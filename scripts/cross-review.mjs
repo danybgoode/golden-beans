@@ -451,6 +451,23 @@ function main() {
     }
   }
 
+  // Pin the commit being reviewed BEFORE the reviewer runs: a push mid-review would otherwise move the
+  // status onto a commit nobody read, and the re-review check needs to tell a new commit from a retry.
+  const reviewedSha = ghHeadSha(pr, repo);
+
+  // Post PENDING before the CLI is even checked. A version-pin mismatch or a dead token exits the
+  // script BEFORE the guard runs (observed live on PR #177, where the agy pin refused the run), and an
+  // ABSENT status is indistinguishable from "never ran". A stuck `pending` is visibly not-clean.
+  if (!dryRun)
+    postReviewStatus({
+      pr,
+      repo,
+      state: 'pending',
+      lens,
+      sha: reviewedSha,
+      description: `${AGENTS[agent]} reviewing…`,
+    });
+
   // Presence-check the CLI we're ACTUALLY about to run. This used to hard-require `agy` on every run
   // regardless of --agent, which was a harmless quirk while agy was the default and codex the only
   // alternative — and becomes a wrong failure now that the roster is four families: without this,
@@ -474,10 +491,6 @@ function main() {
       'claude not found — install Claude Code (https://claude.com/claude-code) and run `claude auth login`, then retry.'
     );
   }
-
-  // Pin the commit being reviewed BEFORE the reviewer runs: a push mid-review would otherwise move the
-  // status onto a commit nobody read, and the re-review check needs to tell a new commit from a retry.
-  const reviewedSha = ghHeadSha(pr, repo);
 
   // Re-review convergence (D8): a prior pass for THIS lens means Blocking/Important only.
   const reReview = isReReview(ghComments(pr, repo), lens, reviewedSha);
@@ -607,19 +620,6 @@ function main() {
       );
     }
   }
-
-  // Post PENDING before the reviewer runs. If the CLI dies mid-run (a dead token, a context overflow),
-  // the script exits without reaching the guard — and an ABSENT status is indistinguishable from "never
-  // ran". A stuck `pending` is visibly not-clean, which is the whole point of the guard.
-  if (!dryRun)
-    postReviewStatus({
-      pr,
-      repo,
-      state: 'pending',
-      lens,
-      sha: reviewedSha,
-      description: `${AGENTS[agent]} reviewing…`,
-    });
 
   const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
 

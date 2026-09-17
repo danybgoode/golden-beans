@@ -64,6 +64,12 @@ test('the fresh reviewer is named on every plan — it is unconditional now, not
   }
 });
 
+test('--exclude routes past a capped family without any protocol', () => {
+  // `hasCmd` cannot see a quota cap, so the fallback is operator-driven: one flag, next family.
+  const plan = planReview({ builder: 'claude', available: PREFERENCE.filter((f) => f !== 'codex') });
+  assert.equal(plan.general, 'agy');
+});
+
 test('an unknown builder throws rather than silently routing to the default family', () => {
   assert.throws(() => planReview({ builder: 'gemini' }), /unknown builder/);
 });

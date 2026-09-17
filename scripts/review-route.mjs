@@ -21,6 +21,7 @@
 //
 // Usage:
 //   node scripts/review-route.mjs --builder claude <PR#> [--repo owner/repo] [--security] [--json]
+//                                  [--exclude <family>]   # a family is quota-capped: route past it
 //
 // `--security` forces the lens on; without it the trigger is the PR's own changed paths
 // (scripts/review-config.json → securityPaths), which is what makes it un-skippable by judgement.
@@ -130,14 +131,21 @@ function main() {
   let repo = null;
   let json = false;
   let forceSecurity = false;
+  let tierIgnored = false;
+  const excluded = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--builder') builder = need(argv[++i], '--builder');
     else if (a === '--repo') repo = need(argv[++i], '--repo');
     else if (a === '--json') json = true;
     else if (a === '--security') forceSecurity = true;
-    else if (a === '--tier')
-      argv[++i]; // accepted and ignored: the tier no longer selects reviewers
+    else if (a === '--tier') {
+      // Accepted so an old invocation does not die, but SAID OUT LOUD: the tier no longer selects
+      // reviewers, and silently ignoring it would let an old `--tier high` call believe it had asked
+      // for the security lens.
+      argv[++i];
+      tierIgnored = true;
+    } else if (a === '--exclude') excluded.push(need(argv[++i], '--exclude'));
     else if (!a.startsWith('-') && pr === null) pr = a;
     else die(`unknown argument '${a}'`);
   }
@@ -164,8 +172,18 @@ function main() {
     securityPass = decision.run;
     trigger = decision.reason;
   }
-  const available = PREFERENCE.filter((f) => hasCmd(AGENT_BIN[AGENT_FLAG[f]]));
+  // `hasCmd` says INSTALLED, not UNCAPPED — a quota-capped CLI is present and answers `--version`.
+  // There is no way to know a family is capped without spending a run on it, so the fallback is
+  // operator-driven and one command long: re-run with `--exclude <family>` and the next one is routed.
+  // (cross-review.mjs additionally self-heals the common case: a dead codex token falls to agy mid-run.)
+  const available = PREFERENCE.filter((f) => hasCmd(AGENT_BIN[AGENT_FLAG[f]]) && !excluded.includes(f));
   const plan = planReview({ builder, available, securityPass });
+  if (tierIgnored) {
+    process.stderr.write(
+      '⚠ --tier is ignored: the risk tier no longer selects reviewers. The security lens is triggered by ' +
+        'the changed paths (scripts/review-config.json) or a `risk: high` PR body — pass --security to force it.\n'
+    );
+  }
   if (json) {
     writeSync(
       1,
