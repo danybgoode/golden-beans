@@ -37,7 +37,13 @@ export async function run(options: RunOptions): Promise<ExitCode> {
   // `--version` before everything, including before the command table: someone asking which version
   // they have is asking a question about the binary, not about a verb, and it must answer on a
   // machine with no credential, no network and a typo in the command.
-  if (args.version && args.path.length === 0) {
+  //
+  // ⚠️ **`args.path.length === 0` used to be part of this condition, and that made `--help`'s
+  // "global flags" section false** (cross-family review, Codex, PR #149). `gf whoami --version`
+  // entered `whoami`, demanded a credential and then made a network call — for a question about the
+  // binary. A flag documented as global is honoured globally, as `git --version` and `npm --version`
+  // are; the alternative is a help text an agent cannot trust, which is the whole of D5.
+  if (args.version) {
     emit.ok({ version: VERSION }, VERSION)
     return EXIT.OK
   }

@@ -408,7 +408,11 @@ test('gf init is IDEMPOTENT: a second run mints nothing', async () => {
   const cwd = mkdtempSync(join(tmpdir(), 'gf-repo-'))
   const seen: Array<{ method: string; url: string; body: unknown }> = []
   const fetchImpl = stubFetch(
-    { '/api/v1/cli/keys': { body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null } } },
+    {
+      '/api/v1/cli/keys': { body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null } },
+      // The second run PROBES the key it found. Answering 200 is what "still works" looks like.
+      '/api/v1/flags/snapshot': { body: { ok: true, contractVersion: 1, flags: [] } },
+    },
     seen
   )
   const first = capture()
@@ -418,9 +422,73 @@ test('gf init is IDEMPOTENT: a second run mints nothing', async () => {
 
   assert.equal(code, EXIT.OK)
   assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 1, 'a second key was minted')
-  const report = JSON.parse(second.out.join('\n')) as { reusedExistingKey: boolean; mintedKeyId: null }
+  const report = JSON.parse(second.out.join('\n')) as {
+    reusedExistingKey: boolean
+    mintedKeyId: null
+    existingKeyState: string
+  }
   assert.equal(report.reusedExistingKey, true)
   assert.equal(report.mintedKeyId, null)
+  assert.equal(report.existingKeyState, 'live')
+})
+
+test('\u26a0\ufe0f gf init REPLACES a revoked or expired key rather than reporting it reused', async () => {
+  // The defect this closes (Codex, PR #149): "there is a key" is not "the key works". A `flag_read`
+  // key is minted with an expiry and can be revoked from the console, and a rerun after either
+  // reported success while leaving the project unable to resolve a flag.
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-repo-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  writeFileSync(join(cwd, '.env.local'), `${ENV_KEYS.flagRead}=gb_key_revoked\n`)
+
+  const seen: Array<{ method: string; url: string; body: unknown }> = []
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['init', '--json'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: stubFetch(
+      {
+        // The key in the file no longer resolves.
+        '/api/v1/flags/snapshot': { status: 401, body: { ok: false, error: 'Invalid flag read credential' } },
+        '/api/v1/cli/keys': { body: { ok: true, id: 'key-2', key: 'gb_key_fresh', type: 'flag_read', expiresAt: null } },
+      },
+      seen
+    ),
+  })
+
+  assert.equal(code, EXIT.OK)
+  assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 1, 'no replacement was minted')
+  assert.equal(readEnvValue(readFileSync(join(cwd, '.env.local'), 'utf8'), ENV_KEYS.flagRead), 'gb_key_fresh')
+  const report = JSON.parse(out.join('\n')) as { existingKeyState: string; reusedExistingKey: boolean }
+  assert.equal(report.existingKeyState, 'dead')
+  assert.equal(report.reusedExistingKey, false)
+})
+
+test('an UNVERIFIABLE key is left alone and SAID to be unverified — never silently replaced', async () => {
+  // Flag serving switched off on this deployment answers 404. Minting on an unanswerable question
+  // would issue a fresh credential on every run and break the idempotency this verb promises;
+  // claiming it is live would repeat the defect above. It says which.
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-repo-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  writeFileSync(join(cwd, '.env.local'), `${ENV_KEYS.flagRead}=gb_key_unknown\n`)
+
+  const seen: Array<{ method: string; url: string; body: unknown }> = []
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['init', '--json'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: stubFetch({ '/api/v1/flags/snapshot': { status: 404, body: {} } }, seen),
+  })
+
+  assert.equal(code, EXIT.OK)
+  assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 0, 'a key was minted on a guess')
+  assert.equal(readEnvValue(readFileSync(join(cwd, '.env.local'), 'utf8'), ENV_KEYS.flagRead), 'gb_key_unknown')
+  assert.equal((JSON.parse(out.join('\n')) as { existingKeyState: string }).existingKeyState, 'unverified')
 })
 
 test('⚠️ gf init REFUSES rather than minting into a repository it cannot protect', async () => {

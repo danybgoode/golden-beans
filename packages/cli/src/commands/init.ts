@@ -136,12 +136,24 @@ export const initCommand: Command = {
     const ignoreResult = ensureIgnored(gitignorePath, context)
     if (ignoreResult !== null) return ignoreResult
 
-    // ── 3. mint, unless the file already carries a live key ───────────────────────────────────
+    // ── 3. mint, unless the file already carries a key that STILL WORKS ───────────────────────
     const existingEnv = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
     const existingKey = readEnvValue(existingEnv, ENV_KEYS.flagRead)
     let minted: { id: string; key: string; expiresAt: string | null } | null = null
 
-    if (existingKey === null) {
+    // ⚠️ **"There is a key" is not "the key works", and treating them as the same shipped a real
+    // defect** (cross-family review, Codex, PR #149). `flag_read` keys are minted with an expiry and
+    // can be revoked from the console, so a rerun of `gf init` after either event reported
+    // `reusedExistingKey: true` and left the project unable to read a flag — the CLI cheerfully
+    // confirming a setup that no longer works, which is worse than not checking at all.
+    //
+    // So the key is EXERCISED, against the route that actually serves it.
+    const existingKeyState = existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey)
+    if (existingKeyState === 'dead') {
+      context.emit.note(`The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`)
+    }
+
+    if (existingKey === null || existingKeyState === 'dead') {
       const result = await context.api!.post<{ id: string; key: string; expiresAt: string | null }>(
         'api/v1/cli/keys',
         { project, type: 'flag_read', label: `gf init (${environment})`, environment }
@@ -184,13 +196,19 @@ export const initCommand: Command = {
         // command just wrote; that is where it belongs.
         mintedKeyId: minted?.id ?? null,
         reusedExistingKey: minted === null,
+        // `live`, `unverified` or `absent` — never a bare boolean. "We could not check" and "we
+        // checked and it works" lead to different actions, and an agent handed only `true` cannot
+        // tell them apart.
+        existingKeyState,
         variables: Object.values(ENV_KEYS),
         snippet: snippetFor(environment),
       },
       [
         minted
           ? `Minted a flag_read key for ${project} (${environment}) and wrote ${ENV_FILE}.`
-          : `${ENV_FILE} already has a ${ENV_KEYS.flagRead}; left it alone and refreshed the other variables.`,
+          : existingKeyState === 'live'
+            ? `${ENV_FILE} already has a working ${ENV_KEYS.flagRead}; left it alone and refreshed the other variables.`
+            : `${ENV_FILE} already has a ${ENV_KEYS.flagRead}. It could not be verified against ${context.api!.baseUrl}, so it was left alone rather than replaced — check it if flags do not resolve.`,
         `${ENV_FILE} is ignored by git and set to mode 0600.`,
         '',
         'Read them like this:',
@@ -200,6 +218,40 @@ export const initCommand: Command = {
     )
     return EXIT.OK
   },
+}
+
+/**
+ * Does this `flag_read` key still resolve a snapshot?
+ *
+ * Exercised against `/api/v1/flags/snapshot` — the route that actually serves it — because that is
+ * the only thing that can answer the question. The key is sent as its own Bearer credential; the
+ * CLI's PAT is not involved and must not be, since a PAT authorizes different things entirely.
+ *
+ * Three answers, and the third is the one that matters:
+ *   `live`        — 200 or 304. The snapshot resolved.
+ *   `dead`        — 401. Unknown, revoked or expired; the caller mints a replacement.
+ *   `unverified`  — anything else: a 404 because flag serving is switched off on this deployment,
+ *                   a network failure, a proxy. **Reported, never guessed at.** Treating an
+ *                   unanswerable question as `dead` would mint a fresh credential on every run of a
+ *                   deployment with serving off, which breaks the idempotency this verb promises;
+ *                   treating it as `live` silently would repeat the defect this check exists to fix.
+ */
+async function probeFlagReadKey(context: CommandContext, key: string): Promise<'live' | 'dead' | 'unverified'> {
+  // ⚠️ **Through `clientFor`, NOT a bare `fetch`.** The first version called the global `fetch`
+  // directly — it was the obvious way to send a different credential — and that quietly opened a
+  // second HTTP path in a package whose whole point is that there is one: it skipped the timeout,
+  // the status-to-`code` mapping and the injected `fetchImpl`, so two tests reached the real
+  // network and the run took half a second per case.
+  //
+  // `clientFor(key)` is exactly the right seam: same base URL, same timeouts, same error mapping,
+  // a DIFFERENT credential. The CLI's PAT is not involved and must not be — a PAT authorizes
+  // something else entirely, and sending it here would tell us nothing about the key in the file.
+  const result = await context.clientFor(key).get('api/v1/flags/snapshot')
+  if (result.kind === 'ok') return 'live'
+  // A network failure, a 404 from a deployment with flag serving switched off, a proxy's HTML —
+  // all "could not tell", which is a third answer and not a synonym for either of the others.
+  if (result.kind === 'network') return 'unverified'
+  return result.code === 'unauthorized' ? 'dead' : 'unverified'
 }
 
 /**

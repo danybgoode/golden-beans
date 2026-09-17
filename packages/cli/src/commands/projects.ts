@@ -49,9 +49,13 @@ export const projectsCreateCommand: Command = {
   detail: `⚠️ An ENSURE, not a second project.
 
   The database enforces one self-serve project per account — a partial unique index that
-  closes a signup race, not a plan limit. So this creates your project if you somehow have
-  none (a failed provision leaves that state reachable) and otherwise reports the one you
-  already have, with created: false. It never mints a second.
+  closes a signup race, not a plan limit. So this reports the project you already have,
+  with created: false, and never mints a second. Use it in a script that wants to be sure
+  before \`gf init\`, without parsing \`gf projects ls\`.
+
+  It cannot rescue an account that has NO project: holding a CLI token already means you
+  have one. If you are in that state, open /app in a browser — it retries provisioning for
+  you.
 
   It also never returns an ingest key. Use \`gf keys create --type ingest\` for that, where
   the credential gets its own confirmation and its own audit row.`,

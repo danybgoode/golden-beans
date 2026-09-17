@@ -14,11 +14,25 @@ import { getSupabaseServiceClient } from '@/lib/supabase'
 // link would otherwise both observe "no membership" and both create a project — not a plan limit,
 // and dropping it would reopen the race a cross-review closed.
 //
-// So there is no second project for this route to create. What it does instead is the genuinely
-// useful thing: it calls the SAME `provisionTenantForUser` the auth callback calls, which is
-// idempotent, and reports `created: false` with the existing slug when there is one. That covers
-// the state that IS reachable — `?provision=failed`, an account whose membership insert failed —
-// and it is honest about the ceiling instead of pretending to a create that cannot happen.
+// So there is no second project for this route to create. What it does instead is call the SAME
+// idempotent `provisionTenantForUser` the auth callback calls, and report `created: false` with the
+// existing slug when there is one.
+//
+// ⚠️ **An earlier version of this comment claimed it recovers the `?provision=failed` state. That
+// was FALSE, and it is the exact defect CODE-QUALITY #3 exists to catch** (cross-family review,
+// Codex, PR #149, graded Blocking). Reaching this route needs a CLI token; minting a CLI token needs
+// `/app/setup/cli/<slug>`, which needs a membership — so an account with NO project can never call
+// it. The prose asserted a capability the code does not have.
+//
+// **There is no deadlock, and that is why this is a comment fix rather than a new route.** The
+// token is minted in a BROWSER either way, and `/app` redirects any project-less signed-in user
+// straight to `/app/provision`, which retries provisioning and hands back the same first-run
+// experience. A project-less user arriving to mint a token is provisioned before they get there;
+// if provisioning genuinely fails they land on `/app?provision=failed` with no tenant, and a CLI
+// that could talk to that account would have nothing to talk about.
+//
+// What this verb IS for: a script saying "make sure I have a project before I init", idempotently,
+// without parsing `gf projects ls`. Recovery from a failed provision is a browser task at `/app`.
 //
 // `gf projects use` is a CLIENT-side concept: it records the active project in the credentials
 // file. There is nothing to store server-side, which is why there is no route for it.
