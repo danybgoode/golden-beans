@@ -40,7 +40,26 @@ async function readTokenFromStdin(context: CommandContext): Promise<string | nul
   if (process.stdin.isTTY) {
     if (context.emit.json) return null
     context.emit.note('Paste your CLI token and press Enter:')
+    // ⚠️ **ONE LINE, not "read to EOF"** (cross-family review, Codex, round 3, graded Blocking).
+    // `for await (const chunk of process.stdin)` ends at EOF, and pressing Enter on a terminal does
+    // NOT close stdin — so the documented happy path, `gf login` with no flags, printed the prompt,
+    // accepted the paste, and then hung until the user guessed at Ctrl-D. The verb every new user
+    // runs first, unusable, under a prompt that said it was waiting for Enter.
+    //
+    // `readline` is the thing that knows what a line is. The interface is closed either way, so the
+    // process does not stay alive holding the TTY open.
+    const readline = await import('node:readline/promises')
+    const rl = readline.createInterface({ input: process.stdin, terminal: false })
+    try {
+      const line = await rl[Symbol.asyncIterator]().next()
+      const value = typeof line.value === 'string' ? line.value.trim() : ''
+      return value === '' ? null : value
+    } finally {
+      rl.close()
+    }
   }
+  // PIPED. Read to EOF, which is exactly right here and is the CI shape: `echo $TOKEN | gf login`
+  // closes stdin, and a token that arrives in several chunks is reassembled.
   const chunks: Buffer[] = []
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk))
   const value = Buffer.concat(chunks).toString('utf8').trim()

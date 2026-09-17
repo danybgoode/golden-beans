@@ -608,6 +608,42 @@ test('\u26a0\ufe0f --json --help emits ONE JSON document, not the plain-text hel
   }
 })
 
+test('\u26a0\ufe0f gf init mints NOTHING when .env.local cannot be written', async () => {
+  // Minting first and discovering the file is unwritable leaves a LIVE credential nobody holds —
+  // unrevokable by the caller, who never saw it — and a retry mints another (Codex, round 3).
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-ro-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  writeFileSync(join(cwd, '.env.local'), '')
+  chmodSync(join(cwd, '.env.local'), 0o400)
+
+  const { writer } = capture()
+  const code = await run({
+    argv: ['init'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: (() => {
+      throw new Error('nothing may be minted before the file is known to be writable')
+    }) as unknown as typeof fetch,
+  })
+  assert.equal(code, EXIT.USAGE)
+})
+
+test('dotenv duplicates: the LAST assignment is read, and an upsert leaves exactly one', () => {
+  // `dotenv` assigns in file order, so a later line overrides an earlier one. Reading the first
+  // meant `gf init` could probe and rewrite one key while the app resolved another (Codex, round 3).
+  const duplicated = `${ENV_KEYS.flagRead}=first\nOTHER=1\n${ENV_KEYS.flagRead}=last\n`
+  assert.equal(readEnvValue(duplicated, ENV_KEYS.flagRead), 'last')
+
+  const upserted = upsertEnvValue(duplicated, ENV_KEYS.flagRead, 'chosen')
+  // ONE occurrence, so there is nothing left for the two functions to disagree about.
+  assert.equal(upserted.split('\n').filter((line) => line.startsWith(`${ENV_KEYS.flagRead}=`)).length, 1)
+  assert.equal(readEnvValue(upserted, ENV_KEYS.flagRead), 'chosen')
+  // ...and the unrelated line survives.
+  assert.equal(readEnvValue(upserted, 'OTHER'), '1')
+})
+
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
 
 test('gf flags ls refuses to guess a project when none was chosen', async () => {
