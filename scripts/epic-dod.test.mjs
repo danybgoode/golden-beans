@@ -81,8 +81,7 @@ test('an exemption excuses a failure with its reason; an exemption on a PASSING 
 });
 
 test('citations: PRs, aliased repos, explicit owner/repo and commits — but never bare numbers', () => {
-  const text =
-    'merged (product-repo #106, plugin-repo #5 + #6), commit b13ae84, run 29305671818, o/r#9';
+  const text = 'merged (product-repo #106, plugin-repo #5 + #6), commit b13ae84, run 29305671818, o/r#9';
   const refs = citations(text, { aliases: { 'product-repo': 'o/product-management' } });
   const keys = refs.map(refKey);
   assert.ok(keys.includes('pr:o/product-management#106'));
