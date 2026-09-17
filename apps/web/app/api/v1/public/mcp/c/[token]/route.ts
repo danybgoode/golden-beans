@@ -4,12 +4,17 @@ import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import {
+  isCliWriteApiEnabled,
   isConnectorEnabled,
   isConnectorWriteToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
   isJourneyMcpToolEnabled,
   isTaskMcpToolEnabled,
 } from '@/lib/flags'
+import { registerFlagTools } from '@/lib/mcp-flag-tools'
+import { resolveCliToken } from '@/lib/cli-tokens'
+import { getMembershipByProjectId } from '@/lib/membership'
+import { isOwner } from '@/lib/roles'
 import { authorizeAgentWrite } from '@/lib/agent-write-keys'
 import { proposeTaskChange, applyTaskChange } from '@/lib/task-write-staging'
 import { listTasksByProjectId, getTaskByProjectId, promoteEligibleSignals } from '@/lib/tasks'
@@ -64,8 +69,19 @@ async function gate(token: string): Promise<{ ok: true; projectId: string; proje
 // Every tool call is scoped to this one resolved project — no tool schema below accepts a
 // project/projectId param, so a token minted for project A has no way to even ask for project
 // B's data. This is what makes the cross-project isolation acceptance true by construction.
-function buildMcpServer(projectId: string, projectSlug: string, writeKeyId: string | null): McpServer {
+function buildMcpServer(
+  projectId: string,
+  projectSlug: string,
+  writeKeyId: string | null,
+  flagWriteActor: { userId: string } | null
+): McpServer {
   const server = new McpServer({ name: 'golden-beans-connector', version: '1.0.0' })
+
+  // golden-frijoles-cli · Sprint 3, Story 3.4 — the flag tools, on the same command core the CLI
+  // uses (D4). The READ tools register unconditionally; the WRITE tools only when `flagWriteActor`
+  // is non-null, which requires a CLI token whose holder OWNS this project. See lib/mcp-flag-tools.ts
+  // for why that credential and not `agent_write`.
+  registerFlagTools(server, projectId, projectSlug, flagWriteActor)
 
   server.registerTool(
     'get_tars_funnel',
@@ -489,6 +505,36 @@ function buildMcpServer(projectId: string, projectSlug: string, writeKeyId: stri
   return server
 }
 
+/**
+ * The account a flag write will be attributed to, or null.
+ *
+ * Three conditions, ALL required, and each one is its own independent kill switch:
+ *   • `CLI_WRITE_API_ENABLED` (epic D8) — checked first, so OFF removes the tools without any
+ *     credential work and cannot become an oracle for whether a token is valid.
+ *   • the presented credential is a live `gf_pat_…`.
+ *   • its holder is an OWNER of the project THIS connector token resolved to.
+ *
+ * ⚠️ The ownership check re-resolves membership against `projectId` — the id the connector token
+ * already produced — and never against anything the caller supplied. A CLI token for account A
+ * paired with a connector token for project B authorizes nothing: not B (A may not own it) and not
+ * A's own project (the reader never proved they may touch it). The mismatch is a flat refusal,
+ * never a fallback to either side, which is the property `authorizeAgentWrite` established.
+ */
+async function resolveFlagWriteActor(
+  projectId: string,
+  presentedKey: string | null
+): Promise<{ userId: string } | null> {
+  if (!isCliWriteApiEnabled() || !presentedKey) return null
+  const resolved = await resolveCliToken(presentedKey)
+  if (!resolved.ok) return null
+  // BY PROJECT ID, not by slug. The connector token already resolved the id; going back through the
+  // slug would re-resolve identity from the mutable half of the pair (AGENTS #10), and a rename
+  // would then read as "you are not a member" — a silent authorization change caused by a display
+  // name. `getMembershipByProjectId` exists for this call.
+  const membership = await getMembershipByProjectId(resolved.userId, projectId)
+  return membership && isOwner(membership) ? { userId: resolved.userId } : null
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const gated = await gate(token)
@@ -512,7 +558,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const writeAuth = presentedKey ? await authorizeAgentWrite(gated.projectId, presentedKey) : null
   const writeKeyId = writeAuth?.ok ? writeAuth.keyId : null
 
-  const server = buildMcpServer(gated.projectId, gated.projectSlug, writeKeyId)
+  // ── The flag-write actor (Story 3.4) ────────────────────────────────────────────────────────
+  // A flag write needs a real USER, because the control plane's RPCs are owner-checked and write
+  // the acting user id into the audit trail. So the same Authorization header is ALSO tried as a
+  // CLI token — the two credential kinds are told apart by prefix (`gb_key_…` vs `gf_pat_…`), so
+  // one header serves both without ambiguity.
+  //
+  // Failure is silent here for exactly the reason the write-key resolution above is silent: the
+  // observable consequence of missing, unknown, revoked, expired, not-an-owner or belonging-to-
+  // another-project is identical — the flag write tools are absent from tools/list.
+  const flagWriteActor = await resolveFlagWriteActor(gated.projectId, presentedKey)
+
+  const server = buildMcpServer(gated.projectId, gated.projectSlug, writeKeyId, flagWriteActor)
   // Stateless: a fresh server + transport per request, no session ID, no connection reuse —
   // matches the read-only, single-call-per-request shape of these tools.
   const transport = new WebStandardStreamableHTTPServerTransport({

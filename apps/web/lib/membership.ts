@@ -78,6 +78,39 @@ export const getMembership = cache(async (userId: string, slug: string): Promise
   return { projectId: project.id as string, role: String(membership.role) }
 })
 
+/**
+ * The same authorization lookup, keyed by project ID instead of slug.
+ *
+ * ⚠️ **It exists so a caller that ALREADY HOLDS a resolved `project_id` does not go back through a
+ * slug to use it.** The MCP connector is exactly that caller: its token resolves to an id and a
+ * slug together, and passing the slug to `getMembership` would re-resolve identity from the one
+ * mutable field of the pair — the thing AGENTS #10 and CODE-QUALITY #10 both forbid, and which a
+ * project rename would silently turn into "you are not a member".
+ *
+ * Same contract as `getMembership` in every other respect, including the one that matters: it
+ * returns null (FAILS CLOSED) on a query error rather than throwing, because it is an authorization
+ * decision and a denied request is safe where a thrown one some caller catches into an allow is not.
+ *
+ * `cache()` for the same per-request reason, and it is per-REQUEST: React clears it between
+ * renders, so this never serves one caller's membership to another.
+ */
+export const getMembershipByProjectId = cache(
+  async (userId: string, projectId: string): Promise<Membership | null> => {
+    const { data, error } = await getSupabaseServiceClient()
+      .from('project_members')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('project_id', projectId)
+      .maybeSingle()
+    if (error) {
+      console.error('[membership] getMembershipByProjectId failed:', error)
+      return null
+    }
+    if (!data) return null
+    return { projectId, role: String(data.role) }
+  }
+)
+
 export async function getMemberProjectId(userId: string, slug: string): Promise<string | null> {
   return (await getMembership(userId, slug))?.projectId ?? null
 }
