@@ -164,6 +164,19 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
       });
   }
   for (const { path, json } of projectFiles) {
+    // The accretion actually happens in `.claude/settings.local.json` — untracked, per-machine, invisible
+    // to CI. Sweeping only the committed list would leave the file this whole story is about unchecked.
+    // A one-off command there is a finding: generalize it into the committed list, or drop it.
+    if (path.endsWith('.local.json')) {
+      for (const rule of json?.permissions?.allow ?? []) {
+        if (looksLiteral(rule)) {
+          findings.push({
+            kind: 'literal-local-allow',
+            detail: `${path}: ${rule} is a one-off approval — generalize it into the committed allow list or drop it`,
+          });
+        }
+      }
+    }
     const mode = json?.permissions?.defaultMode;
     if (mode === 'auto' || mode === 'bypassPermissions') {
       findings.push({

@@ -36,8 +36,9 @@
 // lockfile itself.
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   AGENTS,
   headSidePaths,
@@ -67,16 +68,36 @@ import {
   checkReviewerPairing,
   reviewersFor,
 } from './lib/cross-agent-cli.mjs';
+import {
+  assertReviewOutput,
+  cliVersionNote,
+  decideSecurityPass,
+  parseReviewConfig,
+  isReReview,
+  postReviewStatus,
+  reviewMarker,
+  RE_REVIEW_NOTE,
+} from './lib/review-guard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
+// `--lens security` swaps the prompt ONLY ��� agent selection, the fallback chain, --skip-trivial and the
+// output guard are untouched, so the lens cannot regress the rail that reviews every other PR.
+const SECURITY_PROMPT_PATH = join(__dirname, 'cross-review.security.prompt.md');
+export const LENSES = ['security'];
+
+// THROWS rather than die()s: a pure function that exits cannot be unit-tested, and silently falling back
+// to the general prompt would let an operator believe a security pass ran when a general one did.
+export function promptPathFor(lens) {
+  if (!lens) return PROMPT_PATH;
+  if (!LENSES.includes(lens)) throw new Error(`unknown lens '${lens}' (expected: ${LENSES.join(' | ')})`);
+  return SECURITY_PROMPT_PATH;
+}
 
 const BANNER =
-  '> **The judgment-layer review for this PR** (WAYS-OF-WORKING, updated 2026-07-23) — a single-pass ' +
-  'read from a different model family, standing in for a same-family fresh-reviewer pass. ' +
-  'Not a second CI: does not itself authorize a merge — CI (green/red) and the risk-tier rule ' +
-  '(who may click merge) remain the other two layers. Blocking findings should be resolved or ' +
-  'explicitly triaged before merge.';
+  '> **Cross-agent review — every finding is fixed, or answered on this PR, before merge. This does not authorize one.** ' +
+  'CI and the risk-tier merge rule remain the only merge authority. A fresh `pr-reviewer` pass covers context independence; ' +
+  'this is the family-independence pass: one single-pass read by a model family that did not build the diff.';
 
 const HELP = `cross-review.mjs — the cross-agent judgment-layer review for a PR diff.
 
@@ -119,6 +140,7 @@ function parseArgs(argv) {
     dryRun: false,
     skipTrivial: false,
     minLines: 10,
+    lens: null,
     includeLockfiles: false,
     help: false,
   };
@@ -139,6 +161,8 @@ function parseArgs(argv) {
         .filter(Boolean);
     else if (a === '--builder') out.builder = need(argv[++i], '--builder');
     else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
+    else if (a === '--lens') out.lens = need(argv[++i], '--lens');
+    else if (a.startsWith('--lens=')) out.lens = a.slice('--lens='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
     else if (a.startsWith('--agent=')) out.agent = a.slice('--agent='.length);
     else if (a === '--repo') out.repo = need(argv[++i], '--repo');
@@ -233,8 +257,79 @@ function runReview(agent, prompt, diff) {
   die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
 }
 
-function buildComment(agentLabel, findings) {
-  return `### 🔎 Cross-agent review (${agentLabel})\n\n${BANNER}\n\n---\n\n${findings}\n`;
+export function buildComment(
+  agentLabel,
+  findings,
+  { lens = null, version = null, reReview = false, securityOwed = null } = {}
+) {
+  const title = lens
+    ? `### 🔐 Cross-agent review — ${lens} lens (${agentLabel})`
+    : `### 🔎 Cross-agent review (${agentLabel})`;
+  // The reviewer CLI's version is machine-local state no artifact used to capture: if it drifts, review
+  // strength changes and nothing notices. Recorded, not enforced — see lib/review-guard.mjs.
+  const attribution = version ? `\n\n_${version}._` : '';
+  const limit =
+    lens === 'security'
+      ? `\n\n> **Scope of this pass:** one advisory, single-pass read by a different model family, triggered by the changed paths. It is **not** static analysis, not exhaustive, and not a required check. A clean result here is not a security guarantee.`
+      : '';
+  // A general pass on a security-path PR must not read as the whole review.
+  const owed = securityOwed
+    ? `\n\n> ⚠ **The security lens is OWED on this PR** (${securityOwed}) and has not run here. This general pass is not a substitute for it.`
+    : '';
+  const convergence = reReview
+    ? `\n\n> **Re-review:** Blocking/Important findings only — earlier nits are deliberately not repeated.`
+    : '';
+  return `${title}\n\n${BANNER}${attribution}${limit}${owed}${convergence}\n\n---\n\n${findings}\n`;
+}
+
+/** Comment bodies already on the PR, for re-review convergence. [] on any failure (degrade to first pass). */
+/** The PR body, for the `risk: high` half of the security trigger. '' on any failure. */
+function ghBody(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'body'];
+  if (repo) args.push('--repo', repo);
+  const r = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  if (r.status !== 0) return '';
+  try {
+    return JSON.parse(r.stdout || '{}').body || '';
+  } catch {
+    return '';
+  }
+}
+
+/** The project's review config. A missing/invalid file is FATAL: defaulting it would silently mean "never run the security lens". */
+function loadReviewConfig() {
+  try {
+    return parseReviewConfig(JSON.parse(readFileSync(join(__dirname, 'review-config.json'), 'utf8')));
+  } catch (e) {
+    die(
+      `scripts/review-config.json is missing or invalid (${e.message}). It decides which PRs get the security lens — a default would silently mean "never".`
+    );
+  }
+}
+
+/** The PR head sha, pinned before the review runs. null when gh cannot say — never a guess. */
+function ghHeadSha(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'headRefOid'];
+  if (repo) args.push('--repo', repo);
+  const r = spawnSync('gh', args, { encoding: 'utf8' });
+  if (r.status !== 0) return null;
+  try {
+    return JSON.parse(r.stdout || '{}').headRefOid || null;
+  } catch {
+    return null;
+  }
+}
+
+function ghComments(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'comments'];
+  if (repo) args.push('--repo', repo);
+  const r = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  if (r.status !== 0) return [];
+  try {
+    return (JSON.parse(r.stdout || '{}').comments || []).map((c) => c.body || '');
+  } catch {
+    return [];
+  }
 }
 
 function postComment(pr, repo, body) {
@@ -259,6 +354,7 @@ function main() {
     skipTrivial,
     minLines,
     includeLockfiles,
+    lens,
     help,
     builder,
     codeOnly,
@@ -301,6 +397,8 @@ function main() {
     );
   }
 
+  if (lens && !LENSES.includes(lens)) die(`unknown --lens '${lens}'; use ${LENSES.join('|')}`);
+
   ensureGh();
 
   // No <PR#> → resolve the open PR for the current branch and guard against a stale local HEAD, so the
@@ -325,6 +423,25 @@ function main() {
       );
     }
   }
+  // The security lens is triggered by the CHANGED PATHS, not by judgement (ways-of-work-lean-pass D7).
+  // The router prints both commands, but a hand-run general pass must not silently stand in for a missing
+  // security pass — so this run says so, on stderr AND in the posted comment where a PR reader sees it.
+  let securityOwed = null;
+  if (!lens) {
+    const cfg = loadReviewConfig();
+    const decision = decideSecurityPass({
+      files: ghFiles(pr, repo),
+      body: ghBody(pr, repo),
+      securityPaths: cfg.securityPaths,
+    });
+    if (decision.run) {
+      securityOwed = decision.reason;
+      process.stderr.write(
+        `⚠ this PR triggers the security lens (${decision.reason}) — run: node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent <another-family> --lens security\n`
+      );
+    }
+  }
+
   // Cost guard (CI): bail before installing/running the reviewer when the diff is trivial/docs-only.
   if (skipTrivial) {
     const { skip, reason } = decideTrivialSkip({ files: ghFiles(pr, repo), minLines });
@@ -358,7 +475,13 @@ function main() {
     );
   }
 
-  const prompt = loadPromptBody(PROMPT_PATH);
+  // Pin the commit being reviewed BEFORE the reviewer runs: a push mid-review would otherwise move the
+  // status onto a commit nobody read, and the re-review check needs to tell a new commit from a retry.
+  const reviewedSha = ghHeadSha(pr, repo);
+
+  // Re-review convergence (D8): a prior pass for THIS lens means Blocking/Important only.
+  const reReview = isReReview(ghComments(pr, repo), lens, reviewedSha);
+  const prompt = loadPromptBody(promptPathFor(lens)) + (reReview ? RE_REVIEW_NOTE : '');
   const rawDiff = ghDiff(pr, repo);
   let diff = rawDiff;
   if (!includeLockfiles) {
@@ -485,17 +608,76 @@ function main() {
     }
   }
 
-  const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
-  if (!findings) die(`${AGENTS[agent]} returned no output.`);
+  // Post PENDING before the reviewer runs. If the CLI dies mid-run (a dead token, a context overflow),
+  // the script exits without reaching the guard — and an ABSENT status is indistinguishable from "never
+  // ran". A stuck `pending` is visibly not-clean, which is the whole point of the guard.
+  if (!dryRun)
+    postReviewStatus({
+      pr,
+      repo,
+      state: 'pending',
+      lens,
+      sha: reviewedSha,
+      description: `${AGENTS[agent]} reviewing…`,
+    });
 
-  const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings);
+  const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
+
+  // THE GUARD (ways-of-work-lean-pass D9). With one external pass, a CLI that exits 0 with nothing to say
+  // reads exactly like a clean review and nothing contradicts it. A structureless reply FAILS the run and
+  // fails the PR's `cross-review/<lens>` status rather than posting a comment that looks like a pass.
+  const verdict = assertReviewOutput(findings);
+  if (!verdict.ok) {
+    if (!dryRun) {
+      const st = postReviewStatus({
+        pr,
+        repo,
+        state: 'failure',
+        lens,
+        description: `${AGENTS[agent]}: ${verdict.reason}`,
+      });
+      process.stderr.write(
+        st.posted
+          ? `✗ marked cross-review/${lens || 'general'} FAILED on PR #${pr}.\n`
+          : `✗ could not post the failing status (${st.detail}).\n`
+      );
+    }
+    // NEVER destroy a reply the run paid for: a false reject would otherwise cost a full re-run, which is
+    // exactly how a guard trains people to bypass it.
+    process.stderr.write(
+      `\n───── ${AGENTS[agent]}'s full reply, rejected by the output guard ─────\n${findings || '(empty)'}\n───── end of reply ─────\n`
+    );
+    die(`${AGENTS[agent]} did not return a review: ${verdict.reason}`);
+  }
+
+  const body =
+    buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings, {
+      lens,
+      version: cliVersionNote(agent),
+      reReview,
+      securityOwed,
+    }) + reviewMarker({ lens, sha: reviewedSha });
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
   } else {
     const url = postComment(pr, repo, body);
     process.stderr.write(`✓ Review comment posted${url ? `: ${url}` : ''}\n`);
+    const st = postReviewStatus({
+      pr,
+      repo,
+      state: 'success',
+      lens,
+      description: `review produced by ${AGENTS[agent]} (${verdict.reason}) — not a verdict`,
+    });
+    process.stderr.write(
+      st.posted
+        ? `✓ cross-review/${lens || 'general'} status: success.\n`
+        : `⚠ review posted but its status did not (${st.detail}).\n`
+    );
   }
 }
 
-main();
+// Guarded so importing this module for its pure helpers does not run a review.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) main();

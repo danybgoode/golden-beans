@@ -195,6 +195,23 @@ test('a literal past command in allow fails; verb classes pass', () => {
   assert.deepEqual(kinds(checkContract({ settings: s, ledger })), ['literal-allow']);
 });
 
+test('a one-off approval in the untracked local file is swept too — that is where accretion happens', () => {
+  const local = {
+    path: '.claude/settings.local.json',
+    json: {
+      permissions: {
+        allow: ['Bash(vercel --prod --yes)', "Bash(sed -n '1,60p' app/page.tsx)", 'Bash(npm run *)'],
+      },
+    },
+  };
+  const f = checkContract({ settings, ledger, projectFiles: [local] });
+  assert.deepEqual(
+    f.map((x) => x.kind),
+    ['literal-local-allow', 'literal-local-allow']
+  );
+  assert.match(f[0].detail, /settings\.local\.json/);
+});
+
 test('auto or bypass mode in a PROJECT settings file fails (it is ignored and masks the user default)', () => {
   for (const mode of ['auto', 'bypassPermissions']) {
     const f = checkContract({
