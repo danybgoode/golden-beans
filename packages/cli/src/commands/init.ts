@@ -44,24 +44,50 @@ export function gitignoreCovers(contents: string): boolean {
     .some((line) => ['.env.local', '.env*.local', '.env*', '*.local'].includes(line))
 }
 
-/** The value of `name` in a dotenv file, or null. Quotes stripped; no interpolation, deliberately. */
+/**
+ * The value of `name` in a dotenv file, or null. Quotes stripped; no interpolation, deliberately.
+ *
+ * ⚠️ **The LAST assignment wins, and this returned the FIRST** (cross-family review, Codex,
+ * round 3). `dotenv` assigns in file order, so a later line overrides an earlier one — which meant
+ * `gf init` could probe and rewrite one key while the generated app actually resolved a different
+ * one. Two duplicate lines is not exotic: it is what a hand-edit plus a re-run produces.
+ */
 export function readEnvValue(contents: string, name: string): string | null {
+  let found: string | null = null
   for (const line of contents.split('\n')) {
     const match = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.*)$`).exec(line)
     if (!match) continue
     const raw = match[1].trim().replace(/^(['"])(.*)\1$/, '$2')
-    return raw === '' ? null : raw
+    found = raw === '' ? null : raw
   }
-  return null
+  return found
 }
 
-/** Replace `name`'s line, or append one. Never duplicates a key — a dotenv file's LAST wins. */
+/**
+ * Set `name` to `value`, leaving EXACTLY ONE assignment of it in the file.
+ *
+ * ⚠️ **Rewritten to remove the first/last ambiguity rather than to pick a side** (cross-family
+ * review, Codex, round 3). The previous version replaced the FIRST match and left any later
+ * duplicate in place — and since `dotenv` resolves the LAST one, the file could end up saying
+ * something this function believed it had just changed.
+ *
+ * Every existing assignment is dropped and one is written where the first of them was (or appended
+ * if there were none). The failure is then unrepresentable rather than handled: there is no second
+ * occurrence for the two functions to disagree about (CODE-QUALITY #2).
+ */
 export function upsertEnvValue(contents: string, name: string, value: string): string {
   const line = `${name}=${value}`
-  const pattern = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=.*$`, 'm')
-  if (pattern.test(contents)) return contents.replace(pattern, line)
-  const prefix = contents === '' || contents.endsWith('\n') ? contents : `${contents}\n`
-  return `${prefix}${line}\n`
+  const pattern = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=.*$`)
+  const lines = contents === '' ? [] : contents.split('\n')
+  const firstIndex = lines.findIndex((candidate) => pattern.test(candidate))
+  const kept = lines.filter((candidate) => !pattern.test(candidate))
+  if (firstIndex === -1) {
+    const prefix = contents === '' || contents.endsWith('\n') ? contents : `${contents}\n`
+    return `${prefix}${line}\n`
+  }
+  kept.splice(firstIndex, 0, line)
+  const rebuilt = kept.join('\n')
+  return rebuilt.endsWith('\n') ? rebuilt : `${rebuilt}\n`
 }
 
 export function snippetFor(environment: string): string {
@@ -138,6 +164,13 @@ export const initCommand: Command = {
     if (symlinkResult !== null) return symlinkResult
     const ignoreResult = ensureIgnored(gitignorePath, context)
     if (ignoreResult !== null) return ignoreResult
+    // ⚠️ **Writability is checked BEFORE anything is minted** (cross-family review, Codex, round 3).
+    // Minting first and discovering a read-only `.env.local` afterwards leaves a LIVE credential
+    // nobody holds — unrevokable by the caller, because they never saw it — and a retry mints
+    // another. Same ordering rule as the `.gitignore` check above, for the same reason: this verb
+    // will not create a credential it cannot then protect or hand over.
+    const writableResult = ensureWritable(envPath, context)
+    if (writableResult !== null) return writableResult
 
     // ── 3. mint, unless the file already carries a key that STILL WORKS ───────────────────────
     const existingEnv = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
@@ -221,6 +254,32 @@ export const initCommand: Command = {
     )
     return EXIT.OK
   },
+}
+
+/**
+ * Prove `.env.local` can be written, before a credential exists to put in it.
+ *
+ * The check is a real write — appending nothing to the file, creating it if absent — because that is
+ * the only thing that answers the question. A mode check would be a guess about the filesystem, the
+ * process's user, ACLs and mount options, and the guess is wrong exactly where it matters.
+ *
+ * Creating an empty file as a side effect is harmless: `gf init` is about to write this path
+ * anyway, and an empty `.env.local` in a directory where init failed is not a hazard. A minted
+ * credential nobody holds is.
+ */
+function ensureWritable(envPath: string, context: CommandContext): ExitCode | null {
+  try {
+    appendFileSync(envPath, '', { mode: 0o600 })
+    return null
+  } catch (err) {
+    context.emit.fail(
+      'invalid',
+      `Cannot write ${ENV_FILE} (${err instanceof Error ? err.message : String(err)}). ` +
+        `Nothing was minted — a credential created now would be live and unheld. Fix the permissions ` +
+        `and re-run.`
+    )
+    return EXIT.USAGE
+  }
 }
 
 /**
