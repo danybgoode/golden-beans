@@ -13,6 +13,10 @@
     "apps/web/supabase/migrations/*.sql",
     "packages/sdk/src/**",
     ".github/workflows/**",
-    ".claude/settings.json"
+    ".claude/settings.json",
+    "scripts/review-route.mjs",
+    "scripts/review-config.json",
+    "scripts/cross-review.mjs",
+    "scripts/lib/review-guard.mjs"
   ]
 }
