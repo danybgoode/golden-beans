@@ -104,6 +104,22 @@ export function slotsIn(template) {
 }
 
 /**
+ * Slots that carry a RULE, so an empty value deletes it: `deploy_rail: ""` rendered a process doc with no
+ * deploy rail at all, and `--check` called that current (found by codex on dobby-foundation#17). Every other
+ * slot may legitimately be empty — each says "this does not apply to me": no posture override, no
+ * kill-switch practice, no extra project sections, nothing to add about review scope. A test pins this list
+ * against the template's actual slots, so a rename cannot quietly empty it.
+ */
+export const REQUIRED_FILLS = [
+  'product_owner',
+  'design_is_scope',
+  'deploy_rail',
+  'security_floor',
+  'language_policy',
+  'tooling_table',
+];
+
+/**
  * THE RENDERER. Pure: template + values → the rendered file. Throws on a missing or unused key.
  * A slot alone on its line renders as a block (and an empty value removes the line entirely, which is
  * how a project says "this section does not apply to me" deliberately rather than by omission).
@@ -114,6 +130,12 @@ export function render(template, values) {
   if (missing.length) {
     throw new Error(
       `fill-ins.yml is missing: ${missing.join(', ')} — a slot with no value would silently delete that paragraph`
+    );
+  }
+  const emptied = slots.filter((s) => REQUIRED_FILLS.includes(s) && !String(values[s] ?? '').trim());
+  if (emptied.length) {
+    throw new Error(
+      `fill-ins.yml leaves required slot(s) EMPTY: ${emptied.join(', ')} — that deletes the rule from the rendered file. Fill them, or take the key out of REQUIRED_FILLS with a reason.`
     );
   }
   const unused = Object.keys(values).filter((k) => !slots.includes(k));

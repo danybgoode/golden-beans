@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseFillIns,
+  REQUIRED_FILLS,
   render,
   slotsIn,
   TEMPLATE_PATH,
@@ -69,4 +70,22 @@ test('an UNINDENTED heading inside a block is a hard error, never a silently dro
 
 test('slotsIn lists each slot once, in order', () => {
   assert.deepEqual(slotsIn('{{fill:a}} {{fill:b}} {{fill:a}}'), ['a', 'b']);
+});
+
+test('a REQUIRED slot left empty is a hard error — an empty deploy rail deletes the rule', () => {
+  // Found by codex on #17: `deploy_rail: ""` rendered a file with no deploy rail, and `--check` called
+  // that current. The slots a project may honestly not have stay optional.
+  const tpl = '# T\n\n{{fill:deploy_rail}}\n\n{{fill:operating_posture}}\n';
+  assert.throws(
+    () => render(tpl, { deploy_rail: '   ', operating_posture: '' }),
+    /required slot\(s\) EMPTY: deploy_rail/
+  );
+  const out = render(tpl, { deploy_rail: 'merge = deploy', operating_posture: '' });
+  assert.match(out, /merge = deploy/);
+});
+
+test('every REQUIRED_FILLS key is a slot the real template actually asks for', () => {
+  // A renamed slot would leave the guard pointing at nothing — so it is pinned against the real template.
+  const slots = slotsIn(readFileSync(TEMPLATE_PATH, 'utf8'));
+  for (const k of REQUIRED_FILLS) assert.ok(slots.includes(k), `REQUIRED_FILLS names a missing slot: ${k}`);
 });

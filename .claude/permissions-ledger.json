@@ -125,13 +125,13 @@
       "list": "deny",
       "rule": "Bash(*=* git push *--force*)",
       "probe": "PATH=/x:$PATH git push origin smoke-branch --force",
-      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it. Note the deliberate overlap: this expansion/`env` form also matches `--force-with-lease`, which the ask list treats as a question rather than a refusal. Erring STRICT on a prefixed spelling is the right way round — the ordinary `git push --force-with-lease` spelling still reaches the ask rule, and a rule that denies a lease push costs one `--no-verify`-free retry, while a rule that lets a prefixed force push through costs a rewritten shared branch (raised by codex on dobby-foundation#17)."
     },
     {
       "list": "deny",
       "rule": "Bash(env *git push *--force*)",
       "probe": "env PATH=/x:$PATH git push origin smoke-branch --force",
-      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay."
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay. Note the deliberate overlap: this expansion/`env` form also matches `--force-with-lease`, which the ask list treats as a question rather than a refusal. Erring STRICT on a prefixed spelling is the right way round — the ordinary `git push --force-with-lease` spelling still reaches the ask rule, and a rule that denies a lease push costs one `--no-verify`-free retry, while a rule that lets a prefixed force push through costs a rewritten shared branch (raised by codex on dobby-foundation#17)."
     },
     {
       "list": "deny",
