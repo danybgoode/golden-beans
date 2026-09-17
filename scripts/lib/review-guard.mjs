@@ -82,6 +82,9 @@ export function globToRegExp(glob) {
  * Does this PR get the security lens? Pure.
  * files: [{ path }] or strings · body: PR body · securityPaths: globs from review-config.json.
  */
+/** `gh pr view --json files` returns at most this many files, silently. */
+export const GRAPHQL_FILE_CAP = 100;
+
 export function decideSecurityPass({ files = [], body = '', securityPaths = [], totalFiles = null }) {
   const paths = files.map((f) => (typeof f === 'string' ? f : f.path)).filter(Boolean);
   const res = securityPaths.map(globToRegExp);
@@ -104,6 +107,15 @@ export function decideSecurityPass({ files = [], body = '', securityPaths = [], 
     return {
       run: true,
       reason: `file list truncated (${paths.length} of ${totalFiles} changed files seen) — lens forced on`,
+      matched: [],
+    };
+  // The REST count could not be read AND the list is at the GraphQL cap: truncation cannot be ruled out,
+  // and an unreadable total must not FAIL OPEN. Found independently by codex on two PRs and by the
+  // security lens itself. Under the cap the list is complete, so a missing count changes nothing there.
+  if (totalFiles == null && paths.length >= GRAPHQL_FILE_CAP)
+    return {
+      run: true,
+      reason: `${paths.length} files listed (the gh cap) and the true count could not be read — lens forced on`,
       matched: [],
     };
   return { run: false, reason: 'no security path touched and no risk: high declared', matched: [] };

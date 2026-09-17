@@ -140,7 +140,15 @@ test('a TRUNCATED file list forces the lens on instead of reading as "no securit
   assert.match(cut.reason, /truncated \(100 of 108/);
   // A complete list with nothing matching stays off — the guard must allow the negation.
   assert.equal(decideSecurityPass({ files: hundred, securityPaths, totalFiles: 100 }).run, false);
-  assert.equal(decideSecurityPass({ files: hundred, securityPaths }).run, false);
+  // An UNREADABLE count at the cap must not fail open (codex ×2 and the security lens, #145/#178).
+  const unknown = decideSecurityPass({ files: hundred, securityPaths, totalFiles: null });
+  assert.equal(unknown.run, true);
+  assert.match(unknown.reason, /could not be read — lens forced on/);
+  // Under the cap the list is complete: a missing count changes nothing.
+  assert.equal(
+    decideSecurityPass({ files: hundred.slice(0, 40), securityPaths, totalFiles: null }).run,
+    false
+  );
 });
 
 test('changedFileCount reads the REST count and never guesses', () => {
