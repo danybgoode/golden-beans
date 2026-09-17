@@ -371,3 +371,28 @@ test('fetchExternal(): 404 is false, an unreadable file is unavailable, a good l
   assert.equal(partial, null);
   assert.equal(fetchExternal('not a tree url'), null);
 });
+
+test('duplicate exemptions for one item FAIL instead of cancelling the staleness check out', () => {
+  // Found by codex on #17: the first duplicate marked a passing item stale, the second excused that very
+  // failure, and `ok` came back true — two wrongs making a green.
+  const exemptions = [
+    { epic: 'demo', item: 'branch-deleted', reason: 'a' },
+    { epic: 'demo', item: 'branch-deleted', reason: 'b' },
+  ];
+  const r = evaluate({ ...closedEpic, exemptions });
+  assert.equal(r.items['branch-deleted'].state, 'fail');
+  assert.match(r.items['branch-deleted'].detail, /duplicate exemption/);
+  assert.equal(r.ok, false);
+});
+
+test('a failed git fetch makes commit ancestry UNAVAILABLE, never merged or unmerged', () => {
+  // Warning about a stale origin/main was not enough: a rewritten remote can make an abandoned commit
+  // look merged, so the answer is "unknown" (found by codex on #17 and #179).
+  const out = verify([{ kind: 'commit', sha: 'deadbeef1' }], {
+    staleRemote: true,
+    run: () => {
+      throw new Error('git must not be consulted when the remote is stale');
+    },
+  });
+  assert.equal(out.get('commit:deadbeef1'), 'unavailable');
+});

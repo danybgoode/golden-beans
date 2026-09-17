@@ -273,9 +273,19 @@ export function evaluate({
 
   // Exemptions: an exempted failure passes with its reason; an exemption on a passing item is STALE.
   const epicExemptions = exemptions.filter((e) => e.epic === slug);
+  // Two entries for the same item made the FIRST one flag a stale exemption and the SECOND one excuse that
+  // flag — a duplicate silently disarming the staleness check (found by codex on #17/#179).
+  const dupes = [...new Set(epicExemptions.map((e) => e.item).filter((it, i, a) => a.indexOf(it) !== i))];
+  for (const item of dupes) {
+    if (items[item])
+      items[item] = {
+        state: 'fail',
+        detail: `duplicate exemption entries for '${item}' — one per (epic, item), or they cancel each other out`,
+      };
+  }
   for (const e of epicExemptions) {
     const it = items[e.item];
-    if (!it) continue;
+    if (!it || dupes.includes(e.item)) continue;
     // An exemption excuses a known FAILURE. It never turns "could not check" into a pass — unavailable
     // stays unavailable (found by codex on #179).
     if (it.state === 'unavailable') continue;
@@ -316,11 +326,19 @@ function run(cmd, args, opts = {}) {
 
 export function verify(refs, deps = {}) {
   const exec = deps.run ?? run;
+  // A failed fetch means `origin/main` is whatever this checkout last saw, and a rewritten remote can make
+  // an abandoned commit look merged. Ancestry becomes UNKNOWN, not "warned about" (found by codex on #17
+  // and #179 after the warning-only first fix).
+  const staleRemote = deps.staleRemote === true;
   const out = new Map();
   for (const r of refs) {
     const key = refKey(r);
     if (out.has(key)) continue;
     if (r.kind === 'commit') {
+      if (staleRemote) {
+        out.set(key, 'unavailable');
+        continue;
+      }
       const known = exec('git', ['cat-file', '-e', `${r.sha}^{commit}`]);
       if (known.status !== 0) {
         out.set(key, 'unavailable');
@@ -429,9 +447,10 @@ function main() {
   // A failed fetch means every ancestry answer below is about a STALE origin/main. Say so rather than
   // verifying against yesterday's remote (found by codex, then measured by the fresh reviewer).
   const fetched = run('git', ['fetch', '-q', 'origin']);
-  if (fetched.status !== 0)
+  const staleRemote = fetched.status !== 0;
+  if (staleRemote)
     process.stderr.write(
-      '⚠ `git fetch origin` failed — merge checks below are against a possibly STALE origin/main.\n'
+      '⚠ `git fetch origin` failed — commit ancestry is UNAVAILABLE for this run (not "unmerged", and not merged).\n'
     );
   const { repo: bareRefsRepo, note: bareRefsNote } = effectiveBareRefsRepo(cfg);
   const refs = sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo }));
@@ -442,7 +461,7 @@ function main() {
   // The fetched sprint docs cite PRs too — verify THEIR citations, not just the local ones.
   if (!sprints.length && externalDocs && Array.isArray(externalDocs.sprints))
     refs.push(...externalDocs.sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo })));
-  const verified = verify(refs);
+  const verified = verify(refs, { staleRemote });
   const ls = run('git', ['ls-remote', '--heads', 'origin']);
   const branches =
     ls.status === 0

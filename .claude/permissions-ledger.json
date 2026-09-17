@@ -165,6 +165,24 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *npx supabase db reset*)",
+      "probe": "env PATH=/x:$PATH npx supabase db reset --linked",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` + `npx` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* npx supabase db reset*)",
+      "probe": "PATH=/x:$PATH npx supabase db reset --linked",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `npx` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(npx supabase db reset*)",
+      "probe": "npx supabase db reset --linked",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. `npx` form: `npx supabase db reset` drops the linked database without ever touching the installed CLI (found by codex on #17)."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(env *supabase db reset*)",
       "probe": "env PATH=/x:$PATH supabase db reset",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` form."
@@ -252,6 +270,18 @@
       "rule": "Bash(git push * +*)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git push origin +smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git push * +*)",
+      "probe": "env PATH=/x:$PATH git push origin +main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git push * +*)",
+      "probe": "PATH=/x:$PATH git push origin +main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed form: a `+<ref>` refspec force-updates the branch exactly like `--force` (found by codex on #17)."
     },
     {
       "list": "deny",
