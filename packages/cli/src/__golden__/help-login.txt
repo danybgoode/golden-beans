@@ -1,0 +1,23 @@
+gf login — save a CLI token for this machine
+
+Usage
+  gf login [--token <token>] [--api <url>]
+
+Mint a token at /app/setup/cli in the console, then paste it here.
+
+  With no --token, the token is read from STDIN — so it never appears in your shell
+  history or in `ps`. For CI, set GOLDEN_FRIJOLES_TOKEN instead and skip this verb;
+  nothing is written to disk in that case.
+
+Flags
+  --token <token>  the token, instead of reading stdin
+  --api <url>      the deployment (default: https://goldenfrijoles.com)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

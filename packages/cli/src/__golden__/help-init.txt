@@ -1,0 +1,25 @@
+gf init — project, key, .env.local and the snippet — in one verb
+
+Usage
+  gf init [--env <environment>] [--json] [--yes]
+
+Idempotent. Re-running it does not mint a second key when .env.local already
+  carries one; it says so and leaves the file alone.
+
+  ⚠️ It REFUSES if it cannot get .env.local into .gitignore. A live credential in a
+  tracked file is the failure this verb exists to prevent, so it will not create one and
+  then warn about it.
+
+Flags
+  --env <environment>  development | preview | production (default: development)
+  --project <slug>     the project (default: the remembered one)
+  --yes                accepted and ignored — this verb never prompts
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

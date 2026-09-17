@@ -1,0 +1,23 @@
+gf flags ls — every flag, and what each environment serves
+
+Usage
+  gf flags ls [--project <slug>] [--json]
+
+The "serving" column is what a context with no attributes actually GETS — the
+  answer the SDK's own evaluator gives, which is the answer production gives.
+
+  ⚠️ It is NOT the same as "a version is activated here". A definition whose default
+  variant is false is activated AND serves false; reporting those as one fact is how a
+  console once labelled 34 of 42 flags the wrong way round.
+
+Flags
+  --project <slug>  the project (default: the remembered one)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

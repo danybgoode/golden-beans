@@ -1,0 +1,46 @@
+gf — the Golden Frijoles CLI
+
+  Create a flag in every environment, roll it out, and kill it, from a terminal
+  or from an agent. Every command takes --json.
+
+Usage
+  gf <command> [flags]
+
+Commands
+  login            save a CLI token for this machine
+  logout           forget the saved token on this machine
+  whoami           the account, the credential and the projects it reaches
+  doctor           why is it not working — every check, in order
+  init             project, key, .env.local and the snippet — in one verb
+
+  projects
+  projects ls      the projects this credential reaches
+  projects create  make sure this account has a project (idempotent)
+  projects use     remember which project the other commands act on
+
+  flags
+  flags ls         every flag, and what each environment serves
+  flags get        one flag: its definition, its versions and who changed it
+
+Global flags
+  --json                 machine-readable output on stdout, and nothing else
+  --project <slug>       act on this project (default: the one from `gf projects use`)
+  --api <url>            the deployment to talk to (default: the one you logged in to)
+  --token <token>        use this credential instead of the saved one
+  --help, -h             this text, or a verb's own
+  --version, -V          print the version and exit
+
+Environment
+  GOLDEN_FRIJOLES_TOKEN    a CLI token. Wins over the saved credential — this is the CI path,
+                           and it means CI never has to write a token to disk.
+  GOLDEN_FRIJOLES_URL      the deployment to talk to.
+  GOLDEN_FRIJOLES_PROJECT  the active project.
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

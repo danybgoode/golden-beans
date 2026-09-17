@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "code": "not_found",
+  "error": "No project `acme` is available to this account."
+}

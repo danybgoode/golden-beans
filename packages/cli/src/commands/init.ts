@@ -1,0 +1,251 @@
+// golden-frijoles-cli · Sprint 1, Story 1.4 — `gf init`. The whole onboarding in one verb.
+//
+// ── What it does, in order, and why that order ────────────────────────────────────────────────
+//   1. make sure the account has a project (idempotent — D9)
+//   2. make sure `.env.local` is ignored by git, or REFUSE
+//   3. mint a `flag_read` key for the chosen environment, unless the file already has a live one
+//   4. write `.env.local` at 0600
+//   5. print the snippet that reads exactly the names it just wrote
+//
+// Step 2 comes before step 3 on purpose. Minting first and then discovering the file would be
+// committed leaves a live credential on disk in a tracked file, and "we minted it but could not
+// protect it" is not a state a tool should be able to reach. The shaping named this as a rabbit
+// hole: *"`init` must add the env file to `.gitignore` or refuse."*
+//
+// ── D6: the names are `GOLDEN_FRIJOLES_*`, and the snippet is generated WITH the file ─────────
+// The SDK reads no environment variable at all — `createFlagProvider` takes `flagReadKey` as an
+// argument, and the `GOLDEN_BEANS_*` names appear only in README examples. They are caller-owned
+// addresses, so there is no compatibility to preserve and nothing in shipped code resolves either
+// name. What matters is that the file and its reader agree, so both come out of `ENV_KEYS` below.
+
+import { appendFileSync, chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { isFlagEnvironment } from '@golden-frijoles/sdk'
+import { flagValue } from '../args'
+import type { Command, CommandContext } from '../command'
+import { EXIT, exitForServerCode, type ExitCode } from '../exit-codes'
+
+/** The env-var names `gf init` writes AND the snippet reads. One definition (D6). */
+export const ENV_KEYS = {
+  url: 'GOLDEN_FRIJOLES_URL',
+  flagRead: 'GOLDEN_FRIJOLES_FLAG_READ_KEY',
+  environment: 'GOLDEN_FRIJOLES_ENVIRONMENT',
+} as const
+
+const ENV_FILE = '.env.local'
+const GITIGNORE = '.gitignore'
+
+/** Does `.gitignore` already cover `.env.local`? */
+export function gitignoreCovers(contents: string): boolean {
+  return contents
+    .split('\n')
+    .map((line) => line.trim())
+    .some((line) => ['.env.local', '.env*.local', '.env*', '*.local'].includes(line))
+}
+
+/** The value of `name` in a dotenv file, or null. Quotes stripped; no interpolation, deliberately. */
+export function readEnvValue(contents: string, name: string): string | null {
+  for (const line of contents.split('\n')) {
+    const match = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.*)$`).exec(line)
+    if (!match) continue
+    const raw = match[1].trim().replace(/^(['"])(.*)\1$/, '$2')
+    return raw === '' ? null : raw
+  }
+  return null
+}
+
+/** Replace `name`'s line, or append one. Never duplicates a key — a dotenv file's LAST wins. */
+export function upsertEnvValue(contents: string, name: string, value: string): string {
+  const line = `${name}=${value}`
+  const pattern = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=.*$`, 'm')
+  if (pattern.test(contents)) return contents.replace(pattern, line)
+  const prefix = contents === '' || contents.endsWith('\n') ? contents : `${contents}\n`
+  return `${prefix}${line}\n`
+}
+
+export function snippetFor(environment: string): string {
+  // ⚠️ **`environment` is READ from the variable, not inlined as a literal** — and the first version
+  // of this function inlined it, which the "every name it writes is read" test caught immediately.
+  // An inlined literal means `gf init` writes GOLDEN_FRIJOLES_ENVIRONMENT into the file and then
+  // hands over code that ignores it: change the file, and the app keeps resolving the old
+  // environment with nothing to say so. That is precisely the file-and-its-reader drift D6 exists
+  // to prevent, so the snippet reads every variable the file carries.
+  //
+  // The parameter survives as the DEFAULT in the fallback, so the snippet still runs unchanged in a
+  // process where the variable is missing — and says which environment it would assume.
+  return `import { createFlagProvider } from '@golden-frijoles/sdk'
+
+const flags = createFlagProvider({
+  baseUrl: process.env.${ENV_KEYS.url}!,
+  flagReadKey: process.env.${ENV_KEYS.flagRead}!,
+  environment: (process.env.${ENV_KEYS.environment} ?? '${environment}') as 'development' | 'preview' | 'production',
+})
+
+await flags.initialize()
+const enabled = flags.resolveBooleanEvaluation('checkout.demo_enabled', false, {
+  targetingKey: 'opaque-subject-id',
+}).value`
+}
+
+export const initCommand: Command = {
+  path: ['init'],
+  summary: 'project, key, .env.local and the snippet — in one verb',
+  usage: 'gf init [--env <environment>] [--json] [--yes]',
+  needsAuth: true,
+  detail: `Idempotent. Re-running it does not mint a second key when ${ENV_FILE} already
+  carries one; it says so and leaves the file alone.
+
+  ⚠️ It REFUSES if it cannot get ${ENV_FILE} into ${GITIGNORE}. A live credential in a
+  tracked file is the failure this verb exists to prevent, so it will not create one and
+  then warn about it.`,
+  flags: [
+    { name: 'env', value: '<environment>', describe: 'development | preview | production (default: development)' },
+    { name: 'project', value: '<slug>', describe: 'the project (default: the remembered one)' },
+    // ⚠️ Accepted and INERT, described as such. This verb never prompts — there is nothing for a
+    // --yes to skip — and a flag whose help implies it suppresses a question that does not exist is
+    // a small lie in the one document an agent reads to learn the tool. It stays accepted so a
+    // script that passes it defensively does not hit "unknown flag".
+    { name: 'yes', describe: 'accepted and ignored — this verb never prompts' },
+  ],
+  async run(context): Promise<ExitCode> {
+    const environment = (flagValue(context.args, 'env') ?? 'development').trim()
+    if (!isFlagEnvironment(environment)) {
+      context.emit.fail('invalid', '--env must be development, preview or production.')
+      return EXIT.USAGE
+    }
+
+    // ── 1. a project ──────────────────────────────────────────────────────────────────────────
+    const chosen = flagValue(context.args, 'project')?.trim() || context.auth.activeProject || null
+    let project = chosen
+    if (!project) {
+      const ensured = await context.api!.post<{ created: boolean; slug: string }>('api/v1/cli/projects', {})
+      if (ensured.kind === 'network') {
+        context.emit.fail('server_error', ensured.message)
+        return EXIT.SERVER
+      }
+      if (ensured.kind === 'error') {
+        context.emit.fail(ensured.code, ensured.message)
+        return exitForServerCode(ensured.code)
+      }
+      project = ensured.body.slug
+    }
+
+    // ── 2. the file must be ignorable BEFORE anything is minted ───────────────────────────────
+    const gitignorePath = join(context.cwd, GITIGNORE)
+    const envPath = join(context.cwd, ENV_FILE)
+    const ignoreResult = ensureIgnored(gitignorePath, context)
+    if (ignoreResult !== null) return ignoreResult
+
+    // ── 3. mint, unless the file already carries a live key ───────────────────────────────────
+    const existingEnv = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
+    const existingKey = readEnvValue(existingEnv, ENV_KEYS.flagRead)
+    let minted: { id: string; key: string; expiresAt: string | null } | null = null
+
+    if (existingKey === null) {
+      const result = await context.api!.post<{ id: string; key: string; expiresAt: string | null }>(
+        'api/v1/cli/keys',
+        { project, type: 'flag_read', label: `gf init (${environment})`, environment }
+      )
+      if (result.kind === 'network') {
+        context.emit.fail('server_error', result.message)
+        return EXIT.SERVER
+      }
+      if (result.kind === 'error') {
+        context.emit.fail(result.code, result.message)
+        return exitForServerCode(result.code)
+      }
+      minted = result.body
+    }
+
+    // ── 4. write it ───────────────────────────────────────────────────────────────────────────
+    let next = existingEnv
+    next = upsertEnvValue(next, ENV_KEYS.url, context.api!.baseUrl)
+    next = upsertEnvValue(next, ENV_KEYS.environment, environment)
+    if (minted) next = upsertEnvValue(next, ENV_KEYS.flagRead, minted.key)
+    // 0600 on every write, not only at creation: `writeFileSync`'s mode is ignored for an existing
+    // file, which is how a credential file stays world-readable after the second run.
+    writeFileSync(envPath, next, { mode: 0o600 })
+    try {
+      // chmod separately for the same reason. Best-effort: a filesystem without POSIX modes (a
+      // Windows checkout) must not fail an otherwise-correct init.
+      chmodSync(envPath, 0o600)
+    } catch {
+      /* not every filesystem has modes; the write above is still correct */
+    }
+
+    // ── 5. say what happened, and hand over the snippet ───────────────────────────────────────
+    context.emit.ok(
+      {
+        project,
+        environment,
+        envFile: envPath,
+        // ⚠️ The KEY ID, never the key. Under --json this output is captured by CI and by agents,
+        // and a credential in a captured stdout is a credential in a log. It is in the file the
+        // command just wrote; that is where it belongs.
+        mintedKeyId: minted?.id ?? null,
+        reusedExistingKey: minted === null,
+        variables: Object.values(ENV_KEYS),
+        snippet: snippetFor(environment),
+      },
+      [
+        minted
+          ? `Minted a flag_read key for ${project} (${environment}) and wrote ${ENV_FILE}.`
+          : `${ENV_FILE} already has a ${ENV_KEYS.flagRead}; left it alone and refreshed the other variables.`,
+        `${ENV_FILE} is ignored by git and set to mode 0600.`,
+        '',
+        'Read them like this:',
+        '',
+        snippetFor(environment),
+      ].join('\n')
+    )
+    return EXIT.OK
+  },
+}
+
+/**
+ * Get `.env.local` into `.gitignore`, or refuse.
+ *
+ * Returns `null` when it is now covered, or an exit code when the caller must stop. Refusing is the
+ * whole point: a credential in a tracked file is worse than no credential, and a warning printed
+ * beside one is a warning nobody reads until the repository is public.
+ */
+function ensureIgnored(gitignorePath: string, context: CommandContext): ExitCode | null {
+  let contents: string | null = null
+  try {
+    contents = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : null
+  } catch (err) {
+    // ⚠️ **The READ is inside the try too, and it was not.** `existsSync` is true for a directory
+    // named `.gitignore`, and for a file the process cannot read — `readFileSync` then throws out of
+    // the handler, `run()` catches it as an unexpected failure, and the caller gets EXIT.SERVER and
+    // "gf init failed unexpectedly" for a condition this verb has a precise refusal for. Found by
+    // the test that makes `.gitignore` a directory.
+    context.emit.fail(
+      'invalid',
+      `Could not read ${GITIGNORE} (${err instanceof Error ? err.message : String(err)}). ` +
+        `Nothing was minted and nothing was written. Make ${GITIGNORE} a readable file containing ` +
+        `${ENV_FILE}, then re-run.`
+    )
+    return EXIT.USAGE
+  }
+
+  if (contents !== null && gitignoreCovers(contents)) return null
+
+  try {
+    if (contents === null) {
+      writeFileSync(gitignorePath, `${ENV_FILE}\n`)
+    } else {
+      const prefix = contents.endsWith('\n') || contents === '' ? '' : '\n'
+      appendFileSync(gitignorePath, `${prefix}${ENV_FILE}\n`)
+    }
+    context.emit.note(`Added ${ENV_FILE} to ${GITIGNORE}.`)
+    return null
+  } catch (err) {
+    context.emit.fail(
+      'invalid',
+      `Could not add ${ENV_FILE} to ${GITIGNORE} (${err instanceof Error ? err.message : String(err)}). ` +
+        `Nothing was minted and nothing was written — a credential in a tracked file is the one ` +
+        `outcome this command will not produce. Add the line yourself and re-run.`
+    )
+    return EXIT.USAGE
+  }
+}

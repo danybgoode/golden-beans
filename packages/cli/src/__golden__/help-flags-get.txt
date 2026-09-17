@@ -1,0 +1,16 @@
+gf flags get — one flag: its definition, its versions and who changed it
+
+Usage
+  gf flags get <key> [--project <slug>] [--json]
+
+Flags
+  --project <slug>  the project (default: the remembered one)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

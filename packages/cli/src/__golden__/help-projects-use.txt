@@ -1,0 +1,17 @@
+gf projects use — remember which project the other commands act on
+
+Usage
+  gf projects use <slug>
+
+Writes the choice into the saved credentials file. --project on any command
+  overrides it for that one run, and GOLDEN_FRIJOLES_PROJECT overrides both — which is
+  what CI should set, since CI has no credentials file to write.
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

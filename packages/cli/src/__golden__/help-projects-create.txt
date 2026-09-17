@@ -1,0 +1,23 @@
+gf projects create — make sure this account has a project (idempotent)
+
+Usage
+  gf projects create [--json]
+
+⚠️ An ENSURE, not a second project.
+
+  The database enforces one self-serve project per account — a partial unique index that
+  closes a signup race, not a plan limit. So this creates your project if you somehow have
+  none (a failed provision leaves that state reachable) and otherwise reports the one you
+  already have, with created: false. It never mints a second.
+
+  It also never returns an ingest key. Use `gf keys create --type ingest` for that, where
+  the credential gets its own confirmation and its own audit row.
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry
