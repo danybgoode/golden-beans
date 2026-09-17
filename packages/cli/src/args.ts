@@ -146,6 +146,15 @@ export function boolFlag(args: ParsedArgs, name: string): boolean {
  * place with exit 0 — the CLI agreeing with a command nobody wrote. Fail loud (CODE-QUALITY #7).
  */
 export function unknownFlags(args: ParsedArgs, known: readonly string[]): string[] {
-  const allowed = new Set([...known, 'json', 'help', 'h', 'version', 'V', 'no-color', 'api', 'token'])
+  // ⚠️ **`project` belongs in this list, and its absence made `gf --help` lie** (fresh reviewer,
+  // PR #149). The help's "Global flags" block documents `--project`, and six verbs — `whoami`,
+  // `login`, `logout`, `projects ls|create|use` — rejected it with exit 1 and a JSON error saying
+  // the flag it had just been shown does not exist.
+  //
+  // This is the identical defect `run.ts` records fixing for `--version` in the same review: a flag
+  // documented as global is honoured globally, and the alternative is a help text an agent cannot
+  // trust, which is the whole of D5. Accepting it on a verb that ignores it costs nothing; the
+  // verbs that USE it still declare it so it appears in their own `--help`.
+  const allowed = new Set([...known, 'json', 'help', 'h', 'version', 'V', 'no-color', 'api', 'token', 'project'])
   return [...args.flags.keys()].filter((name) => !allowed.has(name)).sort()
 }

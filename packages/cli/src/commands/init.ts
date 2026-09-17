@@ -18,8 +18,9 @@
 // addresses, so there is no compatibility to preserve and nothing in shipped code resolves either
 // name. What matters is that the file and its reader agree, so both come out of `ENV_KEYS` below.
 
+import { execFileSync } from 'node:child_process'
 import { appendFileSync, chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { isFlagEnvironment } from '@golden-frijoles/sdk'
 import { flagValue } from '../args'
 import type { Command, CommandContext } from '../command'
@@ -221,6 +222,43 @@ export const initCommand: Command = {
 }
 
 /**
+ * Ask GIT whether it really ignores the file, rather than trusting the line we just wrote.
+ *
+ * ⚠️ **A line in `.gitignore` does not mean a file is ignored** (fresh reviewer, PR #149). A
+ * `.env.local` that is ALREADY TRACKED ignores `.gitignore` entirely, and a later `!.env.local`
+ * negation overrides an earlier match. `gf init` printed "ignored by git" on the strength of having
+ * appended a line — a checkable claim, asserted rather than checked, on the one property that stops
+ * a live credential reaching a public repository.
+ *
+ * `git check-ignore` is git's own answer, so there is nothing to reimplement and nothing to get
+ * subtly wrong about precedence.
+ *
+ * Outside a git repository — or with no `git` on PATH — this returns `null` (proceed). There is no
+ * index to be tracked in, so there is nothing this check protects against, and refusing to init a
+ * plain directory because `git` is missing would be a worse answer than the one it prevents.
+ */
+function gitReallyIgnores(gitignorePath: string, context: CommandContext): ExitCode | null {
+  const cwd = dirname(gitignorePath)
+  try {
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd, stdio: 'ignore' })
+  } catch {
+    return null // not a repository, or no git — nothing to be tracked in
+  }
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', ENV_FILE], { cwd, stdio: 'ignore' })
+    return null // git agrees it is ignored
+  } catch {
+    context.emit.fail(
+      'invalid',
+      `git does NOT ignore ${ENV_FILE} here, even though ${GITIGNORE} names it — it is most likely ` +
+        `already tracked, or a later rule un-ignores it. Nothing was minted and nothing was written. ` +
+        `Run \`git rm --cached ${ENV_FILE}\` (or fix the rule), then re-run.`
+    )
+    return EXIT.USAGE
+  }
+}
+
+/**
  * Does this `flag_read` key still resolve a snapshot?
  *
  * Exercised against `/api/v1/flags/snapshot` — the route that actually serves it — because that is
@@ -280,7 +318,7 @@ function ensureIgnored(gitignorePath: string, context: CommandContext): ExitCode
     return EXIT.USAGE
   }
 
-  if (contents !== null && gitignoreCovers(contents)) return null
+  if (contents !== null && gitignoreCovers(contents)) return gitReallyIgnores(gitignorePath, context)
 
   try {
     if (contents === null) {
@@ -290,7 +328,7 @@ function ensureIgnored(gitignorePath: string, context: CommandContext): ExitCode
       appendFileSync(gitignorePath, `${prefix}${ENV_FILE}\n`)
     }
     context.emit.note(`Added ${ENV_FILE} to ${GITIGNORE}.`)
-    return null
+    return gitReallyIgnores(gitignorePath, context)
   } catch (err) {
     context.emit.fail(
       'invalid',

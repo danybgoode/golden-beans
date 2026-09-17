@@ -1,7 +1,7 @@
 // golden-frijoles-cli · Sprint 1, Story 1.1 — `--help`, rendered from the command table.
 //
 // ── D5: this output is a CONTRACT ─────────────────────────────────────────────────────────────
-// `src/__golden__/help.txt` holds these exact bytes and `help.test.ts` diffs them. That is not
+// `src/__golden__/help.txt` holds these exact bytes and `golden.test.ts` diffs them. That is not
 // pedantry about copy: an agent handed `gf --help` reads it to learn the verbs and the flags, so a
 // silent change to this text changes what every agent believes the tool can do. A golden file makes
 // the change arrive in review, where someone can decide it is intended.

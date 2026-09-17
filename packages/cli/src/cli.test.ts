@@ -10,6 +10,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as Module from 'node:module'
+import { execFileSync } from 'node:child_process'
 
 type ResolveHook = (
   specifier: string,
@@ -509,6 +510,40 @@ test('⚠️ gf init REFUSES rather than minting into a repository it cannot pro
   })
   assert.equal(code, EXIT.USAGE)
   assert.equal(existsSync(join(cwd, '.env.local')), false)
+})
+
+test('\u26a0\ufe0f gf init REFUSES when git does not actually ignore .env.local', async () => {
+  // A line in .gitignore is not the same fact as "git ignores this file": a file that is ALREADY
+  // TRACKED ignores .gitignore entirely. `gf init` used to print "ignored by git" on the strength of
+  // having appended the line (fresh reviewer, PR #149) — a checkable claim, asserted rather than
+  // checked, on the one property that keeps a live credential out of a public repository.
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-tracked-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd, stdio: 'ignore' })
+  git('init', '-q')
+  git('config', 'user.email', 'spec@example.test')
+  git('config', 'user.name', 'spec')
+  // Tracked FIRST, then ignored. This is the real-world shape: someone committed the file once.
+  writeFileSync(join(cwd, '.env.local'), 'EXISTING=1\n')
+  git('add', '.env.local')
+  git('commit', '-qm', 'track it')
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+
+  const { writer, err } = capture()
+  const code = await run({
+    argv: ['init'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: (() => {
+      throw new Error('nothing may be minted into a repository that would commit the credential')
+    }) as unknown as typeof fetch,
+  })
+
+  assert.equal(code, EXIT.USAGE)
+  assert.match(err.join('\n'), /git rm --cached/)
+  // And the file is untouched — no credential was written into a tracked file.
+  assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), 'EXISTING=1\n')
 })
 
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
