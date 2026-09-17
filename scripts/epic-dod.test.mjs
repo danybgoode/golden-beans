@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { citations, evaluate, frontmatter, ITEMS, refKey } from './epic-dod.mjs';
+import { citations, evaluate, frontmatter, ITEMS, parseTreeUrl, refKey } from './epic-dod.mjs';
 
 const README_SHIPPED = '---\nstatus: shipped   # closed\nslug: demo\n---\n# Epic\n';
 const README_OPEN = '---\nstatus: in-progress\nslug: demo\n---\n# Epic\n';
@@ -63,10 +63,23 @@ test('a sprint citing an UNMERGED PR fails even when another citation is merged'
 test('an epic whose sprint docs live in another repo reports them as external, not failed', () => {
   const readme =
     '---\nstatus: shipped\nslug: demo\nsprints_in: https://github.com/o/foundation/tree/main/Roadmap/x\n---\n';
-  const r = evaluate({ ...closedEpic, readme, sprints: [], retro: null });
+  const r = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: true });
   assert.equal(r.items['sprints-ticked'].state, 'external');
   assert.equal(r.items['retro-written'].state, 'external');
   assert.equal(r.ok, true);
+  // A typo'd or unreachable sprints_in must not turn the sprint items green.
+  const missing = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: false });
+  assert.equal(missing.items['sprints-ticked'].state, 'fail');
+  assert.equal(missing.ok, false);
+  const unknown = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: null });
+  assert.equal(unknown.items['sprints-merged'].state, 'unavailable');
+  assert.equal(unknown.ok, false);
+  assert.deepEqual(parseTreeUrl('https://github.com/o/r/tree/main/Roadmap/09-x/slug'), {
+    repo: 'o/r',
+    ref: 'main',
+    path: 'Roadmap/09-x/slug',
+  });
+  assert.equal(parseTreeUrl('see the other repo'), null);
 });
 
 test('an exemption excuses a failure with its reason; an exemption on a PASSING item is stale and fails', () => {
@@ -78,6 +91,18 @@ test('an exemption excuses a failure with its reason; an exemption on a PASSING 
   assert.equal(stale.items['branch-deleted'].state, 'fail');
   assert.match(stale.items['branch-deleted'].detail, /STALE exemption/);
   assert.equal(stale.ok, false);
+});
+
+test('an exemption never turns UNAVAILABLE into a pass', () => {
+  const exempt = [{ epic: 'demo', item: 'branch-deleted', reason: 'closed before the convention' }];
+  const r = evaluate({ ...closedEpic, branches: null, exemptions: exempt });
+  assert.equal(r.items['branch-deleted'].state, 'unavailable');
+  assert.equal(r.ok, false);
+});
+
+test('an explicit owner/repo#N is not ALSO read as a local #N', () => {
+  const keys = citations('merged as o/r#12 only').map(refKey);
+  assert.deepEqual(keys, ['pr:o/r#12']);
 });
 
 test('citations: PRs, aliased repos, explicit owner/repo and commits — but never bare numbers', () => {

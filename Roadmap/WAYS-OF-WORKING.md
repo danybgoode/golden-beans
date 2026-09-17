@@ -191,7 +191,8 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
 - **Worker death is a normal case.** Each builder on its own worktree; a killed worker's uncommitted tree
   is evidence, not garbage; **verify by re-deriving repo state, never by trusting a completion report** —
   a rate-limited subagent still returns a plausible-sounding result. Compact at sprint/PR boundaries.
-- Commit messages end with the `Co-Authored-By: Claude` trailer. - **Language.** Docs are written in **English** — everything under `Roadmap/`, `tasks/`, code
+- Commit messages end with the `Co-Authored-By: Claude` trailer.
+- **Language.** Docs are written in **English** — everything under `Roadmap/`, `tasks/`, code
   comments, and PR descriptions. **App copy is English too** (the landing renders `<html lang="en">`);
   Golden Beans is a standalone English-language product with **no bilingual requirement** — do not
   introduce a locale/translation layer or make a surface bilingual without a deliberate scope decision
@@ -262,7 +263,7 @@ is mechanical — not to use one tier for everything.
 | A well-specified story with a clear acceptance check | **Mid** (Sonnet-class subagent) | Bounded, verifiable, cheap to re-run. |
 | Read-only research / data-availability reports over a large or foreign codebase | **Mid**, background, parallel | Fan-out with no write conflicts. Ask for an explicit "NOT DERIVABLE" list — an honest gap beats an optimistic guess. |
 | Money · auth · migrations · tenancy · concurrency | **Strongest**, never delegated | Same tier that decides who merges. |
-| PR review — a PRIMARY gate, not advisory | **One external cross-family pass, routed** by `review-route.mjs` (`codex → agy → vibe → claude`, excluding whoever built it), **plus the fresh `pr-reviewer` subagent on every PR**, **plus a lean security lens** when the changed paths trigger it. | Family independence and context independence are different properties; each is covered exactly once (2026-09-16). The second generalist external pass bought corroboration of the same kind — the fresh reviewer buys a kind the external reader structurally cannot: repo, sibling-repo and `origin/main` state. Findings are resolved before merge. See *Review & merge*. |
+| PR review — the judgment layers (CI is the gate; reviews authorize nothing) | **One external cross-family pass, routed** by `review-route.mjs` (`codex → agy → vibe → claude`, excluding whoever built it), **plus the fresh `pr-reviewer` subagent on every PR**, **plus a lean security lens** when the changed paths trigger it. | Family independence and context independence are different properties; each is covered exactly once (2026-09-16). The second generalist external pass bought corroboration of the same kind — the fresh reviewer buys a kind the external reader structurally cannot: repo, sibling-repo and `origin/main` state. Findings are resolved before merge. See *Review & merge*. |
 | File-derived prose: retro, poster entry, sprint wrap, the merge report | **Devin — the dedicated prose writer**, with Agy `gpt-oss-120b-medium` as fallback | Devin owns prose so Codex/Agy quota stays free for review and building. **One** prose model, never a Gemini one — a model-level fallback between registers is what silently changed every report's voice (see `PROSE_MODEL`). **Always read the draft.** |
 
 ### Verifying delegated work — the rule that is not optional

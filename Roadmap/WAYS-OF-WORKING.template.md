@@ -167,7 +167,8 @@ retrospective, no leftover branch) — **and** the three judgment items are true
 - [ ] **`RETROSPECTIVE.md`** says what actually happened, and its durable learnings are promoted into
       `Roadmap/LEARNINGS.md` — sharpen the existing line, don't append a near-duplicate.
 - [ ] **Each sprint has a smoke walkthrough** a person can follow blind, with real URLs; money/auth steps
-      are flagged by name as owed to the product owner. {{fill:kill_switch_dod}}
+      are flagged by name as owed to the product owner.
+{{fill:kill_switch_dod}}
 
 ## Documentation map
 
@@ -190,7 +191,8 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
 - **Worker death is a normal case.** Each builder on its own worktree; a killed worker's uncommitted tree
   is evidence, not garbage; **verify by re-deriving repo state, never by trusting a completion report** —
   a rate-limited subagent still returns a plausible-sounding result. Compact at sprint/PR boundaries.
-- Commit messages end with the `Co-Authored-By: Claude` trailer. {{fill:language_policy}}
+- Commit messages end with the `Co-Authored-By: Claude` trailer.
+{{fill:language_policy}}
 
 {{fill:project_sections}}
 

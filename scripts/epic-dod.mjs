@@ -79,7 +79,10 @@ export function citations(text, { aliases = {} } = {}) {
   };
   for (const m of t.matchAll(/\b([\w.-]+\/[\w.-]+)#(\d+)\b/g))
     add({ kind: 'pr', repo: m[1], number: Number(m[2]) });
-  for (const m of t.matchAll(/(?:\b([a-z][\w-]*)\s+)?(?:PR\s*)?\[?#(\d{1,5})\b/gi)) {
+  // Blank out the explicit `owner/repo#N` spans first: the generic pass below would otherwise ALSO read
+  // them as a local `#N` and verify a PR that does not exist in this repo (found by codex on #17).
+  const rest = t.replace(/\b[\w.-]+\/[\w.-]+#\d+\b/g, ' ');
+  for (const m of rest.matchAll(/(?:\b([a-z][\w-]*)\s+)?(?:PR\s*)?\[?#(\d{1,5})\b/gi)) {
     const alias = m[1] && aliases[m[1].toLowerCase()];
     add({ kind: 'pr', repo: alias || null, number: Number(m[2]) });
   }
@@ -103,10 +106,21 @@ export function evaluate({
   branches,
   aliases = {},
   exemptions = [],
+  externalVerified = null,
 }) {
   const fm = frontmatter(readme);
   const items = {};
+  // `sprints_in` is only trusted when the place it names was actually found: a typo'd or unreachable URL
+  // must not turn the sprint items green (found by codex on #179). null = could not check.
   const external = Boolean(fm.sprints_in) && sprints.length === 0;
+  const externalState =
+    externalVerified === true ? 'external' : externalVerified === false ? 'fail' : 'unavailable';
+  const externalDetail =
+    externalVerified === true
+      ? `sprint docs live in ${fm.sprints_in}`
+      : externalVerified === false
+        ? `sprints_in points at nothing: ${fm.sprints_in}`
+        : `could not verify sprints_in: ${fm.sprints_in}`;
 
   items['readme-shipped'] =
     fm.status === 'shipped'
@@ -114,8 +128,8 @@ export function evaluate({
       : { state: 'fail', detail: `README frontmatter status is '${fm.status || '(missing)'}'` };
 
   if (external) {
-    items['sprints-ticked'] = { state: 'external', detail: `sprint docs live in ${fm.sprints_in}` };
-    items['sprints-merged'] = { state: 'external', detail: `sprint docs live in ${fm.sprints_in}` };
+    items['sprints-ticked'] = { state: externalState, detail: externalDetail };
+    items['sprints-merged'] = { state: externalState, detail: externalDetail };
   } else if (!sprints.length) {
     items['sprints-ticked'] = { state: 'fail', detail: 'no sprint-N.md files' };
     items['sprints-merged'] = { state: 'fail', detail: 'no sprint-N.md files' };
@@ -150,7 +164,10 @@ export function evaluate({
 
   items['retro-written'] =
     retro == null && Boolean(fm.sprints_in)
-      ? { state: 'external', detail: `retrospective lives in ${fm.sprints_in}` }
+      ? {
+          state: externalState,
+          detail: externalVerified === true ? `retrospective lives in ${fm.sprints_in}` : externalDetail,
+        }
       : retro == null
         ? { state: 'fail', detail: 'RETROSPECTIVE.md missing' }
         : /_Closed:\s*20\d\d-\d\d-\d\d_/.test(retro)
@@ -171,6 +188,9 @@ export function evaluate({
   for (const e of epicExemptions) {
     const it = items[e.item];
     if (!it) continue;
+    // An exemption excuses a known FAILURE. It never turns "could not check" into a pass — unavailable
+    // stays unavailable (found by codex on #179).
+    if (it.state === 'unavailable') continue;
     if (it.state === 'pass' || it.state === 'external') {
       items[e.item] = {
         state: 'fail',
@@ -234,6 +254,27 @@ function verify(refs, deps = {}) {
   return out;
 }
 
+/**
+ * Does a `sprints_in` URL name a real directory? Only github.com tree URLs are understood; anything else is
+ * unverifiable (null), never assumed. true = found, false = GitHub says it does not exist.
+ */
+export function parseTreeUrl(url) {
+  const m = /^https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/tree\/([\w.\/-]+?)\/(Roadmap\/[^\s#?]+?)\/?$/.exec(
+    String(url || '')
+  );
+  return m ? { repo: m[1], ref: m[2], path: m[3] } : null;
+}
+
+function verifyExternal(url, deps = {}) {
+  if (!url) return null;
+  const t = parseTreeUrl(url);
+  if (!t) return null;
+  const exec = deps.run ?? run;
+  const r = exec('gh', ['api', `repos/${t.repo}/contents/${t.path}?ref=${t.ref}`, '--jq', 'length']);
+  if (r.status === 0) return true;
+  return /404|Not Found/.test(`${r.stderr || ''}${r.stdout || ''}`) ? false : null;
+}
+
 function main() {
   const i = process.argv.indexOf('--check');
   const target = i >= 0 ? process.argv[i + 1] : null;
@@ -259,6 +300,8 @@ function main() {
   const retroPath = join(dir, 'RETROSPECTIVE.md');
   run('git', ['fetch', '-q', 'origin']);
   const refs = sprints.flatMap((s) => citations(s.text, { aliases }));
+  const readmeText = readFileSync(join(dir, 'README.md'), 'utf8');
+  const externalVerified = verifyExternal(frontmatter(readmeText).sprints_in);
   const verified = verify(refs);
   const ls = run('git', ['ls-remote', '--heads', 'origin']);
   const branches =
@@ -270,7 +313,8 @@ function main() {
       : null;
   const { ok, items } = evaluate({
     slug,
-    readme: readFileSync(join(dir, 'README.md'), 'utf8'),
+    readme: readmeText,
+    externalVerified,
     sprints,
     retro: existsSync(retroPath) ? readFileSync(retroPath, 'utf8') : null,
     verified,
