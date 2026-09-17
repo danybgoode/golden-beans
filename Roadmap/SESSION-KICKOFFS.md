@@ -47,7 +47,7 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 | **Build epic \<epic\>** | §2 — build a WHOLE epic in one orchestrated run (**the default**). Generate the prompt: `node skills/groom/emit-epic-kickoff.mjs --epic <slug>` |
 | **Build S\<N\> of \<epic\>** | §2 — build a single sprint (the exception: one-sprint epic, or the next sprint's scope genuinely isn't knowable yet) |
 | **Spike \<name\>** | §3 — run a spike |
-| **Review PR #\<N\>** | §4 — route it: `node scripts/review-route.mjs --builder <who> --tier <low\|high> <N>` → **two** cross-family passes |
+| **Review PR #\<N\>** | §4 — route it: `node scripts/review-route.mjs --builder <who> <N>` → one external general pass + the fresh `pr-reviewer` subagent (+ a security lens when the paths trigger it) |
 | **Cross-review PR #\<N\>** | §4 — synonym. Always route it; hand-picking `--agent` is how a family reviews its own diff. Fresh reviewer subagent on HIGH only, **never on LOW** |
 | **Refund \<tool\>** | a reviewer family is capped — top up the quota so the external layer stays lit instead of being replaced by orchestrator subagents |
 | **Panel: \<scope-doc \| ask\>** | advisory second opinion on a *plan* — `node scripts/cross-panel.mjs <doc> --lens both --agent codex\|antigravity` (single-pass, print-only, never gates; surfaced at groom Stage 2/4) |
@@ -106,20 +106,22 @@ already-possible / light-enhancement / genuinely-new; end with Go / No-go / Go-w
 I sign off the decision before anything gets groomed.
 ```
 
-## 4 · Review a PR — two cross-family passes, routed (NOT the builder)
+## 4 · Review a PR — one external pass (+ a security lens when triggered), routed (NOT the builder)
+
 ```
-Review PR #<N> cold after the deterministic gate. The builder stays architect/coordinator and does not
-approve its own diff. Route it FIRST — never hand-pick --agent:
-  node scripts/review-route.mjs --builder <who-wrote-it> --tier <low|high> <N>
-Run the TWO cross-family passes it prints (a family never reviews its own diff — with a coordinating
-Codex, `--agent codex` on a Codex-built diff is a same-family pass wearing a cross-family label).
-On a LOW PR those two plus green CI are the WHOLE layer — do NOT also spawn your own reviewer subagents.
-On HIGH, add the fresh reviewer subagent on top. If a family is quota-capped, STOP AND ASK FOR A REFUND
-before substituting subagents; proceed only after the window review-route states, and record the
-downgrade in the PR body.
-Check correctness + AGENTS.md, post findings, and resolve every Blocking item.
-Re-review substantive fixes; use targeted validation for docs/presentation-only deltas.
+node scripts/review-route.mjs --builder <who-wrote-it> <N>
 ```
+
+It prints the exact commands: the **general pass** by the highest-preference family that did not build the
+diff, the **security lens** by the next family when a changed path matches `scripts/review-config.json` →
+`securityPaths` (or the body declares `risk: high`), and the **fresh `pr-reviewer` subagent**, which runs
+on every non-trivial PR here.
+
+A capped family falls to the next in the order (`codex → agy → vibe → claude`); there is no refund pause.
+One family left runs both prompts and you say so in the PR body; none left means the layer is DARK and you
+say that. **A reviewer that returns nothing is a FAILED run** — the script prints its reply, exits non-zero
+and fails the PR's `cross-review/<lens>` status. Findings are fixed or answered on the PR; the builder
+merges on a green gate at any tier.
 
 ## 5 · Strategy / process work — strong model
 ```
