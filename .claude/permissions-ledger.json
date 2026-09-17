@@ -23,7 +23,7 @@
       "list": "deny",
       "rule": "Bash(*=* vercel --prod*)",
       "probe": "PATH=/x:$PATH vercel --prod --yes",
-      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -47,7 +47,7 @@
       "list": "deny",
       "rule": "Bash(*=* vercel deploy*)",
       "probe": "PATH=/x:$PATH vercel deploy --prod",
-      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -89,7 +89,7 @@
       "list": "deny",
       "rule": "Bash(*=* supabase db push*)",
       "probe": "PATH=/x:$PATH supabase db push",
-      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -125,7 +125,7 @@
       "list": "deny",
       "rule": "Bash(*=* git push *--force*)",
       "probe": "PATH=/x:$PATH git push origin smoke-branch --force",
-      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -208,73 +208,73 @@
     {
       "list": "deny",
       "rule": "Bash(rm -rf*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -rfv smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(*=* rm -rf*)",
       "probe": "PATH=/x:$PATH rm -rf smoke-victim",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
       "rule": "Bash(env *rm -rf*)",
       "probe": "env PATH=/x:$PATH rm -rf smoke-victim",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay."
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay."
     },
     {
       "list": "deny",
       "rule": "Bash(rm -fr*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -fr smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -Rf*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -Rf smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -fR*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -fR smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -vrf*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -vrf smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -r -f*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -r -f smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -R -f*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -R -f smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -f -r*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -f -r smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm -r --force*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -r --force smoke-victim"
     },
     {
       "list": "deny",
       "rule": "Bash(rm --recursive --force*)",
-      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm --recursive --force smoke-victim"
     },
     {
@@ -452,13 +452,13 @@
     {
       "list": "ask",
       "rule": "Bash(gcloud run services update *--set-env-vars*)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
       "probe": "gcloud run services update svc --set-env-vars=A=b"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud run services update *--update-env-vars*)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
       "probe": "gcloud run services update svc --update-env-vars=A=b"
     },
     {

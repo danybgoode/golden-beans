@@ -66,7 +66,7 @@ export function frontmatter(text) {
  *   a 7–40 char hex word with at least one letter → a commit
  * Numbers without `#` (CI run ids, dates) are deliberately not citations.
  */
-export function citations(text, { aliases = {} } = {}) {
+export function citations(text, { aliases = {}, bareRefsRepo = null } = {}) {
   const t = String(text);
   const refs = [];
   const seen = new Set();
@@ -77,14 +77,30 @@ export function citations(text, { aliases = {} } = {}) {
       refs.push(r);
     }
   };
-  for (const m of t.matchAll(/\b([\w.-]+\/[\w.-]+)#(\d+)\b/g))
+  let rest = t;
+  // 1. Full GitHub PR links — the least ambiguous citation there is.
+  for (const m of t.matchAll(/https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/g))
     add({ kind: 'pr', repo: m[1], number: Number(m[2]) });
-  // Blank out the explicit `owner/repo#N` spans first: the generic pass below would otherwise ALSO read
-  // them as a local `#N` and verify a PR that does not exist in this repo (found by codex on #17).
-  const rest = t.replace(/\b[\w.-]+\/[\w.-]+#\d+\b/g, ' ');
-  for (const m of rest.matchAll(/(?:\b([a-z][\w-]*)\s+)?(?:PR\s*)?\[?#(\d{1,5})\b/gi)) {
-    const alias = m[1] && aliases[m[1].toLowerCase()];
-    add({ kind: 'pr', repo: alias || null, number: Number(m[2]) });
+  rest = rest.replace(/https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/g, ' ');
+  // 2. Explicit owner/repo#N.
+  for (const m of rest.matchAll(/\b([\w.-]+\/[\w.-]+)#(\d+)\b/g))
+    add({ kind: 'pr', repo: m[1], number: Number(m[2]) });
+  rest = rest.replace(/\b[\w.-]+\/[\w.-]+#\d+\b/g, ' ');
+  // 3. A named repo: `backend #33`, `medusa-bonsai-backend#33`, `frontend PR [#100]`. Only names the
+  //    alias map knows count; an unknown word before a `#N` is prose, not a repo.
+  for (const m of rest.matchAll(/\b([a-z][\w-]*)\s*(?:PR\s*)?\[?#(\d{1,5})\b/gi)) {
+    const repo = aliases[m[1].toLowerCase()];
+    if (repo) add({ kind: 'pr', repo, number: Number(m[2]) });
+  }
+  rest = rest.replace(/\b([a-z][\w-]*)\s*(?:PR\s*)?\[?#\d{1,5}\b/gi, (w, name) =>
+    aliases[name.toLowerCase()] ? ' ' : w
+  );
+  // 4. A bare `#N` means THIS repo only where the project says so (`bareRefsRepo`). In a multi-repo project
+  //    a bare `#N` is ambiguous — resolving it against the docs repo verified the wrong PRs on real epics
+  //    (found by the fresh review of miyagi-product-management#179), so it is ignored, never guessed.
+  if (bareRefsRepo) {
+    for (const m of rest.matchAll(/(?<![\w/])\[?#(\d{1,5})\b/g))
+      add({ kind: 'pr', repo: bareRefsRepo, number: Number(m[1]) });
   }
   for (const m of t.matchAll(/(?<![\w/#-])([0-9a-f]{7,40})(?![\w-])/g)) {
     if (/[a-f]/.test(m[1])) add({ kind: 'commit', sha: m[1] });
@@ -107,6 +123,7 @@ export function evaluate({
   aliases = {},
   exemptions = [],
   externalVerified = null,
+  bareRefsRepo = null,
 }) {
   const fm = frontmatter(readme);
   const items = {};
@@ -134,7 +151,7 @@ export function evaluate({
     items['sprints-ticked'] = { state: 'fail', detail: 'no sprint-N.md files' };
     items['sprints-merged'] = { state: 'fail', detail: 'no sprint-N.md files' };
   } else {
-    const unticked = sprints.filter((s) => !/^\*\*Status:\*\*\s*✅/m.test(s.text)).map((s) => s.name);
+    const unticked = sprints.filter((s) => !/^\*\*Status:\*\*\s*(?:✅|🟩)/m.test(s.text)).map((s) => s.name);
     items['sprints-ticked'] = unticked.length
       ? { state: 'fail', detail: `not ✅: ${unticked.join(', ')}` }
       : { state: 'pass', detail: `${sprints.length} sprint(s) ✅` };
@@ -142,9 +159,15 @@ export function evaluate({
     const problems = [];
     let unavailable = false;
     for (const s of sprints) {
-      const refs = citations(s.text, { aliases });
+      const refs = citations(s.text, { aliases, bareRefsRepo });
       if (!refs.length) {
-        problems.push(`${s.name} cites no PR or commit`);
+        // Bare `#N` refs exist but nothing says which repo they mean: UNKNOWN, not "cites nothing".
+        if (/(?<![\w/])#\d{1,5}\b/.test(s.text)) {
+          unavailable = true;
+          problems.push(
+            `${s.name}: only bare #N citations, and bareRefsRepo is not set — could be verified only with a repo`
+          );
+        } else problems.push(`${s.name} cites no PR or commit`);
         continue;
       }
       const states = refs.map((r) => verified.get(refKey(r)) || 'unavailable');
@@ -170,7 +193,7 @@ export function evaluate({
         }
       : retro == null
         ? { state: 'fail', detail: 'RETROSPECTIVE.md missing' }
-        : /_Closed:\s*20\d\d-\d\d-\d\d_/.test(retro)
+        : /_Closed:\s*20\d\d-\d\d-\d\d/.test(retro)
           ? { state: 'pass', detail: 'closed with a real date' }
           : { state: 'fail', detail: 'RETROSPECTIVE.md is still the stub (no `_Closed: YYYY-MM-DD_`)' };
 
@@ -299,7 +322,8 @@ function main() {
     .map((f) => ({ name: f, text: readFileSync(join(dir, f), 'utf8') }));
   const retroPath = join(dir, 'RETROSPECTIVE.md');
   run('git', ['fetch', '-q', 'origin']);
-  const refs = sprints.flatMap((s) => citations(s.text, { aliases }));
+  const bareRefsRepo = cfg.bareRefsRepo || null;
+  const refs = sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo }));
   const readmeText = readFileSync(join(dir, 'README.md'), 'utf8');
   const externalVerified = verifyExternal(frontmatter(readmeText).sprints_in);
   const verified = verify(refs);
@@ -315,6 +339,7 @@ function main() {
     slug,
     readme: readmeText,
     externalVerified,
+    bareRefsRepo,
     sprints,
     retro: existsSync(retroPath) ? readFileSync(retroPath, 'utf8') : null,
     verified,

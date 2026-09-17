@@ -4,7 +4,7 @@ import { citations, evaluate, frontmatter, ITEMS, parseTreeUrl, refKey } from '.
 
 const README_SHIPPED = '---\nstatus: shipped   # closed\nslug: demo\n---\n# Epic\n';
 const README_OPEN = '---\nstatus: in-progress\nslug: demo\n---\n# Epic\n';
-const SPRINT_DONE = { name: 'sprint-1.md', text: '# S1\n\n**Status:** ✅ shipped — PR #12 merged\n' };
+const SPRINT_DONE = { name: 'sprint-1.md', text: '# S1\n\n**Status:** ✅ shipped — o/r#12 merged\n' };
 const SPRINT_OPEN = { name: 'sprint-2.md', text: '# S2\n\n**Status:** ⬜ not started\n' };
 const RETRO_REAL = '# Retro\n\n_Closed: 2026-09-17_\n';
 const RETRO_STUB = '# Retro\n\n_Closed: <date>_\n';
@@ -15,7 +15,7 @@ const closedEpic = {
   readme: README_SHIPPED,
   sprints: [SPRINT_DONE],
   retro: RETRO_REAL,
-  verified: merged('pr:.#12'),
+  verified: merged('pr:o/r#12'),
   branches: ['main', 'feat/other'],
 };
 
@@ -31,7 +31,7 @@ test('a known-OPEN epic reports exactly what is outstanding — it never claims 
     readme: README_OPEN,
     sprints: [SPRINT_DONE, SPRINT_OPEN],
     retro: RETRO_STUB,
-    verified: merged('pr:.#12'),
+    verified: merged('pr:o/r#12'),
     branches: ['main', 'feat/demo-s2'],
   });
   assert.equal(r.ok, false);
@@ -50,10 +50,10 @@ test('UNAVAILABLE is not pass — an unverifiable citation or an unreadable remo
 });
 
 test('a sprint citing an UNMERGED PR fails even when another citation is merged', () => {
-  const sprint = { name: 'sprint-1.md', text: '**Status:** ✅ done — #12 and #13\n' };
+  const sprint = { name: 'sprint-1.md', text: '**Status:** ✅ done — o/r#12 and o/r#13\n' };
   const verified = new Map([
-    ['pr:.#12', 'merged'],
-    ['pr:.#13', 'unmerged'],
+    ['pr:o/r#12', 'merged'],
+    ['pr:o/r#13', 'unmerged'],
   ]);
   const r = evaluate({ ...closedEpic, sprints: [sprint], verified });
   assert.equal(r.items['sprints-merged'].state, 'fail');
@@ -105,15 +105,33 @@ test('an explicit owner/repo#N is not ALSO read as a local #N', () => {
   assert.deepEqual(keys, ['pr:o/r#12']);
 });
 
-test('citations: PRs, aliased repos, explicit owner/repo and commits — but never bare numbers', () => {
-  const text = 'merged (product-repo #106, plugin-repo #5 + #6), commit b13ae84, run 29305671818, o/r#9';
-  const refs = citations(text, { aliases: { 'product-repo': 'o/product-management' } });
-  const keys = refs.map(refKey);
+test('citations: PR links, owner/repo#N, known repo names and commits — never a guessed bare #N', () => {
+  const aliases = { backend: 'o/backend', 'product-repo': 'o/product-management' };
+  const text =
+    'merged (product-repo #106, backend PR [#33]), https://github.com/o/front/pull/100, commit b13ae84, run 29305671818, o/r#9, AGENTS rule #3';
+  const keys = citations(text, { aliases }).map(refKey);
   assert.ok(keys.includes('pr:o/product-management#106'));
-  assert.ok(keys.includes('pr:.#6'));
+  assert.ok(keys.includes('pr:o/backend#33'));
+  assert.ok(keys.includes('pr:o/front#100'));
   assert.ok(keys.includes('pr:o/r#9'));
   assert.ok(keys.includes('commit:b13ae84'));
   assert.ok(!keys.some((k) => k.includes('29305671818')), 'a CI run id is not a citation');
+  assert.ok(!keys.some((k) => k.endsWith('#3')), 'an unaliased bare #3 is ambiguous and must not be guessed');
+  // With a declared single repo, a bare #N is that repo.
+  assert.ok(citations('see #45', { bareRefsRepo: 'o/solo' }).map(refKey).includes('pr:o/solo#45'));
+});
+
+test('a sprint with only bare #N refs and no bareRefsRepo is UNAVAILABLE, not a fail and not a pass', () => {
+  const sprint = { name: 'sprint-1.md', text: '**Status:** ✅ shipped — #12\n' };
+  const r = evaluate({ ...closedEpic, sprints: [sprint], verified: new Map() });
+  assert.equal(r.items['sprints-merged'].state, 'unavailable');
+});
+
+test('real status markers and close lines seen on shipped epics are accepted', () => {
+  const green = { name: 'sprint-1.md', text: '**Status:** 🟩 shipped — o/r#12\n' };
+  assert.equal(evaluate({ ...closedEpic, sprints: [green] }).items['sprints-ticked'].state, 'pass');
+  const longClose = '# Retro\n\n_Closed: 2026-08-12 · S1–S5 shipped, verified live_\n';
+  assert.equal(evaluate({ ...closedEpic, retro: longClose }).items['retro-written'].state, 'pass');
 });
 
 test('frontmatter strips inline comments and quotes', () => {

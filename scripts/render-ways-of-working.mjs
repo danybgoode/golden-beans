@@ -51,8 +51,23 @@ export function parseFillIns(text) {
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i];
-    if (!raw.trim() || raw.trimStart().startsWith('#')) {
+    if (!raw.trim()) {
       i++;
+      continue;
+    }
+    if (raw.startsWith('#')) {
+      // A column-0 `#` line is a comment ONLY when what follows is another comment, a key, or the end of
+      // the file. An unindented `# Heading` meant as block content is followed by the block's indented
+      // lines — and silently eating it as a comment would delete a heading from the rendered doc, the one
+      // thing this renderer promises never to do (found by the fresh review of dobby-foundation#17).
+      let k = i + 1;
+      while (k < lines.length && !lines[k].trim()) k++;
+      if (k < lines.length && /^\s{2,}\S/.test(lines[k])) {
+        throw new Error(
+          `fill-ins.yml line ${i + 1}: '${raw.trim().slice(0, 40)}' is at column 0 but is followed by indented block text — indent it 2 spaces if it is content, or move it above a key if it is a comment`
+        );
+      }
+      i = k;
       continue;
     }
     const block = /^([A-Za-z_][\w-]*):\s*\|\s*$/.exec(raw);

@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   parseFillIns,
   render,
@@ -60,6 +58,13 @@ test('fill-ins parser: block and quoted scalars; anything else is refused with i
   assert.throws(() => parseFillIns('owner: unquoted\n'), /line 1/);
   assert.throws(() => parseFillIns('a: "x"\na: "y"\n'), /duplicate key 'a'/);
   assert.throws(() => parseFillIns('list:\n  - one\n'), /only 'key: \|'/);
+});
+
+test('an UNINDENTED heading inside a block is a hard error, never a silently dropped comment', () => {
+  const text = 'rail: |\n  intro line\n\n# Heading meant as content\n  more block text\nnext: "x"\n';
+  assert.throws(() => parseFillIns(text), /column 0 but is followed by indented block text/);
+  // A real comment between keys is still fine.
+  assert.deepEqual(parseFillIns('a: "1"\n\n# a comment\nb: "2"\n'), { a: '1', b: '2' });
 });
 
 test('slotsIn lists each slot once, in order', () => {
