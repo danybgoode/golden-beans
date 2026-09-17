@@ -54,15 +54,21 @@ export default async function SetupCliPage({ params }: { params: Promise<{ proje
           <Callout tone="info">
             <b>Install and sign in.</b> On any machine with Node 20 or newer:
             <br />
-            <code>npx @golden-frijoles/cli login</code>
-            {/* ⚠️ The URL comes from `getSiteUrl()`, never from the request's Host header — AGENTS
-                rule #5. It is rendered because a self-hosted or preview deployment is NOT
-                api.goldenfrijoles.com, and a printed command that silently points at production
-                would be worse than one that asks. */}
+            {/* ⚠️ **`--api` is part of the printed command, and leaving it out was a real defect**
+                (fresh reviewer, PR #149). The CLI's own default is `https://goldenfrijoles.com`, so
+                on a preview deployment the bare command sent a preview-minted token to PRODUCTION
+                and got "not accepted" — a mismatch whose cause is invisible from the terminal.
+                Printing the URL beside a command that ignores it is not the same as printing a
+                command that uses it.
+
+                The URL comes from `getSiteUrl()`, never from the request's Host header (AGENTS
+                rule #5), and on a preview that correctly resolves to the preview's own hostname —
+                which is exactly the deployment these tokens address. */}
+            <code>npx @golden-frijoles/cli login --api {getSiteUrl()}</code>
             <br />
             <span className="ds-hint">
-              Paste a token below when it asks. For CI, set <code>GOLDEN_FRIJOLES_TOKEN</code> instead and
-              skip the login step entirely. This deployment&apos;s API is <code>{getSiteUrl()}</code>.
+              Paste a token below when it asks. For CI, set <code>GOLDEN_FRIJOLES_TOKEN</code> and{' '}
+              <code>GOLDEN_FRIJOLES_URL</code> instead and skip the login step entirely.
             </span>
           </Callout>
 

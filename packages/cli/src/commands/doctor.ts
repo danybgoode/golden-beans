@@ -12,8 +12,10 @@
 //
 // ── It NEVER prints key material ──────────────────────────────────────────────────────────────
 // Not the token, not a prefix, not a length. `doctor` output is the thing people paste into an
-// issue, and `doctor.test.ts` asserts that a known token string appears nowhere in its output in
-// either mode — a claim about a security property gets an assertion, not a comment.
+// issue, and `cli.test.ts`'s "gf doctor never prints key material, in either mode" asserts that a
+// known token string appears nowhere in its output — a claim about a security property gets an
+// assertion, not a comment. (That citation named a `doctor.test.ts` which does not exist; a
+// pointer to a missing guard is how the next reader concludes there isn't one.)
 
 import { existsSync } from 'node:fs'
 import { flagValue } from '../args'
@@ -168,7 +170,7 @@ export const doctorCommand: Command = {
     }
 
     // ── 5. is this CLI current ────────────────────────────────────────────────────────────────
-    checks.push(await versionCheck())
+    checks.push(await versionCheck(context.fetchImpl))
 
     return report(context, checks)
   },
@@ -177,13 +179,17 @@ export const doctorCommand: Command = {
 /**
  * Is a newer `@golden-frijoles/cli` published?
  *
+ * ⚠️ It takes the run's `fetchImpl` rather than calling the global `fetch`. A direct call made
+ * every `doctor` test reach registry.npmjs.org for real, and left this check unassertable — the
+ * same second-HTTP-path defect `init.ts`'s `probeFlagReadKey` records having already made once.
+ *
  * ⚠️ A `warn` or a `skipped`, NEVER a `fail`. The registry is a third party: an offline machine, a
  * corporate proxy or an npm outage must not make `gf doctor` report that the CLI is broken. Being
  * unable to check is a different fact from being out of date, and this reports which.
  */
-async function versionCheck(): Promise<Check> {
+async function versionCheck(fetchImpl: typeof fetch): Promise<Check> {
   try {
-    const response = await fetch('https://registry.npmjs.org/@golden-frijoles/cli/latest', {
+    const response = await fetchImpl('https://registry.npmjs.org/@golden-frijoles/cli/latest', {
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(5_000),
     })

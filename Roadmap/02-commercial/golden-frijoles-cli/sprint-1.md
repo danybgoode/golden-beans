@@ -45,7 +45,10 @@ not stop for a human click.
 **Acceptance:**
 - [ ] Migration `cli_tokens` (+ `active_cli_tokens` view with revocation and expiry welded in,
       service-role only) applied to production **before** the PR merges.
-- [ ] `/app/cli` mints a PAT from a signed-in session, shows the plaintext once, lists and revokes.
+- [ ] `/app/setup/cli/<project>` mints a PAT from a signed-in session, shows the plaintext once,
+      lists and revokes. Setup’s third destination, member-readable — a CLI token is administered
+      against an ACCOUNT, so gating it to owners would bar a member from reading in a terminal what
+      they already read in a browser.
 - [ ] `gf login --token <pat>` writes `~/.config/golden-frijoles/credentials.json` at `0600`;
       `gf login` with no flag reads stdin so a token is never in `argv` (or shell history).
 - [ ] `GOLDEN_FRIJOLES_TOKEN` overrides the file; `gf whoami` names the account and its projects.
@@ -84,6 +87,31 @@ gets from nothing to a working SDK call without a browser.
       an out-of-date CLI (compares against the registry's `latest`).
 - [ ] `gf doctor` **never prints key material** — asserted by a test that greps its output.
 **Risk:** low
+
+## Mutation checks — observed red, then restored
+
+> **Why this table exists.** `cli-api.spec.ts` says "both mutation-checked (see sprint-1.md)", and
+> the first version of this document did not record them — prose reading as evidence, which is the
+> failure the repo keeps finding. Every row below was run: the mutation applied, the named test
+> observed failing, the tree restored and re-verified byte-identical.
+
+| # | Mutation | Went red on |
+|---|---|---|
+| 1 | `planFlagKill` stops clearing the rule list | *kill flips the default to the false variant AND CLEARS EVERY RULE* |
+| 2 | `percentToBasisPoints` clamps instead of rejecting | *an out-of-range percent is REJECTED, never clamped* (both copies) |
+| 3 | the `--help` header text changes | the `help.txt` golden file |
+| 4 | a golden file is **deleted** | that contract's test — it does not self-heal |
+| 5 | `resolveCliToken` reads `cli_tokens` instead of `active_cli_tokens` | the REVOKED and EXPIRED specs |
+| 6 | `requireCliOwner` stops reading the caller's real role | *minting a credential is OWNER-only* |
+| 7 | a foreign project answers `400` instead of `404` | *a project this account is not a member of is 404, never 403* |
+| 8 | `GRANT INSERT ON active_cli_tokens TO service_role` | *service_role CANNOT insert a forged credential* |
+| 9 | `GRANT DELETE ON cli_tokens TO service_role` | *service_role CANNOT delete a cli_token* |
+
+⚠️ **Row 8 found a defect in its own test.** The first version of that spec inserted a
+`randomUUID()` as `user_id`, which violates the foreign key to `auth.users` — so the write failed on
+the FK whether or not the grant existed, and restoring `GRANT INSERT` left the test **green**. It
+now seeds a real account and a well-formed hash, so the REVOKE is the only thing that can refuse it.
+A guard gets the same suspicion as the code (CODE-QUALITY #5b), and this one needed it.
 
 ## Smoke walkthrough
 

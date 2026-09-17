@@ -121,6 +121,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     cwd,
     api: auth.token === null ? null : clientFor(auth.token),
     clientFor,
+    fetchImpl: options.fetchImpl ?? fetch,
   }
 
   try {

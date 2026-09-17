@@ -27,9 +27,20 @@ type WhoamiBody = {
  * shape and works identically.
  */
 async function readTokenFromStdin(context: CommandContext): Promise<string | null> {
-  // A TTY with nothing piped would block forever waiting for input nobody knows to type, so we ask
-  // first — and under `--json` there is no one to ask, which is `EXIT.USAGE` rather than a hang.
-  if (process.stdin.isTTY && !context.emit.json) context.emit.note('Paste your CLI token and press Enter:')
+  // ⚠️ **The `--json` branch used to only SUPPRESS the prompt, and then read stdin anyway** (fresh
+  // reviewer, PR #149, graded Blocking). On an interactive terminal `gf login --json` printed
+  // nothing at all and blocked until the user guessed at Ctrl-D — strictly worse than the
+  // non-`--json` path it was meant to improve on, and on the credential-entry path. The comment
+  // above it claimed it returned a usage error. It did not.
+  //
+  // Now the two conditions are separate facts and both are acted on:
+  //   • nothing is piped AND there is no one to ask (`--json`) ⇒ return null, the caller exits 1
+  //   • nothing is piped and there IS someone to ask ⇒ prompt, then read
+  //   • something is piped ⇒ read it, prompt or not. This is the CI shape and must never block.
+  if (process.stdin.isTTY) {
+    if (context.emit.json) return null
+    context.emit.note('Paste your CLI token and press Enter:')
+  }
   const chunks: Buffer[] = []
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk))
   const value = Buffer.concat(chunks).toString('utf8').trim()

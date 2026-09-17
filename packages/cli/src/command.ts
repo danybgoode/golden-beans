@@ -41,6 +41,19 @@ export type CommandContext = {
   api: ApiClient | null
   /** Build a client against an arbitrary token. `gf login` needs one before a token is saved. */
   clientFor(token: string): ApiClient
+  /**
+   * The `fetch` this run should use, for the ONE call that is not to this deployment's API.
+   *
+   * ⚠️ Only `gf doctor`'s npm-registry check needs it, and it exists because the alternative was a
+   * bare global `fetch` — which is how `packages/cli` grew a second HTTP path twice in one sprint
+   * (`probeFlagReadKey` was the other). A direct global call skips the injected stub, so
+   * `npm run test:unit` made a REAL network request to registry.npmjs.org on every doctor test, and
+   * the check it performs could not be asserted at all.
+   *
+   * Everything talking to the deployment goes through `api` / `clientFor` instead — this is not a
+   * general escape hatch, and a second consumer should be a reason to ask why.
+   */
+  fetchImpl: typeof fetch
 }
 
 export type Command = {

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 
 // golden-frijoles-cli · Sprint 1 — the CLI-authenticated API, at the HTTP layer.
 //
@@ -262,6 +262,77 @@ test.describe('the CLI API', () => {
       expect((await response.json()).code).toBe('invalid')
     } finally {
       await seeded.cleanup()
+    }
+  })
+
+  // ── The grants, ATTEMPTED ──────────────────────────────────────────────────────────────────
+  //
+  // ⚠️ **These exist because the migration's comment claimed them and nothing performed them**
+  // (fresh reviewer, PR #149, graded Blocking). `20260917100000_cli_tokens.sql` says its grants
+  // "are asserted by attempting the writes they forbid" — and they were, once, by hand in a psql
+  // session. A verification that happened once in a terminal is not a verification: it goes green
+  // forever afterwards regardless of what the schema does next.
+  //
+  // What makes this load-bearing rather than belt-and-braces is stated in that migration at length:
+  // `active_cli_tokens` selects from a SINGLE table, so PostgreSQL makes it auto-updatable — unlike
+  // its three siblings, which all JOIN to `projects` and are therefore protected by an accident of
+  // shape. Here the REVOKE is the only thing standing between the application role and a forged
+  // credential, and a later `CREATE OR REPLACE VIEW` without it would reopen the hole silently.
+  //
+  // The precedent is `ingest-guardrails.spec.ts`, which does exactly this for `audit_log`'s
+  // append-only grants and is cited by that migration for the same reason.
+  test('\u26a0\ufe0f service_role CANNOT insert a forged credential THROUGH active_cli_tokens', async () => {
+    // ⚠️ **A REAL user id, and that is the whole difference between this test and a green one that
+    // proves nothing.** The first version passed `randomUUID()`, which violates the foreign key to
+    // `auth.users` — so the insert failed on the FK whether or not the grant existed, and the
+    // assertion was satisfied by the fixture rather than by the property. Mutation-checking it
+    // found that: restoring `GRANT INSERT` to service_role left the test GREEN.
+    //
+    // With a real user id and a well-formed hash, the ONLY thing that can refuse this write is the
+    // REVOKE — which is exactly the claim being made. (CODE-QUALITY #5b: a guard gets the same
+    // suspicion as the code.)
+    const seeded = await seedTokenOwning('project-one')
+    try {
+      const { error } = await db().from('active_cli_tokens').insert({
+        id: randomUUID(),
+        user_id: seeded.userId,
+        token_hash: sha256(newCliToken()),
+        label: 'forged',
+      })
+      // A successful insert mints a `gf_pat_` credential for an arbitrary account, bypassing
+      // lib/cli-tokens.ts, its audit call and the console entirely.
+      expect(error, 'active_cli_tokens must not be writable by the application role').not.toBeNull()
+    } finally {
+      await seeded.cleanup()
+    }
+  })
+
+  test('service_role CANNOT delete a cli_token — revocation stays auditable', async () => {
+    const seeded = await seedTokenOwning('project-one')
+    try {
+      const { error } = await db().from('cli_tokens').delete().eq('token_hash', sha256(seeded.token))
+      // The table grants INSERT/UPDATE and deliberately not DELETE, so a revoked credential stays
+      // in the record. A DELETE path would let a compromised app erase the evidence of its own
+      // credential — the same argument api_keys makes.
+      expect(error, 'cli_tokens must not be DELETE-able by the application role').not.toBeNull()
+    } finally {
+      await seeded.cleanup()
+    }
+  })
+
+  test('the anon key reaches neither cli_tokens nor active_cli_tokens', async () => {
+    // RLS is ON with no policies and the grants name anon explicitly. Asserted through a real anon
+    // client rather than by reading `information_schema`, because what matters is what a request
+    // carrying the public key actually gets back.
+    const url = process.env.SUPABASE_URL
+    const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    test.skip(!url || !anonKey, 'needs SUPABASE_ANON_KEY to exercise the anon role')
+    const anon = createClient(url!, anonKey!, { auth: { persistSession: false } })
+    for (const relation of ['cli_tokens', 'active_cli_tokens']) {
+      const { data, error } = await anon.from(relation).select('id').limit(1)
+      // Either a refusal, or an empty result — never a row. A credential hash must not be readable
+      // by the key that ships to browsers.
+      expect(error !== null || (data ?? []).length === 0, `anon read ${relation}`).toBe(true)
     }
   })
 
