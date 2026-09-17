@@ -1189,6 +1189,14 @@ one-liner + why + date shape.
 - **`Write(<path>)` rules are INERT** — Claude Code checks only `Edit(<path>)` for file tools, and a nested
   `claude -p` refuses to start while one is present. This repo had seven of them on the design-system
   files, all protecting nothing; the paired `Edit` rules were doing the whole job.
+- **A behavioural test needs a baseline the system will actually produce.** `permissions-smoke --live` asks
+  a throwaway session to run each probe with NO rules, so that a later refusal proves the rule. Told the
+  probes were harmless shims, and with the commands explicitly allowed, a session still **refuses**
+  `rm -rf`, a force push or a deploy on its own judgement — so those probes can have no baseline, and the
+  replay can only speak for the benign ones (the staging family). Three more faults surfaced on its first
+  real run: a shim file named `PATH=/x:$PATH`, a temp workspace Claude Code treated as UNTRUSTED (so it
+  ignored the rules under test, keyed by the resolved `/private/var/…` path), and ~300 probes overflowing a
+  session that has no `--max-turns` to raise. A test that has never gone green has not tested anything yet.
 - **An ALLOW skips the auto-mode classifier**, so the allow list is not "safe verbs" in the abstract — it is
   the set of commands that run with no second look, and it must never contain one that destroys work.
 
