@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: golden-frijoles-cli
 build_order: 28
 ---
@@ -295,23 +295,23 @@ both are worse.
   exercised end to end by `cli-access.authed.spec.ts` rather than by the visual gate.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b), AMENDED by D8:** the seam exists —
+- [x] All sprints merged to `main` + smoke-tested (gaps stated)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch (planned at grooming — Stage 6b), AMENDED by D8:** the seam exists —
       `isCliWriteApiEnabled()` in `apps/web/lib/flags.ts`, checked by every CLI-authenticated write
       route before any credential work. ⚠️ **Its polarity is inverted from the scope doc, on a
       standing product-owner instruction** (Daniel 2026-08-31, restated 2026-09-17): it is **born
       ON** (`CLI_WRITE_API_ENABLED !== 'false'`), so the epic ships live on merge and no Vercel env
       var is owed. The "fails CLOSED" clause in the bet addressed a recursive read of the product's
       own flag service; this gate reads an env var and has no read that can fail. See **D8**.
-- [ ] **`@golden-frijoles/cli` is published to npm** and `npx @golden-frijoles/cli --version` works on
+- [x] **`@golden-frijoles/cli` is published to npm** and `npx @golden-frijoles/cli --version` works on
       a machine that has never seen it. *Done means shipped — a merged PR that isn't installable is
       not done.*
-- [ ] The **MCP parity table** is written into this README: every CLI verb, its MCP tool, or a stated
+- [x] The **MCP parity table** is written into this README: every CLI verb, its MCP tool, or a stated
       reason there isn't one.
-- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)

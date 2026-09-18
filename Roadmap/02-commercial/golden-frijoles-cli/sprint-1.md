@@ -1,6 +1,6 @@
 # Golden Frijoles CLI — Sprint 1: something real, installed and authenticated
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR #149, `43c5ca6` (2026-09-18)
 
 > Sprint 1 ships a CLI that a person can install, log in with, and read their flags with. It does
 > not write a flag — that is Sprint 2. What it *does* build is every seam Sprint 2 writes through:
@@ -43,11 +43,10 @@ it without scraping prose.
 **As an** agent with no browser, **I want** to authenticate headlessly, **so that** the session does
 not stop for a human click.
 **Acceptance:**
-- [ ] ⛔ **OWED — the one thing blocking merge.** Migration `cli_tokens` (+ `active_cli_tokens` view
-      with revocation and expiry welded in, service-role only) applied to production **before** the
-      PR merges. Verified applying cleanly from scratch locally, and its grant claims proved by
-      attempting the writes they forbid — but production has not received it. `supabase db push` is
-      on the agent deny list by design; it needs the Supabase MCP authorized, or Daniel by hand.
+- [x] Migration `cli_tokens` (+ `active_cli_tokens` view with revocation and expiry welded in,
+      service-role only) **applied to production before #149 merged** — by Daniel via
+      `supabase db push` (2026-09-18), confirmed on the remote with `supabase migration list
+      --linked`, then proved live by step 2 of the smoke walkthrough.
 - [x] `/app/setup/cli/<project>` mints a PAT from a signed-in session, shows the plaintext once,
       lists and revokes. Setup’s third destination, member-readable — a CLI token is administered
       against an ACCOUNT, so gating it to owners would bar a member from reading in a terminal what
@@ -118,4 +117,21 @@ A guard gets the same suspicion as the code (CODE-QUALITY #5b), and this one nee
 
 ## Smoke walkthrough
 
-_(filled in at sprint close, with real URLs)_
+Run against **production** after `43c5ca6` deployed. Each step says what was observed, not what was expected.
+
+1. **The API is live, not dark (D8).** `curl https://goldenfrijoles.com/api/v1/cli/whoami` →
+   **401** with `{"ok":false,"code":"unauthorized",…}`. A `404` would mean the gate is closed; the
+   JSON body (not Next's HTML 404) is what proves the route exists. Observed on `whoami`,
+   `projects`, `flags` and `keys`.
+2. **The production lookup reached the migration.** A well-formed but unknown `gf_pat_…` →
+   `unauthorized`, **not** `server_error`. A missing `active_cli_tokens.token_hash` column would
+   have been a 500 — which is exactly the defect the local e2e suite found before merge.
+3. **Other credentials are refused.** An ingest-shaped `gb_key_…` → **401**, the same answer.
+4. **The console surface is behind sign-in.** `https://goldenfrijoles.com/app/setup/cli/<project>`
+   anonymously → **307 → /login**.
+5. **Mint → use → revoke, through the real page.** Proved by `cli-access.authed.spec.ts`: a signed-in
+   user mints at *Setup › CLI access*, the plaintext appears once, `/api/v1/cli/whoami` accepts it,
+   revoking it in the page makes the API refuse it. Run locally against the full stack.
+
+**Owed to the product owner, by name:** the same mint → `gf login` → `gf whoami` walk **by hand on
+production** with a real account. It needs your session; no automated step here holds one.
