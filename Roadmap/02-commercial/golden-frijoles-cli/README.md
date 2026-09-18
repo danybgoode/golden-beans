@@ -245,6 +245,33 @@ All three sprints share `packages/cli/` and the command core by construction —
 Sprint 1 is mostly mechanical once D1 is locked; Sprint 3 is mechanical apart from 3.4. Review is
 inverted: Sprint 2's PR gets the strongest available fresh reviewer.
 
+## MCP parity table (Story 3.3 — the audit, written before 3.4 wrote any code)
+
+**Derived from the registered tool names**, not from memory: `grep -oE "registerTool\(\s*'[a-z_]+'"`
+over `app/api/v1/public/mcp/c/[token]/route.ts` and `lib/mcp-flag-tools.ts`.
+
+| CLI verb | MCP tool | Notes |
+|---|---|---|
+| `gf flags ls` | `list_flags` | ✅ closed by 3.4 |
+| `gf flags get` | `get_flag` | ✅ closed by 3.4 |
+| `gf flags create` | `create_flag` | ✅ closed by 3.4 — same planner |
+| `gf flags set` | `set_flag` | ✅ closed by 3.4 — same planner |
+| `gf flags rollout` | `rollout_flag` | ✅ closed by 3.4 — same planner |
+| `gf flags kill` | `kill_flag` | ✅ closed by 3.4 — same planner |
+| `gf flags rules` | — | **Deliberate.** Its input is a rules FILE, and the shaping named a rule DSL as the appetite trap. An MCP tool would either take the whole rule array inline (which `create_flag`/`set_flag` do not need and which no agent composes by hand today) or invent the DSL. Revisit when something asks for it. |
+| `gf flags diff` · `history` | — | **Deliberate, and not a gap.** `get_flag` already returns every version and the audit window; the CLI's diff is a *rendering* of that, in the console's own words. A tool that returned pre-rendered English would be a second place for those sentences to live. |
+| `gf flags sync` | — | **Deliberate — credential shape.** Sync rides a `flag_sync` key precisely so a catalog publisher cannot also roll out or kill. An MCP tool would ride the connector token, which reunites what that split exists to separate. |
+| `gf keys ls/create/revoke` | — | **Deliberate — blast radius.** Minting credentials over a connector is how a read surface becomes a credential factory. It stays owner-only, in the console and the CLI, where a human or a named account is the actor. |
+| `gf projects ls/create/use` | — | **Structural.** A connector token resolves to ONE project and no tool schema accepts a project argument — that is what makes cross-project isolation true by construction (AGENTS rule #2/#3). A `projects` tool would have to break it. |
+| `gf login` · `whoami` · `doctor` · `init` | — | **N/A.** Local-machine concerns: a credentials file, a `.env.local`, a `.gitignore`. There is nothing on the other side of an MCP transport for them to do. |
+
+**Neither rule was relaxed.** `/api/v1/public/*` still serves the demo project only; the connector is
+still enablement-gated and still needs its token. Story 3.4 closed the gap by bringing MCP **up** to
+the CLI — the write tools require a THIRD credential (a `gf_pat_…` whose holder owns the connector's
+project) on top of the existing two, because the flag control plane's RPCs are owner-attributed and
+an `agent_write` key is not a person. `lib/mcp-flag-tools.ts` states the two alternatives and why
+both are worse.
+
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated)
 - [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)

@@ -1,5 +1,11 @@
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
+import {
+  CLI_BIN,
+  CLI_GLOBAL_INSTALL,
+  CLI_KILL_SWITCH_STORY,
+  CLI_NPX_INIT,
+} from '@/lib/cli-install'
 import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Icon } from '@/components/ui/Icon'
@@ -169,10 +175,37 @@ export default async function InstallPage() {
           </>
         )}
 
+        {/* ── golden-frijoles-cli · Sprint 3, Story 3.5 ────────────────────────────────────────
+            A FOURTH labelled section inside the one card, for the same reason the SDK block is a
+            third one rather than a card of its own: the approved `public-install` state draws ONE
+            `.listcard`, and adding cards would break the block sequence the structural gate reads.
+
+            ⚠️ **Every command comes from `lib/cli-install.ts`.** The shaping's words: "the install
+            page and the CLI's printed next-steps are ONE surface". Two hand-written copies of
+            `npx @golden-frijoles/cli init` agree right up until one of them is edited, and
+            `cli-install.test.ts` welds those strings to what `packages/cli/package.json` actually
+            publishes — without `apps/web` importing the CLI, which D4 forbids. */}
+        <h2 className="ds-label">Or drive it from a terminal</h2>
+        <p className="ds-hint">
+          The connector above is how an agent <em>reads</em> your project. The CLI is how it{' '}
+          <em>changes</em> one — create a flag in every environment, roll it out, kill it. No browser, no
+          human click.
+        </p>
+        <pre className="ds-mono ds-codeblock">
+          {`${CLI_NPX_INIT}
+
+# then, the whole kill-switch story:
+${CLI_KILL_SWITCH_STORY.join('\n')}`}
+        </pre>
+        <p className="ds-hint">
+          <code>{CLI_GLOBAL_INSTALL}</code> puts <code>{CLI_BIN}</code> on your PATH. Every command takes{' '}
+          <code>--json</code>. Mint a token at <b>Setup › CLI access</b> once you have signed in.
+        </p>
+
         <h2 className="ds-label">For your engineers</h2>
         <p className="ds-hint">
-          An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input. It is the
-          data-in layer under the connector above, not an alternative to it.
+          An npm-installed SDK — a few lines to your first North Star input. It is the data-in layer under
+          the connector above, not an alternative to it or to the CLI.
         </p>
         <pre className="ds-mono ds-codeblock">
           {`npm install @golden-frijoles/sdk
