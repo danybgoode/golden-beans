@@ -1,0 +1,7 @@
+{
+  "$comment": "Read by the ways-of-work reporting skills' scripts (standup.mjs, weekly-recap.mjs, pmo-report.mjs — the dobby-foundation template's copies) via scripts/lib/reporting-config.mjs. This repo is PUBLIC: the chat id is not here — TELEGRAM_CHAT_ID in the environment, or a gitignored reporting.config.local.json locally. No browser-smoke workflow exists here, so that signal is off. This project's OWN reports (standup-report.mjs, commit-report.mjs) are a separate rail — see scripts/README.md.",
+  "repos": ["danybgoode/golden-beans"],
+  "deployRepos": [{ "label": "Web", "repo": "danybgoode/golden-beans" }],
+  "stalePreviewAgeDays": 7,
+  "checkouts": { "danybgoode/golden-beans": "." }
+}
