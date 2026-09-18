@@ -20,6 +20,23 @@ The `GOLDEN_BEANS_FLAG_READ_KEY` and `GOLDEN_BEANS_FLAG_SYNC_KEY` names below ar
 retained integration addresses used by existing consumers. They are caller-owned environment
 variable names, not SDK lookups or provider identities; renaming them is not required to adopt 0.4.0.
 
+## Environment variable names for a NEW project
+
+This SDK reads **no** environment variable — `createFlagProvider` takes `flagReadKey` as an
+argument, and every name in this document is one the *caller* chose. That is why the legacy names
+above stay valid: nothing in shipped code resolves either of them.
+
+For a new project, `@golden-frijoles/cli` writes **`GOLDEN_FRIJOLES_URL`**,
+**`GOLDEN_FRIJOLES_FLAG_READ_KEY`** and **`GOLDEN_FRIJOLES_ENVIRONMENT`** into `.env.local` and
+prints the snippet that reads exactly those names, so the file and its reader are generated
+together:
+
+```bash
+npx @golden-frijoles/cli init
+```
+
+Either set of names works. Pick one per project.
+
 ## Telemetry
 
 ```ts

@@ -36,6 +36,19 @@ test('the /install page renders a live connector URL that actually round-trips',
       'get_tars_funnel',
       // signals-loop Sprint 2 — gated on connector AND signals, like its siblings above.
       ...(isTaskMcpToolEnabled() ? ['get_task', 'list_tasks'] : []),
+      // ⚠️ golden-frijoles-cli · Story 3.4 — the flag READ tools, unconditional.
+      //
+      // They register for any caller the connector token admits, because they answer a question a
+      // connector token already authorizes, and withholding them would make the connector worse at
+      // the thing it is for.
+      //
+      // ⚠️ **The four flag WRITE tools are deliberately ABSENT from this list, and their absence is
+      // the assertion.** `create_flag`, `set_flag`, `rollout_flag` and `kill_flag` register only
+      // when the request ALSO carries a `gf_pat_…` whose holder owns this project — and this request
+      // carries no Authorization header at all. If any of them ever appeared here, the write gate
+      // would have stopped gating, and this exact-match comparison is what would say so.
+      'get_flag',
+      'list_flags',
     ].sort()
   )
 })
