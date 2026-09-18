@@ -1,5 +1,7 @@
 # Retrospective — Golden Frijoles CLI v1
 
+_Closed: 2026-09-18_
+
 **Shipped:** 2026-09-18 — PRs #149, #150, #151, release #152 · **Appetite:** L (three waves) · **Risk:** high
 
 The engine got a write surface an agent can drive. `gf flags create <key> --kill-switch --all-envs`

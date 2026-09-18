@@ -10,16 +10,15 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (2)
+## 🏗️ Building now (1)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [Golden Frijoles CLI v1 — the write surface an agent can actually drive](../../02-commercial/golden-frijoles-cli/README.md) — 02 Commercial · 16/16 stories · risk: High · wave-2026-09-16
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (26)
+## ✅ Shipped (27)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -36,6 +35,7 @@
 - [Design system lift — the limitless golden-bean brand](../../02-commercial/design-system-lift/README.md) — 02 Commercial · 7/7 stories
 - [Four destinations — an information architecture for the signed-in console](../../02-commercial/console-ia-overhaul/README.md) — 02 Commercial · 13/13 stories · risk: High
 - [Golden Frijoles — the rebrand, the material pass, and the controls that were broken](../../02-commercial/landing-frijoles-rebrand/README.md) — 02 Commercial · 16/16 stories
+- [Golden Frijoles CLI v1 — the write surface an agent can actually drive](../../02-commercial/golden-frijoles-cli/README.md) — 02 Commercial · 16/16 stories · risk: High · wave-2026-09-16
 - [Golden Frijoles rebrand close-out](../../02-commercial/frijoles-rebrand-closeout/README.md) — 02 Commercial · 5/5 stories · risk: Low
 - [Landing redesign v2 — the agent harness for product managers](../../02-commercial/landing-redesign-v2/README.md) — 02 Commercial · 11/11 stories
 - [Maker ops — the landing repositions from a growth engine to an operating context](../../02-commercial/landing-maker-ops/README.md) — 02 Commercial · 21/21 stories · risk: Low · wave-2026-08-19
@@ -54,7 +54,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -64,7 +64,6 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
-| Golden Frijoles CLI v1 — the write surface an agent can actually drive | In progress | Shipped |
 
 ---
-_Epics: 29 · seeds in funnel: 3 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 29 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._

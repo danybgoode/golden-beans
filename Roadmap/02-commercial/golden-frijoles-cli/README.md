@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: golden-frijoles-cli
 build_order: 28
 ---
@@ -309,9 +309,9 @@ both are worse.
       ON** (`CLI_WRITE_API_ENABLED !== 'false'`), so the epic ships live on merge and no Vercel env
       var is owed. The "fails CLOSED" clause in the bet addressed a recursive read of the product's
       own flag service; this gate reads an env var and has no read that can fail. See **D8**.
-- [ ] **`@golden-frijoles/cli` is published to npm** and `npx @golden-frijoles/cli --version` works on
+- [x] **`@golden-frijoles/cli` is published to npm** and `npx @golden-frijoles/cli --version` works on
       a machine that has never seen it. *Done means shipped — a merged PR that isn't installable is
       not done.*
 - [x] The **MCP parity table** is written into this README: every CLI verb, its MCP tool, or a stated
       reason there isn't one.
-- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)

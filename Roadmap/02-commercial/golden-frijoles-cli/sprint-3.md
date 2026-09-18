@@ -22,11 +22,13 @@
 
 ### Story 3.1 — the one-line installer and the `npx` path
 **Acceptance:**
-- [ ] ⛔ **OWED until the package is published.** `npx @golden-frijoles/cli@latest --version` works
-      on a machine that has never seen the package — verified on a clean `npm_config_cache`, not
-      assumed. The publish runs once the routes answer on production; npm auth is in place
-      (`danybgoode`, read-write on the scope), so this is sequencing, not a blocker.
-- [ ] ⛔ **Same.** `npm i -g @golden-frijoles/cli` puts `gf` on `PATH`.
+- [x] `npx @golden-frijoles/cli@latest --version` → **`0.1.0`**, exit 0, verified 2026-09-18 with an
+      EMPTY npm cache, an empty working directory and an empty `HOME` — it pulled
+      `@golden-frijoles/sdk@0.5.0` from the public registry. The same clean install then ran against
+      production: `gf doctor` diagnosed the missing credential, and `gf whoami` with a bogus token got
+      production's `unauthorized` with **exit 2** and JSON on stdout.
+- [x] `npm i -g @golden-frijoles/cli` puts `gf` on `PATH` — the published manifest's `bin` is
+      `{ "gf": "dist/bin.js" }`, read from the registry, not from the repo.
 - [x] The package ships `dist/` + `README.md` only, with `bin` pointing at a shebanged entry that
       runs on Node 20+.
 **Risk:** low
