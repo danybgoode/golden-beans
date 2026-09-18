@@ -486,6 +486,41 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     deferred: null,
   },
   {
+    route: '/app/setup/cli/[projectSlug]',
+    page: 'app/setup/cli/[projectSlug]/page.tsx',
+    label: 'CLI access',
+    frame: 'console',
+    seam: 'product-shell',
+    surface: 'setup/cli',
+    // ⚠️ `null`, and stated rather than borrowed. This route was not in the console prototype — the
+    // CLI did not exist when those 33 states were approved — so there is no approved picture for it
+    // to be measured against, and citing `setup-keys` would give it a contract describing a
+    // different page (four credential kinds, environment and expiry chips, a row menu).
+    referenceState: null,
+    // ⚠️ **`false`, although the page body IS built from `design-system/primitives`** — PageHead,
+    // ListCard, Callout, Row/RowMain/Col, ShownOnce, CopyField, NewThingDialog, ConfirmDialog.
+    //
+    // This pair of booleans means "covered", and `route-manifest.test.ts` refuses the combination
+    // `rendersFromDesignSystem: true` with `referenceState: null` for a reason worth keeping: a
+    // route claiming the system with no approved state to be measured against is coverage of
+    // nothing. Claiming it here would raise the printed percentage for a page nobody has approved —
+    // exactly the "number measuring intent rather than product" this manifest exists to stop.
+    //
+    // So the route is in the DENOMINATOR and not in the numerator, which is the honest position,
+    // and the deferral below says who owes the approval rather than leaving the gap to be noticed.
+    rendersFromDesignSystem: false,
+    landsIn: 4,
+    retiresIn: null,
+    deferred: {
+      owner: 'Daniel',
+      until: '2026-12-31',
+      why:
+        'Setup \u203a CLI access is built from the design system but has no approved reference state: ' +
+        'the console prototype predates the CLI. It needs a state in the next approval batch, at ' +
+        'which point this row claims coverage. Until then it counts against the percentage.',
+    },
+  },
+  {
     route: '/app/setup/keys/[projectSlug]',
     page: 'app/setup/keys/[projectSlug]/page.tsx',
     label: 'Keys',

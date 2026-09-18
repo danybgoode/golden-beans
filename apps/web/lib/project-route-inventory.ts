@@ -294,6 +294,30 @@ export const PROJECT_ROUTE_INVENTORY = [
     description: () => 'your own project’s connector URL',
   },
   {
+    // golden-frijoles-cli · Sprint 1, Story 1.2 — Setup's third destination.
+    //
+    // ⚠️ **MEMBER, not owner, and it is the one Setup surface where that is right.** `setup/keys`
+    // above is owner-only because minting an ingest key is an act against a TENANT. A CLI token is
+    // an act against your own session: it grants exactly what its holder's console session already
+    // grants, and every project-scoped call the CLI makes re-resolves membership server-side
+    // (`lib/cli-auth.ts`). Gating it to owners would bar an ordinary member — who can already read
+    // every one of these screens in a browser — from reading the same things in a terminal.
+    //
+    // Listed after Connect and before Keys: inventory order is nav order and rail order, so Setup
+    // still opens on Connect, and the account-wide credential sits next to the project-scoped one
+    // it is most often confused with.
+    routeSegment: 'setup/cli',
+    iconKey: 'code',
+    audience: 'member',
+    gate: 'always',
+    status: 'gated',
+    topLevelProjectRoute: false,
+    section: 'setup',
+    label: 'CLI access',
+    href: (slug: string) => `/app/setup/cli/${slug}`,
+    description: () => 'a token that signs `gf` in as you',
+  },
+  {
     routeSegment: 'setup/keys',
     iconKey: 'key',
     // OWNER-only, matching all three routes it merges — the boundary moves tighter or identical,

@@ -34,6 +34,7 @@ import {
   isFlagConsoleEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
+  isCliWriteApiEnabled,
 } from './flags.ts'
 
 function withEnv(key: string, value: string | undefined, fn: () => void) {
@@ -98,6 +99,22 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   // and leaving this line behind would have gone red rather than passing quietly.
 ]
 
+// ── The ONE gate that is born ON, and why it gets a MIRRORED matrix rather than an exemption ──
+//
+// golden-frijoles-cli · D8. `CLI_WRITE_API_ENABLED` reads `!== 'false'`, so the epic ships live on
+// merge with no Vercel variable owed (Daniel's standing instruction: nothing dark, nothing waiting).
+//
+// ⚠️ **An exemption here would have been the wrong shape, and expensively so.** The obvious move is
+// a skip-list on the exhaustiveness test — and a gate excused from the matrix is a gate with NO
+// contract at all, which is worse than the born-dark default it deviates from: nothing would then
+// catch `CLI_WRITE_API_ENABLED=FALSE` or `= false` silently leaving the surface open. This table
+// gives it the SAME rigour with the polarity flipped, so the near-miss family is asserted in the
+// direction that matters for a born-ON gate: only the exact string `false` may close it, and every
+// typo leaves it OPEN and visibly so rather than closing the surface by accident.
+//
+// Both tables feed the exhaustiveness test below, so a new gate still has to land in one of them.
+const bornOnGates: Array<[string, () => boolean]> = [['CLI_WRITE_API_ENABLED', isCliWriteApiEnabled]]
+
 // ── The table is now SELF-ENFORCING, and that is the point of adding it here ──────────────────
 //
 // `singleFlagGates` above gives every gate the whole born-dark + near-miss matrix for free. Until
@@ -123,7 +140,12 @@ const singleFlagGates: Array<[string, () => boolean]> = [
 test('every env gate in flags.ts is registered in singleFlagGates, and vice versa', () => {
   const source = readFileSync(new URL('./flags.ts', import.meta.url), 'utf8')
   const readInSource = new Set(Array.from(source.matchAll(/process\.env\.([A-Z0-9_]+)/g), (m) => m[1]))
-  const registered = new Set(singleFlagGates.map(([envKey]) => envKey))
+  // BOTH tables. A gate may be born dark or born on, but it may not be in neither — which is the
+  // property this assertion exists to hold, and the reason D8's deviation did not become a skip.
+  const registered = new Set([
+    ...singleFlagGates.map(([envKey]) => envKey),
+    ...bornOnGates.map(([envKey]) => envKey),
+  ])
 
   const unregistered = [...readInSource].filter((key) => !registered.has(key)).sort()
   assert.deepEqual(
@@ -137,8 +159,8 @@ test('every env gate in flags.ts is registered in singleFlagGates, and vice vers
   assert.deepEqual(
     orphaned,
     [],
-    `singleFlagGates names env vars flags.ts no longer reads, so the table is testing nothing for ` +
-      `them: ${orphaned.join(', ')}`
+    `singleFlagGates/bornOnGates name env vars flags.ts no longer reads, so the tables are testing ` +
+      `nothing for them: ${orphaned.join(', ')}`
   )
 
   // A bare count, so a future refactor that made BOTH sets empty (a regex that stops matching, a
@@ -148,8 +170,46 @@ test('every env gate in flags.ts is registered in singleFlagGates, and vice vers
   // FLOOR against vacuity, not a ratchet: the two `deepEqual`s above are what actually hold the two
   // sets equal, and a gate that is genuinely retired must be allowed to lower it. Lowering it is a
   // decision that leaves its trace here rather than a number quietly following the code.
-  assert.ok(registered.size >= 17, `expected at least 17 registered gates, found ${registered.size}`)
+  assert.ok(registered.size >= 18, `expected at least 18 registered gates, found ${registered.size}`)
+
+  // ⚠️ And a floor on the BORN-DARK table specifically. Without it, moving every gate into
+  // `bornOnGates` would keep the union intact and keep this test green while silently inverting the
+  // default for the whole product — a guard that can be satisfied by the change it exists to catch
+  // (CODE-QUALITY #5b). Born-ON is the exception; the count says so.
+  assert.equal(
+    bornOnGates.length,
+    1,
+    `exactly one gate is born ON by decision (CLI_WRITE_API_ENABLED, epic D8). Adding a second is a ` +
+      `product decision, not a test edit — record it in the epic README first.`
+  )
 })
+
+// The born-ON matrix, mirrored. Read it beside the born-dark loop below: same shape, inverted.
+for (const [envKey, gate] of bornOnGates) {
+  test(`${envKey}: unset reads as ON (born-on by decision — epic D8)`, () => {
+    withEnv(envKey, undefined, () => {
+      assert.equal(gate(), true)
+    })
+  })
+
+  test(`${envKey}: exactly 'false' reads as OFF`, () => {
+    withEnv(envKey, 'false', () => {
+      assert.equal(gate(), false)
+    })
+  })
+
+  // The same near-miss family the born-dark gates get, asserted in the direction that matters here:
+  // a typo must not CLOSE the surface by accident. `FALSE`, `False` and `0` are the ones an operator
+  // reaching for the kill switch would plausibly type — and every one of them leaves it open, which
+  // is why the kill switch's exact spelling is documented at the gate and on this line.
+  for (const nearMiss of ['FALSE', 'False', '0', 'no', ' false', 'false ', '', 'true']) {
+    test(`${envKey}: near-miss value ${JSON.stringify(nearMiss)} reads as ON, not OFF`, () => {
+      withEnv(envKey, nearMiss, () => {
+        assert.equal(gate(), true)
+      })
+    })
+  }
+}
 
 for (const [envKey, gate] of singleFlagGates) {
   test(`${envKey}: unset reads as OFF (born-dark default)`, () => {

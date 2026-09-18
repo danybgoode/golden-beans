@@ -139,6 +139,45 @@ export function isFlagServingEnabled(): boolean {
   return process.env.FLAG_SERVING_ENABLED === 'true'
 }
 
+// ── golden-frijoles-cli · D8 — the CLI-authenticated write seam, and the ONE gate in this module
+// whose polarity is inverted ────────────────────────────────────────────────────────────────────
+//
+// ⚠️ **`!== 'false'`, not `=== 'true'`. It is BORN ON.** Every other gate in this file is born
+// dark; this one is not, and the deviation is deliberate rather than a slip:
+//
+//   • **A standing product-owner instruction.** Daniel, 2026-08-31 and again for this epic on
+//     2026-09-17: "nothing is dark, all is enabled, nothing is waiting for me." A born-dark gate
+//     would mean the epic merges, deploys, and does nothing until someone sets a Vercel variable —
+//     which is the state that instruction exists to forbid. Born ON is the only polarity that
+//     ships live on merge with no env var owed.
+//   • **The epic's scope doc asked for the opposite, and the epic README records the inversion**
+//     (D8) rather than resolving it quietly. Read that before changing this line.
+//
+// **On the bet's "must fail CLOSED" clause.** That clause addressed a real hazard — a flag service
+// gating its own CLI *through its own flag service*, where a failed read would grant write access.
+// This gate does not do that. It reads an environment variable; there is no read that can fail, and
+// no recursion. What remains true either way is that setting `CLI_WRITE_API_ENABLED=false` is a
+// genuine whole-surface kill switch: every CLI route below checks it BEFORE any credential work, so
+// OFF is never a credential-validity oracle.
+//
+// ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
+// ⚠️ **This paragraph used to say "it does not gate ... flag inspection", and that was FALSE**
+// (cross-family review, Codex, round 4). `requireCliAccount` checks this gate before any credential
+// work on EVERY `/api/v1/cli/*` route, reads included — which is deliberate and is what
+// `lib/cli-auth.ts` says in its header ("OFF is a real whole-surface kill switch"). The comment
+// was describing an intention the code did not have, which is the class CODE-QUALITY #3 exists for.
+//
+// GATED: every `/api/v1/cli/*` route — `whoami`, `projects`, `keys`, `flags` (read AND write) —
+// and the MCP flag WRITE tools. An operator turning this off wants the CLI off, not half of it.
+//
+// NOT GATED: `/api/v1/flags/snapshot` (its own `FLAG_SERVING_ENABLED`), `/api/v1/flags/sync` (its
+// own `FLAG_DEFINITION_SYNC_ENABLED`), the console, and the connector's flag READ tools. An
+// incident that needs the CLI stopped must not also stop the consumers already reading snapshots,
+// and none of those paths reads this flag.
+export function isCliWriteApiEnabled(): boolean {
+  return process.env.CLI_WRITE_API_ENABLED !== 'false'
+}
+
 // flag-serving-and-prd-g · Sprint 4 — definition synchronization is an independently removable
 // control-plane WRITE seam.  It is deliberately separate from FLAG_SERVING_ENABLED: an owner may
 // prepare immutable drafts while serving is dark, and an incident may stop publishers without

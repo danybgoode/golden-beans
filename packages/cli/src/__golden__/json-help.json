@@ -1,0 +1,173 @@
+{
+  "ok": true,
+  "help": {
+    "usage": "gf <command> [flags]",
+    "commands": [
+      {
+        "command": "login",
+        "summary": "save a CLI token for this machine",
+        "usage": "gf login [--token <token>] [--api <url>]",
+        "needsAuth": false,
+        "flags": [
+          {
+            "flag": "--token",
+            "takesValue": true,
+            "describe": "the token, instead of reading stdin"
+          },
+          {
+            "flag": "--api",
+            "takesValue": true,
+            "describe": "the deployment (default: https://goldenfrijoles.com)"
+          }
+        ]
+      },
+      {
+        "command": "logout",
+        "summary": "forget the saved token on this machine",
+        "usage": "gf logout",
+        "needsAuth": false,
+        "flags": []
+      },
+      {
+        "command": "whoami",
+        "summary": "the account, the credential and the projects it reaches",
+        "usage": "gf whoami [--json]",
+        "needsAuth": true,
+        "flags": []
+      },
+      {
+        "command": "doctor",
+        "summary": "why is it not working — every check, in order",
+        "usage": "gf doctor [--json]",
+        "needsAuth": false,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "check this project instead of the remembered one"
+          }
+        ]
+      },
+      {
+        "command": "init",
+        "summary": "project, key, .env.local and the snippet — in one verb",
+        "usage": "gf init [--env <environment>] [--json] [--yes]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (default: development)"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--yes",
+            "takesValue": false,
+            "describe": "accepted and ignored — this verb never prompts"
+          }
+        ]
+      },
+      {
+        "command": "projects ls",
+        "summary": "the projects this credential reaches",
+        "usage": "gf projects ls [--json]",
+        "needsAuth": true,
+        "flags": []
+      },
+      {
+        "command": "projects create",
+        "summary": "make sure this account has a project (idempotent)",
+        "usage": "gf projects create [--json]",
+        "needsAuth": true,
+        "flags": []
+      },
+      {
+        "command": "projects use",
+        "summary": "remember which project the other commands act on",
+        "usage": "gf projects use <slug>",
+        "needsAuth": true,
+        "flags": []
+      },
+      {
+        "command": "flags ls",
+        "summary": "every flag, and what each environment serves",
+        "usage": "gf flags ls [--project <slug>] [--json]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          }
+        ]
+      },
+      {
+        "command": "flags get",
+        "summary": "one flag: its definition, its versions and who changed it",
+        "usage": "gf flags get <key> [--project <slug>] [--json]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          }
+        ]
+      }
+    ],
+    "globalFlags": [
+      "--json",
+      "--project",
+      "--api",
+      "--token",
+      "--help",
+      "--version"
+    ],
+    "environment": [
+      "GOLDEN_FRIJOLES_TOKEN",
+      "GOLDEN_FRIJOLES_URL",
+      "GOLDEN_FRIJOLES_PROJECT"
+    ],
+    "exitCodes": [
+      {
+        "code": 0,
+        "name": "ok",
+        "means": "it worked"
+      },
+      {
+        "code": 1,
+        "name": "usage",
+        "means": "the command is wrong — nothing was sent"
+      },
+      {
+        "code": 2,
+        "name": "auth",
+        "means": "the credential is not accepted — run `gf login`"
+      },
+      {
+        "code": 3,
+        "name": "not-found",
+        "means": "no such thing, or not yours"
+      },
+      {
+        "code": 4,
+        "name": "conflict",
+        "means": "someone else changed it — re-read and retry"
+      },
+      {
+        "code": 5,
+        "name": "partial",
+        "means": "some environments changed and some did not"
+      },
+      {
+        "code": 6,
+        "name": "server",
+        "means": "the server or the network is unwell — retry"
+      }
+    ]
+  }
+}

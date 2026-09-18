@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-16 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-17 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -54,7 +54,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -64,6 +64,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
+| Golden Frijoles CLI v1 — the write surface an agent can actually drive | Scaffolded | In progress |
 
 ---
-_Epics: 29 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 29 · seeds in funnel: 3 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

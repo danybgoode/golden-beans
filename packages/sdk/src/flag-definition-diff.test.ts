@@ -11,10 +11,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import { parseFlagDefinition, type FlagDefinition } from '@golden-frijoles/sdk'
+import { parseFlagDefinition, type FlagDefinition } from './flags.ts'
 
 // The extensionless-import hook, verbatim from flag-rule-draft.test.ts — flag-definition-diff
-// imports ./rollout-percent, which is D3's single-conversion rule expressed as a dependency.
+// imports ./rollout-percent AND ./flags, extensionless, because SDK *source* must stay
+// extensionless (see packages/sdk/src/index.ts's header: allowing `.ts` in source would let app
+// code do it too, trading a caught type error for an uncaught build break). Only *.test.ts opts
+// into the looser rule, so the tested module is reached through this hook.
+//
+// golden-frijoles-cli D4 moved this module from apps/web/lib into the SDK so `packages/cli` and
+// `apps/web` diff a definition with ONE implementation; the hook's parent path moved with it.
 type ResolveHook = (
   specifier: string,
   context: Record<string, unknown>,
@@ -31,7 +37,7 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     if (
       typeof context.parentURL === 'string' &&
-      context.parentURL.includes('/apps/web/lib/') &&
+      context.parentURL.includes('/packages/sdk/src/') &&
       specifier.startsWith('./') &&
       !specifier.endsWith('.ts')
     ) {

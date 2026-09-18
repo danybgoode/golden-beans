@@ -117,6 +117,7 @@ test('members see every live member surface but never owner-only or flow-only ro
       'tasks',
       'scenarios',
       'setup/connect',
+      'setup/cli',
       'scheduled',
       'flag-audit',
     ]
@@ -196,6 +197,7 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
       // `agent-keys` are ABSENT and these two are present. `allGatesOpen` sets `console-shell: true`
       // and `legacy-keys: false`, which is the only combination `readGates()` can produce.
       'setup/connect',
+      'setup/cli',
       'setup/keys',
       // Both member-readable, so both appear in this list too. `scheduled` sits between them in
       // INVENTORY order, which is what the rail renders — it is the fourth Ship item the approved
@@ -275,7 +277,7 @@ test('Ship holds the feature-operating surfaces and Setup holds every credential
   // and a credential surface appearing anywhere else is the finding this assertion exists to make.
   assert.deepEqual(
     getSectionLinks(links, 'setup').map((l) => l.routeSegment),
-    ['setup/connect', 'setup/keys', 'destinations', 'shares']
+    ['setup/connect', 'setup/cli', 'setup/keys', 'destinations', 'shares']
   )
   assert.deepEqual(
     getSectionLinks(links, 'measure').map((l) => l.routeSegment),

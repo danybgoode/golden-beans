@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "project": "acme",
+  "flags": [
+    {
+      "key": "checkout.demo_enabled",
+      "valueType": "boolean",
+      "description": "Checkout demo.",
+      "latestVersion": 2,
+      "environments": [
+        {
+          "environment": "development",
+          "state": "on",
+          "version": 2,
+          "serving": true,
+          "readable": true,
+          "updatedAt": "2026-09-17T00:00:00.000Z"
+        },
+        {
+          "environment": "preview",
+          "state": "off",
+          "version": null,
+          "serving": null,
+          "readable": true,
+          "updatedAt": "2026-09-17T00:00:00.000Z"
+        },
+        {
+          "environment": "production",
+          "state": "never",
+          "version": null,
+          "serving": null,
+          "readable": true,
+          "updatedAt": null
+        }
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "environment": "production",
+      "snapshotVersion": 7,
+      "updatedAt": "2026-09-17T00:00:00.000Z"
+    }
+  ]
+}

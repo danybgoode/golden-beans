@@ -1,7 +1,7 @@
 {
   "_": "GENERATED — do not hand-edit. Run: node scripts/design-coverage.mjs",
-  "routes": 28,
-  "liveRoutesAtSprint1": 31,
+  "routes": 29,
+  "liveRoutesAtSprint1": 32,
   "hasReferenceState": 28,
   "rendersFromDesignSystem": 28,
   "complete": 22,

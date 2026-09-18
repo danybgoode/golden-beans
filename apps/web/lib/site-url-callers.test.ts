@@ -72,6 +72,16 @@ const CALLERS: Record<string, { kind: 'informational' } | { kind: 'durable'; gat
   // misconfigured one — `isSiteUrlMisconfiguredInProduction()` exists for it. The minting itself is
   // `lib/connector-tokens.ts`, below.
   'app/install/page.tsx': { kind: 'informational' },
+  // golden-frijoles-cli · Setup › CLI access prints "this deployment's API is <url>" beside the
+  // `npx @golden-frijoles/cli login` command, so a reader knows which deployment the token they are
+  // about to mint addresses.
+  //
+  // INFORMATIONAL, and on a preview a preview hostname is not merely tolerable — it is the RIGHT
+  // answer. A token minted against a preview's console addresses that preview's API; printing
+  // production's URL there would hand someone a command pointed at the wrong deployment. Nothing
+  // here is persisted: the CLI stores whatever base URL its own `--api` resolves at login time,
+  // which is the `durable` half of this pairing and lives in `packages/cli`, outside this registry.
+  'app/app/setup/cli/[projectSlug]/page.tsx': { kind: 'informational' },
 
   // ── Durable: someone keeps this URL ─────────────────────────────────────────────────────────
   'lib/connector-tokens.ts': { kind: 'durable', gatedBy: 'getSupabaseServiceClient' },

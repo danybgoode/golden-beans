@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "account": {
+    "userId": "user-1",
+    "email": "someone@example.com"
+  },
+  "credential": {
+    "id": "token-1",
+    "label": "my laptop"
+  },
+  "apiUrl": "https://goldenfrijoles.com",
+  "tokenSource": "env",
+  "activeProject": null,
+  "projects": [
+    {
+      "slug": "acme",
+      "role": "owner"
+    }
+  ]
+}

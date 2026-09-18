@@ -159,8 +159,13 @@ test('the denominator moves exactly as the D13 ledger says', () => {
   const beforeSprint4 = liveRows(3)
   const atClose = liveRows(6)
 
-  assert.equal(beforeSprint4.length, 31, 'every row is live before Story 4.5 retires three')
-  assert.equal(atClose.length, 28, 'after Story 4.5: 31 rows minus the three retired')
+  // ⚠️ **+1 again — golden-frijoles-cli Sprint 1, Story 1.2: `/app/setup/cli/[projectSlug]`.**
+  // Setup's third destination, where `gf login` gets its token. It moves the DENOMINATOR and not the
+  // "has a state" count, exactly as North Star did above and for the same reason: the console
+  // prototype predates the CLI, so there is no approved picture for it yet and its row says so with
+  // a dated deferral rather than claiming coverage it has not earned.
+  assert.equal(beforeSprint4.length, 32, 'every row is live before Story 4.5 retires three')
+  assert.equal(atClose.length, 29, 'after Story 4.5: 32 rows minus the three retired')
 
   // ...and the row that does not exist yet is the one Daniel approved as a designed empty state.
   const scheduled = ROUTE_MANIFEST.find((row) => row.route === '/app/scheduled/[projectSlug]')
@@ -180,7 +185,8 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // it would make the number measure intent rather than product, which is the failure the epic is
   // named after.
   const now = coverage(1)
-  assert.equal(now.total, 31)
+  // 32 since golden-frijoles-cli added Setup › CLI access — see the ledger test above.
+  assert.equal(now.total, 32)
   // ⚠️ **`>=`, not `>` — and the change is the whole point of Sprint 6.** This line asserted
   // `hasReferenceState > complete` under the message "reference states exist ahead of the work",
   // which was true for five sprints and is FALSE at epic close by design: the work caught up. The
@@ -209,12 +215,27 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // substitution is over and `/app/impact/…` now BORROWS that state (D14-b, Daniel 2026-09-10) —
   // the same language about a different subject. So the denominator moves by exactly one and the
   // epic can still close as a clean sweep.
+  //
+  // ⚠️ **29, not 28 — golden-frijoles-cli Sprint 1, Story 1.2 adds `/app/setup/cli/[projectSlug]`,
+  // and it is the first route since the sweep closed that is NOT covered.** It is built from the
+  // design system, but the console prototype predates the CLI so there is no approved state to
+  // measure it against, and its manifest row refuses to claim coverage it has not earned.
+  //
+  // The sweep therefore stands at 28 of 29, and this assertion says so rather than being relaxed:
+  // `outstanding` is pinned to EXACTLY that one route, so any second uncovered route — or this one
+  // still being uncovered after its deferral is closed — turns it red. A bare
+  // `complete >= 28` would have accepted both.
   const atClose = coverage(6)
-  assert.equal(atClose.total, 28, 'the epic-close denominator is not the 28 the D14 ledger computes')
+  assert.equal(atClose.total, 29, 'the epic-close denominator is not the 29 the two ledgers compute')
   assert.equal(
     atClose.complete,
     28,
-    `the epic closes at ${atClose.complete}/28 — outstanding: ${atClose.outstanding.join(', ')}`
+    `28 of 29 routes are covered — outstanding: ${atClose.outstanding.join(', ')}`
+  )
+  assert.deepEqual(
+    atClose.outstanding,
+    ['/app/setup/cli/[projectSlug]'],
+    'the only uncovered console route is the one whose deferral names an owner and a date'
   )
 
   // ⚠️ **This used to assert `complete === 0`, "nothing renders from design-system/ in Sprint 1".**
@@ -306,7 +327,11 @@ test('every row names a seam, and the seam matches the frame', () => {
   }
 
   const bySeam = (seam: string) => liveRows(3).filter((row) => row.seam === seam).length
-  assert.equal(bySeam('product-shell'), 22, 'seam A: the 20 console routes, plus Scheduled and North Star')
+  assert.equal(
+    bySeam('product-shell'),
+    23,
+    'seam A: the 20 console routes, plus Scheduled, North Star and Setup \u203a CLI access'
+  )
   assert.equal(bySeam('frame'), 9, 'seam B: four hub routes and five doors')
 })
 
