@@ -425,8 +425,11 @@ test('gf init is IDEMPOTENT: a second run mints nothing', async () => {
   const fetchImpl = stubFetch(
     {
       '/api/v1/cli/keys': { body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null } },
-      // The second run PROBES the key it found. Answering 200 is what "still works" looks like.
-      '/api/v1/flags/snapshot': { body: { ok: true, contractVersion: 1, flags: [] } },
+      // The second run PROBES the key it found. "Still works" now means BOTH that it resolves and
+      // that it names the environment being set up — `gf init` defaults to development here.
+      '/api/v1/flags/snapshot': {
+        body: { ok: true, contractVersion: 1, environment: 'development', flags: [] },
+      },
     },
     seen
   )
@@ -558,6 +561,48 @@ test('\u26a0\ufe0f gf init REFUSES when git does not actually ignore .env.local'
   assert.match(err.join('\n'), /git rm --cached/)
   // And the file is untouched — no credential was written into a tracked file.
   assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), 'EXISTING=1\n')
+})
+
+test('\u26a0\ufe0f gf init REPLACES a live key that reads a DIFFERENT environment', async () => {
+  // A `flag_read` credential is scoped to ONE environment, and a live-but-wrong key is the most
+  // dangerous of the three states: the probe said "works", init kept it, and then wrote
+  // GOLDEN_FRIJOLES_ENVIRONMENT=production beside a development credential. The app then believes it
+  // is reading production flags and is reading development's, with nothing saying so (Codex, round 4).
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-env-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  writeFileSync(join(cwd, '.env.local'), `${ENV_KEYS.flagRead}=gb_key_development\n`)
+
+  const seen: Array<{ method: string; url: string; body: unknown }> = []
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['init', '--env', 'production', '--json'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: stubFetch(
+      {
+        // Live — but for development, while production is being set up.
+        '/api/v1/flags/snapshot': {
+          body: { ok: true, contractVersion: 1, environment: 'development', flags: [] },
+        },
+        '/api/v1/cli/keys': {
+          body: { ok: true, id: 'key-prod', key: 'gb_key_production', type: 'flag_read', expiresAt: null },
+        },
+      },
+      seen
+    ),
+  })
+
+  assert.equal(code, EXIT.OK)
+  const report = JSON.parse(out.join('\n')) as { existingKeyState: string; mintedKeyId: string }
+  assert.equal(report.existingKeyState, 'wrong-environment')
+  assert.equal(report.mintedKeyId, 'key-prod')
+  const envFile = readFileSync(join(cwd, '.env.local'), 'utf8')
+  assert.equal(readEnvValue(envFile, ENV_KEYS.flagRead), 'gb_key_production')
+  assert.equal(readEnvValue(envFile, ENV_KEYS.environment), 'production')
+  // And the mint really happened — not just a relabelled report.
+  assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 1)
 })
 
 test('\u26a0\ufe0f gf init REFUSES a symlinked .env.local, and writes nothing', async () => {

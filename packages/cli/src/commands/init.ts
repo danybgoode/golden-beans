@@ -184,12 +184,18 @@ export const initCommand: Command = {
     // confirming a setup that no longer works, which is worse than not checking at all.
     //
     // So the key is EXERCISED, against the route that actually serves it.
-    const existingKeyState = existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey)
+    const existingKeyState =
+      existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey, environment)
     if (existingKeyState === 'dead') {
       context.emit.note(`The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`)
     }
+    if (existingKeyState === 'wrong-environment') {
+      context.emit.note(
+        `The ${ENV_KEYS.flagRead} in ${ENV_FILE} reads a DIFFERENT environment — minting a ${environment} key.`
+      )
+    }
 
-    if (existingKey === null || existingKeyState === 'dead') {
+    if (existingKey === null || existingKeyState === 'dead' || existingKeyState === 'wrong-environment') {
       const result = await context.api!.post<{ id: string; key: string; expiresAt: string | null }>(
         'api/v1/cli/keys',
         { project, type: 'flag_read', label: `gf init (${environment})`, environment }
@@ -360,15 +366,22 @@ function gitReallyIgnores(gitignorePath: string, context: CommandContext): ExitC
  * CLI's PAT is not involved and must not be, since a PAT authorizes different things entirely.
  *
  * Three answers, and the third is the one that matters:
- *   `live`        — 200 or 304. The snapshot resolved.
- *   `dead`        — 401. Unknown, revoked or expired; the caller mints a replacement.
+ *   `live`              — the snapshot resolved AND names the environment being set up.
+ *   `dead`              — 401. Unknown, revoked or expired; the caller mints a replacement.
+ *   `wrong-environment` — it resolves, but for a DIFFERENT environment. A `flag_read` key is scoped
+ *                         to one, so keeping it would pair a production config with a development
+ *                         credential and say nothing.
  *   `unverified`  — anything else: a 404 because flag serving is switched off on this deployment,
  *                   a network failure, a proxy. **Reported, never guessed at.** Treating an
  *                   unanswerable question as `dead` would mint a fresh credential on every run of a
  *                   deployment with serving off, which breaks the idempotency this verb promises;
  *                   treating it as `live` silently would repeat the defect this check exists to fix.
  */
-async function probeFlagReadKey(context: CommandContext, key: string): Promise<'live' | 'dead' | 'unverified'> {
+async function probeFlagReadKey(
+  context: CommandContext,
+  key: string,
+  wanted: string
+): Promise<'live' | 'dead' | 'wrong-environment' | 'unverified'> {
   // ⚠️ **Through `clientFor`, NOT a bare `fetch`.** The first version called the global `fetch`
   // directly — it was the obvious way to send a different credential — and that quietly opened a
   // second HTTP path in a package whose whole point is that there is one: it skipped the timeout,
@@ -378,8 +391,18 @@ async function probeFlagReadKey(context: CommandContext, key: string): Promise<'
   // `clientFor(key)` is exactly the right seam: same base URL, same timeouts, same error mapping,
   // a DIFFERENT credential. The CLI's PAT is not involved and must not be — a PAT authorizes
   // something else entirely, and sending it here would tell us nothing about the key in the file.
-  const result = await context.clientFor(key).get('api/v1/flags/snapshot')
-  if (result.kind === 'ok') return 'live'
+  const result = await context.clientFor(key).get<{ environment?: string }>('api/v1/flags/snapshot')
+  if (result.kind === 'ok') {
+    // ⚠️ **A live key is not necessarily the RIGHT key** (cross-family review, Codex, round 4). A
+    // `flag_read` credential is scoped to ONE environment, and the snapshot names which — so a
+    // rerun as `gf init --env production` over a file holding a working DEVELOPMENT key found it
+    // live, kept it, and then wrote `GOLDEN_FRIJOLES_ENVIRONMENT=production` beside it. The result
+    // is an app that believes it is reading production flags and is reading development's, with
+    // nothing anywhere saying so. That is the worst shape a flag bug has.
+    //
+    // The answer is in the response already; it only had to be looked at.
+    return result.body.environment === wanted ? 'live' : 'wrong-environment'
+  }
   // A network failure, a 404 from a deployment with flag serving switched off, a proxy's HTML —
   // all "could not tell", which is a third answer and not a synonym for either of the others.
   if (result.kind === 'network') return 'unverified'

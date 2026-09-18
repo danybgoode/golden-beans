@@ -160,10 +160,20 @@ export function isFlagServingEnabled(): boolean {
 // genuine whole-surface kill switch: every CLI route below checks it BEFORE any credential work, so
 // OFF is never a credential-validity oracle.
 //
-// WHAT IT GATES, PRECISELY: the `/api/v1/cli/*` routes and (from Sprint 3.4) the MCP flag-write
-// tools. It does not gate snapshot serving, catalog sync, the console, or flag inspection — those
-// have their own gates above, and an incident that needs the CLI stopped must not also stop the
-// consumers already reading snapshots.
+// ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
+// ⚠️ **This paragraph used to say "it does not gate ... flag inspection", and that was FALSE**
+// (cross-family review, Codex, round 4). `requireCliAccount` checks this gate before any credential
+// work on EVERY `/api/v1/cli/*` route, reads included — which is deliberate and is what
+// `lib/cli-auth.ts` says in its header ("OFF is a real whole-surface kill switch"). The comment
+// was describing an intention the code did not have, which is the class CODE-QUALITY #3 exists for.
+//
+// GATED: every `/api/v1/cli/*` route — `whoami`, `projects`, `keys`, `flags` (read AND write) —
+// and the MCP flag WRITE tools. An operator turning this off wants the CLI off, not half of it.
+//
+// NOT GATED: `/api/v1/flags/snapshot` (its own `FLAG_SERVING_ENABLED`), `/api/v1/flags/sync` (its
+// own `FLAG_DEFINITION_SYNC_ENABLED`), the console, and the connector's flag READ tools. An
+// incident that needs the CLI stopped must not also stop the consumers already reading snapshots,
+// and none of those paths reads this flag.
 export function isCliWriteApiEnabled(): boolean {
   return process.env.CLI_WRITE_API_ENABLED !== 'false'
 }
