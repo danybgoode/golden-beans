@@ -19,7 +19,9 @@
 // is `codex login` (see scripts/README.md → "Restoring a lapsed Codex token").
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // label per agent. Drives both the CLI dispatch and the human-readable header.
 export const AGENTS = {
@@ -1275,4 +1277,46 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
         `or use --agent codex/antigravity/vibe. (An empty result is a failure, never "no findings".)`
     );
   return out;
+}
+
+// ── Devin — a PROSE WRITER here, not a reviewer (independent quota pool) ─────────────────────────────────
+// Ported with the reporting family (plugin-audit-and-extraction S1): lib/prose-writer.mjs drafts with
+// Devin first. It is deliberately NOT in AGENTS/AGENT_BIN — the reviewer roster is review-route.mjs's
+// decision, and this port adds a writer, not a reviewer.
+// `devin -p --prompt-file <file>` runs non-interactively and prints the response. The prompt (framing +
+// diff) rides in a FILE, not argv, so there is NO size cap to guard — the whole reason to prefer prompt-file
+// over agy's argv path for large diffs. Empty stdout is a failure (a quota-capped devin, like agy, exits 0
+// with nothing). Uses the account default model. `deps` is injectable so a node:test drives it without a
+// real devin binary or touching the real filesystem.
+export function runDevin(prompt, opts = {}, deps = {}) {
+  const {
+    spawn = spawnSync,
+    writeFile = writeFileSync,
+    mkdtemp = mkdtempSync,
+    rm = rmSync,
+  } = deps;
+  let dir;
+  try {
+    dir = mkdtemp(join(tmpdir(), 'xrev-devin-'));
+  } catch (e) {
+    return fail(opts.soft, `could not create a temp dir for devin's prompt file: ${e.message}`);
+  }
+  const file = join(dir, 'prompt.md');
+  try {
+    writeFile(file, prompt, 'utf8');
+    const r = spawn('devin', ['-p', '--prompt-file', file], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    if (r.error) return fail(opts.soft, `devin not found or failed to spawn (${r.error.message}) — install the Devin CLI or use --agent codex/antigravity.`);
+    if (r.status !== 0) {
+      const last = (r.stderr || '').trim().split('\n').filter(Boolean).pop() || 'unknown error';
+      return fail(opts.soft, `devin -p failed: ${last}`);
+    }
+    const out = (r.stdout || '').trim();
+    if (!out) {
+      return fail(opts.soft, `devin returned no output — likely a quota cap or auth lapse (run \`devin auth\`), or use --agent codex/antigravity.`);
+    }
+    return out;
+  } finally {
+    // Best-effort cleanup — a leaked temp prompt file must never fail the review.
+    try { rm(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
 }
