@@ -42,9 +42,7 @@ function verbList(commands: readonly Command[]): string {
   }
   return [...groups.entries()]
     .map(([group, members]) => {
-      const lines = members.map(
-        (command) => `  ${pad(command.path.join(' '), width)}  ${command.summary}`
-      )
+      const lines = members.map((command) => `  ${pad(command.path.join(' '), width)}  ${command.summary}`)
       return group === '' ? lines.join('\n') : [`  ${group}`, ...lines].join('\n')
     })
     .join('\n\n')
@@ -53,9 +51,7 @@ function verbList(commands: readonly Command[]): string {
 function exitCodes(): string {
   return [
     'Exit codes',
-    ...EXIT_CODE_TABLE.map(
-      (row) => `  ${row.code}  ${pad(row.name, 9)}  ${row.means}`
-    ),
+    ...EXIT_CODE_TABLE.map((row) => `  ${row.code}  ${pad(row.name, 9)}  ${row.means}`),
   ].join('\n')
 }
 
@@ -98,9 +94,14 @@ export function commandAsData(command: Command) {
 }
 
 export function renderRootHelp(commands: readonly Command[]): string {
-  return [HEADER, `Usage\n  gf <command> [flags]`, `Commands\n${verbList(commands)}`, GLOBAL_FLAGS, ENVIRONMENT, exitCodes()].join(
-    '\n\n'
-  )
+  return [
+    HEADER,
+    `Usage\n  gf <command> [flags]`,
+    `Commands\n${verbList(commands)}`,
+    GLOBAL_FLAGS,
+    ENVIRONMENT,
+    exitCodes(),
+  ].join('\n\n')
 }
 
 export function renderCommandHelp(command: Command): string {

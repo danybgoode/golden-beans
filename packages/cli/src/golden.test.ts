@@ -33,9 +33,8 @@ type ResolveHook = (
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
 
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -121,7 +120,11 @@ function stubFetch(routes: Record<string, { status?: number; body: unknown }>): 
 /** A throwaway HOME so a developer's real credentials file is never read or written by a test. */
 function sandbox(): NodeJS.ProcessEnv {
   const home = mkdtempSync(join(tmpdir(), 'gf-golden-'))
-  return { HOME: home, XDG_CONFIG_HOME: join(home, '.config'), GOLDEN_FRIJOLES_TOKEN: `gf_pat_${'a'.repeat(32)}` }
+  return {
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, '.config'),
+    GOLDEN_FRIJOLES_TOKEN: `gf_pat_${'a'.repeat(32)}`,
+  }
 }
 
 const WHOAMI = {
@@ -141,9 +144,30 @@ const FLAGS = {
       description: 'Checkout demo.',
       latestVersion: 2,
       environments: [
-        { environment: 'development', state: 'on', version: 2, serving: true, readable: true, updatedAt: '2026-09-17T00:00:00.000Z' },
-        { environment: 'preview', state: 'off', version: null, serving: null, readable: true, updatedAt: '2026-09-17T00:00:00.000Z' },
-        { environment: 'production', state: 'never', version: null, serving: null, readable: true, updatedAt: null },
+        {
+          environment: 'development',
+          state: 'on',
+          version: 2,
+          serving: true,
+          readable: true,
+          updatedAt: '2026-09-17T00:00:00.000Z',
+        },
+        {
+          environment: 'preview',
+          state: 'off',
+          version: null,
+          serving: null,
+          readable: true,
+          updatedAt: '2026-09-17T00:00:00.000Z',
+        },
+        {
+          environment: 'production',
+          state: 'never',
+          version: null,
+          serving: null,
+          readable: true,
+          updatedAt: null,
+        },
       ],
     },
   ],

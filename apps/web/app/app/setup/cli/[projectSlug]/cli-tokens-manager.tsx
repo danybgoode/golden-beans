@@ -88,8 +88,8 @@ export function CliTokensManager({ slug, tokens }: { slug: string; tokens: CliTo
         title="Your CLI token"
         body={
           <>
-            This is the only time it is shown — only a hash was stored, so it cannot be displayed again.
-            Paste it into <code>gf login</code>, or set it as <code>GOLDEN_FRIJOLES_TOKEN</code> in CI.
+            This is the only time it is shown — only a hash was stored, so it cannot be displayed again. Paste
+            it into <code>gf login</code>, or set it as <code>GOLDEN_FRIJOLES_TOKEN</code> in CI.
           </>
         }
       >

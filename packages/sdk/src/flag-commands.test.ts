@@ -22,9 +22,8 @@ type ResolveHook = (
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
 
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -163,7 +162,9 @@ function boolFlag(overrides: Partial<FlagDefinition> = {}): FlagDefinition {
 
 test('set changes the default variant and carries the rules across untouched', () => {
   const current = boolFlag({
-    rules: [{ priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' }],
+    rules: [
+      { priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    ],
   })
   const plan = unwrap(planFlagSet({ current, variantKey: OFF_VARIANT_KEY, environments: ['production'] }))
   assert.equal(plan.definition.defaultVariantKey, OFF_VARIANT_KEY)

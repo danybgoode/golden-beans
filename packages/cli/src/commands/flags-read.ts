@@ -41,7 +41,13 @@ export type FlagDetailBody = {
       definition: unknown
       servedBy: string[]
     }>
-    audit: Array<{ action: string; environment: string | null; reason: string; createdAt: string; actor: string }>
+    audit: Array<{
+      action: string
+      environment: string | null
+      reason: string
+      createdAt: string
+      actor: string
+    }>
   }
   environments: Array<{ environment: string; snapshotVersion: number; updatedAt: string }>
 }
@@ -58,10 +64,7 @@ export function resolveProject(context: CommandContext): string | null {
 }
 
 export function missingProject(context: CommandContext): ExitCode {
-  context.emit.fail(
-    'invalid',
-    'No project chosen. Pass --project <slug>, or run `gf projects use <slug>`.'
-  )
+  context.emit.fail('invalid', 'No project chosen. Pass --project <slug>, or run `gf projects use <slug>`.')
   return EXIT.USAGE
 }
 

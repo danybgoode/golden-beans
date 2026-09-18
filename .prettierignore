@@ -43,3 +43,10 @@ apps/web/design-system/coverage.json
 # and `state-contract.mjs --check` went red on the next command.
 apps/web/design-system/STATE-CONTRACT.json
 apps/web/design-system/STATE-MATCH.json
+
+# golden-frijoles-cli · D5 — the CLI's golden files are BYTE contracts, not source.
+# They hold the exact output of `gf --help` and each `--json` envelope, and `golden.test.ts` diffs
+# them byte for byte. Same failure as the two generated files above, verified the same way:
+# `format:changed --write` reflowed `json-help.json` and the golden test went red on the next run.
+# A formatter that rewrites a contract is a second author of it.
+packages/cli/src/__golden__/

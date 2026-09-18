@@ -116,7 +116,8 @@ export function resolveAuth(options: {
   const activeProject = env.GOLDEN_FRIJOLES_PROJECT?.trim() || file?.activeProject || null
 
   if (envToken) return { token: envToken, apiUrl, activeProject, source: 'env' }
-  if (options.tokenFlag?.trim()) return { token: options.tokenFlag.trim(), apiUrl, activeProject, source: 'flag' }
+  if (options.tokenFlag?.trim())
+    return { token: options.tokenFlag.trim(), apiUrl, activeProject, source: 'flag' }
   if (file) return { token: file.token, apiUrl, activeProject, source: 'file' }
   return { token: null, apiUrl, activeProject, source: 'none' }
 }
