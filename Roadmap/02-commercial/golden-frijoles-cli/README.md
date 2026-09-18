@@ -151,9 +151,17 @@ shape that a copy edit can change is a contract with no teeth.
 `packages/sdk/README.md` **examples**. They are caller-owned addresses, exactly as the README says.
 
 So there is no compatibility to preserve — nothing in shipped code resolves either name. Locked:
-`gf init` writes **`GOLDEN_FRIJOLES_FLAG_READ_KEY`**, `GOLDEN_FRIJOLES_FLAG_SYNC_KEY`,
-`GOLDEN_FRIJOLES_API_KEY` and `GOLDEN_FRIJOLES_URL`, and it **prints the snippet that reads them in
-the same breath**, so the file and its reader are generated together and cannot drift. The SDK
+`gf init` writes **`GOLDEN_FRIJOLES_URL`**, **`GOLDEN_FRIJOLES_FLAG_READ_KEY`** and
+**`GOLDEN_FRIJOLES_ENVIRONMENT`** — exactly the three `ENV_KEYS` in `packages/cli/src/commands/init.ts`
+— and it **prints the snippet that reads them in the same breath**, so the file and its reader are
+generated together and cannot drift.
+
+⚠️ *Corrected in review (Codex, round 5).* This paragraph originally listed
+`GOLDEN_FRIJOLES_FLAG_SYNC_KEY` and `GOLDEN_FRIJOLES_API_KEY` too. `gf init` deliberately writes
+neither: a `flag_sync` key authorizes writing definitions and an ingest key sends events, and a
+verb whose job is "let this app READ its flags" must not put wider credentials on disk as a side
+effect. They are minted on purpose with `gf keys create --type flag_sync|ingest`. The decision was
+right; the sentence describing it was not. The SDK
 README gains one line naming the new default; the legacy names stay valid because they were never
 lookups. Existing consumers are untouched.
 
