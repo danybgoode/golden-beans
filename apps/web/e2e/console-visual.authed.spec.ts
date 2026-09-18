@@ -565,6 +565,10 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/app/scheduled/[projectSlug]': (slug) => `/app/scheduled/${slug}`,
   '/app/flag-audit/[projectSlug]': (slug) => `/app/flag-audit/${slug}`,
   '/app/setup/connect/[projectSlug]': (slug) => `/app/setup/connect/${slug}`,
+  // golden-frijoles-cli · Setup › CLI access. Opened by the gate like every other route, so its
+  // structural promises (a `ds-` class inside <main>, no horizontal scroll) are measured even though
+  // it has no approved reference state yet — the manifest row's deferral says why.
+  '/app/setup/cli/[projectSlug]': (slug) => `/app/setup/cli/${slug}`,
   '/app/setup/keys/[projectSlug]': (slug) => `/app/setup/keys/${slug}`,
   '/app/destinations/[projectSlug]': (slug) => `/app/destinations/${slug}`,
   '/app/shares/[projectSlug]': (slug) => `/app/shares/${slug}`,
