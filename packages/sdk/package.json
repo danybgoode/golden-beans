@@ -1,7 +1,7 @@
 {
   "name": "@golden-frijoles/sdk",
   "private": false,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Golden Frijoles Growth Engine TypeScript SDK for telemetry, experiments, and local feature-flag evaluation.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
