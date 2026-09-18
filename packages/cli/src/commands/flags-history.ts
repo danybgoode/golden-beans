@@ -160,14 +160,19 @@ export const flagsDiffCommand: Command = {
         const row = flag.environments.find((candidate) => candidate.environment === name)
         if (!row || row.version === null) return null
         const version = flag.versions.find((candidate) => candidate.version === row.version)
-        return version ? { label: `${name} (v${version.version})`, definition: version.definition as FlagDefinition } : null
+        return version
+          ? { label: `${name} (v${version.version})`, definition: version.definition as FlagDefinition }
+          : null
       }
       before = resolveEnvironment(environments[0])
       after = resolveEnvironment(environments[1])
       if (!before || !after) {
         // Naming WHICH one, because "one of them serves nothing" sends the reader to check both.
         const empty = [before ? null : environments[0], after ? null : environments[1]].filter(Boolean)
-        context.emit.fail('not_found', `${empty.join(' and ')} ${empty.length === 1 ? 'is' : 'are'} serving nothing, so there is nothing to compare.`)
+        context.emit.fail(
+          'not_found',
+          `${empty.join(' and ')} ${empty.length === 1 ? 'is' : 'are'} serving nothing, so there is nothing to compare.`
+        )
         return EXIT.NOT_FOUND
       }
     }
@@ -187,10 +192,15 @@ export const flagsDiffCommand: Command = {
       },
       [
         `${before.label} → ${after.label}`,
-        ...(diff.changes.length === 0 && !diff.unexplained ? ['Nothing changed in the parts this compares.'] : []),
+        ...(diff.changes.length === 0 && !diff.unexplained
+          ? ['Nothing changed in the parts this compares.']
+          : []),
         ...diff.changes.map((change) => `  · ${change}`),
         ...(diff.unexplained
-          ? ['  · something changed outside what this can describe — the JSON:', JSON.stringify(after.definition, null, 2)]
+          ? [
+              '  · something changed outside what this can describe — the JSON:',
+              JSON.stringify(after.definition, null, 2),
+            ]
           : []),
       ].join('\n')
     )

@@ -16,9 +16,8 @@ type ResolveHook = (
   context: Record<string, unknown>,
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (
@@ -27,7 +26,10 @@ registerHooks({
       specifier.startsWith('.') &&
       !specifier.endsWith('.ts')
     ) {
-      return nextResolve(specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`, context)
+      return nextResolve(
+        specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`,
+        context
+      )
     }
     return nextResolve(specifier, context)
   },
@@ -220,7 +222,12 @@ test('⚠️ a PARTIAL answers 200 and still exits 5, naming which environments 
         serving: true,
         environments: [
           { environment: 'development', status: 'applied', snapshotVersion: 1 },
-          { environment: 'preview', status: 'conflict', snapshotVersion: null, error: 'someone else changed it' },
+          {
+            environment: 'preview',
+            status: 'conflict',
+            snapshotVersion: null,
+            error: 'someone else changed it',
+          },
           { environment: 'production', status: 'failed', snapshotVersion: null, error: 'boom' },
         ],
       },
@@ -432,7 +439,15 @@ test('a minted key is printed, and the report carries its id', async () => {
     writer,
     env: sandbox(),
     fetchImpl: stubWrite({
-      body: { ok: true, id: 'key-9', type: 'ingest', label: 'ci', scope: null, expiresAt: null, key: 'gb_key_x' },
+      body: {
+        ok: true,
+        id: 'key-9',
+        type: 'ingest',
+        label: 'ci',
+        scope: null,
+        expiresAt: null,
+        key: 'gb_key_x',
+      },
     }),
   })
   assert.equal(code, EXIT.OK)
@@ -450,7 +465,11 @@ test('diff refuses both forms at once, and neither — it never guesses which wa
     ['flags', 'diff', 'a.b', '--from', '1', '--to', '2', '--env', 'preview', '--env', 'production'],
   ]) {
     const { writer } = capture()
-    assert.equal(await run({ argv, writer, env: sandbox(), fetchImpl: noNetwork }), EXIT.USAGE, argv.join(' '))
+    assert.equal(
+      await run({ argv, writer, env: sandbox(), fetchImpl: noNetwork }),
+      EXIT.USAGE,
+      argv.join(' ')
+    )
   }
 })
 

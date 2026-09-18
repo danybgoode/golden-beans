@@ -112,7 +112,8 @@ function baseDefinition(
     if (served) return { definition: served.definition, versionId: served.id }
   }
   const newest = flag.versions.reduce<(typeof flag.versions)[number] | undefined>(
-    (highest, candidate) => (highest === undefined || candidate.version > highest.version ? candidate : highest),
+    (highest, candidate) =>
+      highest === undefined || candidate.version > highest.version ? candidate : highest,
     undefined
   )
   return newest ? { definition: newest.definition, versionId: newest.id } : null
@@ -196,8 +197,7 @@ export async function executeCliFlagWrite(input: {
             environments,
           })
   } else {
-    if (!flag)
-      return { ok: false, status: 404, error: `No flag \`${input.flagKey}\` in this project.` }
+    if (!flag) return { ok: false, status: 404, error: `No flag \`${input.flagKey}\` in this project.` }
     const disagreement = baseDisagreement(flag, environments)
     if (disagreement) return { ok: false, status: 400, error: disagreement }
     const base = baseDefinition(flag, environments)
@@ -223,7 +223,8 @@ export async function executeCliFlagWrite(input: {
             : planFlagKill({ current: base.definition, environments })
   }
 
-  if (!plan.ok) return { ok: false, status: 400, error: plan.errors[0] ?? 'Invalid flag command.', issues: plan.errors }
+  if (!plan.ok)
+    return { ok: false, status: 400, error: plan.errors[0] ?? 'Invalid flag command.', issues: plan.errors }
 
   // ── reuse an identical version rather than writing a new one ───────────────────────────────
   //
