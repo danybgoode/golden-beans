@@ -1,0 +1,25 @@
+gf keys revoke — kill a credential, immediately and permanently
+
+Usage
+  gf keys revoke <id> --type ingest
+
+--type is required, and it is not bureaucracy: each kind is revoked through its own
+  path so the audit trail records what actually happened. A trail whose label can be chosen
+  by picking an endpoint is worse than no trail — an operator asking "why did ingest stop?"
+  must not find the answer filed under something else.
+
+  Idempotent. A credential that is already revoked, never existed, or belongs to another
+  project is one answer: not found.
+
+Flags
+  --project <slug>  the project (default: the remembered one)
+  --type <kind>     ingest | flag_read | flag_sync — required
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

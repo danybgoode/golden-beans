@@ -1,0 +1,27 @@
+gf flags diff — what changed between two versions, in words
+
+Usage
+  gf flags diff <key> --from 3 --to 4    ·    gf flags diff <key> --env preview --env production
+
+Two ways to ask:
+    --from <n> --to <n>          compare two version numbers
+    --env <a> --env <b>          compare what two environments are serving
+
+  The sentences are the console's own — one implementation, so the terminal and the page
+  cannot describe the same change differently. Anything outside the six parts the differ
+  covers is reported as such, with the raw JSON, rather than silently omitted.
+
+Flags
+  --project <slug>     the project (default: the remembered one)
+  --from <version>     the version to compare FROM
+  --to <version>       the version to compare TO
+  --env <environment>  pass twice to compare two environments
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

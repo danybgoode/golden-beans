@@ -47,9 +47,21 @@ const STATUS_BY_CODE: Record<CliErrorCode, number> = {
   server_error: 500,
 }
 
-export function cliError(code: CliErrorCode, error: string): NextResponse<CliErrorBody> {
+/**
+ * `extra` carries machine-readable detail beside the sentence — `issues`, the flag parser's own
+ * list of what is wrong with a definition.
+ *
+ * It is a separate parameter rather than something a caller folds into `error`, because the CLI
+ * prints those messages verbatim and an agent branches on them. Concatenating them into the
+ * sentence would turn a list into prose, which is the direction D5 exists to stop.
+ */
+export function cliError(
+  code: CliErrorCode,
+  error: string,
+  extra?: Record<string, unknown>
+): NextResponse<CliErrorBody> {
   return NextResponse.json(
-    { ok: false as const, error, code },
+    { ok: false as const, error, code, ...extra },
     { status: STATUS_BY_CODE[code], headers: { 'Cache-Control': 'no-store' } }
   )
 }

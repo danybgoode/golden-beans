@@ -1,0 +1,31 @@
+gf keys create — mint a credential — the kind is required, never guessed
+
+Usage
+  gf keys create --type flag_read --env production --label "my app"
+
+--type is required and has no default:
+
+    ingest      sends events into this project, and reads its funnels through the SDK
+    flag_read   reads ONE environment's flag snapshot — needs --env
+    flag_sync   registers flag definitions from an outside catalog — needs --source
+
+  These have different blast radii and the product models them separately; a CLI that
+  flattened them into "a key" would hand out the widest one by accident.
+
+  The value is printed ONCE. Only its hash is stored, so it cannot be shown again.
+
+Flags
+  --project <slug>     the project (default: the remembered one)
+  --type <kind>        ingest | flag_read | flag_sync — required
+  --label <text>       what holds it — required
+  --env <environment>  required for flag_read
+  --source <name>      required for flag_sync
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

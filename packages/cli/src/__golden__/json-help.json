@@ -117,6 +117,329 @@
             "describe": "the project (default: the remembered one)"
           }
         ]
+      },
+      {
+        "command": "flags create",
+        "summary": "create a flag, with a polarity, in the environments you name",
+        "usage": "gf flags create <key> --kill-switch|--enablement --all-envs",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (repeatable)"
+          },
+          {
+            "flag": "--all-envs",
+            "takesValue": false,
+            "describe": "all three environments, under the partial-failure contract"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--reason",
+            "takesValue": true,
+            "describe": "why — it goes in the audit trail (default: \"via gf\")"
+          },
+          {
+            "flag": "--kill-switch",
+            "takesValue": false,
+            "describe": "born serving true — the incident switch"
+          },
+          {
+            "flag": "--enablement",
+            "takesValue": false,
+            "describe": "born serving false — the gate you open later"
+          },
+          {
+            "flag": "--description",
+            "takesValue": true,
+            "describe": "what the flag is for"
+          },
+          {
+            "flag": "--type",
+            "takesValue": true,
+            "describe": "string | number | json (omit for a boolean)"
+          },
+          {
+            "flag": "--variants",
+            "takesValue": true,
+            "describe": "a JSON array of {key,value} — with --type"
+          },
+          {
+            "flag": "--default",
+            "takesValue": true,
+            "describe": "which variant is served by default — with --type"
+          }
+        ]
+      },
+      {
+        "command": "flags set",
+        "summary": "change which variant a flag serves by default",
+        "usage": "gf flags set <key> --value true|false --env production",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (repeatable)"
+          },
+          {
+            "flag": "--all-envs",
+            "takesValue": false,
+            "describe": "all three environments, under the partial-failure contract"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--reason",
+            "takesValue": true,
+            "describe": "why — it goes in the audit trail (default: \"via gf\")"
+          },
+          {
+            "flag": "--value",
+            "takesValue": true,
+            "describe": "shorthand for the on / off variant"
+          },
+          {
+            "flag": "--variant",
+            "takesValue": true,
+            "describe": "the variant to serve, by name"
+          }
+        ]
+      },
+      {
+        "command": "flags rollout",
+        "summary": "serve a flag to a percentage of contexts",
+        "usage": "gf flags rollout <key> --percent 25 --env production",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (repeatable)"
+          },
+          {
+            "flag": "--all-envs",
+            "takesValue": false,
+            "describe": "all three environments, under the partial-failure contract"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--reason",
+            "takesValue": true,
+            "describe": "why — it goes in the audit trail (default: \"via gf\")"
+          },
+          {
+            "flag": "--percent",
+            "takesValue": true,
+            "describe": "the share of matching contexts served"
+          },
+          {
+            "flag": "--variant",
+            "takesValue": true,
+            "describe": "which variant to roll out (default: on)"
+          }
+        ]
+      },
+      {
+        "command": "flags rules",
+        "summary": "replace a flag’s targeting rules from a file",
+        "usage": "gf flags rules <key> --rules-file rules.json --env production",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (repeatable)"
+          },
+          {
+            "flag": "--all-envs",
+            "takesValue": false,
+            "describe": "all three environments, under the partial-failure contract"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--reason",
+            "takesValue": true,
+            "describe": "why — it goes in the audit trail (default: \"via gf\")"
+          },
+          {
+            "flag": "--rules-file",
+            "takesValue": true,
+            "describe": "a JSON array of rules"
+          }
+        ]
+      },
+      {
+        "command": "flags kill",
+        "summary": "the 3am verb — serve false, and clear every rule",
+        "usage": "gf flags kill <key> --env production",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "development | preview | production (repeatable)"
+          },
+          {
+            "flag": "--all-envs",
+            "takesValue": false,
+            "describe": "all three environments, under the partial-failure contract"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--reason",
+            "takesValue": true,
+            "describe": "why — it goes in the audit trail (default: \"via gf\")"
+          }
+        ]
+      },
+      {
+        "command": "flags diff",
+        "summary": "what changed between two versions, in words",
+        "usage": "gf flags diff <key> --from 3 --to 4    ·    gf flags diff <key> --env preview --env production",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--from",
+            "takesValue": true,
+            "describe": "the version to compare FROM"
+          },
+          {
+            "flag": "--to",
+            "takesValue": true,
+            "describe": "the version to compare TO"
+          },
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "pass twice to compare two environments"
+          }
+        ]
+      },
+      {
+        "command": "flags history",
+        "summary": "every version of a flag, and who changed what",
+        "usage": "gf flags history <key> [--project <slug>] [--json]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          }
+        ]
+      },
+      {
+        "command": "flags sync",
+        "summary": "publish a flag catalog from source control",
+        "usage": "gf flags sync --file flags.json [--dry-run]",
+        "needsAuth": false,
+        "flags": [
+          {
+            "flag": "--file",
+            "takesValue": true,
+            "describe": "a JSON array of { key, definition } entries"
+          },
+          {
+            "flag": "--sync-key",
+            "takesValue": true,
+            "describe": "the flag_sync credential (or set the env var)"
+          },
+          {
+            "flag": "--dry-run",
+            "takesValue": false,
+            "describe": "parse and report, send nothing"
+          }
+        ]
+      },
+      {
+        "command": "keys ls",
+        "summary": "every credential that can reach this project",
+        "usage": "gf keys ls [--project <slug>] [--json]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          }
+        ]
+      },
+      {
+        "command": "keys create",
+        "summary": "mint a credential — the kind is required, never guessed",
+        "usage": "gf keys create --type flag_read --env production --label \"my app\"",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--type",
+            "takesValue": true,
+            "describe": "ingest | flag_read | flag_sync — required"
+          },
+          {
+            "flag": "--label",
+            "takesValue": true,
+            "describe": "what holds it — required"
+          },
+          {
+            "flag": "--env",
+            "takesValue": true,
+            "describe": "required for flag_read"
+          },
+          {
+            "flag": "--source",
+            "takesValue": true,
+            "describe": "required for flag_sync"
+          }
+        ]
+      },
+      {
+        "command": "keys revoke",
+        "summary": "kill a credential, immediately and permanently",
+        "usage": "gf keys revoke <id> --type ingest",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          },
+          {
+            "flag": "--type",
+            "takesValue": true,
+            "describe": "ingest | flag_read | flag_sync — required"
+          }
+        ]
       }
     ],
     "globalFlags": [

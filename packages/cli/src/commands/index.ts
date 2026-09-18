@@ -9,6 +9,16 @@ import { loginCommand, logoutCommand, whoamiCommand } from './auth'
 import { projectsCreateCommand, projectsLsCommand, projectsUseCommand } from './projects'
 import { initCommand } from './init'
 import { flagsGetCommand, flagsLsCommand } from './flags-read'
+import {
+  flagsCreateCommand,
+  flagsKillCommand,
+  flagsRolloutCommand,
+  flagsRulesCommand,
+  flagsSetCommand,
+} from './flags-write'
+import { flagsDiffCommand, flagsHistoryCommand } from './flags-history'
+import { flagsSyncCommand } from './flags-sync'
+import { keysCreateCommand, keysLsCommand, keysRevokeCommand } from './keys'
 import { doctorCommand } from './doctor'
 
 export const COMMANDS: readonly Command[] = [
@@ -22,4 +32,15 @@ export const COMMANDS: readonly Command[] = [
   projectsUseCommand,
   flagsLsCommand,
   flagsGetCommand,
+  flagsCreateCommand,
+  flagsSetCommand,
+  flagsRolloutCommand,
+  flagsRulesCommand,
+  flagsKillCommand,
+  flagsDiffCommand,
+  flagsHistoryCommand,
+  flagsSyncCommand,
+  keysLsCommand,
+  keysCreateCommand,
+  keysRevokeCommand,
 ]

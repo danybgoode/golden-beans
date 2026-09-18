@@ -1614,7 +1614,9 @@ test('every approved “+ New …” opens the wizard shape, and no surface answ
     // ⚠️ The label is compared CASE-INSENSITIVELY and otherwise exactly. The contract lowercases
     // (`+ new key`), and the page draws `+ New key`; anything else — "New key", "Add key" — is a
     // different word than the one that was approved, which the structural gate already fails on.
-    const trigger = page.getByRole('button', { name: new RegExp(`^\\s*${escapeForRegExp(action)}\\s*$`, 'i') })
+    const trigger = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeForRegExp(action)}\\s*$`, 'i'),
+    })
     if ((await trigger.count()) !== 1) {
       failures.push(
         `\n  ${row.route}  (approved state: ${row.referenceState})\n` +

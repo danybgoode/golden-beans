@@ -1,0 +1,23 @@
+gf keys ls — every credential that can reach this project
+
+Usage
+  gf keys ls [--project <slug>] [--json]
+
+Owner-only, exactly as the console's Keys page is — an ordinary member can read the
+  dashboards but must not enumerate the credentials production runs on.
+
+  ⚠️ It does NOT list connector URLs, share links or your CLI tokens. Those are managed on
+  their own surfaces and are not project-scoped credentials; saying so is better than a list
+  that implies completeness it does not have.
+
+Flags
+  --project <slug>  the project (default: the remembered one)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

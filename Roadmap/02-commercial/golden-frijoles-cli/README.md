@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: golden-frijoles-cli
 build_order: 28
 ---
@@ -252,6 +252,20 @@ All three sprints share `packages/cli/` and the command core by construction —
 **Model routing:** Sprint 2 defines the write contract everything else imports — stronger model.
 Sprint 1 is mostly mechanical once D1 is locked; Sprint 3 is mechanical apart from 3.4. Review is
 inverted: Sprint 2's PR gets the strongest available fresh reviewer.
+
+## Known gaps and follow-ups (named, not dropped)
+
+- **Concurrent identical writes can each create a version.** `lib/cli-flag-write.ts` checks "is the
+  newest version identical?" in application code, while `create_flag_definition_version` takes its
+  advisory lock inside the RPC. Two identical `gf flags create` calls racing each other can produce
+  v1 and v2. Every environment still serves the same values (the definitions are identical), and
+  neither `create` nor `kill` has a rollout rule to re-bucket; the residual case is two agents
+  running the *same* `gf flags rollout` at once. **The fix is to move the comparison into the RPC,
+  under its existing lock — a migration on the control plane's core write function**, deliberately
+  not done mid-release. Raised in review of #150, round 2.
+- **Setup › CLI access has no approved reference state.** The console prototype predates the CLI, so
+  the route claims no design coverage (28 of 29) and carries a dated deferral naming Daniel. It is
+  exercised end to end by `cli-access.authed.spec.ts` rather than by the visual gate.
 
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated)

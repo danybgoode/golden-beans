@@ -1,0 +1,29 @@
+gf flags set — change which variant a flag serves by default
+
+Usage
+  gf flags set <key> --value true|false --env production
+
+--value true|false is shorthand for the "on" / "off" variants every flag `gf flags
+  create` makes. For a flag created elsewhere, or a non-boolean one, name the variant with
+  --variant; the server lists the real variant keys if the one you name is not there.
+
+  Rules are carried across untouched. A set that quietly dropped a targeting rule would be
+  the worst kind of surprise on a flag someone is mid-rollout on — use `gf flags kill` when
+  clearing the rules is what you mean.
+
+Flags
+  --env <environment>  development | preview | production (repeatable)
+  --all-envs           all three environments, under the partial-failure contract
+  --project <slug>     the project (default: the remembered one)
+  --reason <text>      why — it goes in the audit trail (default: "via gf")
+  --value true|false   shorthand for the on / off variant
+  --variant <key>      the variant to serve, by name
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry
