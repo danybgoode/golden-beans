@@ -82,6 +82,8 @@ export type CliWriteResult =
       flagKey: string
       version: number
       versionId: string
+      /** False when an identical definition already existed and was reused rather than re-written. */
+      versionCreated: boolean
       serving: unknown
       environments: EnvironmentOutcome[]
     }
@@ -223,14 +225,33 @@ export async function executeCliFlagWrite(input: {
 
   if (!plan.ok) return { ok: false, status: 400, error: plan.errors[0] ?? 'Invalid flag command.', issues: plan.errors }
 
-  // ── write the version ──────────────────────────────────────────────────────────────────────
-  const created = await createFlagDefinitionVersion({
-    projectId: input.projectId,
-    flagKey: input.flagKey,
-    definition: plan.plan.definition,
-    reason: input.reason,
-    actorUserId: input.actorUserId,
-  })
+  // ── reuse an identical version rather than writing a new one ───────────────────────────────
+  //
+  // ⚠️ **`create_flag_definition_version` ALWAYS creates a version** — it takes `max(version)+1` and
+  // inserts. So without this, re-running `gf flags create … --all-envs` produced v1, v2, v3… of a
+  // definition that never changed, and every re-run rewrote the activation and wrote an audit row
+  // saying something had happened. An agent re-running its own setup script is the ordinary case,
+  // not an edge one, and the epic's acceptance says re-running is idempotent.
+  //
+  // Found by auditing that acceptance criterion against the RPC rather than ticking it.
+  //
+  // The semantics match `import_flag_definition_catalog`, which the catalog-sync path already has:
+  // an identical definition is a no-op that reports itself as one. Matching on the PARSED shape, not
+  // on raw JSON text, so key order and whitespace cannot make two identical definitions look
+  // different — `parseFlagDefinition` has already normalised both sides.
+  const identical = flag?.versions.find(
+    (version) => JSON.stringify(version.definition) === JSON.stringify(plan.plan.definition)
+  )
+
+  const created = identical
+    ? { ok: true as const, flagId: flag!.id, versionId: identical.id, version: identical.version }
+    : await createFlagDefinitionVersion({
+        projectId: input.projectId,
+        flagKey: input.flagKey,
+        definition: plan.plan.definition,
+        reason: input.reason,
+        actorUserId: input.actorUserId,
+      })
   if (!created.ok) return { ok: false, status: 500, error: created.error }
 
   // ── activate, per environment, independently (D2) ──────────────────────────────────────────
@@ -279,13 +300,17 @@ export async function executeCliFlagWrite(input: {
   const failed = outcomes.filter((row) => row.status === 'conflict' || row.status === 'failed')
   return {
     ok: true,
-    // ⚠️ `partial` whenever ANY environment failed — including when ALL of them did. The definition
-    // version WAS created either way, so "everything failed" is not the same as "nothing happened",
-    // and reporting it as a clean failure would hide a new version sitting in the registry.
+    // ⚠️ `partial` whenever ANY environment failed — including when ALL of them did. A definition
+    // version may have been created either way, so "everything failed" is not the same as "nothing
+    // happened", and reporting it as a clean failure would hide a new version in the registry.
     outcome: failed.length === 0 ? 'applied' : 'partial',
     flagKey: input.flagKey,
     version: created.version,
     versionId: created.versionId,
+    // Whether this run added to the version history. `false` means an identical definition already
+    // existed and was reused — the honest answer to "did anything change?", which the per-environment
+    // rows alone cannot give (they describe activation, not authorship).
+    versionCreated: identical === undefined,
     serving: defaultServedValue(plan.plan.definition) ?? null,
     environments: outcomes,
   }
