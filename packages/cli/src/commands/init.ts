@@ -195,6 +195,26 @@ export const initCommand: Command = {
       )
     }
 
+    // ⚠️ **`unverified` + a CHANGED environment is refused, not guessed** (cross-family review,
+    // Codex, round 6). If the probe could not answer, the key's environment is unknown — and if the
+    // file currently says a different environment from the one being set up, rewriting
+    // GOLDEN_FRIJOLES_ENVIRONMENT beside a key that may belong to the old one is exactly the
+    // mismatched config the `wrong-environment` state exists to prevent, reached by the back door.
+    //
+    // Unverified with the SAME environment is still safe to leave alone: nothing about the pairing
+    // changes. It is only the combination of "cannot check" and "about to change" that is refused —
+    // retryably, because the cause is the probe, not the caller.
+    const recordedEnvironment = readEnvValue(existingEnv, ENV_KEYS.environment)
+    if (existingKeyState === 'unverified' && recordedEnvironment !== null && recordedEnvironment !== environment) {
+      context.emit.fail(
+        'server_error',
+        `${ENV_FILE} holds a ${ENV_KEYS.flagRead} for ${recordedEnvironment} that could not be verified ` +
+          `against ${context.api!.baseUrl}, so it cannot be safely re-pointed at ${environment}. Nothing was ` +
+          `changed. Retry when the deployment answers, or remove the key to mint a fresh one.`
+      )
+      return EXIT.SERVER
+    }
+
     if (existingKey === null || existingKeyState === 'dead' || existingKeyState === 'wrong-environment') {
       const result = await context.api!.post<{ id: string; key: string; expiresAt: string | null }>(
         'api/v1/cli/keys',
