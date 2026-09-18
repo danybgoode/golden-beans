@@ -112,6 +112,27 @@ export function normalizeEnvironments(requested: readonly FlagEnvironment[]): Fl
   return FLAG_ENVIRONMENTS.filter((environment) => wanted.has(environment))
 }
 
+/**
+ * A description the parser will accept, when the caller gave none.
+ *
+ * ⚠️ **Without this, the epic's HEADLINE COMMAND failed.** `parseFlagDefinition` requires a
+ * NON-BLANK description, and `--description` is optional — so `gf flags create <key>
+ * --kill-switch --all-envs`, the exact line the epic exists to make work, returned a 400. Every
+ * planner unit test happened to pass a description, and the CLI's own tests stubbed the network, so
+ * nothing ran the real parser against the real default until an end-to-end spec against the write
+ * route did (PR #150).
+ *
+ * It lives HERE, in the shared planner, so the MCP `create_flag` tool — whose `description` argument
+ * also defaults to '' — is fixed by the same line (D4).
+ *
+ * The default says what is known and nothing more: the key, what kind of flag it is, and that it was
+ * created without a description. It does not invent a purpose.
+ */
+function describeOrDefault(description: string, key: string, kind: string): string {
+  const trimmed = description.trim()
+  return trimmed === '' ? `${key} (${kind}) — created without a description` : trimmed
+}
+
 export type FlagCreateInput = {
   key: string
   polarity: FlagPolarity
@@ -135,7 +156,7 @@ export function planFlagCreate(input: FlagCreateInput): FlagPlanResult {
   return planned(
     {
       valueType: 'boolean',
-      description: input.description,
+      description: describeOrDefault(input.description, input.key, input.polarity),
       defaultVariantKey: input.polarity === 'kill-switch' ? ON_VARIANT_KEY : OFF_VARIANT_KEY,
       variants: [
         { key: OFF_VARIANT_KEY, value: false },
@@ -173,7 +194,7 @@ export function planTypedFlagCreate(input: FlagTypedCreateInput): FlagPlanResult
   return planned(
     {
       valueType: input.valueType,
-      description: input.description,
+      description: describeOrDefault(input.description, input.key, input.valueType),
       defaultVariantKey: input.defaultVariantKey,
       variants: [...input.variants],
       rules: [],

@@ -114,6 +114,21 @@ test('a create plan round-trips through the real parser', () => {
   assert.equal(parseFlagDefinition(plan.definition).ok, true)
 })
 
+test('\u26a0\ufe0f a create with NO description still plans — the headline command must work', () => {
+  // `gf flags create <key> --kill-switch --all-envs` passes no description, and the parser requires a
+  // non-blank one. Every other test here happens to pass 'x', which is how this shipped broken.
+  const plan = unwrap(
+    planFlagCreate({
+      key: 'checkout.demo_enabled',
+      polarity: 'kill-switch',
+      description: '',
+      environments: ALL,
+    })
+  )
+  assert.match(plan.definition.description, /checkout\.demo_enabled/)
+  assert.equal(parseFlagDefinition(plan.definition).ok, true)
+})
+
 test('an invalid flag key fails in the planner, before any network call', () => {
   const result = planFlagCreate({
     key: 'Not A Key',

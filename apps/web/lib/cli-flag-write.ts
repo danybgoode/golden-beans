@@ -90,33 +90,39 @@ export type CliWriteResult =
   | { ok: false; status: 400 | 404 | 409 | 500; error: string; issues?: string[] }
 
 /**
- * The definition a change is computed FROM.
+ * The definition a change is computed FROM: the version the NAMED environments serve.
  *
- * ⚠️ **What `production` serves, when it serves something — not the newest version.** The same rule
- * `projectFlagRows` and `cli-flag-view.ts` apply, and here it is not cosmetic: computing a rollout
- * from an unactivated draft would silently publish that draft's rules alongside the rollout. An
- * operator who ran `gf flags rollout` expecting to change one number would have shipped someone
- * else's unreviewed targeting with it.
+ * ⚠️ **Rewritten after review (Codex, PR #150, Blocking).** The first version preferred whatever
+ * PRODUCTION served and fell back to the newest version — even when production was not one of the
+ * named environments' servers. With preview serving v3, production serving nothing and v5 sitting
+ * as an unactivated draft, `--all-envs` computed its change from v5 and wrote it over preview: an
+ * unreviewed draft published to an environment that had never seen it, under a command that looked
+ * like "change one number". The exact failure this function's own comment said it prevented.
  *
- * When several environments are being written at once and they serve DIFFERENT versions, this still
- * picks one base — see `baseDisagreement` below, which refuses rather than picking quietly.
+ * Now: the version served by the environments being written. `baseDisagreement` has already refused
+ * if they serve DIFFERENT versions, so among those that serve anything there is exactly one. Only if
+ * NONE of them serves anything does it fall back to the newest version — nothing is live there to
+ * diverge from, and the newest definition is the last thing an owner authored.
  */
 function baseDefinition(
   flag: Awaited<ReturnType<typeof getFlagRegistryView>>['flags'][number],
   environments: readonly FlagEnvironment[]
 ): { definition: FlagDefinition; versionId: string } | null {
-  const preferred = environments.includes('production') ? 'production' : environments[0]
-  const activation = resolveActivationState(flag.activations, preferred)
-  if (activation.versionId) {
-    const served = flag.versions.find((version) => version.id === activation.versionId)
+  for (const environment of environments) {
+    const versionId = resolveActivationState(flag.activations, environment).versionId
+    const served = versionId ? flag.versions.find((version) => version.id === versionId) : undefined
     if (served) return { definition: served.definition, versionId: served.id }
   }
-  const newest = flag.versions.reduce<(typeof flag.versions)[number] | undefined>(
+  const newest = newestVersion(flag)
+  return newest ? { definition: newest.definition, versionId: newest.id } : null
+}
+
+function newestVersion(flag: Awaited<ReturnType<typeof getFlagRegistryView>>['flags'][number]) {
+  return flag.versions.reduce<(typeof flag.versions)[number] | undefined>(
     (highest, candidate) =>
       highest === undefined || candidate.version > highest.version ? candidate : highest,
     undefined
   )
-  return newest ? { definition: newest.definition, versionId: newest.id } : null
 }
 
 /**
@@ -151,6 +157,38 @@ function baseDisagreement(
     `to change. Name one environment at a time with --env.`
   )
 }
+
+/**
+ * A definition as a string whose value does not depend on object key ORDER.
+ *
+ * Needed because one side of every comparison here has been through Postgres `jsonb`, which stores
+ * keys in its own order, and the other has not. Array order is preserved — it is meaningful (rule
+ * priority is separate, but variant and clause lists are compared as authored).
+ */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entry]) => entry !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonical(entry)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+/**
+ * Is this activation failure the reload-and-retry case?
+ *
+ * `lib/flag-registry.ts` matches the RPC's dedicated ERRCODE and turns it into its "someone else
+ * changed this environment" sentence, so the code-level distinction lives there; this reads only
+ * which of its two sentences came back.
+ */
+function isConflict(error: string): boolean {
+  return /changed this environment/i.test(error)
+}
+
+/** How many times one environment's activation is retried after a snapshot conflict. */
+const MAX_CONFLICT_RETRIES = 3
 
 export async function executeCliFlagWrite(input: {
   projectId: string
@@ -237,12 +275,25 @@ export async function executeCliFlagWrite(input: {
   // Found by auditing that acceptance criterion against the RPC rather than ticking it.
   //
   // The semantics match `import_flag_definition_catalog`, which the catalog-sync path already has:
-  // an identical definition is a no-op that reports itself as one. Matching on the PARSED shape, not
-  // on raw JSON text, so key order and whitespace cannot make two identical definitions look
-  // different — `parseFlagDefinition` has already normalised both sides.
-  const identical = flag?.versions.find(
-    (version) => JSON.stringify(version.definition) === JSON.stringify(plan.plan.definition)
-  )
+  // an identical definition is a no-op that reports itself as one.
+  //
+  // ⚠️ **Compared CANONICALLY, and this comment used to claim that was already true when it was
+  // not.** It said "matching on the PARSED shape, so key order cannot make two identical definitions
+  // look different" above a raw `JSON.stringify` comparison — and Postgres `jsonb` REORDERS object
+  // keys on storage, so a stored definition and a freshly planned one never stringified alike, and
+  // the reuse never fired. Found by the end-to-end spec on its first run; every unit test compared
+  // two objects that had never been through the database. `canonical` sorts keys recursively.
+  //
+  // ⚠️ **Only the NEWEST version is eligible for reuse** (cross-family review, Codex, PR #150,
+  // Blocking). The first version reused ANY identical historical version — so with v1=off and
+  // v2=on, `gf flags set --value false` matched v1 and re-activated it: a change recorded in the
+  // lifecycle as a rollback to an old version, and, because rollout bucketing is keyed on the
+  // definition VERSION, one that can re-bucket users differently from a fresh version with the same
+  // rules. "The command already happened" is only true of the newest version; anything older is
+  // history, and a new change gets a new version.
+  const newest = flag ? newestVersion(flag) : undefined
+  const identical =
+    newest && canonical(newest.definition) === canonical(plan.plan.definition) ? newest : undefined
 
   const created = identical
     ? { ok: true as const, flagId: flag!.id, versionId: identical.id, version: identical.version }
@@ -264,22 +315,57 @@ export async function executeCliFlagWrite(input: {
     // A project that has never served in this environment has no state row yet. `0` is what the RPC
     // creates it at, and passing it is how a first activation succeeds rather than conflicting with
     // a row that does not exist.
-    const expected = snapshotByEnvironment.get(environment) ?? 0
-    const result = await setFlagActivation({
-      projectId: input.projectId,
-      environment,
-      flagId: created.flagId,
-      versionId: created.versionId,
-      expectedSnapshotVersion: expected,
-      reason: input.reason,
-      actorUserId: input.actorUserId,
-    })
+    const activate = (expectedSnapshotVersion: number) =>
+      setFlagActivation({
+        projectId: input.projectId,
+        environment,
+        flagId: created.flagId,
+        versionId: created.versionId,
+        expectedSnapshotVersion,
+        reason: input.reason,
+        actorUserId: input.actorUserId,
+      })
+    let expected = snapshotByEnvironment.get(environment) ?? 0
+    // What THIS flag served here when the change was planned. A retry is only honest while that is
+    // still true — see below.
+    const plannedAgainst = flag ? resolveActivationState(flag.activations, environment).versionId : null
+    let result = await activate(expected)
+
+    // ── Retry a conflict, but only one that is not about THIS flag ──────────────────────────────
+    // ⚠️ **Added after the end-to-end spec went `partial` under concurrency.** The snapshot counter
+    // is per (project, environment), so a write to ANY OTHER FLAG in the same environment between
+    // our read and our write trips it — the RPC cannot tell "someone changed your flag" from
+    // "someone changed a neighbour". An agent running two `gf` commands at once hits that routinely,
+    // and D2's per-environment report then says `conflict` for a change that was never contested.
+    //
+    // So on a conflict the environment is re-read, and the activation is retried with the fresh
+    // counter ONLY IF this flag still serves what the plan was computed against. If THIS flag moved,
+    // the plan is stale and retrying would clobber someone else's change to it — that stays a
+    // `conflict`, which is exactly what it is. Bounded, so a busy environment cannot spin a request.
+    for (
+      let attempt = 0;
+      attempt < MAX_CONFLICT_RETRIES && !result.ok && isConflict(result.error);
+      attempt++
+    ) {
+      let fresh: Awaited<ReturnType<typeof getFlagRegistryView>>
+      try {
+        fresh = await getFlagRegistryView(input.projectId)
+      } catch {
+        break
+      }
+      const current = fresh.flags.find((candidate) => candidate.key === input.flagKey)
+      const nowServing = current ? resolveActivationState(current.activations, environment).versionId : null
+      if (nowServing !== plannedAgainst && nowServing !== created.versionId) break
+      expected = fresh.environments.find((row) => row.environment === environment)?.snapshotVersion ?? 0
+      result = await activate(expected)
+    }
+
     if (!result.ok) {
       // The RPC raises `40001` for a snapshot conflict and `lib/flag-registry.ts` turns it into the
       // "someone else changed this" message; anything else is a real failure. Matching on the
       // MESSAGE would be fragile, so the shape of the distinction is carried by that module and
       // this one reads only whether it is the reload-and-retry case.
-      const conflict = /changed this environment/i.test(result.error)
+      const conflict = isConflict(result.error)
       outcomes.push({
         environment,
         status: conflict ? 'conflict' : 'failed',

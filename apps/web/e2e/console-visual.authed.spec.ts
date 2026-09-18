@@ -565,6 +565,10 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/app/scheduled/[projectSlug]': (slug) => `/app/scheduled/${slug}`,
   '/app/flag-audit/[projectSlug]': (slug) => `/app/flag-audit/${slug}`,
   '/app/setup/connect/[projectSlug]': (slug) => `/app/setup/connect/${slug}`,
+  // golden-frijoles-cli · Setup › CLI access. Opened by the gate like every other route, so its
+  // structural promises (a `ds-` class inside <main>, no horizontal scroll) are measured even though
+  // it has no approved reference state yet — the manifest row's deferral says why.
+  '/app/setup/cli/[projectSlug]': (slug) => `/app/setup/cli/${slug}`,
   '/app/setup/keys/[projectSlug]': (slug) => `/app/setup/keys/${slug}`,
   '/app/destinations/[projectSlug]': (slug) => `/app/destinations/${slug}`,
   '/app/shares/[projectSlug]': (slug) => `/app/shares/${slug}`,
@@ -1610,7 +1614,9 @@ test('every approved “+ New …” opens the wizard shape, and no surface answ
     // ⚠️ The label is compared CASE-INSENSITIVELY and otherwise exactly. The contract lowercases
     // (`+ new key`), and the page draws `+ New key`; anything else — "New key", "Add key" — is a
     // different word than the one that was approved, which the structural gate already fails on.
-    const trigger = page.getByRole('button', { name: new RegExp(`^\\s*${escapeForRegExp(action)}\\s*$`, 'i') })
+    const trigger = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeForRegExp(action)}\\s*$`, 'i'),
+    })
     if ((await trigger.count()) !== 1) {
       failures.push(
         `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
