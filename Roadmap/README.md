@@ -80,6 +80,16 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [Golden Frijoles CLI v1 — a write surface an agent can drive](02-commercial/golden-frijoles-cli/README.md)
+  — `gf`, published as `@golden-frijoles/cli`. An agent can create a flag **in every environment**,
+  roll it out and kill it with no browser and no human click: `gf flags create <key> --kill-switch
+  --all-envs` is the line that used to stop and wait for someone to open the console. Built on a
+  **user-scoped CLI token** minted at *Setup › CLI access* (its own table — `api_keys` cannot express
+  a credential that exists before a project does), and every write goes through the SAME RPCs the
+  console uses. The decisions — polarity, kill-clears-every-rule, percent-not-clamped — live in ONE
+  pure command core in the SDK, which the CLI and the connector's new **MCP flag tools** both call,
+  so parity is structural. `/install` now leads with the CLI. **Live in production** (2026-09-18,
+  PRs #149–#152); the npm packages are `@golden-frijoles/cli@0.1.0` and `@golden-frijoles/sdk@0.5.0`.
 - ✅ [The mockups, as built](02-commercial/mockups-as-built/README.md) — the previous epic shipped six
   sprints, reported **27/27 coverage with `outstanding: []`**, and the console still did not look like
   the approved design. Three facts explained the whole gap: the old UI had been **hidden behind
@@ -331,6 +341,17 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-09-18** — `golden-frijoles-cli` **shipped & live** (PRs #149–#152): the engine's first write
+  surface an agent can drive end to end. The architecture lock disproved three of the scope doc's
+  assumptions before any code was written — the credential could not be an `api_keys` scope, "created
+  disabled" had to mean *serving false* rather than *absent*, and the env-var "compatibility" question
+  dissolved because the SDK reads no env var at all. Review ran nine rounds on Sprint 1 alone and
+  found two Blocking defects on the **happy path** — interactive `gf login` hung after Enter, which a
+  piped test cannot see — and an end-to-end spec found the epic's **headline command** returning 400
+  (the parser requires a description; `--description` is optional). The last catch came at release:
+  the CLI imported three SDK exports the **published** 0.4.0 lacked, invisible inside the monorepo
+  because the workspace link resolves the local source. SDK 0.5.0 shipped with it.
 
 - **2026-09-10** — `mockups-as-built` **shipped & live** (PRs #136–#140): the epic that made the last
   epic's number true. `design-system-rails` reported 27/27 with `outstanding: []` and at least

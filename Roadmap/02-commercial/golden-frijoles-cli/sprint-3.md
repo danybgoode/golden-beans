@@ -1,6 +1,6 @@
 # Golden Frijoles CLI — Sprint 3: distribution, CI, and MCP parity
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR #151, `cb4b8c5`; release PR #152, `185744f` (2026-09-18)
 
 > Sprint 3 is what makes the epic's promise checkable on a machine that has never seen this
 > product: one line, a token, and a kill-switch story completed end to end. It also closes the
@@ -77,4 +77,19 @@
 
 ## Smoke walkthrough
 
-_(filled in at sprint close, with real URLs)_
+Run against **production** after `cb4b8c5` deployed.
+
+1. **`/install` teaches the CLI.** `https://goldenfrijoles.com/install` contains
+   `npx @golden-frijoles/cli init` and the kill-switch story, under *Or drive it from a terminal*;
+   the stale "not a CLI wizard" sentence is gone.
+2. **The connector has the flag READ tools and not the WRITE tools.** Using the public demo connector
+   URL from `/install`, `tools/list` → includes `list_flags` and `get_flag`; **none** of
+   `create_flag`, `set_flag`, `rollout_flag`, `kill_flag` (no CLI token was presented).
+3. **`list_flags` answers.** `tools/call list_flags` → `ok: true`, project `golden-beans-demo`,
+   `flags: 0` — the honest empty state for a project with no flags.
+4. **The write tools open only for the right caller.** Proved by `mcp-flag-tools.spec.ts`: an owner's
+   `gf_pat_…` gets them and `create_flag` actually lands; a member, an owner of a different project,
+   an ingest key and a revoked token do not.
+5. **The package, from a clean machine.** SDK 0.5.0 and CLI 0.1.0 installed from their tarballs into
+   an empty directory with an empty npm cache: `gf --version` → `0.1.0`, and the installed SDK
+   carries `diffFlagDefinitions`, `ON_VARIANT_KEY`, `OFF_VARIANT_KEY` — the exports 0.4.0 lacked.

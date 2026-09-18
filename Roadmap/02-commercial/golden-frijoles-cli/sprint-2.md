@@ -1,6 +1,6 @@
 # Golden Frijoles CLI — Sprint 2: the write path
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR #150, `6aecdb0` (2026-09-18)
 
 > This is the sprint the epic exists for, and the one everything else imports. A kill-switch story
 > that an agent can complete end to end is a flag that can be **created in every environment**,
@@ -93,4 +93,18 @@
 
 ## Smoke walkthrough
 
-_(filled in at sprint close, with real URLs)_
+Run against **production** after `6aecdb0` deployed.
+
+1. **The write route is live.** `curl -X POST https://goldenfrijoles.com/api/v1/cli/flags/write -d '{}'`
+   → **401** `{"code":"unauthorized"}` (the gate's JSON, not a 404).
+2. **An ingest key cannot write.** Same request with `Authorization: Bearer gb_key_…` → **401**.
+3. **The write semantics, against the real control plane.** `cli-flag-write.spec.ts` (8 specs, local
+   stack, the same RPCs production runs): `create --kill-switch --all-envs` serves `true` in all
+   three environments; an identical re-run writes **no** new version and reports `unchanged`;
+   `set` back to an old definition writes **v3**, never resurrecting v1; a change is computed from the
+   **served** version, never an unactivated draft; `kill` clears every rule; environments on different
+   versions are refused; a member gets 404; the audit row names the acting account and the reason.
+
+**Owed to the product owner, by name:** `gf flags create <key> --kill-switch --all-envs` then
+`gf flags kill <key> --env production` on a real project, and the console at
+`/app/flags/<project>` showing it — the epic's acceptance sentence, by hand, with your token.
