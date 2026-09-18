@@ -730,6 +730,30 @@ test('\u26a0\ufe0f gf init refuses to re-point an UNVERIFIED key at a different 
   assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
 })
 
+test('\u26a0\ufe0f global flags work BEFORE the verb — `gf --json flags ls` is not root help', async () => {
+  // The parser collected the verb only until the first flag, so this printed root help with exit 0:
+  // a success code and none of the output asked for (Codex, round 8).
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['--json', 'flags', 'ls', '--project', 'acme'],
+    writer,
+    env: sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN }),
+    fetchImpl: stubFetch({
+      '/api/v1/cli/flags?project=acme': { body: { ok: true, project: 'acme', flags: [], environments: [] } },
+    }),
+  })
+  assert.equal(code, EXIT.OK)
+  const body = JSON.parse(out.join('\n')) as { flags?: unknown; help?: unknown }
+  assert.ok(Array.isArray(body.flags), 'expected the flags listing, got root help')
+  assert.equal(body.help, undefined)
+})
+
+test('a flag value never leaks into the verb path', () => {
+  const args = parseArgs(['--env', 'production', 'flags', 'kill', 'a.b'])
+  assert.deepEqual(args.path, ['flags', 'kill', 'a.b'])
+  assert.deepEqual(flagValues(args, 'env'), ['production'])
+})
+
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
 
 test('gf flags ls refuses to guess a project when none was chosen', async () => {

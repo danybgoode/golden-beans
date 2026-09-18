@@ -56,18 +56,20 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
     flags.set(name, [...(flags.get(name) ?? []), value])
   }
 
-  let index = 0
-  // The verb path is the leading run of bare words. `gf flags create checkout.demo` has a two-word
-  // path and one positional, and the command table decides where the path ends — see `matchCommand`.
-  while (index < argv.length && !argv[index].startsWith('-')) {
-    path.push(argv[index])
-    index++
-  }
-
-  for (; index < argv.length; index++) {
+  // ⚠️ **Every bare word goes to `path`, wherever it appears — not only the LEADING run** (cross-
+  // family review, Codex, round 8). The first version collected the path only until the first
+  // flag, so `gf --json flags ls` parsed as an empty path and printed ROOT HELP with exit 0 — an
+  // agent that put its global flags first (which the help calls "global" and the README says work
+  // "anywhere") got a success code and none of the output it asked for.
+  //
+  // The command table decides where the verb ends and the subject begins: `matchCommand` takes the
+  // longest known prefix and hands the rest to the verb as positionals. So `path` here is simply
+  // "the bare words, in order", and flags may sit anywhere among them. A value-taking flag still
+  // consumes its value below, so `--env production` never leaks `production` into the path.
+  for (let index = 0; index < argv.length; index++) {
     const token = argv[index]
     if (!token.startsWith('-')) {
-      positionals.push(token)
+      path.push(token)
       continue
     }
     // `--` ends flag parsing: everything after it is a positional, even if it starts with a dash.
