@@ -689,6 +689,46 @@ test('dotenv duplicates: the LAST assignment is read, and an upsert leaves exact
   assert.equal(readEnvValue(upserted, 'OTHER'), '1')
 })
 
+test('\u26a0\ufe0f a flag given an EMPTY value is refused, never defaulted — `--project "$UNSET"`', async () => {
+  // Every resolver is `flagValue(...)?.trim() || default`, so '' silently fell back to the
+  // remembered project and minted a credential for a tenant the caller did not name (Codex, round 6).
+  for (const argv of [
+    ['init', '--project', ''],
+    ['init', '--project='],
+    ['flags', 'kill', 'a.b', '--env', ''],
+  ]) {
+    const { writer } = capture()
+    const code = await run({
+      argv,
+      writer,
+      env: sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'remembered' }),
+      fetchImpl: noNetworkFetch,
+    })
+    assert.equal(code, EXIT.USAGE, JSON.stringify(argv))
+  }
+})
+
+test('\u26a0\ufe0f gf init refuses to re-point an UNVERIFIED key at a different environment', async () => {
+  // Cannot-check + about-to-change is the mismatched config `wrong-environment` exists to prevent,
+  // reached by the back door (Codex, round 6).
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-unv-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  const before = `${ENV_KEYS.flagRead}=gb_key_old\n${ENV_KEYS.environment}=development\n`
+  writeFileSync(join(cwd, '.env.local'), before)
+  const { writer } = capture()
+  const code = await run({
+    argv: ['init', '--env', 'production'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: stubFetch({ '/api/v1/flags/snapshot': { status: 404, body: {} } }),
+  })
+  assert.equal(code, EXIT.SERVER)
+  // Untouched — no half-rewritten config.
+  assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
+})
+
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
 
 test('gf flags ls refuses to guess a project when none was chosen', async () => {
