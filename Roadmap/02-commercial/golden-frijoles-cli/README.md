@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: golden-frijoles-cli
 build_order: 28
 ---
@@ -279,6 +279,20 @@ the CLI — the write tools require a THIRD credential (a `gf_pat_…` whose hol
 project) on top of the existing two, because the flag control plane's RPCs are owner-attributed and
 an `agent_write` key is not a person. `lib/mcp-flag-tools.ts` states the two alternatives and why
 both are worse.
+
+## Known gaps and follow-ups (named, not dropped)
+
+- **Concurrent identical writes can each create a version.** `lib/cli-flag-write.ts` checks "is the
+  newest version identical?" in application code, while `create_flag_definition_version` takes its
+  advisory lock inside the RPC. Two identical `gf flags create` calls racing each other can produce
+  v1 and v2. Every environment still serves the same values (the definitions are identical), and
+  neither `create` nor `kill` has a rollout rule to re-bucket; the residual case is two agents
+  running the *same* `gf flags rollout` at once. **The fix is to move the comparison into the RPC,
+  under its existing lock — a migration on the control plane's core write function**, deliberately
+  not done mid-release. Raised in review of #150, round 2.
+- **Setup › CLI access has no approved reference state.** The console prototype predates the CLI, so
+  the route claims no design coverage (28 of 29) and carries a dated deferral naming Daniel. It is
+  exercised end to end by `cli-access.authed.spec.ts` rather than by the visual gate.
 
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated)
