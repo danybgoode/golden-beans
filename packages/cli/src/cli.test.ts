@@ -484,17 +484,18 @@ test('\u26a0\ufe0f gf init REPLACES a revoked or expired key rather than reporti
   assert.equal(report.reusedExistingKey, false)
 })
 
-test('an UNVERIFIABLE key is left alone and SAID to be unverified — never silently replaced', async () => {
-  // Flag serving switched off on this deployment answers 404. Minting on an unanswerable question
-  // would issue a fresh credential on every run and break the idempotency this verb promises;
-  // claiming it is live would repeat the defect above. It says which.
+test('an UNVERIFIABLE key refuses retryably, and nothing is minted or rewritten', async () => {
+  // Round 7's rule: a key is reused only when VERIFIED live for this environment. When the probe
+  // cannot speak (flag serving off answers 404), neither the key's scope nor the environment line
+  // beside it is known to be true — so init refuses rather than guessing either way.
   const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
   const cwd = mkdtempSync(join(tmpdir(), 'gf-repo-'))
   writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
-  writeFileSync(join(cwd, '.env.local'), `${ENV_KEYS.flagRead}=gb_key_unknown\n`)
+  const before = `${ENV_KEYS.flagRead}=gb_key_unknown\n`
+  writeFileSync(join(cwd, '.env.local'), before)
 
   const seen: Array<{ method: string; url: string; body: unknown }> = []
-  const { writer, out } = capture()
+  const { writer } = capture()
   const code = await run({
     argv: ['init', '--json'],
     writer,
@@ -503,10 +504,10 @@ test('an UNVERIFIABLE key is left alone and SAID to be unverified — never sile
     fetchImpl: stubFetch({ '/api/v1/flags/snapshot': { status: 404, body: {} } }, seen),
   })
 
-  assert.equal(code, EXIT.OK)
+  assert.equal(code, EXIT.SERVER)
   assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 0, 'a key was minted on a guess')
-  assert.equal(readEnvValue(readFileSync(join(cwd, '.env.local'), 'utf8'), ENV_KEYS.flagRead), 'gb_key_unknown')
-  assert.equal((JSON.parse(out.join('\n')) as { existingKeyState: string }).existingKeyState, 'unverified')
+  // Byte-identical: no environment line was added beside a key whose scope is unknown.
+  assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
 })
 
 test('⚠️ gf init REFUSES rather than minting into a repository it cannot protect', async () => {
