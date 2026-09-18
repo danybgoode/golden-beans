@@ -36,13 +36,7 @@ export type CliErrorBody = { ok: false; error: string; code: CliErrorCode }
  * A STRING code, carried beside the human sentence, because D5's whole point is that an agent must
  * never have to match on prose: `error` may be reworded by a copy edit, `code` may not.
  */
-export type CliErrorCode =
-  | 'disabled'
-  | 'unauthorized'
-  | 'not_found'
-  | 'invalid'
-  | 'conflict'
-  | 'server_error'
+export type CliErrorCode = 'disabled' | 'unauthorized' | 'not_found' | 'invalid' | 'conflict' | 'server_error'
 
 const STATUS_BY_CODE: Record<CliErrorCode, number> = {
   disabled: 404,

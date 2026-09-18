@@ -126,7 +126,11 @@ export const initCommand: Command = {
   tracked file is the failure this verb exists to prevent, so it will not create one and
   then warn about it.`,
   flags: [
-    { name: 'env', value: '<environment>', describe: 'development | preview | production (default: development)' },
+    {
+      name: 'env',
+      value: '<environment>',
+      describe: 'development | preview | production (default: development)',
+    },
     { name: 'project', value: '<slug>', describe: 'the project (default: the remembered one)' },
     // ⚠️ Accepted and INERT, described as such. This verb never prompts — there is nothing for a
     // --yes to skip — and a flag whose help implies it suppresses a question that does not exist is
@@ -187,7 +191,9 @@ export const initCommand: Command = {
     const existingKeyState =
       existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey, environment)
     if (existingKeyState === 'dead') {
-      context.emit.note(`The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`)
+      context.emit.note(
+        `The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`
+      )
     }
     if (existingKeyState === 'wrong-environment') {
       context.emit.note(

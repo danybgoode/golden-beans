@@ -157,6 +157,17 @@ export function unknownFlags(args: ParsedArgs, known: readonly string[]): string
   // documented as global is honoured globally, and the alternative is a help text an agent cannot
   // trust, which is the whole of D5. Accepting it on a verb that ignores it costs nothing; the
   // verbs that USE it still declare it so it appears in their own `--help`.
-  const allowed = new Set([...known, 'json', 'help', 'h', 'version', 'V', 'no-color', 'api', 'token', 'project'])
+  const allowed = new Set([
+    ...known,
+    'json',
+    'help',
+    'h',
+    'version',
+    'V',
+    'no-color',
+    'api',
+    'token',
+    'project',
+  ])
   return [...args.flags.keys()].filter((name) => !allowed.has(name)).sort()
 }

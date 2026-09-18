@@ -97,7 +97,8 @@ function describingVersion(flag: FlagRegistryRow) {
     if (served) return served
   }
   return flag.versions.reduce<FlagRegistryRow['versions'][number] | undefined>(
-    (highest, candidate) => (highest === undefined || candidate.version > highest.version ? candidate : highest),
+    (highest, candidate) =>
+      highest === undefined || candidate.version > highest.version ? candidate : highest,
     undefined
   )
 }

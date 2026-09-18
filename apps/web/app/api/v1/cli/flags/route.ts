@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
   // Shape-check the key BEFORE the query. It costs nothing, and it keeps an arbitrary string out of
   // a comparison whose miss would otherwise be reported as "no such flag" — which is true but
   // unhelpful when the real answer is "that is not a flag key at all".
-  if (key !== null && !validateFlagKey(key))
-    return cliError('invalid', `\`${key}\` is not a valid flag key.`)
+  if (key !== null && !validateFlagKey(key)) return cliError('invalid', `\`${key}\` is not a valid flag key.`)
 
   let registry: Awaited<ReturnType<typeof getFlagRegistryView>>
   try {

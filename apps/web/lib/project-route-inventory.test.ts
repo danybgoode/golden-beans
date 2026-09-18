@@ -117,7 +117,7 @@ test('members see every live member surface but never owner-only or flow-only ro
       'tasks',
       'scenarios',
       'setup/connect',
-    'setup/cli',
+      'setup/cli',
       'scheduled',
       'flag-audit',
     ]
@@ -197,7 +197,7 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
       // `agent-keys` are ABSENT and these two are present. `allGatesOpen` sets `console-shell: true`
       // and `legacy-keys: false`, which is the only combination `readGates()` can produce.
       'setup/connect',
-    'setup/cli',
+      'setup/cli',
       'setup/keys',
       // Both member-readable, so both appear in this list too. `scheduled` sits between them in
       // INVENTORY order, which is what the rail renders — it is the fourth Ship item the approved

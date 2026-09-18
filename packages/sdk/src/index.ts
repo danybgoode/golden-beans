@@ -96,7 +96,13 @@ export {
   planFlagSet,
   planTypedFlagCreate,
 } from './flag-commands'
-export type { FlagCreateInput, FlagPlan, FlagPlanResult, FlagPolarity, FlagTypedCreateInput } from './flag-commands'
+export type {
+  FlagCreateInput,
+  FlagPlan,
+  FlagPlanResult,
+  FlagPolarity,
+  FlagTypedCreateInput,
+} from './flag-commands'
 // golden-frijoles-cli · D4 — moved here from apps/web/lib so the CLI and the console describe a
 // rollout, and diff two versions, with ONE implementation. apps/web re-exports both paths.
 export {

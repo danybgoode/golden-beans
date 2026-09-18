@@ -25,9 +25,8 @@ type ResolveHook = (
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
 
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -66,10 +65,21 @@ function flag(overrides: Partial<FlagRegistryRow> = {}): FlagRegistryRow {
     createdBy: 'user-1',
     createdAt: '2026-09-01T00:00:00.000Z',
     versions: [
-      { id: 'v1', version: 1, definition: definition(), createdBy: 'user-1', createdAt: '2026-09-01T00:00:00.000Z' },
+      {
+        id: 'v1',
+        version: 1,
+        definition: definition(),
+        createdBy: 'user-1',
+        createdAt: '2026-09-01T00:00:00.000Z',
+      },
     ],
     activations: [
-      { environment: 'production', versionId: 'v1', updatedBy: 'user-1', updatedAt: '2026-09-02T00:00:00.000Z' },
+      {
+        environment: 'production',
+        versionId: 'v1',
+        updatedBy: 'user-1',
+        updatedAt: '2026-09-02T00:00:00.000Z',
+      },
     ],
     ...overrides,
   }
@@ -108,7 +118,12 @@ test('an environment with an activation row and no version is `off`, not `never`
   const view = toCliFlagView(
     flag({
       activations: [
-        { environment: 'production', versionId: null, updatedBy: 'user-1', updatedAt: '2026-09-02T00:00:00.000Z' },
+        {
+          environment: 'production',
+          versionId: null,
+          updatedBy: 'user-1',
+          updatedAt: '2026-09-02T00:00:00.000Z',
+        },
       ],
     })
   )
@@ -198,11 +213,28 @@ test('the detail view lists versions newest first and names which environments s
   const detail = toCliFlagDetailView(
     flag({
       versions: [
-        { id: 'v1', version: 1, definition: definition(), createdBy: 'u', createdAt: '2026-09-01T00:00:00.000Z' },
-        { id: 'v2', version: 2, definition: definition(), createdBy: 'u', createdAt: '2026-09-03T00:00:00.000Z' },
+        {
+          id: 'v1',
+          version: 1,
+          definition: definition(),
+          createdBy: 'u',
+          createdAt: '2026-09-01T00:00:00.000Z',
+        },
+        {
+          id: 'v2',
+          version: 2,
+          definition: definition(),
+          createdBy: 'u',
+          createdAt: '2026-09-03T00:00:00.000Z',
+        },
       ],
       activations: [
-        { environment: 'development', versionId: 'v2', updatedBy: 'u', updatedAt: '2026-09-04T00:00:00.000Z' },
+        {
+          environment: 'development',
+          versionId: 'v2',
+          updatedBy: 'u',
+          updatedAt: '2026-09-04T00:00:00.000Z',
+        },
         { environment: 'production', versionId: 'v1', updatedBy: 'u', updatedAt: '2026-09-02T00:00:00.000Z' },
       ],
     }),

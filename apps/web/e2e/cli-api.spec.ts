@@ -40,7 +40,9 @@ function db() {
  * the token to a user and then asks `project_members`, exactly as the console does, so a fixture
  * that skipped the membership would be testing a path production never takes.
  */
-async function seedTokenOwning(slug: string): Promise<{ token: string; userId: string; cleanup: () => Promise<void> }> {
+async function seedTokenOwning(
+  slug: string
+): Promise<{ token: string; userId: string; cleanup: () => Promise<void> }> {
   const client = db()
   const email = `cli-spec-${randomBytes(6).toString('hex')}@example.test`
   const { data: created, error: createError } = await client.auth.admin.createUser({
@@ -151,7 +153,10 @@ test.describe('the CLI API', () => {
   test('a REVOKED token stops working immediately, and looks like an unknown one', async ({ request }) => {
     const seeded = await seedTokenOwning('project-one')
     try {
-      await db().from('cli_tokens').update({ revoked_at: new Date().toISOString() }).eq('token_hash', sha256(seeded.token))
+      await db()
+        .from('cli_tokens')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('token_hash', sha256(seeded.token))
       const response = await request.get('/api/v1/cli/whoami', {
         headers: { authorization: `Bearer ${seeded.token}` },
       })
@@ -293,12 +298,14 @@ test.describe('the CLI API', () => {
     // suspicion as the code.)
     const seeded = await seedTokenOwning('project-one')
     try {
-      const { error } = await db().from('active_cli_tokens').insert({
-        id: randomUUID(),
-        user_id: seeded.userId,
-        token_hash: sha256(newCliToken()),
-        label: 'forged',
-      })
+      const { error } = await db()
+        .from('active_cli_tokens')
+        .insert({
+          id: randomUUID(),
+          user_id: seeded.userId,
+          token_hash: sha256(newCliToken()),
+          label: 'forged',
+        })
       // A successful insert mints a `gf_pat_` credential for an arbitrary account, bypassing
       // lib/cli-tokens.ts, its audit call and the console entirely.
       expect(error, 'active_cli_tokens must not be writable by the application role').not.toBeNull()

@@ -26,9 +26,8 @@ type ResolveHook = (
   context: Record<string, unknown>,
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (
@@ -37,7 +36,10 @@ registerHooks({
       specifier.startsWith('.') &&
       !specifier.endsWith('.ts')
     ) {
-      return nextResolve(specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`, context)
+      return nextResolve(
+        specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`,
+        context
+      )
     }
     return nextResolve(specifier, context)
   },
@@ -46,7 +48,8 @@ registerHooks({
 const { run } = await import('./run.ts')
 const { EXIT, exitForServerCode } = await import('./exit-codes.ts')
 const { parseArgs, flagValues, boolFlag } = await import('./args.ts')
-const { credentialsPath, normalizeApiUrl, readCredentials, writeCredentials } = await import('./credentials.ts')
+const { credentialsPath, normalizeApiUrl, readCredentials, writeCredentials } =
+  await import('./credentials.ts')
 const { gitignoreCovers, readEnvValue, upsertEnvValue, ENV_KEYS } = await import('./commands/init.ts')
 const { VERSION } = await import('./version.ts')
 
@@ -424,7 +427,9 @@ test('gf init is IDEMPOTENT: a second run mints nothing', async () => {
   const seen: Array<{ method: string; url: string; body: unknown }> = []
   const fetchImpl = stubFetch(
     {
-      '/api/v1/cli/keys': { body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null } },
+      '/api/v1/cli/keys': {
+        body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null },
+      },
       // The second run PROBES the key it found. "Still works" now means BOTH that it resolves and
       // that it names the environment being set up — `gf init` defaults to development here.
       '/api/v1/flags/snapshot': {
@@ -470,7 +475,9 @@ test('\u26a0\ufe0f gf init REPLACES a revoked or expired key rather than reporti
       {
         // The key in the file no longer resolves.
         '/api/v1/flags/snapshot': { status: 401, body: { ok: false, error: 'Invalid flag read credential' } },
-        '/api/v1/cli/keys': { body: { ok: true, id: 'key-2', key: 'gb_key_fresh', type: 'flag_read', expiresAt: null } },
+        '/api/v1/cli/keys': {
+          body: { ok: true, id: 'key-2', key: 'gb_key_fresh', type: 'flag_read', expiresAt: null },
+        },
       },
       seen
     ),
@@ -505,7 +512,11 @@ test('an UNVERIFIABLE key refuses retryably, and nothing is minted or rewritten'
   })
 
   assert.equal(code, EXIT.SERVER)
-  assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 0, 'a key was minted on a guess')
+  assert.equal(
+    seen.filter((call) => call.url === '/api/v1/cli/keys').length,
+    0,
+    'a key was minted on a guess'
+  )
   // Byte-identical: no environment line was added beside a key whose scope is unknown.
   assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
 })
