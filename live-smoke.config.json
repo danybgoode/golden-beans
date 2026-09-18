@@ -1,0 +1,11 @@
+{
+  "$comment": "scripts/live-smoke.mjs (the dobby-foundation template's copy) drives apps/web's Playwright `browser` project. Unauthed only for now: e2e/_helpers/auth.ts's signIn() is the fill-in for a role flow; this repo's authed rail is its own `authed` project (npm run test:e2e:authed).",
+  "appDir": "apps/web",
+  "envs": {
+    "prod": "https://goldenfrijoles.com",
+    "local": "http://localhost:3000"
+  },
+  "flows": {},
+  "auth": { "requiredEnv": [], "forbidKeyPattern": null, "unsupportedEnvs": ["prod"] },
+  "previewBypassEnv": "VERCEL_AUTOMATION_BYPASS_SECRET"
+}
