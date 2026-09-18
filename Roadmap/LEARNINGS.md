@@ -326,6 +326,31 @@ one-liner + why + date shape.
 
 ## Review quality
 
+- **A mutation check that breaks the BUILD proves nothing — confirm the mutated code compiled before
+  reading "no failing test" as "the guard is weak".** Three times in golden-frijoles-cli a mutation
+  left a symbol unused; lint failed inside `next build`, no test ran, and the result read exactly
+  like a guard that survived its mutation. Mutate with a change that compiles AND lints (keep the
+  symbol referenced, weaken the condition), and check the run actually built before scoring it.
+  *(2026-09-17, golden-frijoles-cli S1–S3.)*
+- **A guard written to satisfy a rule is not exempt from that rule — check WHAT refused the write,
+  not just that something did.** A spec written because a migration's comment claimed "asserted by
+  attempting the writes" passed a random `user_id`, so the forged INSERT failed on the FOREIGN KEY
+  rather than the grant; restoring `GRANT INSERT` left it green. A database refusal can come from
+  any constraint — the fixture must make the property under test the ONLY thing that can refuse.
+  *(2026-09-17, golden-frijoles-cli S1.)*
+- **When the same function draws a finding in round after round, stop enumerating cases and
+  change the rule.** `gf init`'s key reuse took four review rounds, each fix covering one more
+  "safe unverified" branch and leaving another — because there were none. The fix that held was the
+  one that made the class unrepresentable: reuse only when verified; otherwise refuse. A narrowing
+  trail of findings in ONE function is the signal, distinct from convergence across a PR.
+  *(2026-09-17, golden-frijoles-cli S1, rounds 1/4/6/7.)*
+- **What the suite cannot reach is where the defects live — list it, then reach it.** Four review
+  rounds and 1800 green tests shipped an interactive `gf login` that hung after Enter, because a
+  piped test cannot exercise a TTY; it was found by review and verified by driving the built binary
+  under a real pty (`expect`). The epic's HEADLINE command returned 400 until an end-to-end spec ran
+  it against the real parser — every unit test had supplied the optional field the parser requires.
+  For a new surface, name the layer no test touches (a TTY, the real parser, `jsonb` round-trips)
+  before calling the gate complete. *(2026-09-17, golden-frijoles-cli.)*
 - **A truncated review posts as a clean pass — guard the SHAPE of the output, not just its
   presence.** A reviewer CLI exhausted its turn budget mid-read and exited 0 with a bare
   `read_file{…}` tool call as its entire output. The runner's guards (non-zero status, empty output)
