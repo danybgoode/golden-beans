@@ -94,7 +94,11 @@ test('⚠️ NEITHER surface contains a decision — the assertion plan equality
       .join('\n')
 
     // `rules: []` — clearing the rule list is `planFlagKill`'s job and the whole value of `kill`.
-    assert.doesNotMatch(code, /rules:\s*\[\s*\]/, `${name} clears a rule list — that is planFlagKill's decision`)
+    assert.doesNotMatch(
+      code,
+      /rules:\s*\[\s*\]/,
+      `${name} clears a rule list — that is planFlagKill's decision`
+    )
     // Basis points — the one conversion seam lives in the SDK (`percentToBasisPoints`).
     assert.doesNotMatch(code, /basisPoints\s*:/, `${name} computes basis points — that is the SDK's seam`)
     assert.doesNotMatch(code, /\bpercent\s*\*/, `${name} does rollout arithmetic`)
@@ -119,7 +123,11 @@ test('the mutation check for the guard above: the patterns DO match the planner 
   // what separates this from a guard that is green because it is looking at nothing
   // (CODE-QUALITY #5b).
   const core = readFileSync(join(ROOT, '..', '..', 'packages/sdk/src/flag-commands.ts'), 'utf8')
-  assert.match(core, /rules:\s*\[\s*\]/, 'the planner should clear rules — the guard is looking for the wrong thing')
+  assert.match(
+    core,
+    /rules:\s*\[\s*\]/,
+    'the planner should clear rules — the guard is looking for the wrong thing'
+  )
   assert.match(core, /polarity\s*===\s*'kill-switch'\s*\?/, 'the planner should derive from polarity')
   assert.match(core, /variants\s*:\s*\[\s*\{\s*key/, 'the planner should build the variant list')
 })

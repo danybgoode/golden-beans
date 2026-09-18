@@ -1,11 +1,6 @@
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
-import {
-  CLI_BIN,
-  CLI_GLOBAL_INSTALL,
-  CLI_KILL_SWITCH_STORY,
-  CLI_NPX_INIT,
-} from '@/lib/cli-install'
+import { CLI_BIN, CLI_GLOBAL_INSTALL, CLI_KILL_SWITCH_STORY, CLI_NPX_INIT } from '@/lib/cli-install'
 import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Icon } from '@/components/ui/Icon'
@@ -187,9 +182,8 @@ export default async function InstallPage() {
             publishes — without `apps/web` importing the CLI, which D4 forbids. */}
         <h2 className="ds-label">Or drive it from a terminal</h2>
         <p className="ds-hint">
-          The connector above is how an agent <em>reads</em> your project. The CLI is how it{' '}
-          <em>changes</em> one — create a flag in every environment, roll it out, kill it. No browser, no
-          human click.
+          The connector above is how an agent <em>reads</em> your project. The CLI is how it <em>changes</em>{' '}
+          one — create a flag in every environment, roll it out, kill it. No browser, no human click.
         </p>
         <pre className="ds-mono ds-codeblock">
           {`${CLI_NPX_INIT}
@@ -204,8 +198,8 @@ ${CLI_KILL_SWITCH_STORY.join('\n')}`}
 
         <h2 className="ds-label">For your engineers</h2>
         <p className="ds-hint">
-          An npm-installed SDK — a few lines to your first North Star input. It is the data-in layer under
-          the connector above, not an alternative to it or to the CLI.
+          An npm-installed SDK — a few lines to your first North Star input. It is the data-in layer under the
+          connector above, not an alternative to it or to the CLI.
         </p>
         <pre className="ds-mono ds-codeblock">
           {`npm install @golden-frijoles/sdk

@@ -80,7 +80,7 @@ export function registerFlagTools(
     'list_flags',
     {
       description:
-        "Read every feature flag in this project and what each environment actually serves. `state` says whether a version is being served; `serving` says what it resolves to — they are different facts.",
+        'Read every feature flag in this project and what each environment actually serves. `state` says whether a version is being served; `serving` says what it resolves to — they are different facts.',
       inputSchema: {},
     },
     async () => {
@@ -104,7 +104,7 @@ export function registerFlagTools(
   server.registerTool(
     'get_flag',
     {
-      description: "Read one flag: its definition, every version, and who changed what.",
+      description: 'Read one flag: its definition, every version, and who changed what.',
       inputSchema: { key: z.string().describe('The flag key, e.g. checkout.demo_enabled') },
     },
     async ({ key }) => {
@@ -127,7 +127,7 @@ export function registerFlagTools(
     'create_flag',
     {
       description:
-        "Create a feature flag with a polarity, active in the environments you name. `kill_switch` is born serving TRUE (it is on until you kill it); `enablement` is born serving FALSE (you open it later). Both are ACTIVATED — a flag that is not activated is absent from the snapshot and your app falls back to its own literal.",
+        'Create a feature flag with a polarity, active in the environments you name. `kill_switch` is born serving TRUE (it is on until you kill it); `enablement` is born serving FALSE (you open it later). Both are ACTIVATED — a flag that is not activated is absent from the snapshot and your app falls back to its own literal.',
       inputSchema: {
         key: z.string().describe('The flag key, e.g. checkout.demo_enabled'),
         polarity: z.enum(['kill-switch', 'enablement']),
@@ -153,7 +153,7 @@ export function registerFlagTools(
     'set_flag',
     {
       description:
-        "Change which variant a flag serves by default. Targeting rules are carried across untouched — use kill_flag when clearing them is what you mean.",
+        'Change which variant a flag serves by default. Targeting rules are carried across untouched — use kill_flag when clearing them is what you mean.',
       inputSchema: {
         key: z.string(),
         variantKey: z.string().describe('The variant to serve. Flags created here have "on" and "off".'),
@@ -178,7 +178,7 @@ export function registerFlagTools(
     'rollout_flag',
     {
       description:
-        "Serve a flag to a percentage of matching contexts. REPLACES the rule list with one unconditional rollout rule. A percent outside 0-100 is rejected, never clamped.",
+        'Serve a flag to a percentage of matching contexts. REPLACES the rule list with one unconditional rollout rule. A percent outside 0-100 is rejected, never clamped.',
       inputSchema: {
         key: z.string(),
         percent: z.number().describe('0 to 100. Rejected, not clamped, if outside that range.'),
@@ -204,7 +204,7 @@ export function registerFlagTools(
     'kill_flag',
     {
       description:
-        "The incident verb. Sets the default to the variant whose value is false AND CLEARS EVERY RULE — without the second part a flag reads as off while a rollout still serves true to a slice. Refuses a non-boolean flag rather than guessing an off.",
+        'The incident verb. Sets the default to the variant whose value is false AND CLEARS EVERY RULE — without the second part a flag reads as off while a rollout still serves true to a slice. Refuses a non-boolean flag rather than guessing an off.',
       inputSchema: {
         key: z.string(),
         environments: environmentsArgument,
