@@ -6,7 +6,7 @@ build_order: 22
 
 # Epic: The methodology gets a room of its own
 
-> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** New surface + vocabulary change
+> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** New surface + vocabulary change · **Scope seed:** [`00-ideas/seeds/methodology-experience.md`](../../00-ideas/seeds/methodology-experience.md)
 > **Appetite:** L (multi-wave; re-bet at each wave boundary) · **Underwritten by:**
 > [`Roadmap/bets/wave-2026-08-20-methodology.md`](../../bets/wave-2026-08-20-methodology.md)
 > **Seed:** [`methodology-experience`](../../00-ideas/seeds/methodology-experience.md) (approved 2026-08-20)

@@ -1,5 +1,7 @@
 # Retrospective — A preview deployment stops calling itself localhost
 
+_Closed: 2026-08-20_
+
 **Shipped:** 2026-08-20 · **PR:** [#116](https://github.com/danybgoode/golden-beans/pull/116)
 (`c2589e1`) · 4 stories · 1 amendment · **9 cross-family review rounds**
 

@@ -1,5 +1,7 @@
 # Retrospective — Notification rails
 
+_Closed: 2026-07-28_
+
 **Shipped:** 2026-07-28 · **Golden Beans PR:** [#51](https://github.com/danybgoode/golden-beans/pull/51)
 
 ## What shipped

@@ -12,7 +12,7 @@ build_order: 20
 > resolves, the gated surfaces' badges match the real route state, and `/talk` serves the
 > booking flow.
 
-> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Repositioning
+> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Repositioning · **Scope seed:** [`00-ideas/seeds/landing-maker-ops.md`](../../00-ideas/seeds/landing-maker-ops.md)
 > **Appetite:** M (one wave) · **Mockup (signed-off):**
 > [`references/golden-frijoles-maker-ops-landing-v0.2.html`](../../../references/golden-frijoles-maker-ops-landing-v0.2.html)
 > **Predecessors:** [`landing-redesign-v2`](../landing-redesign-v2/README.md) (2026-08-12) →

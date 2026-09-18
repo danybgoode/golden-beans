@@ -108,3 +108,7 @@ vocabulary instead of two.
 ## Sprints
 
 - [`sprint-1.md`](./sprint-1.md) — the whole pass, as one slice.
+
+## Definition of Done (epic)
+
+_Recorded retroactively on 2026-09-18, when the project adopted the template's doc-format checker: this epic shipped before its README carried the canonical DoD section. Its close evidence is `RETROSPECTIVE.md`._

@@ -1,5 +1,7 @@
 # Retrospective — The public surface names the category
 
+_Closed: 2026-08-20_
+
 **Shipped:** 2026-08-20 · **PRs:** [#111](https://github.com/danybgoode/golden-beans/pull/111) ·
 [#113](https://github.com/danybgoode/golden-beans/pull/113) ·
 [#114](https://github.com/danybgoode/golden-beans/pull/114) (plus

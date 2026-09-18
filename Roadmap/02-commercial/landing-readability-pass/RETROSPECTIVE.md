@@ -1,5 +1,7 @@
 # Retrospective — landing-readability-pass
 
+_Closed: 2026-08-20_
+
 **Shipped:** 2026-08-20 · **PR:** [#102](https://github.com/danybgoode/golden-beans/pull/102) ·
 **Live:** https://goldenfrijoles.com · **Appetite:** S (one sprint, one slice)
 

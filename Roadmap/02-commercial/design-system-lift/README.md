@@ -6,7 +6,7 @@ build_order: 9
 
 # Epic: Design system lift — the limitless golden-bean brand
 
-> **Area:** 02-commercial · **Risk:** low · **Source:** Daniel’s 2026-07-28 approved handoff in
+> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Source:** Daniel’s 2026-07-28 approved handoff in
 > `references/golden-beans-design-system-proposal/` and
 > `references/golden-beans-mark-exploration-round2.html`
 
@@ -61,3 +61,7 @@ and its corrective handoff follow-up [#53](https://github.com/danybgoode/golden-
 the navigation loader and route safeguards are in place; and the drift guard runs locally and in
 CI. The post-handoff review also preserved feature-gated 404 semantics by keeping guards above
 streaming shell/loading boundaries.
+
+## Definition of Done (epic)
+
+_Recorded retroactively on 2026-09-18, when the project adopted the template's doc-format checker: this epic shipped before its README carried the canonical DoD section. Its close evidence is `RETROSPECTIVE.md`._

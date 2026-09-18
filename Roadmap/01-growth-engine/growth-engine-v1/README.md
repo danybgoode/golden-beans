@@ -6,8 +6,7 @@ build_order: 1
 
 # Epic: Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped
 
-> **Area:** 01-growth-engine · **Risk:** low · **Archetype:** Builder ·
-> **Scope seed:** [`00-ideas/seeds/growth-engine-v1.md`](../../00-ideas/seeds/growth-engine-v1.md)
+> **Area:** 01-growth-engine · **Risk:** low · **Class:** Feature · **Archetype:** Builder · **Scope seed:** [`00-ideas/seeds/growth-engine-v1.md`](../../00-ideas/seeds/growth-engine-v1.md)
 > (mirror-pointer — the canonical, panel-adjudicated scope doc lives in the sibling repo:
 > `~/dobby/medusa-bonsai/Roadmap/00-ideas/2. readyforscope/golden-beans-growth-engine.md`, since it
 > was groomed before golden-beans existed).

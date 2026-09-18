@@ -1,5 +1,7 @@
 # Scenarios made PM-operable — define, launch, and kill a scenario from the UI — Retrospective
 
+_Closed: 2026-08-13_
+
 _Shipped dark: 2026-08-13 · PR #98 · `5bca24c`_
 
 ## What shipped

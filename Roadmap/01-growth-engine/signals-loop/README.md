@@ -6,7 +6,7 @@ build_order: 8
 
 # Epic: Signals loop — error/friction signals → structured tasks → the customer's own agent
 
-> **Area:** 01-growth-engine · **Risk:** high · **Scope seed:** [`00-ideas/seeds/signals-loop.md`](../../00-ideas/seeds/signals-loop.md)
+> **Area:** 01-growth-engine · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/signals-loop.md`](../../00-ideas/seeds/signals-loop.md)
 
 ## Why
 The PostHog steal, inverted. Error and friction signals flow into the engine, get deterministically
@@ -166,3 +166,7 @@ Fine-grained kill: revoking or descoping an `agent_write` row cuts one agent's w
 deploy; revoking the connector token cuts that agent entirely. Carve-outs: signal capture is
 client-controlled (SDK init) · read tools also ride `CONNECTOR_ENABLED` · dashboards sit behind the
 team boundary. All migrations additive.
+
+## Definition of Done (epic)
+
+_Recorded retroactively on 2026-09-18, when the project adopted the template's doc-format checker: this epic shipped before its README carried the canonical DoD section. Its close evidence is `RETROSPECTIVE.md`._

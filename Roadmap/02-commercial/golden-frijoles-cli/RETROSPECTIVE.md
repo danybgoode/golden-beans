@@ -9,7 +9,7 @@ is the line that used to stop and wait for a human to open a browser.
 
 ---
 
-## What actually happened
+## What shipped — what actually happened
 
 ### The architecture lock disproved three of the scope doc's assumptions, and that was the cheapest hour of the epic
 
@@ -141,7 +141,7 @@ Written while Sprint 1 was still in review; these happened afterwards and belong
   120 turns, and Codex hit its usage cap mid-epic. The security lens was completed on a different agy
   model, scoped to the security surface, and each PR says which family ran which pass.
 
-## What we would do differently
+## What we learned — what we would do differently
 
 - **Run the `--help`/`--json` golden files against a pseudo-terminal too.** Everything agent-facing
   was pinned as bytes; nothing was pinned as *behaviour under a real terminal*, and that is where the
@@ -155,7 +155,7 @@ Written while Sprint 1 was still in review; these happened afterwards and belong
   tarballs, install into an empty directory with an empty cache, and run the binary — the only check
   that sees the dependency graph a user gets.
 
-## What we would do again
+## What went well — what we would do again
 
 - **Lock the architecture against live code, and let it disprove things.** Three decisions changed.
 - **Put the shared core where both callers can reach it, then assert the absence of decisions
@@ -163,3 +163,7 @@ Written while Sprint 1 was still in review; these happened afterwards and belong
 - **Verify a database guarantee by attempting the write.** `active_cli_tokens` selects from a single
   table and *is* auto-updatable, unlike all three of its siblings — so its `REVOKE` is the only thing
   between the app role and a forged credential. That is knowable only by trying it.
+
+## Gaps / follow-ups
+
+_Not recorded at close — this section was added on 2026-09-18 when the project adopted the template's doc-format checker. See the rest of this retrospective._

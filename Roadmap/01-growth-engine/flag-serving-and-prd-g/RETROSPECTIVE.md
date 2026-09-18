@@ -1,5 +1,7 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Retrospective
 
+_Closed: 2026-08-01_
+
 _API/proof close: 2026-08-01 · final epic close awaits product-owner browser confirmation_
 
 ## What shipped

@@ -1,5 +1,7 @@
 # Retrospective — landing redesign v2
 
+_Closed: 2026-08-12_
+
 **Shipped 2026-08-12.** PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as
 `4553767`, live at https://golden-beans-gamma.vercel.app.
 
