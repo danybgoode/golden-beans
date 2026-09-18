@@ -9,6 +9,17 @@ typed local feature-flag evaluation.
 npm install @golden-frijoles/sdk
 ```
 
+## 0.5.0 — the command core, for the CLI and the MCP tools
+
+**Additive only; nothing existing changes.** 0.5.0 exports the shared, pure command core that
+`@golden-frijoles/cli` and the connector's flag write tools both call — `planFlagCreate`,
+`planFlagSet`, `planFlagRollout`, `planFlagRules`, `planFlagKill`, `ON_VARIANT_KEY` /
+`OFF_VARIANT_KEY` — plus `diffFlagDefinitions` and the percent ↔ basis-points helpers the console
+already used. One implementation, so the CLI verb and the MCP tool cannot disagree about what a
+flag change means.
+
+A pre-1.0 caret (`^0.4.0`) does not pick this up automatically; move to `^0.5.0` to use them.
+
 ## 0.4.0 identity change
 
 The package rename and the OpenFeature provider rename ship together as a breaking pre-1.0 minor
