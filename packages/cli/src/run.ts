@@ -91,6 +91,28 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     return EXIT.USAGE
   }
 
+  // ⚠️ **A flag supplied with an EMPTY value is a usage error — for every flag, not one** (cross-family
+  // review, Codex, round 6). `gf init --project "$UNSET_VAR"` expands to `--project ""`, and every
+  // resolver here is written `flagValue(...)?.trim() || <default>`, so the empty string is falsy and
+  // silently FELL BACK to the remembered project — minting a credential for a tenant the caller
+  // did not name, having visibly tried to name one. The reviewer found it on `--project`; the same
+  // `|| default` shape sits behind `--env`, `--api`, `--token` and `--reason`.
+  //
+  // Fixed at the parser boundary so the class is gone rather than one instance patched: a caller
+  // who typed a flag meant to supply it, and an empty value is never what they meant.
+  const blank = [...withPositionals.flags.entries()]
+    .filter(([, values]) => values.some((value) => value.trim() === ''))
+    .map(([name]) => `--${name}`)
+    .sort()
+  if (blank.length > 0) {
+    emit.fail(
+      'invalid',
+      `${blank.join(', ')} ${blank.length === 1 ? 'was' : 'were'} given no value. An empty value is ` +
+        `refused rather than defaulted — check for an unset shell variable.`
+    )
+    return EXIT.USAGE
+  }
+
   const auth = resolveAuth({
     tokenFlag: flagValue(withPositionals, 'token'),
     apiFlag: flagValue(withPositionals, 'api'),
