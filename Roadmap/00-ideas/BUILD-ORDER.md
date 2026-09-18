@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-17 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-18 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -64,7 +64,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
-| Golden Frijoles CLI v1 — the write surface an agent can actually drive | Scaffolded | In progress |
+| Golden Frijoles CLI v1 — the write surface an agent can actually drive | Scaffolded | Shipped |
 
 ---
 _Epics: 29 · seeds in funnel: 3 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
