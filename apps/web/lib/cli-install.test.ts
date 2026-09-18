@@ -51,3 +51,62 @@ test('the kill-switch story is the three verbs the epic promises, in order', () 
   )
   assert.match(CLI_KILL_SWITCH_STORY[0], /--kill-switch --all-envs$/)
 })
+
+// ── The half of the weld that was missing (cross-family review, Codex, PR #151) ─────────────────
+//
+// The tests above prove the page names the right PACKAGE and BINARY. They did not prove the page's
+// COMMANDS exist: rename `--kill-switch` in the CLI, and every test in both packages stayed green
+// while `/install` kept teaching a flag that no longer parses. The claim "one surface" was only
+// half enforced.
+//
+// The CLI's own recorded `--json --help` is the machine-readable truth about what `gf` accepts —
+// every verb and every flag it declares — and it is pinned by the CLI's golden test, so it cannot
+// drift from the CLI either. Read off DISK, for the same D4 reason as the manifest above.
+
+type RecordedHelp = {
+  help: {
+    commands: Array<{ command: string; flags: Array<{ flag: string }> }>
+    globalFlags: string[]
+  }
+}
+
+const recorded = JSON.parse(
+  readFileSync(
+    join(import.meta.dirname, '..', '..', '..', 'packages/cli/src/__golden__/json-help.json'),
+    'utf8'
+  )
+) as RecordedHelp
+
+/** Check one printed command line against what the CLI actually declares. */
+function assertRealCommand(line: string) {
+  const words = line.replace(/^npx \S+ /, `${CLI_BIN} `).split(/\s+/)
+  assert.equal(words[0], CLI_BIN, `${line} does not invoke ${CLI_BIN}`)
+  const bare = words.slice(1).filter((word) => !word.startsWith('-'))
+  // The LONGEST verb the CLI declares that prefixes the bare words — the dispatcher's own rule.
+  const verb = recorded.help.commands
+    .map((entry) => entry.command)
+    .filter((command) => bare.join(' ').startsWith(command))
+    .sort((left, right) => right.length - left.length)[0]
+  assert.ok(verb, `\`${line}\` names no verb the CLI declares`)
+  const declared = new Set([
+    ...recorded.help.globalFlags,
+    ...recorded.help.commands.find((entry) => entry.command === verb)!.flags.map((flag) => flag.flag),
+  ])
+  for (const flag of words.filter((word) => word.startsWith('--'))) {
+    assert.ok(declared.has(flag), `\`${line}\` passes ${flag}, which \`gf ${verb}\` does not declare`)
+  }
+}
+
+test('every command /install prints is a verb and flags the CLI actually declares', () => {
+  for (const line of [CLI_NPX_INIT, CLI_NPX_LOGIN, ...CLI_KILL_SWITCH_STORY]) assertRealCommand(line)
+})
+
+test('the guard above can fail: a renamed flag is caught', () => {
+  // Without this, a checker that silently matched nothing — a bad path, an empty recording — would
+  // pass the test above forever (CODE-QUALITY #5b).
+  assert.throws(
+    () => assertRealCommand(`${CLI_BIN} flags create x --kill-switchh --all-envs`),
+    /--kill-switchh/
+  )
+  assert.throws(() => assertRealCommand(`${CLI_BIN} flags obliterate x`), /names no verb/)
+})
