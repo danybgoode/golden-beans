@@ -151,14 +151,19 @@ export const keysCreateCommand: Command = {
     }
 
     const minted = result.body
-    context.emit.ok(minted, [
-      `${minted.type} credential for ${project}${minted.scope ? ` (${minted.scope})` : ''}`,
-      '',
-      minted.key,
-      '',
-      'This is the only time it is shown — only a hash was stored.',
-      minted.expiresAt ? `It expires ${minted.expiresAt}.` : 'It does not expire; revoke it when you are done.',
-    ].join('\n'))
+    context.emit.ok(
+      minted,
+      [
+        `${minted.type} credential for ${project}${minted.scope ? ` (${minted.scope})` : ''}`,
+        '',
+        minted.key,
+        '',
+        'This is the only time it is shown — only a hash was stored.',
+        minted.expiresAt
+          ? `It expires ${minted.expiresAt}.`
+          : 'It does not expire; revoke it when you are done.',
+      ].join('\n')
+    )
     return EXIT.OK
   },
 }

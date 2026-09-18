@@ -126,7 +126,11 @@ export const initCommand: Command = {
   tracked file is the failure this verb exists to prevent, so it will not create one and
   then warn about it.`,
   flags: [
-    { name: 'env', value: '<environment>', describe: 'development | preview | production (default: development)' },
+    {
+      name: 'env',
+      value: '<environment>',
+      describe: 'development | preview | production (default: development)',
+    },
     { name: 'project', value: '<slug>', describe: 'the project (default: the remembered one)' },
     // ⚠️ Accepted and INERT, described as such. This verb never prompts — there is nothing for a
     // --yes to skip — and a flag whose help implies it suppresses a question that does not exist is
@@ -187,7 +191,9 @@ export const initCommand: Command = {
     const existingKeyState =
       existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey, environment)
     if (existingKeyState === 'dead') {
-      context.emit.note(`The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`)
+      context.emit.note(
+        `The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`
+      )
     }
     if (existingKeyState === 'wrong-environment') {
       context.emit.note(
@@ -195,22 +201,30 @@ export const initCommand: Command = {
       )
     }
 
-    // ⚠️ **`unverified` + a CHANGED environment is refused, not guessed** (cross-family review,
-    // Codex, round 6). If the probe could not answer, the key's environment is unknown — and if the
-    // file currently says a different environment from the one being set up, rewriting
-    // GOLDEN_FRIJOLES_ENVIRONMENT beside a key that may belong to the old one is exactly the
-    // mismatched config the `wrong-environment` state exists to prevent, reached by the back door.
+    // ⚠️ **A key is reused ONLY when it is verified live for THIS environment. `unverified` always
+    // refuses.** This is the third shape of this rule, and the history is the reason for it:
     //
-    // Unverified with the SAME environment is still safe to leave alone: nothing about the pairing
-    // changes. It is only the combination of "cannot check" and "about to change" that is refused —
-    // retryably, because the cause is the probe, not the caller.
-    const recordedEnvironment = readEnvValue(existingEnv, ENV_KEYS.environment)
-    if (existingKeyState === 'unverified' && recordedEnvironment !== null && recordedEnvironment !== environment) {
+    //   round 1 — "there is a key" was treated as "the key works"          (Codex, round 1)
+    //   round 4 — a live key for the WRONG environment was kept            (Codex, round 4)
+    //   round 6 — unverified + a changed environment was re-pointed        (Codex, round 6)
+    //   round 7 — unverified + NO recorded environment was labelled        (Codex, round 7)
+    //
+    // Each fix covered one more branch of "which unverified cases are safe?", and each left another.
+    // The answer is that none of them are: when the probe cannot speak, neither the key's scope NOR
+    // the `GOLDEN_FRIJOLES_ENVIRONMENT` line beside it is known to be true — that line is just text a
+    // person may have edited. So the rule stopped enumerating cases and became the only one that
+    // holds: verified-live → reuse; dead or wrong-environment → mint; unverified → refuse, retryably,
+    // with nothing written. The class is unrepresentable rather than patched (CODE-QUALITY #2).
+    //
+    // The cost is stated, not hidden: on a deployment with flag serving switched off, a re-run of
+    // `gf init` refuses instead of passing. That is the honest answer — it cannot check — and the
+    // message says how to proceed.
+    if (existingKeyState === 'unverified') {
       context.emit.fail(
         'server_error',
-        `${ENV_FILE} holds a ${ENV_KEYS.flagRead} for ${recordedEnvironment} that could not be verified ` +
-          `against ${context.api!.baseUrl}, so it cannot be safely re-pointed at ${environment}. Nothing was ` +
-          `changed. Retry when the deployment answers, or remove the key to mint a fresh one.`
+        `${ENV_FILE} already holds a ${ENV_KEYS.flagRead}, and ${context.api!.baseUrl} could not confirm ` +
+          `which environment it reads. Nothing was changed. Retry when the deployment answers, or ` +
+          `remove that line to mint a fresh ${environment} key.`
       )
       return EXIT.SERVER
     }

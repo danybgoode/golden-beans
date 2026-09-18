@@ -81,7 +81,10 @@ export async function run(options: RunOptions): Promise<ExitCode> {
   // ⚠️ An unknown flag is a USAGE ERROR, not something to ignore. An agent that types `--environment`
   // for `--env` and is silently ignored gets a flag created in the wrong place, with exit 0 — the
   // CLI agreeing with a command nobody wrote.
-  const unknown = unknownFlags(withPositionals, command.flags.map((flag) => flag.name))
+  const unknown = unknownFlags(
+    withPositionals,
+    command.flags.map((flag) => flag.name)
+  )
   if (unknown.length > 0) {
     emit.fail(
       'invalid',

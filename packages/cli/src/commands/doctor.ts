@@ -193,10 +193,20 @@ async function versionCheck(fetchImpl: typeof fetch): Promise<Check> {
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(5_000),
     })
-    if (!response.ok) return { id: 'cli-version', status: 'skipped', detail: `Running ${VERSION}. Could not reach the npm registry to compare.` }
+    if (!response.ok)
+      return {
+        id: 'cli-version',
+        status: 'skipped',
+        detail: `Running ${VERSION}. Could not reach the npm registry to compare.`,
+      }
     const body = (await response.json()) as { version?: string }
     const latest = typeof body.version === 'string' ? body.version : null
-    if (!latest) return { id: 'cli-version', status: 'skipped', detail: `Running ${VERSION}. The registry gave no version to compare.` }
+    if (!latest)
+      return {
+        id: 'cli-version',
+        status: 'skipped',
+        detail: `Running ${VERSION}. The registry gave no version to compare.`,
+      }
     return latest === VERSION
       ? { id: 'cli-version', status: 'ok', detail: `Running ${VERSION}, the latest.` }
       : {
@@ -205,7 +215,11 @@ async function versionCheck(fetchImpl: typeof fetch): Promise<Check> {
           detail: `Running ${VERSION}; ${latest} is published. Update with \`npm i -g @golden-frijoles/cli\`.`,
         }
   } catch {
-    return { id: 'cli-version', status: 'skipped', detail: `Running ${VERSION}. Could not reach the npm registry to compare.` }
+    return {
+      id: 'cli-version',
+      status: 'skipped',
+      detail: `Running ${VERSION}. Could not reach the npm registry to compare.`,
+    }
   }
 }
 
@@ -226,9 +240,7 @@ function report(context: CommandContext, checks: Check[]): ExitCode {
   const failed = checks.find((check) => check.status === 'fail')
   context.emit.ok(
     { checks, healthy: failed === undefined },
-    checks
-      .map((check) => `${symbol(check.status)} ${pad(check.id, 20)} ${check.detail}`)
-      .join('\n')
+    checks.map((check) => `${symbol(check.status)} ${pad(check.id, 20)} ${check.detail}`).join('\n')
   )
   if (!failed) return EXIT.OK
   // The failing check decides the code, so a caller branching on it gets the same vocabulary the

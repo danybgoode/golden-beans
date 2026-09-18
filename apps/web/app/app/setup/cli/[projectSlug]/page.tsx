@@ -44,8 +44,8 @@ export default async function SetupCliPage({ params }: { params: Promise<{ proje
           lede={
             <>
               A token signs <code>gf</code> in as <strong>you</strong>. It reaches every project you are a
-              member of — not just the one in the switcher above — and it can do exactly what you can do
-              here, no more.
+              member of — not just the one in the switcher above — and it can do exactly what you can do here,
+              no more.
             </>
           }
         />

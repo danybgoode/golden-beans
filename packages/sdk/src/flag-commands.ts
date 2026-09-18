@@ -306,6 +306,8 @@ export function planFlagKill(input: {
  * forbids; a stored row in that state is corrupt, and the caller renders "unreadable" rather than
  * inventing a value (CODE-QUALITY #8 — a broken read must not look like a legitimate value).
  */
-export function defaultServedValue(definition: FlagDefinition): boolean | string | number | JsonValue | undefined {
+export function defaultServedValue(
+  definition: FlagDefinition
+): boolean | string | number | JsonValue | undefined {
   return definition.variants.find((variant) => variant.key === definition.defaultVariantKey)?.value
 }

@@ -12,7 +12,12 @@
 // on that basis would create a second version. So `outcome: 'partial'` is what produces EXIT.PARTIAL.
 
 import { readFileSync } from 'node:fs'
-import { FLAG_ENVIRONMENTS, OFF_VARIANT_KEY, ON_VARIANT_KEY, type FlagEnvironment } from '@golden-frijoles/sdk'
+import {
+  FLAG_ENVIRONMENTS,
+  OFF_VARIANT_KEY,
+  ON_VARIANT_KEY,
+  type FlagEnvironment,
+} from '@golden-frijoles/sdk'
 import { boolFlag, flagValue, flagValues } from '../args'
 import type { Command, CommandContext, FlagDoc } from '../command'
 import { EXIT, exitForServerCode, type ExitCode } from '../exit-codes'
@@ -96,7 +101,11 @@ async function submit(
     return EXIT.SERVER
   }
   if (result.kind === 'error') {
-    context.emit.fail(result.code, result.message, result.body.issues ? { issues: result.body.issues } : undefined)
+    context.emit.fail(
+      result.code,
+      result.message,
+      result.body.issues ? { issues: result.body.issues } : undefined
+    )
     return exitForServerCode(result.code)
   }
 
@@ -179,7 +188,10 @@ export const flagsCreateCommand: Command = {
       const rawVariants = flagValue(context.args, 'variants')
       const defaultVariantKey = flagValue(context.args, 'default')
       if (!rawVariants || !defaultVariantKey) {
-        context.emit.fail('invalid', '--type needs --variants \'[{"key":"a","value":1}]\' and --default <key>.')
+        context.emit.fail(
+          'invalid',
+          '--type needs --variants \'[{"key":"a","value":1}]\' and --default <key>.'
+        )
         return EXIT.USAGE
       }
       let variants: unknown
@@ -323,10 +335,7 @@ export const flagsRulesCommand: Command = {
 
   The file is a JSON array of rules. The caps come from the SDK's own constants, so the CLI
   and the parser cannot disagree about how many rules a flag may have.`,
-  flags: [
-    ...ENVIRONMENT_FLAGS,
-    { name: 'rules-file', value: '<path>', describe: 'a JSON array of rules' },
-  ],
+  flags: [...ENVIRONMENT_FLAGS, { name: 'rules-file', value: '<path>', describe: 'a JSON array of rules' }],
   async run(context): Promise<ExitCode> {
     const key = context.args.positionals[0]
     const path = flagValue(context.args, 'rules-file')
@@ -339,7 +348,10 @@ export const flagsRulesCommand: Command = {
       rules = JSON.parse(readFileSync(path, 'utf8'))
     } catch (err) {
       // The path and the reason, both. "Could not read rules" sends someone looking at the rules.
-      context.emit.fail('invalid', `Could not read ${path}: ${err instanceof Error ? err.message : String(err)}`)
+      context.emit.fail(
+        'invalid',
+        `Could not read ${path}: ${err instanceof Error ? err.message : String(err)}`
+      )
       return EXIT.USAGE
     }
     if (!Array.isArray(rules)) {

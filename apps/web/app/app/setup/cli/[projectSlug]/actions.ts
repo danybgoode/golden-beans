@@ -82,8 +82,7 @@ export async function revokeCliTokenAction(slug: unknown, tokenId: unknown) {
   // Scoped to `userId` inside `revokeCliToken`, which is the property that stops one account
   // revoking another's token by guessing an id — the same shape `revokeApiKey` uses for projects.
   const revoked = await revokeCliToken(userId, tokenId)
-  if (!revoked)
-    return { ok: false as const, error: 'That token is not active, or does not belong to you.' }
+  if (!revoked) return { ok: false as const, error: 'That token is not active, or does not belong to you.' }
 
   await recordAudit({
     action: 'cli_token_revoked',

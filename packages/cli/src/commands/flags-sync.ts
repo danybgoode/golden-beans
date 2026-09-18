@@ -59,7 +59,10 @@ export const flagsSyncCommand: Command = {
     try {
       catalog = JSON.parse(readFileSync(path, 'utf8'))
     } catch (err) {
-      context.emit.fail('invalid', `Could not read ${path}: ${err instanceof Error ? err.message : String(err)}`)
+      context.emit.fail(
+        'invalid',
+        `Could not read ${path}: ${err instanceof Error ? err.message : String(err)}`
+      )
       return EXIT.USAGE
     }
     if (!Array.isArray(catalog)) {
@@ -72,13 +75,19 @@ export const flagsSyncCommand: Command = {
       // key check is below this branch: a dry run is useful precisely when you have not wired the
       // credential up yet.
       context.emit.ok(
-        { dryRun: true, file: path, entries: catalog.length, keys: catalog.map((entry) => (entry as { key?: string }).key ?? null) },
+        {
+          dryRun: true,
+          file: path,
+          entries: catalog.length,
+          keys: catalog.map((entry) => (entry as { key?: string }).key ?? null),
+        },
         `${catalog.length} entr${catalog.length === 1 ? 'y' : 'ies'} in ${path}. Nothing was sent.`
       )
       return EXIT.OK
     }
 
-    const syncKey = flagValue(context.args, 'sync-key')?.trim() || context.env.GOLDEN_FRIJOLES_FLAG_SYNC_KEY?.trim()
+    const syncKey =
+      flagValue(context.args, 'sync-key')?.trim() || context.env.GOLDEN_FRIJOLES_FLAG_SYNC_KEY?.trim()
     if (!syncKey) {
       context.emit.fail(
         'unauthorized',
@@ -89,7 +98,9 @@ export const flagsSyncCommand: Command = {
     }
 
     const client = createFlagDefinitionSyncClient({ baseUrl: context.auth.apiUrl, flagSyncKey: syncKey })
-    const result = await client.syncFlagDefinitions(catalog as Parameters<typeof client.syncFlagDefinitions>[0])
+    const result = await client.syncFlagDefinitions(
+      catalog as Parameters<typeof client.syncFlagDefinitions>[0]
+    )
 
     if (!result.ok) {
       // `kind` is the SDK's own vocabulary for what went wrong, and it is deliberately NOT the same

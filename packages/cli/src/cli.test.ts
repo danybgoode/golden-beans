@@ -26,9 +26,8 @@ type ResolveHook = (
   context: Record<string, unknown>,
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (
@@ -37,7 +36,10 @@ registerHooks({
       specifier.startsWith('.') &&
       !specifier.endsWith('.ts')
     ) {
-      return nextResolve(specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`, context)
+      return nextResolve(
+        specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`,
+        context
+      )
     }
     return nextResolve(specifier, context)
   },
@@ -46,7 +48,8 @@ registerHooks({
 const { run } = await import('./run.ts')
 const { EXIT, exitForServerCode } = await import('./exit-codes.ts')
 const { parseArgs, flagValues, boolFlag } = await import('./args.ts')
-const { credentialsPath, normalizeApiUrl, readCredentials, writeCredentials } = await import('./credentials.ts')
+const { credentialsPath, normalizeApiUrl, readCredentials, writeCredentials } =
+  await import('./credentials.ts')
 const { gitignoreCovers, readEnvValue, upsertEnvValue, ENV_KEYS } = await import('./commands/init.ts')
 const { VERSION } = await import('./version.ts')
 
@@ -424,7 +427,9 @@ test('gf init is IDEMPOTENT: a second run mints nothing', async () => {
   const seen: Array<{ method: string; url: string; body: unknown }> = []
   const fetchImpl = stubFetch(
     {
-      '/api/v1/cli/keys': { body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null } },
+      '/api/v1/cli/keys': {
+        body: { ok: true, id: 'key-1', key: 'gb_key_secret', type: 'flag_read', expiresAt: null },
+      },
       // The second run PROBES the key it found. "Still works" now means BOTH that it resolves and
       // that it names the environment being set up — `gf init` defaults to development here.
       '/api/v1/flags/snapshot': {
@@ -470,7 +475,9 @@ test('\u26a0\ufe0f gf init REPLACES a revoked or expired key rather than reporti
       {
         // The key in the file no longer resolves.
         '/api/v1/flags/snapshot': { status: 401, body: { ok: false, error: 'Invalid flag read credential' } },
-        '/api/v1/cli/keys': { body: { ok: true, id: 'key-2', key: 'gb_key_fresh', type: 'flag_read', expiresAt: null } },
+        '/api/v1/cli/keys': {
+          body: { ok: true, id: 'key-2', key: 'gb_key_fresh', type: 'flag_read', expiresAt: null },
+        },
       },
       seen
     ),
@@ -484,17 +491,18 @@ test('\u26a0\ufe0f gf init REPLACES a revoked or expired key rather than reporti
   assert.equal(report.reusedExistingKey, false)
 })
 
-test('an UNVERIFIABLE key is left alone and SAID to be unverified — never silently replaced', async () => {
-  // Flag serving switched off on this deployment answers 404. Minting on an unanswerable question
-  // would issue a fresh credential on every run and break the idempotency this verb promises;
-  // claiming it is live would repeat the defect above. It says which.
+test('an UNVERIFIABLE key refuses retryably, and nothing is minted or rewritten', async () => {
+  // Round 7's rule: a key is reused only when VERIFIED live for this environment. When the probe
+  // cannot speak (flag serving off answers 404), neither the key's scope nor the environment line
+  // beside it is known to be true — so init refuses rather than guessing either way.
   const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
   const cwd = mkdtempSync(join(tmpdir(), 'gf-repo-'))
   writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
-  writeFileSync(join(cwd, '.env.local'), `${ENV_KEYS.flagRead}=gb_key_unknown\n`)
+  const before = `${ENV_KEYS.flagRead}=gb_key_unknown\n`
+  writeFileSync(join(cwd, '.env.local'), before)
 
   const seen: Array<{ method: string; url: string; body: unknown }> = []
-  const { writer, out } = capture()
+  const { writer } = capture()
   const code = await run({
     argv: ['init', '--json'],
     writer,
@@ -503,10 +511,14 @@ test('an UNVERIFIABLE key is left alone and SAID to be unverified — never sile
     fetchImpl: stubFetch({ '/api/v1/flags/snapshot': { status: 404, body: {} } }, seen),
   })
 
-  assert.equal(code, EXIT.OK)
-  assert.equal(seen.filter((call) => call.url === '/api/v1/cli/keys').length, 0, 'a key was minted on a guess')
-  assert.equal(readEnvValue(readFileSync(join(cwd, '.env.local'), 'utf8'), ENV_KEYS.flagRead), 'gb_key_unknown')
-  assert.equal((JSON.parse(out.join('\n')) as { existingKeyState: string }).existingKeyState, 'unverified')
+  assert.equal(code, EXIT.SERVER)
+  assert.equal(
+    seen.filter((call) => call.url === '/api/v1/cli/keys').length,
+    0,
+    'a key was minted on a guess'
+  )
+  // Byte-identical: no environment line was added beside a key whose scope is unknown.
+  assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
 })
 
 test('⚠️ gf init REFUSES rather than minting into a repository it cannot protect', async () => {
@@ -727,6 +739,30 @@ test('\u26a0\ufe0f gf init refuses to re-point an UNVERIFIED key at a different 
   assert.equal(code, EXIT.SERVER)
   // Untouched — no half-rewritten config.
   assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), before)
+})
+
+test('\u26a0\ufe0f global flags work BEFORE the verb — `gf --json flags ls` is not root help', async () => {
+  // The parser collected the verb only until the first flag, so this printed root help with exit 0:
+  // a success code and none of the output asked for (Codex, round 8).
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['--json', 'flags', 'ls', '--project', 'acme'],
+    writer,
+    env: sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN }),
+    fetchImpl: stubFetch({
+      '/api/v1/cli/flags?project=acme': { body: { ok: true, project: 'acme', flags: [], environments: [] } },
+    }),
+  })
+  assert.equal(code, EXIT.OK)
+  const body = JSON.parse(out.join('\n')) as { flags?: unknown; help?: unknown }
+  assert.ok(Array.isArray(body.flags), 'expected the flags listing, got root help')
+  assert.equal(body.help, undefined)
+})
+
+test('a flag value never leaks into the verb path', () => {
+  const args = parseArgs(['--env', 'production', 'flags', 'kill', 'a.b'])
+  assert.deepEqual(args.path, ['flags', 'kill', 'a.b'])
+  assert.deepEqual(flagValues(args, 'env'), ['production'])
 })
 
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
