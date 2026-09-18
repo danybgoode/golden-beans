@@ -44,24 +44,50 @@ export function gitignoreCovers(contents: string): boolean {
     .some((line) => ['.env.local', '.env*.local', '.env*', '*.local'].includes(line))
 }
 
-/** The value of `name` in a dotenv file, or null. Quotes stripped; no interpolation, deliberately. */
+/**
+ * The value of `name` in a dotenv file, or null. Quotes stripped; no interpolation, deliberately.
+ *
+ * ⚠️ **The LAST assignment wins, and this returned the FIRST** (cross-family review, Codex,
+ * round 3). `dotenv` assigns in file order, so a later line overrides an earlier one — which meant
+ * `gf init` could probe and rewrite one key while the generated app actually resolved a different
+ * one. Two duplicate lines is not exotic: it is what a hand-edit plus a re-run produces.
+ */
 export function readEnvValue(contents: string, name: string): string | null {
+  let found: string | null = null
   for (const line of contents.split('\n')) {
     const match = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=\\s*(.*)$`).exec(line)
     if (!match) continue
     const raw = match[1].trim().replace(/^(['"])(.*)\1$/, '$2')
-    return raw === '' ? null : raw
+    found = raw === '' ? null : raw
   }
-  return null
+  return found
 }
 
-/** Replace `name`'s line, or append one. Never duplicates a key — a dotenv file's LAST wins. */
+/**
+ * Set `name` to `value`, leaving EXACTLY ONE assignment of it in the file.
+ *
+ * ⚠️ **Rewritten to remove the first/last ambiguity rather than to pick a side** (cross-family
+ * review, Codex, round 3). The previous version replaced the FIRST match and left any later
+ * duplicate in place — and since `dotenv` resolves the LAST one, the file could end up saying
+ * something this function believed it had just changed.
+ *
+ * Every existing assignment is dropped and one is written where the first of them was (or appended
+ * if there were none). The failure is then unrepresentable rather than handled: there is no second
+ * occurrence for the two functions to disagree about (CODE-QUALITY #2).
+ */
 export function upsertEnvValue(contents: string, name: string, value: string): string {
   const line = `${name}=${value}`
-  const pattern = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=.*$`, 'm')
-  if (pattern.test(contents)) return contents.replace(pattern, line)
-  const prefix = contents === '' || contents.endsWith('\n') ? contents : `${contents}\n`
-  return `${prefix}${line}\n`
+  const pattern = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=.*$`)
+  const lines = contents === '' ? [] : contents.split('\n')
+  const firstIndex = lines.findIndex((candidate) => pattern.test(candidate))
+  const kept = lines.filter((candidate) => !pattern.test(candidate))
+  if (firstIndex === -1) {
+    const prefix = contents === '' || contents.endsWith('\n') ? contents : `${contents}\n`
+    return `${prefix}${line}\n`
+  }
+  kept.splice(firstIndex, 0, line)
+  const rebuilt = kept.join('\n')
+  return rebuilt.endsWith('\n') ? rebuilt : `${rebuilt}\n`
 }
 
 export function snippetFor(environment: string): string {
@@ -138,6 +164,13 @@ export const initCommand: Command = {
     if (symlinkResult !== null) return symlinkResult
     const ignoreResult = ensureIgnored(gitignorePath, context)
     if (ignoreResult !== null) return ignoreResult
+    // ⚠️ **Writability is checked BEFORE anything is minted** (cross-family review, Codex, round 3).
+    // Minting first and discovering a read-only `.env.local` afterwards leaves a LIVE credential
+    // nobody holds — unrevokable by the caller, because they never saw it — and a retry mints
+    // another. Same ordering rule as the `.gitignore` check above, for the same reason: this verb
+    // will not create a credential it cannot then protect or hand over.
+    const writableResult = ensureWritable(envPath, context)
+    if (writableResult !== null) return writableResult
 
     // ── 3. mint, unless the file already carries a key that STILL WORKS ───────────────────────
     const existingEnv = existsSync(envPath) ? readFileSync(envPath, 'utf8') : ''
@@ -151,12 +184,18 @@ export const initCommand: Command = {
     // confirming a setup that no longer works, which is worse than not checking at all.
     //
     // So the key is EXERCISED, against the route that actually serves it.
-    const existingKeyState = existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey)
+    const existingKeyState =
+      existingKey === null ? 'absent' : await probeFlagReadKey(context, existingKey, environment)
     if (existingKeyState === 'dead') {
       context.emit.note(`The ${ENV_KEYS.flagRead} in ${ENV_FILE} is revoked or expired — minting a replacement.`)
     }
+    if (existingKeyState === 'wrong-environment') {
+      context.emit.note(
+        `The ${ENV_KEYS.flagRead} in ${ENV_FILE} reads a DIFFERENT environment — minting a ${environment} key.`
+      )
+    }
 
-    if (existingKey === null || existingKeyState === 'dead') {
+    if (existingKey === null || existingKeyState === 'dead' || existingKeyState === 'wrong-environment') {
       const result = await context.api!.post<{ id: string; key: string; expiresAt: string | null }>(
         'api/v1/cli/keys',
         { project, type: 'flag_read', label: `gf init (${environment})`, environment }
@@ -221,6 +260,32 @@ export const initCommand: Command = {
     )
     return EXIT.OK
   },
+}
+
+/**
+ * Prove `.env.local` can be written, before a credential exists to put in it.
+ *
+ * The check is a real write — appending nothing to the file, creating it if absent — because that is
+ * the only thing that answers the question. A mode check would be a guess about the filesystem, the
+ * process's user, ACLs and mount options, and the guess is wrong exactly where it matters.
+ *
+ * Creating an empty file as a side effect is harmless: `gf init` is about to write this path
+ * anyway, and an empty `.env.local` in a directory where init failed is not a hazard. A minted
+ * credential nobody holds is.
+ */
+function ensureWritable(envPath: string, context: CommandContext): ExitCode | null {
+  try {
+    appendFileSync(envPath, '', { mode: 0o600 })
+    return null
+  } catch (err) {
+    context.emit.fail(
+      'invalid',
+      `Cannot write ${ENV_FILE} (${err instanceof Error ? err.message : String(err)}). ` +
+        `Nothing was minted — a credential created now would be live and unheld. Fix the permissions ` +
+        `and re-run.`
+    )
+    return EXIT.USAGE
+  }
 }
 
 /**
@@ -301,15 +366,22 @@ function gitReallyIgnores(gitignorePath: string, context: CommandContext): ExitC
  * CLI's PAT is not involved and must not be, since a PAT authorizes different things entirely.
  *
  * Three answers, and the third is the one that matters:
- *   `live`        — 200 or 304. The snapshot resolved.
- *   `dead`        — 401. Unknown, revoked or expired; the caller mints a replacement.
+ *   `live`              — the snapshot resolved AND names the environment being set up.
+ *   `dead`              — 401. Unknown, revoked or expired; the caller mints a replacement.
+ *   `wrong-environment` — it resolves, but for a DIFFERENT environment. A `flag_read` key is scoped
+ *                         to one, so keeping it would pair a production config with a development
+ *                         credential and say nothing.
  *   `unverified`  — anything else: a 404 because flag serving is switched off on this deployment,
  *                   a network failure, a proxy. **Reported, never guessed at.** Treating an
  *                   unanswerable question as `dead` would mint a fresh credential on every run of a
  *                   deployment with serving off, which breaks the idempotency this verb promises;
  *                   treating it as `live` silently would repeat the defect this check exists to fix.
  */
-async function probeFlagReadKey(context: CommandContext, key: string): Promise<'live' | 'dead' | 'unverified'> {
+async function probeFlagReadKey(
+  context: CommandContext,
+  key: string,
+  wanted: string
+): Promise<'live' | 'dead' | 'wrong-environment' | 'unverified'> {
   // ⚠️ **Through `clientFor`, NOT a bare `fetch`.** The first version called the global `fetch`
   // directly — it was the obvious way to send a different credential — and that quietly opened a
   // second HTTP path in a package whose whole point is that there is one: it skipped the timeout,
@@ -319,8 +391,18 @@ async function probeFlagReadKey(context: CommandContext, key: string): Promise<'
   // `clientFor(key)` is exactly the right seam: same base URL, same timeouts, same error mapping,
   // a DIFFERENT credential. The CLI's PAT is not involved and must not be — a PAT authorizes
   // something else entirely, and sending it here would tell us nothing about the key in the file.
-  const result = await context.clientFor(key).get('api/v1/flags/snapshot')
-  if (result.kind === 'ok') return 'live'
+  const result = await context.clientFor(key).get<{ environment?: string }>('api/v1/flags/snapshot')
+  if (result.kind === 'ok') {
+    // ⚠️ **A live key is not necessarily the RIGHT key** (cross-family review, Codex, round 4). A
+    // `flag_read` credential is scoped to ONE environment, and the snapshot names which — so a
+    // rerun as `gf init --env production` over a file holding a working DEVELOPMENT key found it
+    // live, kept it, and then wrote `GOLDEN_FRIJOLES_ENVIRONMENT=production` beside it. The result
+    // is an app that believes it is reading production flags and is reading development's, with
+    // nothing anywhere saying so. That is the worst shape a flag bug has.
+    //
+    // The answer is in the response already; it only had to be looked at.
+    return result.body.environment === wanted ? 'live' : 'wrong-environment'
+  }
   // A network failure, a 404 from a deployment with flag serving switched off, a proxy's HTML —
   // all "could not tell", which is a third answer and not a synonym for either of the others.
   if (result.kind === 'network') return 'unverified'
