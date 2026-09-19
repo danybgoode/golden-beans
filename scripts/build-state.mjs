@@ -277,9 +277,12 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
     sprint && !sprint.contract ? `Roadmap/…/sprint-${sprint.n}.md frontmatter could not be read` : null;
 
   // D7 — the written phase, advanced only by direct evidence.
-  const phaseWritten = (sprint && sprint.phase) || epic.phase;
+  // The sprint in flight owns the phase. When there IS a sprint but it carries no readable one, the epic's
+  // phase is NOT a stand-in — claiming it would state a sprint phase nobody wrote (codex, consumer copy-in).
+  // Status is then null ("unknown") unless evidence lifts it, which is the one honest answer.
+  const phaseWritten = sprint ? sprint.phase || null : epic.phase;
   let status = phaseWritten;
-  let statusSource = 'written';
+  let statusSource = phaseWritten ? 'written' : 'unknown';
   if (storyCommits > 0 && rank(status) < rank('Building')) {
     status = 'Building';
     statusSource = 'git';
@@ -366,7 +369,7 @@ export function renderLines(state) {
   const storyPart = `Story ${progress.story ?? '?'} of ${progress.stories}`;
   const sprintPart = `Sprint ${progress.sprint ?? '?'} of ${progress.sprints}`;
   lines.push(`${pad('Progress')}${storyPart} · ${sprintPart}`);
-  lines.push(`${pad('Status')}${state.status}`);
+  lines.push(`${pad('Status')}${state.status || `unknown${state.warning ? ` — ${state.warning}` : ''}`}`);
   return lines;
 }
 

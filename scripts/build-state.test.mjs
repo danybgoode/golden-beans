@@ -473,6 +473,20 @@ test('codex round 2: a sprint whose frontmatter cannot be read says so', () => {
     const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
     assert.match(s.warning, /sprint-2\.md frontmatter could not be read/);
     assert.equal(s.story, null);
+    // …and it does not borrow the epic's phase to fill the gap.
+    assert.equal(s.phase_written, null);
+    assert.equal(s.status, null);
+    assert.equal(s.status_source, 'unknown');
+    assert.match(
+      renderLines(s).at(-1),
+      /^ {2}Status {3}unknown — .*sprint-2\.md frontmatter could not be read/
+    );
+    // A commit naming S2.1 does NOT lift it either: with sprint-2 unreadable, no story list says S2.1
+    // exists, so the id is unlisted and the honest answer stays unknown.
+    f.commit('S2.1 — work on the branch anyway');
+    const after = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.deepEqual([after.status, after.status_source], [null, 'unknown']);
+    assert.match(after.story_note, /names S2\.1, which no sprint of this epic lists/);
   } finally {
     f.done();
   }
