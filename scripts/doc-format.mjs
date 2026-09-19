@@ -676,12 +676,12 @@ function runFix() {
  * of this dispatch would drift — the epic-README segment-count rule below is subtle enough that a
  * near-duplicate would eventually disagree with this one about what counts as an epic doc.
  */
-export function checkOneDoc(relPath) {
+export function checkOneDoc(relPath, contentOverride = null) {
   if (!/^Roadmap\/.*\.md$/.test(relPath)) return null; // not a Roadmap doc — nothing to check
   const abs = join(REPO, relPath);
-  if (!existsSync(abs)) return null;
+  if (contentOverride === null && !existsSync(abs)) return null;
 
-  const content = readFileSync(abs, 'utf8');
+  const content = contentOverride ?? readFileSync(abs, 'utf8');
   const segs = relPath.split('/');
   const base = segs.pop();
   // An epic README is exactly Roadmap/<macro-section>/<epic>/README.md (4 segments). The top-level
@@ -730,19 +730,70 @@ export function checkOneDoc(relPath) {
  * yesterday's file non-conforming). That's a CI question, not a per-commit one, so `--check` stays
  * exactly as it is and runs on the PR.
  */
+/** The committed (HEAD) text of a doc, or null when it is new — the "known state" a commit is measured against. */
+function committedVersion(relPath) {
+  try {
+    return execFileSync('git', ['show', `HEAD:${relPath}`], {
+      cwd: REPO,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The offenses a commit INTRODUCES: those in the staged doc that its committed version did not already
+ * have (same rule + detail, counted). A NEW doc has no committed version, so every finding is its own.
+ *
+ * Why (build-visualization-claude-mods S2): the doctrine for this checker is "green on today's known
+ * state, red on anything new". Blocking on a touched doc's PRE-EXISTING findings made every edit to a
+ * legacy doc a demand to sweep it — and a mechanical change touching hundreds of legacy docs (the
+ * frontmatter backfill) impossible to commit without bypassing the hook. A finding the commit did not
+ * cause is still printed, as a count, and the full walk still reports all of them.
+ */
+export function introducedOffenses(now, before) {
+  if (!before) return now;
+  const seen = new Map();
+  for (const o of before)
+    seen.set(`${o.rule}\u0000${o.detail}`, (seen.get(`${o.rule}\u0000${o.detail}`) || 0) + 1);
+  return now.filter((o) => {
+    const key = `${o.rule}\u0000${o.detail}`;
+    if (!seen.get(key)) return true;
+    seen.set(key, seen.get(key) - 1);
+    return false;
+  });
+}
+
 function runCheckFiles(paths) {
   const findings = [];
   let checked = 0;
+  let preExisting = 0;
   for (const p of paths) {
     const relPath = p.startsWith(REPO) ? relative(REPO, p) : p;
     const offenses = checkOneDoc(relPath);
     if (offenses === null) continue; // not a covered doc type
     checked++;
-    if (offenses.length) findings.push({ path: relPath, offenses });
+    if (!offenses.length) continue;
+    const committed = committedVersion(relPath);
+    const introduced = introducedOffenses(
+      offenses,
+      committed === null ? null : checkOneDoc(relPath, committed) || []
+    );
+    preExisting += offenses.length - introduced.length;
+    if (introduced.length) findings.push({ path: relPath, offenses: introduced });
   }
+  if (preExisting)
+    console.log(
+      `doc-format: ${preExisting} pre-existing finding(s) in the staged docs were already committed — not this commit's (see: node scripts/doc-format.mjs).`
+    );
 
   if (findings.length) {
-    console.error(`doc-format: ${findings.length} of ${checked} checked doc(s) have format findings:\n`);
+    console.error(
+      `doc-format: ${findings.length} of ${checked} checked doc(s) have findings this commit introduces:\n`
+    );
     for (const f of findings) {
       console.error(f.path);
       console.error(formatOffense(f));
