@@ -40,7 +40,8 @@ re-check before "unifying" it.
 - **The review rail** — `lib/cross-agent-cli.mjs` (the CLI driver), `cross-review.mjs`,
   `cross-panel.mjs`, their prompts and `lib/vibe-invocation.test.mjs` — forked by the review-stack work
   before this epic. Unifying it is that rail's job, not this one's.
-- **Project fill-in** — `prose-lessons.md`: this project's own lessons. `prose/cpo-persona.md` is
+- **Project fill-ins** — `prose-lessons.md` (this project's own lessons), `routines/README.md` and
+  `review-config.json` (its routines and review routing; the template ships both as fill-ins). `prose/cpo-persona.md` is
   still the template's NEUTRAL copy (generic example people), byte-identical on purpose until someone
   fills it in for this product. It only reaches `prose-draft.mjs` here, and that tool's previous prompt
   was the template's neutral one too. The merge report, the surface that matters, keeps its own
