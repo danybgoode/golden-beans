@@ -165,7 +165,7 @@ const BENEFICIARY_PATTERNS = [
  * So a beneficiary mention inside a no-impact construction is allowed; a positive claim still is not.
  */
 const NO_IMPACT_PATTERNS = [
-  /\bno (?:user|customer|tenant|merchant|buyer)[- ]visible\b/i,
+  /\bno (?:user|customer|tenant|merchant|buyer|client|shopper|subscriber)[- ]visible\b/i,
   /\b(?:nothing|none|no)\b[^.]{0,40}\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:see|saw|notice|noticed|observe)\b/i,
   /\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:are|is|were|was)\s+(?:not|un)(?:affected|changed|impacted)\b/i,
   /\b(?:not|nothing)\b[^.]{0,30}\b(?:a|any)\s+(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,30}\b(?:would|will|can|could)\s+(?:see|notice|observe)\b/i,
@@ -376,7 +376,9 @@ export function checkProse(draft, evidence = {}) {
     });
   }
 
-  const tools = [...BANNED_TOOL_NAMES, ...(evidence.extraBannedToolNames || [])].filter((t) => new RegExp(`\\b${t}\\b`, 'i').test(lower));
+  const tools = [...BANNED_TOOL_NAMES, ...(evidence.extraBannedToolNames || [])].filter((t) =>
+    new RegExp(`\\b${t}\\b`, 'i').test(lower)
+  );
   if (tools.length) {
     findings.push({
       code: 'names-implementation',
@@ -412,9 +414,16 @@ export function checkProse(draft, evidence = {}) {
   }
 
   if (!allowsBeneficiary) {
-    // A mention that DENIES impact is the honest internal framing the persona asks for — never a finding.
-    const deniesImpact = NO_IMPACT_PATTERNS.some((re) => re.test(text));
-    const named = !deniesImpact && BENEFICIARY_PATTERNS.some((re) => re.test(text));
+    // Per SENTENCE: a mention that DENIES impact is the honest internal framing the persona asks for,
+    // but it only excuses its own sentence. Tested against the whole draft, one "no customer-visible
+    // effect" would launder a separate invented benefit elsewhere — measured failure 1 again.
+    const named = text
+      .split(/(?<=[.!?])\s+/)
+      .some(
+        (sentence) =>
+          BENEFICIARY_PATTERNS.some((re) => re.test(sentence)) &&
+          !NO_IMPACT_PATTERNS.some((re) => re.test(sentence))
+      );
     if (named) {
       findings.push({
         code: 'invented-beneficiary',

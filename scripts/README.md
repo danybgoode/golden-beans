@@ -10,7 +10,7 @@ back — never fork them here.** A fork is how a rail ends up with three impleme
 
 | Rail | Files | This project's values |
 |---|---|---|
-| Prose writer + guard | `lib/prose-writer.mjs`, `lib/prose-guard.mjs`, `prose-draft.mjs`, `prose/internal.task.md` (+ tests) | `reporting.config.json` → `prose.extraBannedToolNames` |
+| Prose writer + guard | `lib/prose-writer.mjs`, `lib/prose-guard.mjs`, `prose-draft.mjs`, `prose/cpo-persona.md`, `prose/internal.task.md` (+ tests) | `reporting.config.json` → `prose.extraBannedToolNames` |
 | Reporting skills | `standup.mjs`, `weekly-recap.mjs`, `pmo-report.mjs`, `lib/{reporting-config,prose-brief,telegram-format,log-branch,gh-rest,standup-deck,report-registry,pmo-*}.mjs`, `prose/`, `pmo/`, `standup/` | `reporting.config.json` (committed; `vercelProject` names the project the stale-preview count reads; the chat id is NOT in it — this repo is public: `TELEGRAM_CHAT_ID`, or a gitignored `reporting.config.local.json`) |
 | PR / board / docs skills | `babysit-pr.mjs`, `build-order.mjs`, `lib/roadmap-status-buckets.mjs`, `build-order-sync.mjs`, `doc-hygiene.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
 | Browser smoke | `live-smoke.mjs`, `apps/web/e2e/_live/ad-hoc.browser.spec.ts`, `apps/web/e2e/_helpers/auth.ts` | `live-smoke.config.json` (unauthed; the authed rail stays this repo's own `authed` Playwright project) |
@@ -40,4 +40,8 @@ re-check before "unifying" it.
 - **The review rail** — `lib/cross-agent-cli.mjs` (the CLI driver), `cross-review.mjs`,
   `cross-panel.mjs`, their prompts and `lib/vibe-invocation.test.mjs` — forked by the review-stack work
   before this epic. Unifying it is that rail's job, not this one's.
-- **Project fill-in** — `prose-lessons.md`: this project's own lessons (the persona is the shared one).
+- **Project fill-in** — `prose-lessons.md`: this project's own lessons. `prose/cpo-persona.md` is
+  still the template's NEUTRAL copy (generic example people), byte-identical on purpose until someone
+  fills it in for this product. It only reaches `prose-draft.mjs` here, and that tool's previous prompt
+  was the template's neutral one too. The merge report, the surface that matters, keeps its own
+  `commit-report.prompt.md`.

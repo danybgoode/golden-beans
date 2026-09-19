@@ -49,6 +49,20 @@ test('…but a REAL merchant-facing change may name merchants', () => {
   assert.ok(!codes(r).includes('invented-beneficiary'));
 });
 
+test('an explicit no-impact disclosure is allowed for internal work', () => {
+  for (const beneficiary of ['customer', 'client', 'shopper', 'subscriber']) {
+    const draft = `The roadmap now records the agreed operating boundary. There was no ${beneficiary}-visible effect.`;
+    const r = checkProse(draft, { allowsBeneficiary: false });
+    assert.ok(!codes(r).includes('invented-beneficiary'), `${beneficiary}: ${JSON.stringify(r.findings)}`);
+  }
+});
+
+test('a no-impact sentence does not launder a separate positive beneficiary claim', () => {
+  const draft = 'There was no customer-visible effect. Users now benefit from faster and safer publishing.';
+  const r = checkProse(draft, { allowsBeneficiary: false });
+  assert.ok(codes(r).includes('invented-beneficiary'));
+});
+
 test('MEASURED FAILURE 2: an unsupported fix claim is flagged', () => {
   // Verbatim shape of the real run: a commit that only ADDED TESTS claiming it closed the bug.
   const draft =
@@ -371,20 +385,38 @@ test('flagTokens: a plain capability name works, for a change with no flag at al
 // people to ignore it, which hides the findings it exists to surface.
 
 test('unfinished: a markdown table row is a clean ending when the surface allows markdown', () => {
-  const draft = 'A real poster paragraph that ends properly.\n\n| [slug](slug/) | what it does | ✅ **Shipped 2026-07-02** |';
-  assert.equal(checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some((f) => f.code === 'unfinished'), false);
+  const draft =
+    'A real poster paragraph that ends properly.\n\n| [slug](slug/) | what it does | ✅ **Shipped 2026-07-02** |';
+  assert.equal(
+    checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some(
+      (f) => f.code === 'unfinished'
+    ),
+    false
+  );
 });
 
 test('unfinished: the SAME draft is still flagged on a prose-only surface', () => {
-  const draft = 'A real poster paragraph that ends properly.\n\n| [slug](slug/) | what it does | ✅ **Shipped 2026-07-02** |';
-  assert.ok(checkProse(draft, { allowsMarkdown: false, maxWords: 4000, minWords: 5 }).findings.some((f) => f.code === 'unfinished'));
+  const draft =
+    'A real poster paragraph that ends properly.\n\n| [slug](slug/) | what it does | ✅ **Shipped 2026-07-02** |';
+  assert.ok(
+    checkProse(draft, { allowsMarkdown: false, maxWords: 4000, minWords: 5 }).findings.some(
+      (f) => f.code === 'unfinished'
+    )
+  );
 });
 
 test('unfinished: headings, list items and fenced blocks also end cleanly under allowsMarkdown', () => {
-  for (const tail of ['## Gaps / follow-ups', '- one owed smoke', '```', '[GAP: no close date in the sources]']) {
+  for (const tail of [
+    '## Gaps / follow-ups',
+    '- one owed smoke',
+    '```',
+    '[GAP: no close date in the sources]',
+  ]) {
     const draft = `Some real content in a sentence.\n\n${tail}`;
     assert.equal(
-      checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some((f) => f.code === 'unfinished'),
+      checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some(
+        (f) => f.code === 'unfinished'
+      ),
       false,
       `expected "${tail}" to count as a clean ending`
     );
@@ -392,8 +424,13 @@ test('unfinished: headings, list items and fenced blocks also end cleanly under 
 });
 
 test('unfinished: allowsMarkdown does NOT excuse a genuine mid-clause fragment', () => {
-  const draft = 'The rail is built and the reminder schedule still has no runner, so broader error handling is';
-  assert.ok(checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some((f) => f.code === 'unfinished'));
+  const draft =
+    'The rail is built and the reminder schedule still has no runner, so broader error handling is';
+  assert.ok(
+    checkProse(draft, { allowsMarkdown: true, maxWords: 4000, minWords: 5 }).findings.some(
+      (f) => f.code === 'unfinished'
+    )
+  );
 });
 
 // ---- beneficiary mentions that DENY impact (regression: the guard contradicted its own brief) ----

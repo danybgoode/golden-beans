@@ -109,8 +109,9 @@ export function gatherSprintSources(
 // ── prompt assembly (pure) ──────────────────────────────────────────────────────────────────
 
 // The house voice now comes from the SHARED persona + the internal-artifact task file, so a change to
-// the register reaches this surface and the two scheduled reports at once. prose-draft.prompt.md is
-// retained only for what is genuinely local to this tool (its three mode shapes live in taskBlock).
+// the register reaches this surface and the two scheduled reports at once. What is genuinely local to
+// this tool — its three mode shapes — lives in taskBlock. (The old prose-draft.prompt.md is retired;
+// its internal-artifact rules moved into prose/internal.task.md.)
 export function loadStylePrompt() {
   return [
     loadPromptBody(join(__dirname, 'prose', 'cpo-persona.md')),
