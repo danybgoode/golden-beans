@@ -143,3 +143,7 @@ mergeable` first, and expect it after every stacked merge.
   from #15; removing an intermediate clause mismatches input state.
 - **The flip is a separate, deliberate act** and needs its own commit to `main` — Vercel snapshots
   env values at build time, so an env edit alone does nothing.
+
+## What went well
+
+_Not recorded at close — this section was added on 2026-09-18 when the project adopted the template's doc-format checker. See the rest of this retrospective._

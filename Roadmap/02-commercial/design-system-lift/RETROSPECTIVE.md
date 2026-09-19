@@ -1,5 +1,7 @@
 # Retrospective — Design system lift
 
+_Closed: 2026-07-28_
+
 **Shipped:** 2026-07-28 · **Golden Beans PRs:** [#51](https://github.com/danybgoode/golden-beans/pull/51)
 and [#53](https://github.com/danybgoode/golden-beans/pull/53)
 
@@ -20,3 +22,7 @@ auth, install, and signed-in product surfaces.
 
 The streaming-boundary rule and the design-drift guard's source-of-truth discipline are already
 promoted to `Roadmap/LEARNINGS.md`; no duplicate entry is needed.
+
+## Gaps / follow-ups
+
+_Not recorded at close — this section was added on 2026-09-18 when the project adopted the template's doc-format checker. See the rest of this retrospective._

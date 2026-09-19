@@ -1,5 +1,7 @@
 # Experiment governance v2 — Retrospective
 
+_Closed: 2026-07-23_
+
 _Shipped & LIVE in production: 2026-07-23 (PRs #19/#22/#23; migration applied, flag flipped ON, flag flip
 verified live; the authenticated production decision round-trip validated on the UI by Daniel). One deferred
 follow-up: the live Miyagi dogfood decision — see Gaps._

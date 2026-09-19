@@ -6,9 +6,8 @@ build_order: 19
 
 # Epic: Golden Frijoles rebrand close-out
 
-> **Area:** 02-commercial · **Risk:** low · **Class:** Chore · **Archetype:** Sweeper ·
-> **Appetite:** S · **Scope seed:**
-> [`00-ideas/seeds/frijoles-rebrand-closeout.md`](../../00-ideas/seeds/frijoles-rebrand-closeout.md)
+> **Area:** 02-commercial · **Risk:** low · **Class:** Chore · **Archetype:** Sweeper · **Scope seed:** [`00-ideas/seeds/frijoles-rebrand-closeout.md`](../../00-ideas/seeds/frijoles-rebrand-closeout.md)
+> **Appetite:** S
 > **Predecessor:** [`landing-frijoles-rebrand`](../landing-frijoles-rebrand/README.md) — shipped and
 > live 2026-08-13; its D1 deliberately deferred the package/integration rename to this epic.
 

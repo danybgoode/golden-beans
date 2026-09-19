@@ -1,5 +1,7 @@
 # Retrospective — Golden Frijoles: the rebrand, the material pass, and the controls that were broken
 
+_Closed: 2026-08-13_
+
 **Shipped 2026-08-13.** PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as
 `5544c06`, live on **https://goldenfrijoles.com**. One day after `landing-redesign-v2` closed.
 

@@ -6,7 +6,7 @@ build_order: 2
 
 # Epic: Commercial shell — Golden Beans landing, waitlist, connector install page
 
-> **Area:** 02-commercial · **Risk:** high · **Scope seed:** [`00-ideas/seeds/commercial-shell.md`](../../00-ideas/seeds/commercial-shell.md) · **Archetype:** Grower
+> **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/commercial-shell.md`](../../00-ideas/seeds/commercial-shell.md) · **Archetype:** Grower
 
 ## Why
 Golden Beans has a shipped, live engine (growth-engine-v1) and no public face. This epic stands up

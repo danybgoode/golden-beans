@@ -143,3 +143,7 @@ beside a working fix. **Prose asserting a property the code does not have is a d
   environment~~ — **both done 2026-09-10**, each authorized by Daniel by name.
 - **Two live prod credentials from the walkthrough** — an API key and a share link, both labelled
   `walkthrough-2026-09-10-…`. Real and working; revoke them if they are not wanted.
+
+## What went well
+
+_Not recorded at close — this section was added on 2026-09-18 when the project adopted the template's doc-format checker. See the rest of this retrospective._

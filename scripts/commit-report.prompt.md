@@ -3,8 +3,9 @@ Shared prompt for scripts/commit-report.mjs. Everything above the first `---` is
 STRIPPED before the prompt is sent (loadPromptBody's contract) — put notes-to-humans here, never
 instructions to the model.
 
-Why this file is separate from scripts/prose-draft.prompt.md: prose-draft writes INTERNAL artifacts
-for the team (retros, poster entries, sprint wraps) in this repo's own voice. This writes an
+Why this file is separate from prose-draft's prompt (the shared prose/cpo-persona.md +
+prose/internal.task.md): prose-draft writes INTERNAL artifacts for the team (retros, poster entries,
+sprint wraps). This writes an
 OUTWARD-FACING product summary for one reader — Daniel, on his phone, in Telegram, right after a
 merge. Different audience, different register, different length budget. Sharing one prompt would
 force a compromise that serves neither.

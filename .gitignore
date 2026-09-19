@@ -66,3 +66,6 @@ apps/web/e2e/.auth/
 # `node apps/web/design-system/render-reference.mjs`.
 apps/web/design-system/reference/
 Roadmap/**/design/reference/
+
+# Local overlay for reporting.config.json — the chat id this PUBLIC repo does not commit
+reporting.config.local.json

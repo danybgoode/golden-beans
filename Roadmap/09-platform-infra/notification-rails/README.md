@@ -6,7 +6,7 @@ build_order: 10
 
 # Epic: Notification rails — Telegram and Slack in lockstep
 
-> **Area:** 09-platform-infra · **Risk:** medium
+> **Area:** 09-platform-infra · **Risk:** medium· **Class:** Chore 
 
 ## Why
 
@@ -38,3 +38,7 @@ on 2026-07-28. It added Slack delivery for the mechanical push/deploy rail and t
 prose rail, with shared bounded text handling, plain-text webhook verdicts, and retry-safe
 per-destination delivery state. The remaining live-channel configuration check is an operating
 follow-up, not unshipped product scope.
+
+## Definition of Done (epic)
+
+_Recorded retroactively on 2026-09-18, when the project adopted the template's doc-format checker: this epic shipped before its README carried the canonical DoD section. Its close evidence is `RETROSPECTIVE.md`._

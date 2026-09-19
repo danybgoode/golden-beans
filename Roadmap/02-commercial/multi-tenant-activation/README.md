@@ -6,7 +6,7 @@ build_order: 3
 
 # Epic: Multi-tenant activation — auth hardening, self-serve tenants, pod trials
 
-> **Area:** 02-commercial · **Risk:** high · **Scope seed:** [`00-ideas/seeds/multi-tenant-activation.md`](../../00-ideas/seeds/multi-tenant-activation.md)
+> **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/multi-tenant-activation.md`](../../00-ideas/seeds/multi-tenant-activation.md)
 
 ## Why
 The engine is multi-tenant by design but single-tenant in practice: dashboards are anonymous

@@ -1,5 +1,7 @@
 # Retrospective — The methodology gets a room of its own
 
+_Closed: 2026-08-20_
+
 **Shipped:** 2026-08-20 · **PRs:** [#104](https://github.com/danybgoode/golden-beans/pull/104) ·
 [#105](https://github.com/danybgoode/golden-beans/pull/105) ·
 [#107](https://github.com/danybgoode/golden-beans/pull/107) ·
@@ -89,3 +91,7 @@ in a different voice. None is expressible as "the element exists".
   (baselined against clean `main`; green in CI), and `design-system.browser.spec.ts` intermittently
   trips a local 429 from ~5,900 accumulated `rate_limit_counters` rows. Neither is this epic's
   code; both would be worth a cleanup step in those suites.
+
+## Gaps / follow-ups
+
+_Not recorded at close — this section was added on 2026-09-18 when the project adopted the template's doc-format checker. See the rest of this retrospective._

@@ -6,7 +6,7 @@ build_order: 7
 
 # Epic: Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views
 
-> **Area:** 02-commercial · **Risk:** high · **Scope seed:** [`00-ideas/seeds/pod-report.md`](../../00-ideas/seeds/pod-report.md)
+> **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/pod-report.md`](../../00-ideas/seeds/pod-report.md)
 
 ## Why
 Two things, one primitive. The **Pod Report** is the cost-center→revenue-engine sales artifact:
@@ -117,3 +117,7 @@ path-gates internally and only Sprint 3 hard-needs the credential taxonomy.
 `REPORT_SHARES_ENABLED` — enablement gate, ships dark/**OFF**, flipped deliberately at story 3.3.
 Fine-grained kill: revoking a share-token row. Internal hub views (Sprints 1–2) sit behind the
 team boundary — no flag; rollback = revert on `main`. All migrations additive.
+
+## Definition of Done (epic)
+
+_Recorded retroactively on 2026-09-18, when the project adopted the template's doc-format checker: this epic shipped before its README carried the canonical DoD section. Its close evidence is `RETROSPECTIVE.md`._

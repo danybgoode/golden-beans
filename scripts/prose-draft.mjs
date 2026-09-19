@@ -18,32 +18,25 @@
 // the coordinating agent — same "advisory only" stance as cross-review).
 //
 // Model: agy with a cheap-fast pair by default (prose doesn't need Pro-tier reasoning; the
-// coordinating agent is the editor). Override via PROSE_MODEL. ONE model, no pair — a fallback
-// between two models with different registers is what silently changed every report's voice.
+// coordinating agent is the editor). Override via PROSE_MODEL / PROSE_FALLBACK_MODEL.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  runAntigravity,
-  checkAgyVersion,
-  ensureCmd,
-  die,
-  need,
-  AGY_ARG_LIMIT,
-  PROSE_MODEL,
-} from './lib/cross-agent-cli.mjs';
+import { hasCmd, loadPromptBody, die, need } from './lib/cross-agent-cli.mjs';
+import { writeProse, buildWriterPrompt, loadLessons } from './lib/prose-writer.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 
-// Re-exported for this module's existing test, which asserts the pair's shape. The constants
-// THEMSELVES moved to lib/cross-agent-cli.mjs on 2026-07-25 — they used to be declared here, held
-// agy's pre-1.1.5 display names, and agy silently substituted its own default for every draft
-// rather than erroring. `agy-doctor` only validated the review pair, so nothing caught it. All agy
-// model names now live in one file that the doctor checks in full (AGY_MODELS_IN_USE).
-export { PROSE_MODEL };
+// The model/router lives in scripts/lib/prose-writer.mjs now — deliberately NOT here.
+//
+// This file used to default to `gemini-3.5-flash-high`. That is the exact constant a consuming
+// project identified as having silently destroyed the register of every report it wrote: the accepted
+// drafts had come from GPT-OSS on the occasions Gemini's quota was exhausted, so the "fallback" was
+// actually the good writer. The rail now pins a single non-Gemini model and routes devin first. Do not
+// reintroduce a model constant here.
 
 export const KINDS = ['retro', 'poster', 'sprint-wrap'];
 
@@ -115,14 +108,21 @@ export function gatherSprintSources(
 
 // ── prompt assembly (pure) ──────────────────────────────────────────────────────────────────
 
-export function loadStylePrompt(readFile = read) {
-  const raw = readFile(join(__dirname, 'prose-draft.prompt.md'));
-  const cut = raw.indexOf('\n---\n');
-  return cut === -1 ? raw : raw.slice(cut + 5);
+// The house voice now comes from the SHARED persona + the internal-artifact task file, so a change to
+// the register reaches this surface and the two scheduled reports at once. What is genuinely local to
+// this tool — its three mode shapes — lives in taskBlock. (The old prose-draft.prompt.md is retired;
+// its internal-artifact rules moved into prose/internal.task.md.)
+export function loadStylePrompt() {
+  return [
+    loadPromptBody(join(__dirname, 'prose', 'cpo-persona.md')),
+    loadPromptBody(join(__dirname, 'prose', 'internal.task.md')),
+  ].join('\n\n');
 }
 
-export function buildPrompt({ style, kind, sources }) {
-  return `${style}\n\n${taskBlock(kind)}\n\n${sources}\n`;
+export function buildPrompt({ style, kind, sources, lessons = '' }) {
+  // buildWriterPrompt owns the style→lessons→task ordering for BOTH backends, so the lessons file
+  // cannot reach one surface and silently miss the other.
+  return buildWriterPrompt({ style, lessons, task: `${taskBlock(kind)}\n\n${sources}` });
 }
 
 // ── main ────────────────────────────────────────────────────────────────────────────────────
@@ -138,8 +138,9 @@ function main() {
   }
   if (!kind || !KINDS.includes(kind)) die(`--kind is required (${KINDS.join(' | ')})`);
 
-  ensureCmd('agy', 'agy not found — the prose drafter rides the Antigravity CLI (see scripts/README.md).');
-  checkAgyVersion();
+  if (!hasCmd('devin') && !hasCmd('agy')) {
+    die('no prose writer available — this rail needs devin or agy on PATH (see scripts/README.md).');
+  }
 
   let sources;
   if (kind === 'sprint-wrap') {
@@ -150,19 +151,41 @@ function main() {
     sources = gatherEpicSources(resolve(REPO_ROOT, epic));
   }
 
-  const prompt = buildPrompt({ style: loadStylePrompt(), kind, sources });
-  if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
-    die(
-      `gathered sources exceed the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — trim the epic dir or draft by hand.`
-    );
-  }
+  const prompt = buildPrompt({ style: loadStylePrompt(), kind, sources, lessons: loadLessons() });
 
-  const draft = runAntigravity(prompt, { models: [PROSE_MODEL] });
-  // Advisory banner so a paste-without-reading is self-identifying in review.
+  // These are INTERNAL engineering artifacts, so two guard rules that fit a chat-message report would
+  // misfire here: refs/dates are required (not invented), and the length budget is a document, not 60
+  // words. `allowsBeneficiary` stays TRUE because a retro legitimately discusses merchants and buyers.
+  // The size cap is gone with the argv path — devin takes the prompt in a file.
+  const result = writeProse({
+    prompt,
+    evidence: {
+      allowsFixClaim: true,
+      allowsBeneficiary: true,
+      allowsMarkdown: true,
+      maxWords: 4000,
+      minWords: 40,
+    },
+  });
+  if (!result.text) die(result.error || 'no prose writer produced a draft.');
+
+  // Advisory banner: names the writer AND the model that actually ran, plus whether the guard passed
+  // clean — so a paste-without-reading stays self-identifying in review.
+  const verdict = result.ok
+    ? 'guard: clean'
+    : `guard: FLAGGED (${result.guard.findings.map((f) => f.code).join(', ')})`;
   writeSync(
     1,
-    `<!-- draft: prose-draft.mjs --kind ${kind} · model ${PROSE_MODEL} · EDIT BEFORE COMMITTING -->\n${draft}\n`
+    `<!-- draft: prose-draft.mjs --kind ${kind} · writer ${result.writer}/${result.model} · ${verdict} · EDIT BEFORE COMMITTING -->\n${result.text}\n`
   );
+
+  if (!result.ok) {
+    process.stderr.write(
+      `\n⚠ The guard rejected this draft and it did NOT converge after a revision pass:\n` +
+        result.guard.findings.map((f) => `  · ${f.code}: ${f.note}`).join('\n') +
+        `\n  Read it carefully before committing.\n\n`
+    );
+  }
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

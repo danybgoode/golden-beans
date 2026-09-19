@@ -6,7 +6,7 @@ build_order: 24
 
 # Epic: A preview deployment stops calling itself localhost
 
-> **Area:** 09-platform-infra · **Risk:** medium · **Class:** Fix · **Archetype:** Shared seam
+> **Area:** 09-platform-infra · **Risk:** medium · **Class:** Bug · **Archetype:** Shared seam
 > **Appetite:** S (one wave; if it exhausts, stop and re-shape)
 > **Origin:** [`agentic-pm-public-surface` A13](../../02-commercial/agentic-pm-public-surface/README.md)
 > — found by Codex persisting on a finding after the comment it first objected to had been fixed.
@@ -190,7 +190,7 @@ names, their signatures and their call sites.
 One PR. No migration, no env var, nothing to sequence. Merging to `main` deploys, and production is
 unaffected by D1.
 
-## Epic Definition of Done
+## Definition of Done (epic)
 
 - [x] Sprint merged to `main`; production verified unchanged (`SITE_URL` still wins).
 - [x] **A real preview deployment observed serving its own hostname** — the acceptance no unit test

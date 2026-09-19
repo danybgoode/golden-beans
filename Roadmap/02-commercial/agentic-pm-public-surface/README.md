@@ -6,7 +6,7 @@ build_order: 23
 
 # Epic: The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL
 
-> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Repositioner ·
+> **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Repositioner · **Scope seed:** [`00-ideas/seeds/agentic-pm-public-surface.md`](../../00-ideas/seeds/agentic-pm-public-surface.md)
 > **Appetite:** L (multi-wave — re-bet at each sprint boundary)
 > **Underwritten by:** [`Roadmap/bets/wave-2026-08-20-agentic-pm.md`](../../bets/wave-2026-08-20-agentic-pm.md)
 > **Scope doc:** [`seeds/agentic-pm-public-surface.md`](../../00-ideas/seeds/agentic-pm-public-surface.md) — approved by the product owner 2026-08-20
@@ -468,7 +468,7 @@ live, `/` is unchanged, and nothing is half-built.
 - [`sprint-2.md`](./sprint-2.md) — the landing's structure
 - [`sprint-3.md`](./sprint-3.md) — the register, everywhere it shows
 
-## Epic Definition of Done
+## Definition of Done (epic)
 
 - [x] All three sprints merged to `main` and smoke-tested (gaps stated).
 - [x] Each `sprint-N.md` carries a fool-proof smoke walkthrough with real production URLs.

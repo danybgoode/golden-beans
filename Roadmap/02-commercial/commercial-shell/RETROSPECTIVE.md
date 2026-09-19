@@ -1,5 +1,7 @@
 # Commercial shell — Golden Beans landing, waitlist, connector install page — Retrospective
 
+_Closed: 2026-07-20_
+
 _Written: 2026-07-20. Epic status: **shipped** — all three sprints live in production; Story 3.3
 (the launch) executed 2026-07-20 with Daniel's explicit authorization and live per-action approval.
 The read-only MCP connector is now enabled in production. Domain stays on `golden-beans-gamma.vercel.app`

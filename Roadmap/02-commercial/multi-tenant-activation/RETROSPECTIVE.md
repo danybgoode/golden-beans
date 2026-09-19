@@ -1,5 +1,7 @@
 # Multi-tenant activation — auth hardening, self-serve tenants, pod trials — Retrospective
 
+_Closed: 2026-07-21_
+
 _Closed 2026-07-21. **Launched**: the gate is flipped, the Supabase redirect allow-list is
 configured, and a real user has signed up and received a working tenant in production without
 anyone touching the database._
