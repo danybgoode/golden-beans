@@ -209,3 +209,16 @@ test('a trailing comment is allowed after a quoted value too', () => {
   assert.equal(data.title, 'x # y');
   assert.equal(data.risk, 'low');
 });
+
+test('a bare `stories:` (null) or a scalar is not a list, and fails (golden-beans#156, codex)', () => {
+  for (const v of ['', 'null', 'none']) {
+    const parsed = parseDocFrontmatter(
+      sprintDoc(`epic: e\nsprint: 1\ntitle: t\nrisk: low\nphase: Building\nstories_total: 0\nstories: ${v}`)
+    );
+    assert.deepEqual(
+      validateSprintFrontmatter(parsed, { n: 1 }).map((o) => o.rule),
+      ['contract-stories-invalid'],
+      JSON.stringify(v)
+    );
+  }
+});

@@ -253,11 +253,17 @@ export function validateSprintFrontmatter(parsed, ctx = {}) {
       detail: `risk: "${fm.risk}" is not one of ${RISKS.join(' | ')}`,
     });
 
-  const stories = fm.stories == null ? [] : fm.stories;
-  if (fm.stories != null && !Array.isArray(fm.stories)) {
-    offenses.push({ rule: 'contract-stories-invalid', detail: '`stories:` must be a list of story maps' });
+  // A sprint with no stories says so with `stories: []`. A bare `stories:` (null) or a scalar is not a
+  // list, and would let `stories_total: 0` pass with nothing machine-readable behind it (found by the
+  // codex pass on golden-beans#156).
+  if ('stories' in fm && !Array.isArray(fm.stories)) {
+    offenses.push({
+      rule: 'contract-stories-invalid',
+      detail: '`stories:` must be a list of story maps (write `stories: []` for none)',
+    });
     return offenses;
   }
+  const stories = fm.stories || [];
   if (fm.stories_total != null && (!isInt(fm.stories_total) || fm.stories_total !== stories.length))
     offenses.push({
       rule: 'contract-total-mismatch',
