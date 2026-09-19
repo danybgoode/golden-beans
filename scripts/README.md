@@ -37,5 +37,7 @@ re-check before "unifying" it.
   project's). This one is a superset the template does not need; it shares the prose writer and guard.
 - **`pod-report.mjs`** (+ `lib/pod-metrics.mjs`) — not ops reporting: it computes the Pod Report
   *artifact* this product serves. The template's `pmo-report.mjs` reports on the project's own delivery.
-- **`lib/cross-agent-cli.mjs`** — the review rail's CLI driver, forked by the review-stack work before
-  this epic. Unifying it is that rail's job, not this one's.
+- **The review rail** — `lib/cross-agent-cli.mjs` (the CLI driver), `cross-review.mjs`,
+  `cross-panel.mjs`, their prompts and `lib/vibe-invocation.test.mjs` — forked by the review-stack work
+  before this epic. Unifying it is that rail's job, not this one's.
+- **Project fill-in** — `prose-lessons.md`: this project's own lessons (the persona is the shared one).
