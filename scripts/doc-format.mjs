@@ -24,11 +24,21 @@
 // build-order.mjs and doc-hygiene.mjs read) — this script does not re-derive epic status itself, and
 // NEVER rewrites the `status:` frontmatter field (everything that reads the board depends on that
 // field's name + values staying stable).
+//
+// The machine-readable frontmatter contract (epic README fields, sprint frontmatter, the per-story
+// block, the `phase:` ladder) is defined in lib/roadmap-contract.mjs and only ENFORCED here — see
+// checkContract below. It is reported as `contract-*` rules, never `--fix`ed: a missing field is filled
+// by `node scripts/roadmap-backfill.mjs --write` (which reads the doc's own prose), not by this checker.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, relative } from 'node:path';
+import {
+  parseDocFrontmatter,
+  validateEpicFrontmatter,
+  validateSprintFrontmatter,
+} from './lib/roadmap-contract.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
@@ -207,9 +217,22 @@ export function checkEpicReadme(content, { slug, exists = existsRelative } = {})
   return offenses;
 }
 
+// Index of the first line AFTER a leading `---` frontmatter block (0 when there is none). Sprint files
+// carry frontmatter since build-visualization-claude-mods, and a sprint or story titled "Status: …" must
+// not be mistaken for the prose Status line — every Status-line search starts here, and skips headings
+// (the scaffolder puts the sprint title in the H1, so the same title reappears there).
+export function bodyStartIndex(lines) {
+  if (lines[0]?.trim() !== '---') return 0;
+  const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
+  return end === -1 ? 0 : end + 1;
+}
+
 export function checkSprintDoc(content) {
   const offenses = [];
-  const statusLine = content.split('\n').find((l) => l.includes('**Status:**') || l.includes('Status:'));
+  const all = content.split('\n');
+  const statusLine = all
+    .slice(bodyStartIndex(all))
+    .find((l) => !l.startsWith('#') && (l.includes('**Status:**') || l.includes('Status:')));
   if (!statusLine) {
     offenses.push({ rule: 'sprint-status-missing', detail: 'no Status line found' });
   } else {
@@ -238,6 +261,50 @@ export function checkSprintDoc(content) {
     }
   }
   return offenses;
+}
+
+// ── The frontmatter contract (build-visualization-claude-mods S2.1) ─────────────────────────────────
+// Kept apart from checkEpicReadme/checkSprintDoc on purpose: those check the prose FORMAT of one file's
+// text, while the contract needs the file's place in its epic (sprint number, slug, sibling totals).
+// The rules themselves live in lib/roadmap-contract.mjs — this only supplies that context.
+
+/** The contract context for one epic dir: slug, archived?, sprint numbers + each sprint's parsed frontmatter. */
+export function contractContext(readmeRelPath, { read = readRelative } = {}) {
+  const dir = dirname(readmeRelPath);
+  const slug = dir.split('/').at(-1);
+  const epic = parseDocFrontmatter(read(readmeRelPath));
+  const { sprints } = siblingDocs(readmeRelPath);
+  const parsedSprints = sprints.map((p) => ({
+    path: p,
+    n: Number(p.match(/sprint-(\d+)\.md$/)[1]),
+    parsed: parseDocFrontmatter(read(p)),
+  }));
+  // The epic's story total is only cross-checked when every sprint's list could be read — a sprint that
+  // fails to parse is already its own finding, and a sum over a partial set would add a false second one.
+  const allRead = parsedSprints.every(
+    (s) => s.parsed.hasFrontmatter && !s.parsed.error && Array.isArray(s.parsed.data.stories)
+  );
+  return {
+    slug,
+    archived: epic.data.status === 'archived',
+    epic,
+    sprints: parsedSprints,
+    sprintCount: parsedSprints.length,
+    storyCount: allRead ? parsedSprints.reduce((a, s) => a + s.parsed.data.stories.length, 0) : undefined,
+  };
+}
+
+/** Contract offenses for one doc, given its epic's context. RETROSPECTIVE.md carries no contract. */
+export function checkContract(docType, content, ctx) {
+  if (ctx.archived) return []; // frozen historical record (doc-format-consistency D3)
+  if (docType === 'epic-README')
+    return validateEpicFrontmatter(parseDocFrontmatter(content), {
+      sprintCount: ctx.sprintCount,
+      storyCount: ctx.storyCount,
+    });
+  if (docType === 'sprint')
+    return validateSprintFrontmatter(parseDocFrontmatter(content), { n: ctx.n, slug: ctx.slug });
+  return [];
 }
 
 // Accepted section headings, by stem. Triage against a second project (golden-beans, plugin-audit-and-
@@ -318,7 +385,10 @@ export function fixDodHeading(content) {
  */
 export function fixSprintStatusLine(content) {
   const lines = content.split('\n');
-  const idx = lines.findIndex((l) => l.includes('**Status:**') || l.includes('Status:'));
+  const from = bodyStartIndex(lines);
+  const idx = lines.findIndex(
+    (l, i) => i >= from && !l.startsWith('#') && (l.includes('**Status:**') || l.includes('Status:'))
+  );
   if (idx === -1) return content;
 
   const extractValue = (line) => {
@@ -463,13 +533,23 @@ export function findAllOffenses({ activeOnly = false } = {}) {
   for (const epic of epics) {
     const readmePath = epic.doc_link;
     if (!existsRelative(readmePath)) continue; // extractor can lag a just-renamed/moved doc
-    const readmeOffenses = checkEpicReadme(readRelative(readmePath), { slug: epic.slug });
+    const ctx = contractContext(readmePath);
+    const readmeText = readRelative(readmePath);
+    const readmeOffenses = [
+      ...checkEpicReadme(readmeText, { slug: epic.slug }),
+      ...checkContract('epic-README', readmeText, ctx),
+    ];
     if (readmeOffenses.length)
       results.push({ path: readmePath, docType: 'epic-README', offenses: readmeOffenses });
 
     const { sprints, retro } = siblingDocs(readmePath);
     for (const sprintPath of sprints) {
-      const sprintOffenses = checkSprintDoc(readRelative(sprintPath));
+      const sprintText = readRelative(sprintPath);
+      const n = Number(sprintPath.match(/sprint-(\d+)\.md$/)[1]);
+      const sprintOffenses = [
+        ...checkSprintDoc(sprintText),
+        ...checkContract('sprint', sprintText, { ...ctx, n }),
+      ];
       if (sprintOffenses.length)
         results.push({ path: sprintPath, docType: 'sprint', offenses: sprintOffenses });
     }
@@ -608,11 +688,33 @@ export function checkOneDoc(relPath) {
   // poster (Roadmap/README.md, 2) and macro-section index READMEs (Roadmap/<section>/README.md, 3)
   // share the README.md basename but are NOT epic docs — checkEpicReadme's frontmatter/Area/DoD
   // rules don't apply to them. segs still holds the dir path after the pop() above.
+  // Sprint + README docs also carry the frontmatter contract, which needs the epic's context — read
+  // from the sibling README when there is one (a sprint file with no README is not an epic doc).
+  const readme = join(...segs, 'README.md');
+  const ctx = segs.length === 3 && existsRelative(readme) ? contractContext(readme) : null;
   if (base === 'README.md') {
     if (segs.length !== 3) return null; // ['Roadmap', section, epic] ⇒ epic README; else skip
-    return checkEpicReadme(content, { slug: segs.at(-1) });
+    return [
+      ...checkEpicReadme(content, { slug: segs.at(-1) }),
+      ...(ctx ? checkContract('epic-README', content, ctx) : []),
+    ];
   }
-  if (/^sprint-\d+\.md$/.test(base)) return checkSprintDoc(content);
+  if (/^sprint-\d+\.md$/.test(base)) {
+    const n = Number(base.match(/\d+/)[0]);
+    // A sprint edit can make its epic's declared totals wrong (a story added to `stories:`), and the README
+    // is not in the staged set — so its totals are re-checked here, named as the README's, or the commit
+    // passes locally and only the full CI walk notices.
+    const totals = ctx
+      ? checkContract('epic-README', readRelative(readme), ctx)
+          .filter((o) => o.rule === 'contract-total-mismatch')
+          .map((o) => ({ ...o, detail: `${readme}: ${o.detail}` }))
+      : [];
+    return [
+      ...checkSprintDoc(content),
+      ...(ctx ? checkContract('sprint', content, { ...ctx, n }) : []),
+      ...totals,
+    ];
+  }
   if (base === 'RETROSPECTIVE.md') return checkRetrospective(content);
   return null; // not an epic doc type this checker covers (e.g. a seed, the poster)
 }

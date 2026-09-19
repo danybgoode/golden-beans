@@ -389,3 +389,27 @@ test('enforced list: exact paths and trailing-slash prefixes; no file enforces n
   assert.ok(!isEnforced('Roadmap/09-x/y/README.md', ['Roadmap/09-x/y/sprint-1.md', 'Roadmap/01-']));
   assert.deepEqual(loadEnforced('/nonexistent/doc-format.enforced.json').entries, []);
 });
+
+// ── Sprint files with frontmatter (build-visualization-claude-mods) ──────────────────────────────
+// A sprint or story titled "Status: …" lives in the frontmatter now; the prose Status line is the one
+// that counts. Found by the fresh reviewer on dobby-foundation#25 by scaffolding `--sprints 'Status: board'`.
+const FM_SPRINT =
+  '---\nepic: e\nsprint: 1\ntitle: "Status: board"\nstories:\n  - id: S1.1\n    i_want: "a Status: line"\n---\n';
+
+test('checkSprintDoc: a "Status:" inside the frontmatter is not mistaken for the prose Status line', () => {
+  assert.deepEqual(
+    checkSprintDoc(`${FM_SPRINT}# E — Sprint 1: Status: board\n\n**Status:** ⬜ not started\n`),
+    []
+  );
+  assert.deepEqual(
+    checkSprintDoc(`${FM_SPRINT}# E — Sprint 1: x\n\n## Stories\n`).map((o) => o.rule),
+    ['sprint-status-missing']
+  );
+});
+
+test('fixSprintStatusLine: rewrites the prose Status line, never a frontmatter line', () => {
+  const doc = `${FM_SPRINT}# E\n\n> **Epic:** x · **Risk:** low\n> **Status:** ✅ shipped\n`;
+  const fixed = fixSprintStatusLine(doc);
+  assert.ok(fixed.startsWith(FM_SPRINT), 'frontmatter untouched');
+  assert.match(fixed, /^\*\*Status:\*\* ✅ shipped$/m);
+});
