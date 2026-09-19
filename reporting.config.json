@@ -3,5 +3,6 @@
   "repos": ["danybgoode/golden-beans"],
   "deployRepos": [{ "label": "Web", "repo": "danybgoode/golden-beans" }],
   "stalePreviewAgeDays": 7,
+  "vercelProject": "golden-beans",
   "checkouts": { "danybgoode/golden-beans": "." }
 }

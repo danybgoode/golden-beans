@@ -48,9 +48,19 @@ test('the minimal config loads, and every optional signal is OFF rather than def
   assert.equal(cfg.smoke, null);
   assert.equal(cfg.liveFlags, null);
   assert.equal(cfg.stalePreviewAgeDays, null);
+  assert.equal(cfg.vercelProject, null);
   assert.equal(cfg.artifacts.docViewerUrl, null);
   assert.equal(cfg.artifacts.registry, null);
   assert.deepEqual(cfg.prose.extraBannedToolNames, []);
+});
+
+test('the stale-preview signal carries its Vercel project — the prune script has no default one', () => {
+  const cfg = loadReportingConfig({
+    root: tempRoot({ ...MIN, stalePreviewAgeDays: 7, vercelProject: 'acme-web' }),
+    env: {},
+  });
+  assert.equal(cfg.stalePreviewAgeDays, 7);
+  assert.equal(cfg.vercelProject, 'acme-web');
 });
 
 test('repos is required, non-empty, and every entry is owner/name', () => {
@@ -77,6 +87,11 @@ test('shape errors name the offending key', () => {
     [{ ...MIN, smoke: { repo: 'acme/web' } }, /smoke\.workflow/],
     [{ ...MIN, liveFlags: { command: 'node flags.mjs' } }, /liveFlags\.command/],
     [{ ...MIN, stalePreviewAgeDays: 0 }, /stalePreviewAgeDays/],
+    [{ ...MIN, stalePreviewAgeDays: 7 }, /stalePreviewAgeDays" needs "vercelProject"/],
+    [
+      { ...MIN, stalePreviewAgeDays: 7, vercelProject: 'a b' },
+      /vercelProject" must be a Vercel project name/,
+    ],
     [{ ...MIN, artifacts: { docViewerUrl: 'viewer.example' } }, /artifacts\.docViewerUrl/],
     [
       { ...MIN, artifacts: { registry: { resolverBaseUrl: 'https://r.example' } } },

@@ -9,7 +9,7 @@
 // Signals: opened/merged PRs + CI status + merge-conflict state (gh, every configured repo), the latest
 // run of the configured browser-smoke workflow (`smoke`), BUILD-ORDER.md drift
 // (`node scripts/build-order.mjs --check`), open-PR state, and the stale-preview count
-// (`node scripts/vercel-prune-previews.mjs --age <stalePreviewAgeDays>`, dry-run — never `--apply`). The CI-red and
+// (`node scripts/vercel-prune-previews.mjs --project <vercelProject> --age <stalePreviewAgeDays>`, dry-run — never `--apply`). The CI-red and
 // conflict signals are this standup's OWN independent read — taken after babysit-pr has had a chance
 // to act (it runs earlier in the same ops-nightly routine), so a "still red" line reflects state
 // post-retry, not pre-retry.
@@ -177,12 +177,16 @@ function gatherBuildOrderDrift() {
   return { drifted: r.status !== 0 };
 }
 
-function gatherStalePreviews(ageDays) {
-  if (!ageDays) return { available: false };
-  const r = spawnSync('node', ['scripts/vercel-prune-previews.mjs', '--age', String(ageDays)], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
+function gatherStalePreviews(ageDays, project) {
+  if (!ageDays || !project) return { available: false };
+  const r = spawnSync(
+    'node',
+    ['scripts/vercel-prune-previews.mjs', '--project', project, '--age', String(ageDays)],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }
+  );
   if (r.status !== 0 && !r.stdout) return { available: false };
   const m = (r.stdout || '').match(/Preview deployments to remove[^:]*:\s*(\d+)/);
   return { available: m != null, count: m ? Number(m[1]) : null };
@@ -490,7 +494,7 @@ async function main() {
   const repoSignals = config.repos.map(gatherRepoPrs);
   const smoke = gatherSmoke(config.smoke);
   const buildOrder = gatherBuildOrderDrift();
-  const previews = gatherStalePreviews(config.stalePreviewAgeDays);
+  const previews = gatherStalePreviews(config.stalePreviewAgeDays, config.vercelProject);
 
   const cur = buildSnapshot({ repoSignals, smoke, buildOrder, previews });
   const prev = loadLastRun();

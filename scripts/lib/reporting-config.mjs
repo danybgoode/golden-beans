@@ -160,6 +160,13 @@ export function validateReportingConfig(raw, path = CONFIG_FILENAME) {
       '"stalePreviewAgeDays" must be a positive integer, or absent to skip the stale-preview signal'
     );
   }
+  // The prune script has no default project (a defaulted name prunes someone else's project), so the
+  // signal needs one named here. Age without a project is a config error, not a silently-dark signal.
+  const vercelProject = raw.vercelProject ?? null;
+  if (vercelProject !== null && (typeof vercelProject !== 'string' || !/^[\w.-]+$/.test(vercelProject)))
+    fail(path, '"vercelProject" must be a Vercel project name');
+  if (stalePreviewAgeDays !== null && vercelProject === null)
+    fail(path, '"stalePreviewAgeDays" needs "vercelProject" — the Vercel project whose previews it counts');
 
   const artifacts = raw.artifacts ?? {};
   const docViewerUrl = artifacts.docViewerUrl ?? null;
@@ -196,6 +203,7 @@ export function validateReportingConfig(raw, path = CONFIG_FILENAME) {
     smoke,
     liveFlags,
     stalePreviewAgeDays,
+    vercelProject,
     artifacts: { docViewerUrl, registry },
     prose: { extraBannedToolNames },
   };

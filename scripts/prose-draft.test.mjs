@@ -11,7 +11,6 @@ import {
   gatherSprintSources,
   buildPrompt,
   loadStylePrompt,
-  PROSE_MODEL,
 } from './prose-draft.mjs';
 
 test('taskBlock: every kind has a task block that names its artifact', () => {
@@ -63,21 +62,41 @@ test('gatherSprintSources: a missing epic README is skipped, not read', () => {
   assert.ok(!/FILE \(context\)/.test(out));
 });
 
-test('buildPrompt: style → task → sources, in that order', () => {
-  const out = buildPrompt({ style: 'STYLE', kind: 'poster', sources: 'SOURCES' });
-  assert.ok(out.indexOf('STYLE') < out.indexOf('## Task'));
+test('buildPrompt: style → lessons → task → sources, in that order', () => {
+  const out = buildPrompt({ style: 'STYLE', kind: 'poster', sources: 'SOURCES', lessons: 'LESSON-X' });
+  assert.ok(out.indexOf('STYLE') < out.indexOf('LESSON-X'));
+  assert.ok(out.indexOf('LESSON-X') < out.indexOf('## Task'));
   assert.ok(out.indexOf('## Task') < out.indexOf('SOURCES'));
 });
 
-test('loadStylePrompt: strips the HTML-comment header above the first ---', () => {
-  const raw = '<!-- header -->\n\n---\n\nREAL PROMPT';
-  assert.equal(loadStylePrompt(() => raw).trim(), 'REAL PROMPT');
+// The lessons file is the mechanism that makes this rail improve. It is shared with the two scheduled
+// report surfaces, so a regression that dropped it HERE would leave the other backend still passing —
+// which is precisely the silent half-wiring this test exists to prevent.
+test('buildPrompt: the lessons block actually reaches the composed prompt', () => {
+  const out = buildPrompt({
+    style: 'S',
+    kind: 'retro',
+    sources: 'SRC',
+    lessons: 'NEVER-INVENT-A-BENEFICIARY',
+  });
+  assert.ok(out.includes('NEVER-INVENT-A-BENEFICIARY'));
 });
 
-test('model pair: cheap-fast primary, separate-quota fallback, env-overridable shape', () => {
-  assert.notEqual(PROSE_MODEL, '');
-  // Single model by design (see PROSE_MODEL's note). The property worth pinning is that it is the
-  // GPT lineage — a Gemini slug here means the review model has leaked into prose and the register
-  // silently changed, which is the bug this constant's history is entirely about.
-  assert.match(PROSE_MODEL, /^gpt-oss/, 'prose runs the GPT lineage, never a Gemini review model');
+test('buildPrompt: an empty lessons file composes without an orphan heading', () => {
+  const out = buildPrompt({ style: 'S', kind: 'retro', sources: 'SRC', lessons: '' });
+  assert.ok(out.includes('S'));
+  assert.ok(out.includes('SRC'));
+  assert.ok(!/Lessons from previous drafts/.test(out));
+});
+
+// The register now comes from the SHARED persona + internal task file, not a local prompt file — so
+// this asserts composition of the real files rather than a stubbed reader. A regression that pointed
+// this surface back at a private prompt would fork the house voice, which is the exact drift
+// LEARNINGS calls "a paraphrased contract drifts permissive".
+test('loadStylePrompt: composes the shared CPO persona with the internal-artifact task', () => {
+  const style = loadStylePrompt();
+  assert.ok(style.includes('Chief Product Officer'), 'expected the shared persona');
+  assert.ok(style.includes('INTERNAL engineering artifact'), 'expected the internal task block');
+  // Both files' notes-to-humans headers must be stripped by loadPromptBody.
+  assert.ok(!style.includes('Everything above the first'), 'header leaked into the prompt');
 });

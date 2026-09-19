@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// build-order.mjs — render Roadmap/00-ideas/BUILD-ORDER.md from the SAME projection the Notion
-// sync uses (roadmap-to-notion.mjs --extract). One source of truth: seed frontmatter + epic/sprint
+// build-order.mjs — render Roadmap/00-ideas/BUILD-ORDER.md from the SAME projection every roadmap
+// tool reads (roadmap-extract.mjs). One source of truth: seed frontmatter + epic/sprint
 // status lines. This file is GENERATED — never hand-edit BUILD-ORDER.md; run this instead.
 //
 //   node scripts/build-order.mjs            # write Roadmap/00-ideas/BUILD-ORDER.md
@@ -14,14 +14,15 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { EPIC_STATUS_ORDER, SEED_FUNNEL_STATUSES } from './lib/roadmap-status-buckets.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
 const OUT = join(REPO, 'Roadmap', '00-ideas', 'BUILD-ORDER.md');
-const EXTRACTOR = join(__dirname, 'roadmap-to-notion.mjs');
+const EXTRACTOR = join(__dirname, 'roadmap-extract.mjs');
 
 function extract() {
-  const json = execFileSync('node', [EXTRACTOR, '--extract'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const json = execFileSync('node', [EXTRACTOR], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(json);
 }
 
@@ -31,13 +32,16 @@ function extract() {
 // here — a scaffolded epic's seed is funnel-only; the epic README owns its status.
 
 // Epic status → bucket. Sprints are folded into their epic via sprint_progress; seeds are the funnel.
-const EPIC_BUCKETS = [
-  { key: 'In progress', emoji: '🏗️', title: 'Building now' },
-  { key: 'Scaffolded',  emoji: '📋', title: 'Ready to build (scaffolded, not started)' },
-  { key: 'Shipped',     emoji: '✅', title: 'Shipped' },
-];
-// Seeds not yet scaffolded = the funnel.
-const SEED_FUNNEL = new Set(['Raw', 'Ready', 'Queued']);
+// The bucket KEYS/ORDER and the seed-funnel status set live in scripts/lib/roadmap-status-buckets.mjs —
+// shared with any other view of the roadmap (a reporting hub, a dashboard) so it can never independently
+// drift from this board's counts. Emoji/title here are this board's own presentation.
+const EPIC_BUCKET_META = {
+  'In progress': { emoji: '🏗️', title: 'Building now' },
+  Scaffolded: { emoji: '📋', title: 'Ready to build (scaffolded, not started)' },
+  Shipped: { emoji: '✅', title: 'Shipped' },
+};
+const EPIC_BUCKETS = EPIC_STATUS_ORDER.map((key) => ({ key, ...EPIC_BUCKET_META[key] }));
+const SEED_FUNNEL = SEED_FUNNEL_STATUSES;
 
 function line(r) {
   const bits = [`[${r.name}](../../${r.doc_link.replace(/^Roadmap\//, '')})`];
@@ -68,19 +72,26 @@ function render(rows) {
   const out = [];
   out.push('<!-- GENERATED FILE — do not edit by hand.');
   out.push('     Regenerate:  node scripts/build-order.mjs');
-  out.push('     Status SSOT: each epic README\'s frontmatter `status:` field (set at epic close). Funnel');
-  out.push('     ordering: seed frontmatter (priority). Both projected via scripts/roadmap-to-notion.mjs --extract. -->');
+  out.push("     Status SSOT: each epic README's frontmatter `status:` field (set at epic close). Funnel");
+  out.push('     ordering: seed frontmatter (priority). Both projected via scripts/roadmap-extract.mjs. -->');
   out.push('');
   out.push('# Build order — generated status board');
   out.push('');
-  out.push(`> **Generated ${now} — do not hand-edit.** Epic status SSOT = the epic \`README.md\` frontmatter`);
-  out.push('> `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the');
-  out.push('> funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"');
+  out.push(
+    `> **Generated ${now} — do not hand-edit.** Epic status SSOT = the epic \`README.md\` frontmatter`
+  );
+  out.push(
+    '> `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the'
+  );
+  out.push(
+    '> funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"'
+  );
   out.push('> DB are both *derived views* — never hand-edit the board.');
   out.push('');
 
   for (const b of EPIC_BUCKETS) {
-    const list = epics.filter((e) => e.status === b.key)
+    const list = epics
+      .filter((e) => e.status === b.key)
       .sort((a, z) => (a.area || '').localeCompare(z.area || '') || a.name.localeCompare(z.name));
     out.push(`## ${b.emoji} ${b.title} (${list.length})`);
     out.push('');
@@ -88,18 +99,28 @@ function render(rows) {
     out.push('');
   }
 
-  const funnel = seeds.filter((s) => SEED_FUNNEL.has(s.status))
+  const funnel = seeds
+    .filter((s) => SEED_FUNNEL.has(s.status))
     .sort((a, z) => (a.priority || 'zzz').localeCompare(z.priority || 'zzz') || a.name.localeCompare(z.name));
   out.push(`## ⬜ Funnel — seeds not yet scaffolded (${funnel.length})`);
   out.push('');
-  out.push(funnel.length ? funnel.map((s) => {
-    const meta = [s.status, s.type, s.appetite ? `appetite ${s.appetite}` : null, s.priority]
-      .filter(Boolean).join(' · ');
-    // A queued seed without an underwriter is funded-but-unowned — advisory drift, loud on the board.
-    const warn = s.status === 'Queued' && !s.underwritten_by
-      ? ' — ⚠️ no underwriter (set `underwritten_by:` at the betting table)' : '';
-    return `- [${s.name}](seeds/${s.slug}.md)${meta ? ` — ${meta}` : ''}${warn}`;
-  }).join('\n') : '_None._');
+  out.push(
+    funnel.length
+      ? funnel
+          .map((s) => {
+            const meta = [s.status, s.type, s.appetite ? `appetite ${s.appetite}` : null, s.priority]
+              .filter(Boolean)
+              .join(' · ');
+            // A queued seed without an underwriter is funded-but-unowned — advisory drift, loud on the board.
+            const warn =
+              s.status === 'Queued' && !s.underwritten_by
+                ? ' — ⚠️ no underwriter (set `underwritten_by:` at the betting table)'
+                : '';
+            return `- [${s.name}](seeds/${s.slug}.md)${meta ? ` — ${meta}` : ''}${warn}`;
+          })
+          .join('\n')
+      : '_None._'
+  );
   out.push('');
 
   if (drift.length) {
@@ -107,7 +128,9 @@ function render(rows) {
     out.push('');
     out.push('These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro');
     out.push('derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out');
-    out.push('forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.');
+    out.push(
+      'forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.'
+    );
     out.push('');
     out.push('| Epic | frontmatter (used) | sprint/retro-derived |');
     out.push('|---|---|---|');
@@ -116,7 +139,9 @@ function render(rows) {
   }
 
   out.push('---');
-  out.push(`_Epics: ${epics.length} · seeds in funnel: ${funnel.length} · status drift: ${drift.length}. Regenerate with \`node scripts/build-order.mjs\`._`);
+  out.push(
+    `_Epics: ${epics.length} · seeds in funnel: ${funnel.length} · status drift: ${drift.length}. Regenerate with \`node scripts/build-order.mjs\`._`
+  );
   out.push('');
   return out.join('\n');
 }
@@ -128,7 +153,9 @@ const rows = extract();
 // (the same enforced-not-advisory stance as the status enum).
 const unfunded = rows.filter((r) => r.grain === 'Seed' && r.status === 'Queued' && !r.appetite);
 if (unfunded.length) {
-  console.error('Queued seeds missing `appetite:` frontmatter (S | M | L — set at shaping, bet at the wave boundary):');
+  console.error(
+    'Queued seeds missing `appetite:` frontmatter (S | M | L — set at shaping, bet at the wave boundary):'
+  );
   for (const s of unfunded) console.error(`  - ${s.doc_link}`);
   process.exit(1);
 }

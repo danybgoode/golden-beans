@@ -10,9 +10,9 @@ back — never fork them here.** A fork is how a rail ends up with three impleme
 
 | Rail | Files | This project's values |
 |---|---|---|
-| Prose writer + guard | `lib/prose-writer.mjs`, `lib/prose-guard.mjs` (+ tests) | `reporting.config.json` → `prose.extraBannedToolNames` |
-| Reporting skills | `standup.mjs`, `weekly-recap.mjs`, `pmo-report.mjs`, `lib/{reporting-config,prose-brief,telegram-format,log-branch,gh-rest,standup-deck,report-registry,pmo-*}.mjs`, `prose/`, `pmo/`, `standup/` | `reporting.config.json` (committed; the chat id is NOT in it — this repo is public: `TELEGRAM_CHAT_ID`, or a gitignored `reporting.config.local.json`) |
-| PR / board / docs skills | `babysit-pr.mjs`, `build-order-sync.mjs`, `doc-hygiene.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
+| Prose writer + guard | `lib/prose-writer.mjs`, `lib/prose-guard.mjs`, `prose-draft.mjs`, `prose/internal.task.md` (+ tests) | `reporting.config.json` → `prose.extraBannedToolNames` |
+| Reporting skills | `standup.mjs`, `weekly-recap.mjs`, `pmo-report.mjs`, `lib/{reporting-config,prose-brief,telegram-format,log-branch,gh-rest,standup-deck,report-registry,pmo-*}.mjs`, `prose/`, `pmo/`, `standup/` | `reporting.config.json` (committed; `vercelProject` names the project the stale-preview count reads; the chat id is NOT in it — this repo is public: `TELEGRAM_CHAT_ID`, or a gitignored `reporting.config.local.json`) |
+| PR / board / docs skills | `babysit-pr.mjs`, `build-order.mjs`, `lib/roadmap-status-buckets.mjs`, `build-order-sync.mjs`, `doc-hygiene.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
 | Browser smoke | `live-smoke.mjs`, `apps/web/e2e/_live/ad-hoc.browser.spec.ts`, `apps/web/e2e/_helpers/auth.ts` | `live-smoke.config.json` (unauthed; the authed rail stays this repo's own `authed` Playwright project) |
 
 `lib/cross-agent-cli.mjs` is this project's own (see below) but gained the template's `runDevin` export,
