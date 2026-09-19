@@ -14,12 +14,31 @@ back — never fork them here.** A fork is how a rail ends up with three impleme
 | Reporting skills | `standup.mjs`, `weekly-recap.mjs`, `pmo-report.mjs`, `lib/{reporting-config,prose-brief,telegram-format,log-branch,gh-rest,standup-deck,report-registry,pmo-*}.mjs`, `prose/`, `pmo/`, `standup/` | `reporting.config.json` (committed; `vercelProject` names the project the stale-preview count reads; the chat id is NOT in it — this repo is public: `TELEGRAM_CHAT_ID`, or a gitignored `reporting.config.local.json`) |
 | PR / board / docs skills | `babysit-pr.mjs`, `build-order.mjs`, `lib/roadmap-status-buckets.mjs`, `build-order-sync.mjs`, `doc-hygiene.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
 | Browser smoke | `live-smoke.mjs`, `apps/web/e2e/_live/ad-hoc.browser.spec.ts`, `apps/web/e2e/_helpers/auth.ts` | `live-smoke.config.json` (unauthed; the authed rail stays this repo's own `authed` Playwright project) |
+| Golden Frijoles preflight | `preflight.mjs`, `lib/golden-onboarding.mjs` (+ tests) | **Reports FAIL here, correctly — see the note below.** `groom` declares it, so it must exist; nothing in this repo is meant to pass it |
 
 `lib/cross-agent-cli.mjs` is this project's own (see below) but gained the template's `runDevin` export,
 which the shared prose writer needs.
 
 `roadmap-extract.mjs` **delegates** to this project's `roadmap-to-notion.mjs --extract` rather than forking
 the extractor — that script drives the live Notion board.
+
+### `preflight.mjs` fails in THIS repo, and that is the right answer
+
+It is the ways-of-work mandate that a project spawned from the template reads its flags from Golden
+Frijoles: `preflight.mjs` checks that a project is linked, that a `flag_read` key resolves a
+snapshot, and that the CLI is installed and current. **This repo is the other end of that wire** — it
+*is* Golden Frijoles. It serves `/api/v1/flags/snapshot`; it does not consume it, and its
+`.env.local` carries this product's own service configuration, not a `GOLDEN_FRIJOLES_FLAG_READ_KEY`
+pointing at itself.
+
+So a bare `node scripts/preflight.mjs` here prints ✅ for the CLI, the version and the SDK (both are
+workspace packages) and ❌ for `project` and `flag-read-key`. That is the check telling the truth: this
+repo is not a consumer. It lives here because `groom`'s `requires_scripts` declares it and
+`check-skill-scripts.mjs` is checked against this repo — a skill whose script is absent must say so
+and stop, and the honest way to satisfy that is the real script, not a stub.
+
+**Do not "fix" the red by inventing a self-pointing key.** If you ever do want to exercise it against
+a real project, point it at one with the three `GOLDEN_FRIJOLES_*` variables in the environment.
 
 ## This project's own rails — deliberately divergent, with reasons
 
