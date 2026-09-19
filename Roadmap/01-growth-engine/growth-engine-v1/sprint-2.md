@@ -1,3 +1,33 @@
+---
+epic: growth-engine-v1
+sprint: 2
+title: TARS funnel v1
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: Feature registry seeded from live platform_flags rows
+    as_a: a builder
+    i_want: "a feature registry (key · target rule · retention window) seeded by the client pushing its live `platform_flags` rows (SDK `syncFeatures()`, or a one-command seed run from Miyagi)"
+    so_that: "the Targeted denominator reflects real production flag state, never `lib/flags.ts` code defaults (code defaults are fail-safe fallbacks and systematically say OFF)"
+    risk: low
+    status: done
+  - id: S2.2
+    title: TARS aggregation
+    as_a: a PM
+    i_want: "Targeted (registry-declared) / Adopted (first event) / Retained (repeat event inside the feature's retention window) computed from Sprint 1's event stream"
+    so_that: funnel numbers are trustworthy
+    risk: low
+    status: done
+  - id: S2.3
+    title: Funnel page for the S1.3 feature
+    as_a: a PM
+    i_want: a funnel page rendering Targeted/Adopted/Retained for the feature instrumented in Sprint 1
+    so_that: the first real funnel is visible from live traffic
+    risk: low
+    status: done
+---
 # Growth Engine v1 — Sprint 2: TARS funnel v1
 
 **Status:** ✅ **Sprint 2 fully closed 2026-07-14.** Merged to `main` (PR #2, squash `02c6219`),

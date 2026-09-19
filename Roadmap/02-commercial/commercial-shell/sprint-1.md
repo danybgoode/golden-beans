@@ -1,3 +1,40 @@
+---
+epic: commercial-shell
+sprint: 1
+title: Launch-ready landing
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: Public landing shell + brand v1
+    as_a: a visitor
+    i_want: "a Golden Beans landing at `/` (hero, section scaffold per the end-state map, honest 🔜 badges on unlit sections)"
+    so_that: the offer is legible in 30 seconds
+    risk: low
+    status: done
+  - id: S1.2
+    title: Live-proof section on a synthetic demo project
+    as_a: a skeptical PM
+    i_want: the live-proof section fed by a synthetic demo project seeded through the real SDK/API
+    so_that: every number on the page is real engine output
+    risk: low
+    status: done
+  - id: S1.3
+    title: Waitlist
+    as_a: a prospect
+    i_want: to join a waitlist
+    so_that: "I'm queued for a hand-provisioned pilot"
+    risk: low
+    status: done
+  - id: S1.4
+    title: Backfill contract wiring
+    as_a: the team
+    i_want: "the section↔epic registry in the landing code (each section declares the epic that lights it up, driving the 🔜 badges)"
+    so_that: the WAYS-OF-WORKING backfill DoD line (already merged 2026-07-14) has a mechanical surface to check
+    risk: low
+    status: done
+---
 # Commercial shell — Sprint 1: Launch-ready landing
 
 **Status:** ✅ Merged — [PR #8](https://github.com/danybgoode/golden-beans/pull/8) (`d3b19ed`), CI

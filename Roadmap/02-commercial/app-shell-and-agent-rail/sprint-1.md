@@ -1,3 +1,40 @@
+---
+epic: app-shell-and-agent-rail
+sprint: 1
+title: The read seam and the shell
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: lib/agent-activity.ts, the project-scoped activity read
+    as_a: a PM
+    i_want: the engine to be able to tell me what happened on my project recently
+    so_that: the rail in Sprint 2 has something true to show
+    risk: high
+    status: done
+  - id: S1.2
+    title: lib/pending-confirmations.ts, the staged-proposal read
+    as_a: a PM
+    i_want: the engine to know which agent proposals are waiting on me
+    so_that: the rail can surface them instead of leaving them invisible until someone reads the database
+    risk: high
+    status: done
+  - id: S1.3
+    title: the section nav
+    as_a: a PM
+    i_want: to reach and relate every feature area from the shell
+    so_that: I stop needing to know URLs
+    risk: low
+    status: done
+  - id: S1.4
+    title: extend the drift guard to the component directories
+    as_a: a builder
+    i_want: the design-drift guard to cover the directories the new primitives land in
+    so_that: "Sprint 2 can't introduce raw hex or pictographs where nothing is watching"
+    risk: low
+    status: done
+---
 # App shell and agent rail — Sprint 1: The read seam and the shell
 
 **Status:** ✅ complete — `b9ff9d6` (1.1) · `14fd94c` (1.2) · `49cd746` (1.3) · `06a2031` (1.4) · `9bcef1f` (QA)

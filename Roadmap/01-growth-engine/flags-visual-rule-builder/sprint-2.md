@@ -1,3 +1,33 @@
+---
+epic: flags-visual-rule-builder
+sprint: 2
+title: Rollout visualization and the version diff
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: RolloutBar
+    as_a: a PM
+    i_want: to see what proportion of users a flag is reaching in each environment
+    so_that: "\"active (snapshot 7)\" stops being the only thing the page tells me"
+    risk: high
+    status: done
+  - id: S2.2
+    title: Per-environment state at a glance
+    as_a: a PM
+    i_want: "to see where a flag is on and where it isn't, in one row"
+    so_that: "I don't have to open three views to answer \"is this live in production\""
+    risk: high
+    status: done
+  - id: S2.3
+    title: Plain-language version diff (bounded)
+    as_a: a PM
+    i_want: to read what changed between two flag versions in a sentence
+    so_that: the immutable history becomes something I can audit instead of something I can only store
+    risk: high
+    status: done
+---
 # Flags — a visual rule builder — Sprint 2: Rollout visualization and the version diff
 
 **Status:** 🟢 built, review CLEAN — PR [#88](https://github.com/danybgoode/golden-beans/pull/88),

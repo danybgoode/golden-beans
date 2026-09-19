@@ -1,3 +1,33 @@
+---
+epic: experiment-governance-v2
+sprint: 1
+title: Registry, lifecycle and assignment contract
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Versioned experiment registry and plan
+    as_a: an experiment owner
+    i_want: a versioned plan containing hypothesis, eligibility, assignment and metrics
+    so_that: the test is auditable before anyone is exposed
+    risk: high
+    status: done
+  - id: S1.2
+    title: Local SDK compatibility and assignment context
+    as_a: a client developer
+    i_want: governance compatible with local SDK bucketing
+    so_that: experiment trust does not add a network dependency to runtime assignment
+    risk: high
+    status: done
+  - id: S1.3
+    title: Immutable experiment lifecycle
+    as_a: an experiment owner
+    i_want: lifecycle rules enforced
+    so_that: results remain tied to the plan that produced them
+    risk: high
+    status: done
+---
 # Experiment governance v2 — Sprint 1: Registry, lifecycle and assignment contract
 
 **Status:** ✅ shipped in PR [#19](https://github.com/danybgoode/golden-beans/pull/19)

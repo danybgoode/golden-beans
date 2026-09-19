@@ -1,3 +1,54 @@
+---
+epic: design-system-rails
+sprint: 3
+title: The shell
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S3.1
+    title: "~~The kill-switch and its seam~~ · DELETED (D6)"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S3.2
+    title: The two chrome tiers
+    as_a: a person using the console
+    i_want: the top bar and the section nav to look like the approved design
+    so_that: the product reads as one product
+    risk: high
+    status: done
+  - id: S3.3
+    title: "The rail ✳ two of Daniel's five complaints"
+    as_a: a person navigating a section
+    i_want: to see where I am
+    so_that: the rail tells me my location instead of only offering destinations
+    risk: high
+    status: done
+  - id: S3.4
+    title: "The environment control ✳ Daniel's first complaint — Do-not #5"
+    as_a: a person operating a project
+    i_want: one control naming the environment I am in
+    so_that: the rail says where I am rather than offering a filter
+    risk: high
+    status: done
+  - id: S3.5
+    title: Palette, dialogs and toasts on the system
+    as_a: a person using the product
+    i_want: the overlays to belong to the same product
+    so_that: the redesign does not stop at the edge of the page
+    risk: high
+    status: done
+  - id: S3.6
+    title: "~~Flip it on~~ / ~~Prove the rollback~~ · DELETED (D6)"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 3: The shell
 
 **Status:** ✅ **SHIPPED & LIVE 2026-08-31** — merged as `8f86cf7` (PR #131), deployed to

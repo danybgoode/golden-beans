@@ -1,3 +1,12 @@
+---
+epic: entity-journeys-projections
+sprint: 3
+title: Miyagi founding-merchant proof and scale decision
+risk: high
+phase: Shipped
+stories_total: 0
+stories: []
+---
 # Entity journeys — Sprint 3: Miyagi founding-merchant proof and scale decision
 
 **Status:** ✅ complete — PR [#20](https://github.com/danybgoode/golden-beans/pull/20), production `cd62a98`

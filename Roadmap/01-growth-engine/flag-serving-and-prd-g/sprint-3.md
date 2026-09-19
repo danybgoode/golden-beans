@@ -1,3 +1,54 @@
+---
+epic: flag-serving-and-prd-g
+sprint: 3
+title: Resilience, SecOps and circuit breakers
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S3.1
+    title: Governed live-capable scenario registry
+    as_a: a product owner
+    i_want: resilience/security scenarios reviewed before execution
+    so_that: production capability has an explicit blast radius and owner
+    risk: high
+    status: done
+  - id: S3.2
+    title: Closed fault payload and explicit Miyagi executor
+    as_a: a Miyagi operator
+    i_want: a bounded fault injected only at an instrumented seam
+    so_that: I can measure degradation without opening arbitrary execution
+    risk: high
+    status: done
+  - id: S3.3
+    title: Closed defensive-security simulation runner
+    as_a: a security owner
+    i_want: safe repeatable attack-defense checks
+    so_that: invalid input, rate and credential controls are tested against live architecture rather than assumed
+    risk: high
+    status: done
+  - id: S3.4
+    title: Canonical resilience/product-impact evidence
+    as_a: a product owner
+    i_want: technical degradation explained through product metrics
+    so_that: mitigation is based on business impact rather than error count alone
+    risk: high
+    status: done
+  - id: S3.5
+    title: Policy-bound manual and automatic breakers
+    as_a: a product owner
+    i_want: verified guardrail failure to move a flag to its known safe value
+    so_that: mitigation can be fast without granting arbitrary mutation
+    risk: high
+    status: done
+  - id: S3.6
+    title: Miyagi production-infrastructure proof and future activation runbook
+    as_a: the owner of both pre-launch products
+    i_want: to exercise the real deployment safely
+    so_that: launch does not become the first test of the architecture
+    risk: high
+    status: done
+---
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 3: Resilience, SecOps and circuit breakers
 
 **Status:** ✅ implementation, production API proof and gate cleanup complete; product-owner Clerk

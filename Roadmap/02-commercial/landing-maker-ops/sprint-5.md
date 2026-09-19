@@ -1,3 +1,26 @@
+---
+epic: landing-maker-ops
+sprint: 5
+title: The Pods booking flow
+risk: low
+phase: Shipped
+stories_total: 2
+stories:
+  - id: S5.1
+    title: The consulting tier stops implying a price
+    as_a: a reader comparing three tiers
+    i_want: the Pods tier to say plainly that it is priced after a conversation
+    so_that: I am not left guessing whether the missing number is an oversight
+    risk: low
+    status: done
+  - id: S5.2
+    title: Booking happens inside our own page
+    as_a: a team lead who wants to talk
+    i_want: to know what the call is before I pick a time
+    so_that: I am booking a conversation rather than a mystery
+    risk: low
+    status: done
+---
 # Maker ops — Sprint 5: The Pods booking flow
 
 **Status:** ✅ done

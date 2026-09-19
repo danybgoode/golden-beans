@@ -1,3 +1,33 @@
+---
+epic: multi-tenant-activation
+sprint: 3
+title: The flip (landing backfill + trials live)
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: "Landing §1 hero flip + §7 honest tiers"
+    as_a: a visitor
+    i_want: "the hero CTA flipped from waitlist to \"Start free\" and the pricing/tenancy section showing honest tiers (free pilot · pods = \"talk to us\" — no fake pricing, no payment rail)"
+    so_that: the public offer matches reality
+    risk: low
+    status: done
+  - id: S3.2
+    title: "Waitlist retirement (re-scoped 2026-07-20 — see note)"
+    as_a: a visitor
+    i_want: the waitlist to disappear the moment self-serve signup is real
+    so_that: the page never asks me to queue for something I can just start
+    risk: low
+    status: done
+  - id: S3.3
+    title: Activation launch
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+---
 # Multi-tenant activation — Sprint 3: The flip (landing backfill + trials live)
 
 **Status:** ✅ 3.1 + 3.2 merged (PR #14 → `bbaffd2`). ✅ **3.3 — the gate is FLIPPED in production**

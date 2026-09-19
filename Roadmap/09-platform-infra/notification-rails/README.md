@@ -2,6 +2,13 @@
 status: shipped
 slug: notification-rails
 build_order: 10
+title: "Notification rails — Telegram and Slack in lockstep"
+area: 09-platform-infra
+risk: high
+type: chore
+phase: Shipped
+sprints_total: 1
+stories_total: 3
 ---
 
 # Epic: Notification rails — Telegram and Slack in lockstep

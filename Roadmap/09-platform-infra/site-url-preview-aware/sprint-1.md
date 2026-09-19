@@ -1,3 +1,40 @@
+---
+epic: site-url-preview-aware
+sprint: 1
+title: The seam, its guards, and a preview that proves it
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: getSiteUrl() knows it is on a preview
+    as_a: anyone verifying a change on a preview deployment
+    i_want: "the preview's own URLs in its own output"
+    so_that: I can actually exercise the surface before it merges
+    risk: high
+    status: done
+  - id: S1.2
+    title: The comments that now say the opposite
+    as_a: the next person to read these files
+    i_want: them to describe the function that exists
+    so_that: I am not reasoning from a sentence that was true last week
+    risk: low
+    status: done
+  - id: S1.3
+    title: The dangerous call sites are guarded by a spec, not by a paragraph
+    as_a: a maintainer widening an environment variable a year from now
+    i_want: to be told that I have just made preview-minted URLs reachable
+    so_that: I find out from a red test rather than from a customer holding a dead link
+    risk: high
+    status: done
+  - id: S1.4
+    title: Observe it on a real preview
+    as_a: the product owner
+    i_want: the fix demonstrated on a real preview URL
+    so_that: we know Vercel actually exposes the variables rather than trusting that it does
+    risk: high
+    status: done
+---
 # Site URL preview-aware — Sprint 1: The seam, its guards, and a preview that proves it
 
 **Status:** ✅ shipped — [`c2589e1`](https://github.com/danybgoode/golden-beans/pull/116)

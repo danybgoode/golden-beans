@@ -1,3 +1,54 @@
+---
+epic: design-system-rails
+sprint: 1
+title: "The rails — make a bad-looking page fail the build"
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S1.1
+    title: "The design source moves out of a closed epic ✳ closes Mechanism F"
+    as_a: a builder on any future epic
+    i_want: the design system to live at a product-level path
+    so_that: it does not expire with the epic that produced it
+    risk: high
+    status: done
+  - id: S1.2
+    title: "One token file ✳ D2"
+    as_a: a builder
+    i_want: exactly one definition of every colour
+    so_that: changing a token changes the product rather than one of three copies
+    risk: high
+    status: done
+  - id: S1.3
+    title: The drift guard learns the rules this epic needs
+    as_a: a reviewer
+    i_want: "`check-design-drift.mjs` to hold the rules this epic's new surface needs"
+    so_that: the guard is not blind to the ways this design system can drift
+    risk: high
+    status: done
+  - id: S1.4
+    title: "The contract becomes generated output ✳ closes Mechanisms C and D"
+    as_a: a product owner
+    i_want: every number in the spec to come from a measurement
+    so_that: a number nobody can reproduce cannot be committed and then reasoned about as intent
+    risk: high
+    status: done
+  - id: S1.5
+    title: "The coverage manifest ✳ closes the rest of Mechanism E"
+    as_a: a product owner
+    i_want: one generated number for how much of the product is on the system
+    so_that: an XXL project has a finish line and an off-system page is visibly a debt
+    risk: high
+    status: done
+  - id: S1.6
+    title: "The gate is driven by the manifest ✳ closes Mechanism A — D5"
+    as_a: a product owner
+    i_want: a page that looks wrong to fail CI on any route
+    so_that: "\"done\" and \"right\" stop being different conditions"
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 1: The rails — make a bad-looking page fail the build
 
 **Status:** ✅ **SHIPPED & LIVE 2026-08-30** — merged as `8bd9167` (PR #128), deployed to

@@ -1,3 +1,47 @@
+---
+epic: mockups-as-built
+sprint: 3
+title: The two missing screens, and no flags
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S3.1
+    title: "North Star becomes a Measure surface ✳ measure-north-star"
+    as_a: a person
+    i_want: Measure to open on the North Star
+    so_that: the section shows the number the project exists to move
+    risk: high
+    status: done
+  - id: S3.2
+    title: "Activity paginates ✳ ship-activity"
+    as_a: a person
+    i_want: Activity to be a page
+    so_that: it stops being an endless list
+    risk: high
+    status: done
+  - id: S3.3
+    title: "Delete the flag ✳ D4"
+    as_a: a product owner
+    i_want: no flag between the console and the people using it
+    so_that: nothing is dark and nothing is half-on
+    risk: high
+    status: done
+  - id: S3.4
+    title: Close it honestly
+    as_a: a product owner
+    i_want: the record to say what happened
+    so_that: the next epic does not inherit a false green
+    risk: low
+    status: done
+  - id: S3.5
+    title: "Activity names who acted ✳ ship-activity"
+    as_a: a person reading Activity
+    i_want: to see who made a change
+    so_that: the sentence reads the way the approved state draws it rather than as a UUID
+    risk: high
+    status: done
+---
 # The mockups, as built — Sprint 3: The two missing screens, and no flags
 
 **Status:** ✅ COMPLETE (2026-09-10) — 3.1, 3.2, 3.3 and 3.5 built. 3.4 closes with the epic.

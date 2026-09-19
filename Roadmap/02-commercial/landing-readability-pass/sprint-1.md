@@ -1,3 +1,40 @@
+---
+epic: landing-readability-pass
+sprint: 1
+title: The page says each thing once
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: "The hero opens at the mockup's scale, and its graphics compose"
+    as_a: a maker landing on this page for the first time
+    i_want: the opening to read in two seconds
+    so_that: I know what this is before I decide whether to scroll
+    risk: low
+    status: done
+  - id: S1.2
+    title: Nothing on the page is green, and no claim is made twice
+    as_a: a reader scanning for what is and is not built
+    i_want: "the page's accent to mean something"
+    so_that: I can find the exceptions without reading every paragraph
+    risk: low
+    status: done
+  - id: S1.3
+    title: "§connect and §sdk come out, and nothing they carried is lost"
+    as_a: a reader deciding whether this category exists
+    i_want: the proof to reach the price without two integration sections in between
+    so_that: the argument closes
+    risk: low
+    status: done
+  - id: S1.4
+    title: "The remaining sections say the mockup's version of what they say"
+    as_a: a reader
+    i_want: the copy to match what was designed
+    so_that: the page reads as one piece of writing
+    risk: low
+    status: done
+---
 # Landing readability pass — Sprint 1: The page says each thing once
 
 **Status:** ✅ done — merged in PR #102 (`0ec12b3`), live in production 2026-08-20; all 15 smoke

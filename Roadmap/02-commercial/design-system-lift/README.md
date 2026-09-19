@@ -2,6 +2,13 @@
 status: shipped
 slug: design-system-lift
 build_order: 9
+title: "Design system lift — the limitless golden-bean brand"
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 2
+stories_total: 7
 ---
 
 # Epic: Design system lift — the limitless golden-bean brand

@@ -1,3 +1,47 @@
+---
+epic: flag-serving-and-prd-g
+sprint: 4
+title: Evergreen catalog sync + discoverable operations
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S4.1
+    title: Find the operating surfaces
+    as_a: a project member
+    i_want: "Flags and Tasks linked from my project on `/app`"
+    so_that: I do not need to know hidden URLs to operate Golden Beans
+    risk: high
+    status: done
+  - id: S4.2
+    title: Synchronize a project catalog without Golden-side hardcoding
+    as_a: a project builder
+    i_want: to synchronize my typed flag catalog through the Golden SDK
+    so_that: adding a flag to a new project never requires editing Golden Beans source or SQL
+    risk: high
+    status: done
+  - id: S4.3
+    title: Make Miyagi an evergreen consumer
+    as_a: the Miyagi operator
+    i_want: each independently deployed service to synchronize its own catalog fragment
+    so_that: frontend and backend releases stay independent while shared flags cannot silently disagree
+    risk: high
+    status: done
+  - id: S4.4
+    title: Operationalize the owned-shop kill switch without darkening it
+    as_a: the Miyagi product owner
+    i_want: "`catalog.owned_shop_only_enabled` managed in Golden"
+    so_that: I can deliberately turn the policy OFF or back ON without a code deployment while its normal live state remains ON
+    risk: high
+    status: done
+  - id: S4.5
+    title: Make the written contract true
+    as_a: the next builder
+    i_want: the poster, epic, retrospective, learnings and team memory to describe the evergreen rail
+    so_that: a correct local fallback is never mistaken for an accepted unmanaged exception
+    risk: low
+    status: done
+---
 # Sprint 4 — Evergreen catalog sync + discoverable operations
 
 **Status:** ✅ shipped — 2026-08-01

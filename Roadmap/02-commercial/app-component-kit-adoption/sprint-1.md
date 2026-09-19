@@ -1,3 +1,33 @@
+---
+epic: app-component-kit-adoption
+sprint: 1
+title: The three missing primitives
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: DataTable
+    as_a: a PM
+    i_want: every table in the product to sort, filter and explain itself the same way
+    so_that: "I don't re-learn each screen"
+    risk: low
+    status: done
+  - id: S1.2
+    title: ConfirmDialog
+    as_a: a PM
+    i_want: "anything I can't undo to ask me first, and to name what it's about to do"
+    so_that: I can operate the product without fear of a one-click mistake
+    risk: low
+    status: done
+  - id: S1.3
+    title: FormSection / Field
+    as_a: a PM
+    i_want: every form in the product to label, group and report errors the same way
+    so_that: the next new surface is one I already know how to use
+    risk: low
+    status: done
+---
 # Component-kit adoption sweep — Sprint 1: The three missing primitives
 
 **Status:** ✅ Shipped — PR [#82](https://github.com/danybgoode/golden-beans/pull/82), merged as `0e54414`. Live in production.

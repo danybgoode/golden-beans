@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: landing-redesign-v2
 build_order: 16
+title: "Landing redesign v2 — the agent harness for product managers"
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 11
 ---
 
 # Epic: Landing redesign v2 — the agent harness for product managers

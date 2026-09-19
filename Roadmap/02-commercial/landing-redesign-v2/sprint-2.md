@@ -1,3 +1,47 @@
+---
+epic: landing-redesign-v2
+sprint: 2
+title: The redesigned landing
+risk: low
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: The narrative spine
+    as_a: a technical PM landing here cold
+    i_want: "the page to open with the problem I recognise — too many opinions, no shared yardstick —"
+    so_that: "I understand what this is before I'm asked to connect anything"
+    risk: low
+    status: done
+  - id: S2.2
+    title: The copy-a-prompt blocks
+    as_a: a PM who has not signed up
+    i_want: to paste one prompt into the agent I already use
+    so_that: I can evaluate this without an account
+    risk: low
+    status: done
+  - id: S2.3
+    title: "Proof: computed, not claimed"
+    as_a: a decision-maker
+    i_want: the proof section to show real numbers
+    so_that: "the page's own claim about receipts is one it satisfies"
+    risk: low
+    status: done
+  - id: S2.4
+    title: "/northstar-self-serve.md"
+    as_a: "a reader's agent"
+    i_want: the workshop document the prompt tells me to read to exist
+    so_that: "the page's primary call to action works end to end"
+    risk: low
+    status: done
+  - id: S2.5
+    title: Pricing, honestly
+    as_a: a buyer
+    i_want: the pricing section to tell me what I can actually do today
+    so_that: "I don't discover the gap after signing up"
+    risk: low
+    status: done
+---
 # Landing redesign v2 — Sprint 2: The redesigned landing
 
 **Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.

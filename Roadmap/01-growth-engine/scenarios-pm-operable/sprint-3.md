@@ -1,3 +1,33 @@
+---
+epic: scenarios-pm-operable
+sprint: 3
+title: Impact as a comparison
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Control vs treatment, honestly (PRD-G E3)
+    as_a: a PM
+    i_want: "to see a scenario's business impact as a comparison"
+    so_that: "\"technical delta / claim / blockers\" in a table row becomes something I can actually read"
+    risk: high
+    status: done
+  - id: S3.2
+    title: Blockers and claim status stay first-class
+    as_a: a PM
+    i_want: "to see what's blocking a claim as prominently as the claim itself"
+    so_that: "the product's honesty survives the redesign"
+    risk: high
+    status: done
+  - id: S3.3
+    title: "The scenario → impact → experiment thread (PRD-G E1)"
+    as_a: a PM
+    i_want: to get from a scenario I ran to the canonical experiment analysis it used
+    so_that: "\"define a scenario and watch the downstream impact\" is one path instead of two screens"
+    risk: high
+    status: done
+---
 # Scenarios made PM-operable — Sprint 3: Impact as a comparison
 
 **Status:** ✅ merged in PR #98 (`5bca24c`); built in `cf1b971` + hardening through `00b1a86`

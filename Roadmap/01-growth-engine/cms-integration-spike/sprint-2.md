@@ -1,3 +1,33 @@
+---
+epic: cms-integration-spike
+sprint: 2
+title: Payload go/no-go decision
+risk: low
+phase: Shaping
+stories_total: 3
+stories:
+  - id: S2.1
+    title: Present-day Payload capability and ownership check
+    as_a: the product owner
+    i_want: current primary-source evidence about Payload
+    so_that: "the decision reflects today's product rather than acquisition speculation"
+    risk: low
+    status: planned
+  - id: S2.2
+    title: Option scorecard and go/no-go
+    as_a: the product owner
+    i_want: the viable choices compared on the same criteria
+    so_that: "we choose intentionally rather than defaulting to “build” or “not now"
+    risk: low
+    status: planned
+  - id: S2.3
+    title: Executable follow-on
+    as_a: a future coordinator
+    i_want: the decision translated into an unambiguous next state
+    so_that: the spike does not end as shelfware
+    risk: low
+    status: planned
+---
 # CMS-neutral experiment integration + Payload go/no-go — Sprint 2: Payload go/no-go decision
 
 **Status:** ⬜ not started

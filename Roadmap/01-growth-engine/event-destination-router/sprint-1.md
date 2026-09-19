@@ -1,3 +1,26 @@
+---
+epic: event-destination-router
+sprint: 1
+title: Contract and durable queue
+risk: high
+phase: Shipped
+stories_total: 2
+stories:
+  - id: S1.1
+    title: Versioned actor and subject context
+    as_a: a client developer
+    i_want: "optional actor, subject, correlation, occurred-at and idempotency context on `track()`"
+    so_that: "one stream can describe a merchant, shop, promoter, campaign or experiment without overloading `userId`"
+    risk: high
+    status: done
+  - id: S1.2
+    title: Transactional outbox and dark delivery gate
+    as_a: an operator
+    i_want: eligible delivery work committed with the canonical event
+    so_that: later delivery is recoverable and a vendor outage never changes ingest success
+    risk: high
+    status: done
+---
 # Event destination router — Sprint 1: Contract and durable queue
 
 **Status:** 🟩 Ready to merge — Story 1.1 ✅ (`3d6950c`), Story 1.2 ✅ (`ea862d1`), + 7 cross-review hardening commits. Gate green (187 passed, 1 skipped); **cross-review CLEAN from both families (Codex + Agy) at round 11** after 10 rounds of findings converged from architectural → hardening → test-quality. PR #15, HIGH risk → Daniel merges. **Blocked on: the two migrations must be applied to prod Supabase BEFORE the merge deploys the RPC-calling route (migration-first rollout), else `/track` 500s.**

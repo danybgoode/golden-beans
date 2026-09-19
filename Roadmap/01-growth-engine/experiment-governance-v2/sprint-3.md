@@ -1,3 +1,33 @@
+---
+epic: experiment-governance-v2
+sprint: 3
+title: Decision record, operating parity and Miyagi proof
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Immutable human decision record
+    as_a: an experiment owner
+    i_want: an immutable close-out decision
+    so_that: future teammates know what was observed, trusted and chosen
+    risk: high
+    status: done
+  - id: S3.2
+    title: Registry-aware UI, API and MCP parity
+    as_a: an authorized teammate or agent
+    i_want: one trustworthy experiment view
+    so_that: the plan, diagnostics, results and decision agree across channels
+    risk: high
+    status: done
+  - id: S3.3
+    title: Tiendas Fundadoras governed experiment proof
+    as_a: "Miyagi's growth team"
+    i_want: its founding-shop promise/CTA test governed end to end
+    so_that: the first acquisition experiment produces a reusable decision instead of a loose lift dashboard
+    risk: high
+    status: done
+---
 # Experiment governance v2 — Sprint 3: Decision record, operating parity and Miyagi proof
 
 **Status:** ✅ shipped & LIVE in production — merged in PR [#23](https://github.com/danybgoode/golden-beans/pull/23),

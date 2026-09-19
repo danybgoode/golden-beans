@@ -2,6 +2,13 @@
 status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: agentic-pm-public-surface
 build_order: 23
+title: "The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL"
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 12
 ---
 
 # Epic: The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL

@@ -1,3 +1,33 @@
+---
+epic: growth-engine-v1
+sprint: 4
+title: A/B v1
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S4.1
+    title: Deterministic client-side hash bucketing
+    as_a: an app builder
+    i_want: "the SDK to deterministically bucket a user into a variant (same user → same variant), computed client-side, with no lookup and no resolve endpoint"
+    so_that: experiment assignment works without standing up a flag-serving gateway
+    risk: low
+    status: done
+  - id: S4.2
+    title: Exposure events
+    as_a: a PM
+    i_want: an exposure event fired when a user is bucketed
+    so_that: variant comparison has a denominator
+    risk: low
+    status: done
+  - id: S4.3
+    title: Side-by-side variant comparison (basic lift)
+    as_a: a PM
+    i_want: a side-by-side view comparing variants on a chosen metric
+    so_that: "I can eyeball an experiment's effect"
+    risk: low
+    status: done
+---
 # Growth Engine v1 — Sprint 4: A/B v1
 
 **Status:** ✅ **Sprint 4 merged + deployed 2026-07-16.** PR

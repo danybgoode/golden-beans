@@ -1,3 +1,68 @@
+---
+epic: landing-maker-ops
+sprint: 2
+title: The new spine
+risk: low
+phase: Shipped
+stories_total: 8
+stories:
+  - id: S2.1
+    title: The hero says who this is for
+    as_a: a maker who builds with agents
+    i_want: the first screen to name me and show what I would actually do here
+    so_that: I know within one screen whether this product is for me
+    risk: low
+    status: done
+  - id: S2.2
+    title: The maker loop, in five steps
+    as_a: a reader who just got the pitch
+    i_want: the shape of the loop in five plain steps
+    so_that: "\"operate your product\" becomes something concrete rather than a category"
+    risk: low
+    status: done
+  - id: S2.3
+    title: One operating context
+    as_a: a maker
+    i_want: to see that my North Star, journeys, signals, experiments, flags, scenarios and agent activity live in one place
+    so_that: I understand the product is a context, not a dashboard
+    risk: low
+    status: done
+  - id: S2.4
+    title: Four Ops surfaces, one panel
+    as_a: a maker weighing whether this covers my whole operation
+    i_want: to move between Product, Dev, Sec and FinOps
+    so_that: I can see the breadth without eight screens of scrolling
+    risk: high
+    status: done
+  - id: S2.5
+    title: Agents move, authority stays put
+    as_a: a maker being asked to let an agent act on my product
+    i_want: to see exactly where its autonomy stops
+    so_that: "\"let agents move\" reads as a controlled system rather than a leap of faith"
+    risk: low
+    status: done
+  - id: S2.6
+    title: FinOps, labelled as the concept it is
+    as_a: a reader
+    i_want: the AI-economics section to be unmistakably a plan
+    so_that: I do not sign up expecting a cost dashboard that does not exist
+    risk: low
+    status: done
+  - id: S2.7
+    title: The methodology, without the placeholder
+    as_a: a reader who wants the way of working behind the product
+    i_want: "the field guide's shape and its nine steps"
+    so_that: I know what I would be learning
+    risk: low
+    status: done
+  - id: S2.8
+    title: The page is recomposed
+    as_a: a reader
+    i_want: one page that argues once
+    so_that: the repositioning is not bolted on top of the argument it replaces
+    risk: high
+    status: done
+---
 # Maker ops — Sprint 2: The new spine
 
 **Status:** ✅ done

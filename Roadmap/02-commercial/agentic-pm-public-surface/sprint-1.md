@@ -1,3 +1,40 @@
+---
+epic: agentic-pm-public-surface
+sprint: 1
+title: The workshop earns its URL
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: The category is stated once, from one module
+    as_a: a reader of any Golden Frijoles surface
+    i_want: the product described the same way everywhere
+    so_that: I am reading about one product
+    risk: low
+    status: done
+  - id: S1.2
+    title: The workshop teaches the actual framework
+    as_a: a practitioner with no account
+    i_want: a workshop that actually teaches me the North Star Framework
+    so_that: I leave with a metric I can defend rather than a nice conversation
+    risk: low
+    status: done
+  - id: S1.3
+    title: The workshop knows how to close, and what it cannot claim
+    as_a: an agent running this workshop
+    i_want: to know when to stop and what to hand back
+    so_that: I neither stall nor over-run nor promise something I did not do
+    risk: low
+    status: done
+  - id: S1.4
+    title: The product owner runs it end-to-end in a real agent
+    as_a: Daniel
+    i_want: to run the whole workshop in a fresh agent against the preview
+    so_that: we find out whether a facilitation script actually facilitates
+    risk: low
+    status: done
+---
 # Agentic PM public surface — Sprint 1: The workshop earns its URL
 
 **Status:** ✅ shipped — [`bbb337f`](https://github.com/danybgoode/golden-beans/pull/111)

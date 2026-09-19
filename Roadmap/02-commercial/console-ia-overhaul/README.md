@@ -4,6 +4,13 @@ slug: console-ia-overhaul
 build_order: 25      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+title: "Four destinations — an information architecture for the signed-in console"
+area: 02-commercial
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 13
 ---
 
 # Epic: Four destinations — an information architecture for the signed-in console

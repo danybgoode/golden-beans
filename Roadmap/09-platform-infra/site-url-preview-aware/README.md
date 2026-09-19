@@ -2,6 +2,13 @@
 status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: site-url-preview-aware
 build_order: 24
+title: A preview deployment stops calling itself localhost
+area: 09-platform-infra
+risk: high
+type: bug
+phase: Shipped
+sprints_total: 1
+stories_total: 4
 ---
 
 # Epic: A preview deployment stops calling itself localhost

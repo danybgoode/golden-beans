@@ -1,3 +1,47 @@
+---
+epic: app-component-kit-adoption
+sprint: 2
+title: Convert the owner-operated routes
+risk: low
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: Convert two routes thin, then freeze the API
+    as_a: a builder
+    i_want: "`DataTable`'s API validated by two real call sites before it grows"
+    so_that: "the remaining conversions don't inherit an abstraction shaped by guesswork"
+    risk: low
+    status: done
+  - id: S2.2
+    title: Convert destinations and experiments
+    as_a: a PM
+    i_want: the destinations and experiments tables to sort and filter like the others
+    so_that: "finding the row I need doesn't depend on which screen I'm on"
+    risk: low
+    status: done
+  - id: S2.3
+    title: Convert flags and impact
+    as_a: a PM
+    i_want: the flags list and the impact view to use the same grammar as everything else
+    so_that: the two surfaces I check most often are the two I have to think about least
+    risk: low
+    status: done
+  - id: S2.4
+    title: Route-conversion inventory
+    as_a: a product owner
+    i_want: the remaining debt written down as a list
+    so_that: "\"the sweep is partly done\" is a set of named routes rather than a feeling"
+    risk: low
+    status: done
+  - id: S2.5
+    title: the route-conversion inventory (the carry-over, named)
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Component-kit adoption sweep — Sprint 2: Convert the owner-operated routes
 
 **Status:** ✅ Shipped — PR [#83](https://github.com/danybgoode/golden-beans/pull/83), merged as `997fc93`. Live in production.

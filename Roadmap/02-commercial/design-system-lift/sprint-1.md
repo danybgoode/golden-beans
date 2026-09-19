@@ -1,3 +1,33 @@
+---
+epic: design-system-lift
+sprint: 1
+title: Brand foundation and public lift
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: A bean that looks worth planting
+    as_a: a visitor
+    i_want: a distinctive golden-bean mark
+    so_that: I understand the product as magic growth infrastructure rather than coffee software
+    risk: low
+    status: done
+  - id: S1.2
+    title: One set of design rails
+    as_a: a builder
+    i_want: shared tokens and components
+    so_that: every new page starts inside the same visual, responsive, accessible system
+    risk: low
+    status: done
+  - id: S1.3
+    title: The story reads as magic beans
+    as_a: a buyer
+    i_want: the landing, install, and auth surfaces to communicate compounding growth
+    so_that: "the brand promise and the product’s real capabilities reinforce each other"
+    risk: low
+    status: done
+---
 # Sprint 1 — Brand foundation and public lift
 
 **Status:** ✅ Shipped — Golden Beans PRs [#51](https://github.com/danybgoode/golden-beans/pull/51)

@@ -2,6 +2,13 @@
 status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: methodology-experience
 build_order: 22
+title: The methodology gets a room of its own
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 4
+stories_total: 17
 ---
 
 # Epic: The methodology gets a room of its own

@@ -1,3 +1,33 @@
+---
+epic: pod-report
+sprint: 1
+title: The rendering primitive + hub skateboard (internal)
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Report artifacts + the roadmap-push rail
+    as_a: a tenant
+    i_want: to push my roadmap projection (extract-schema JSON via my API key) and have it stored as a versioned, immutable report artifact
+    so_that: the engine renders from data I control
+    risk: low
+    status: done
+  - id: S1.2
+    title: "Journey + epic drill-down views (gb as tenant #0)"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S1.3
+    title: Horizon view (progress against the desired end-state)
+    as_a: a stakeholder
+    i_want: "the horizon view — end-state destinations (generalized from the landing section↔epic registry) as cards, each showing what's lit ✅ vs coming 🔜 and the epic that lights it, funnel seeds rendered as deliberately-hazy \"on the horizon\""
+    so_that: progress reads against the destination, never as a backlog
+    risk: low
+    status: done
+---
 # Pod Report + Roadmap Hub — Sprint 1: The rendering primitive + hub skateboard (internal)
 
 **Status:** ✅ SHIPPED 2026-07-25 — PR [#30](https://github.com/danybgoode/golden-beans/pull/30)

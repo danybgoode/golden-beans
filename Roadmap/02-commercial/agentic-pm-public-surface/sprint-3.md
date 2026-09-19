@@ -1,3 +1,40 @@
+---
+epic: agentic-pm-public-surface
+sprint: 3
+title: The register, everywhere it shows
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: The register pass, everywhere it shows
+    as_a: a reader deciding whether this is a serious product
+    i_want: the page to sound like one
+    so_that: I take the claim seriously enough to test it
+    risk: low
+    status: done
+  - id: S3.2
+    title: The link preview names the category
+    as_a: someone who sees the link before the page
+    i_want: the preview to tell me what this is
+    so_that: I know whether to click
+    risk: low
+    status: done
+  - id: S3.3
+    title: "/llms.txt becomes an operating brief"
+    as_a: an agent someone sent to this manifest
+    i_want: to know how to help the person who sent me
+    so_that: I am useful before I have read anything else
+    risk: low
+    status: done
+  - id: S3.4
+    title: "/methodology opens on the same category"
+    as_a: a reader arriving at the methodology
+    i_want: it to open on the category the landing named
+    so_that: the two pages are about one thing
+    risk: low
+    status: done
+---
 # Agentic PM public surface — Sprint 3: The register, everywhere it shows
 
 **Status:** ✅ shipped — [`c37fafe`](https://github.com/danybgoode/golden-beans/pull/114)

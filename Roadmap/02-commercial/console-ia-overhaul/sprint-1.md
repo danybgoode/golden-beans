@@ -1,3 +1,47 @@
+---
+epic: console-ia-overhaul
+sprint: 1
+title: The shell
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S1.1
+    title: The gate
+    as_a: a product owner
+    i_want: the whole new console to sit behind one switch that is off until I say otherwise
+    so_that: it can merge in pieces without any of it reaching me half-built
+    risk: high
+    status: done
+  - id: S1.2
+    title: section on the route inventory
+    as_a: a builder
+    i_want: every surface to declare which of the four sections it belongs to
+    so_that: the navigation is generated from one list and a new page cannot become another URL only its author knows
+    risk: high
+    status: done
+  - id: S1.3
+    title: "The shell: one project switcher, four sections"
+    as_a: an operator
+    i_want: a header that names the project I am in and four places I can go
+    so_that: I am not reading a flat list of every route in the product
+    risk: high
+    status: done
+  - id: S1.4
+    title: The per-section rail
+    as_a: an operator
+    i_want: the section I picked to show what is inside it
+    so_that: depth costs one click instead of a menu of everything
+    risk: low
+    status: done
+  - id: S1.5
+    title: "⌘K over surfaces"
+    as_a: an operator
+    i_want: to type where I want to go
+    so_that: the depth of the rail costs nothing
+    risk: low
+    status: done
+---
 # Four destinations — an information architecture for the signed-in console — Sprint 1: The shell
 
 **Status:** ✅ SHIPPED 2026-08-27 — PR #122, squash-merged to `main` and deployed.

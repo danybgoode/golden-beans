@@ -1,3 +1,33 @@
+---
+epic: methodology-experience
+sprint: 1
+title: The vocabulary and the loop
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: The maker loop reads as three portfolio moves
+    as_a: a visitor
+    i_want: the maker loop to read as three investment moves
+    so_that: I understand the method as decisions about what deserves funding rather than as a five-step process
+    risk: low
+    status: done
+  - id: S1.2
+    title: The product uses one word for the second move
+    as_a: a reader
+    i_want: the page to say Design and never Shape
+    so_that: the product does not use two words for the same move while I am deciding whether to trust it
+    risk: low
+    status: done
+  - id: S1.3
+    title: The Methodology section previews the chapters instead of repeating the phases
+    as_a: a visitor
+    i_want: "§methodology to tell me what is actually in the field guide"
+    so_that: the page stops printing Consider/Operate/Exit twice and I learn something new by scrolling
+    risk: low
+    status: done
+---
 # Methodology experience — Sprint 1: The vocabulary and the loop
 
 **Status:** ✅ **Shipped and verified in production** — PR [#104](https://github.com/danybgoode/golden-beans/pull/104), squashed to `main` as `0751e45`, Production deployment `5995556979` reported `success` for that exact SHA.

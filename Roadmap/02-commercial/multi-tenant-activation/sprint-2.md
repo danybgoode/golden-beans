@@ -1,3 +1,33 @@
+---
+epic: multi-tenant-activation
+sprint: 2
+title: Self-serve activation
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: "Signup → instant tenant + first key (ships dark)"
+    as_a: a prospect
+    i_want: signup to provision a working tenant instantly (project + first API key + my membership) once I confirm my email
+    so_that: I can trial without waiting on a human
+    risk: high
+    status: done
+  - id: S2.2
+    title: Isolation guardrails + credential audit trail
+    as_a: the operator
+    i_want: per-tenant event quotas, payload caps, and per-key ingest rate limits, plus an audit trail of signup/credential actions
+    so_that: "open signup can't hurt real tenants or the bill"
+    risk: high
+    status: done
+  - id: S2.3
+    title: First-run onboarding
+    as_a: a new tenant
+    i_want: "first-run onboarding — copy-your-MCP-URL (\"Add to Claude\" deep-link) + a ≤5-line SDK snippet pre-filled with my key"
+    so_that: time-to-first-event is minutes
+    risk: low
+    status: done
+---
 # Multi-tenant activation — Sprint 2: Self-serve activation
 
 **Status:** ✅ Merged to `main` (PR #14 — commits `bee637f · 9348a71 · 6cacfd4`, plus review-round fixes `c724c91` · `29701fd` · `c75dc1d` · `3ebc05e` · `ea4f256`). Shipping **dark**: `SIGNUP_ENABLED` is unset in production, so every surface here 404s until Story 3.3.

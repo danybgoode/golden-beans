@@ -1,3 +1,47 @@
+---
+epic: landing-maker-ops
+sprint: 4
+title: Verify and ship
+risk: low
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S4.1
+    title: The specs describe the page that exists
+    as_a: a future contributor
+    i_want: "the landing's rendered contract to pin the new spine"
+    so_that: the next redesign breaks a test rather than a promise
+    risk: low
+    status: done
+  - id: S4.2
+    title: The full gate, actually run
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S4.3
+    title: Cross-family review, to clean
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.4
+    title: Ship it, then prove it shipped
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.5
+    title: Close the epic
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Maker ops — Sprint 4: Verify and ship
 
 **Status:** ✅ done — merged as `46c7e80`, production smoke green.

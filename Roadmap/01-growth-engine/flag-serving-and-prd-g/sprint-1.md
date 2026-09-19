@@ -1,3 +1,40 @@
+---
+epic: flag-serving-and-prd-g
+sprint: 1
+title: Typed project flag control plane
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: Versioned typed flag registry
+    as_a: a project owner
+    i_want: typed flags with immutable versions, environments, variants and bounded targeting
+    so_that: runtime decisions are reviewable, reproducible and tenant-safe
+    risk: high
+    status: done
+  - id: S1.2
+    title: Revocable snapshot read and local evaluator
+    as_a: an application server
+    i_want: a scoped immutable snapshot and synchronous evaluator
+    so_that: flag checks add no network dependency to a request
+    risk: high
+    status: done
+  - id: S1.3
+    title: OpenFeature-compatible SDK/provider contract
+    as_a: an application builder
+    i_want: a standards-shaped provider facade
+    so_that: Golden Beans is replaceable at the call boundary without outsourcing its data model
+    risk: high
+    status: done
+  - id: S1.4
+    title: Owner lifecycle UI/API and experiment binding
+    as_a: a project owner
+    i_want: to draft, validate, activate, stop and inspect flags and bind an immutable version to an experiment
+    so_that: flags and measurement form one governed loop
+    risk: high
+    status: done
+---
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 1: Typed project flag control plane
 
 **Status:** ✅ Code merged, deployed and migrated — [PR #39](https://github.com/danybgoode/golden-beans/pull/39)

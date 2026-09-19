@@ -1,3 +1,47 @@
+---
+epic: mockups-as-built
+sprint: 4
+title: The nine routes nothing was measuring
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S4.1
+    title: "Setup › Connect and Setup › Keys"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.2
+    title: "Setup › Share links"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.3
+    title: Tasks
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.4
+    title: "The hub: roadmap, horizon and report"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.5
+    title: "The public surfaces: /install and /s/[token]"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+---
 # The mockups, as built — Sprint 4: The nine routes nothing was measuring
 
 **Status:** ✅ COMPLETE (2026-09-10) — all eight routes match. **22 of 22.**

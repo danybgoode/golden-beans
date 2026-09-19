@@ -1,3 +1,40 @@
+---
+epic: scenarios-pm-operable
+sprint: 1
+title: Define a scenario
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: "Rewrite the page around ProductShell and #13's primitives"
+    as_a: a PM
+    i_want: the scenarios page to read like the rest of the product
+    so_that: "the most consequential screen isn't also the least legible"
+    risk: high
+    status: done
+  - id: S1.2
+    title: The define-a-scenario form
+    as_a: a PM
+    i_want: to define a scenario by choosing from options rather than writing a definition
+    so_that: I can run a resilience exercise without an engineer
+    risk: high
+    status: done
+  - id: S1.3
+    title: Save through the shared operation core
+    as_a: a PM
+    i_want: the scenario I defined to be a real registered definition
+    so_that: I can launch it in the next sprint
+    risk: high
+    status: done
+  - id: S1.4
+    title: Target state, honestly
+    as_a: a PM
+    i_want: "to see whether a target is verified and what to do if it isn't"
+    so_that: "I don't define a scenario I can't run"
+    risk: high
+    status: done
+---
 # Scenarios made PM-operable — Sprint 1: Define a scenario
 
 **Status:** ✅ merged in PR #98 (`5bca24c`); built in `013b404` + hardening through `00b1a86`

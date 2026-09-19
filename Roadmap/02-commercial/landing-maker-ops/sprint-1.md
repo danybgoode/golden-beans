@@ -1,3 +1,40 @@
+---
+epic: landing-maker-ops
+sprint: 1
+title: Shared surface
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: The repository stops carrying a build artefact
+    as_a: a contributor
+    i_want: the packed SDK tarball out of the working tree and out of the future
+    so_that: "nobody mistakes a compiled snapshot for source or commits a stale copy of `dist/`"
+    risk: low
+    status: done
+  - id: S1.2
+    title: The section registry describes the page that now exists
+    as_a: "a future agent reading `lib/landing-sections.ts` to find out what is on the landing page"
+    i_want: it to describe the maker-ops page rather than the one it replaced
+    so_that: the registry stays the source of truth the badges read from instead of a second, stale narrative
+    risk: low
+    status: done
+  - id: S1.3
+    title: The four Ops surfaces are data, and their status is computed
+    as_a: a reader deciding whether this product covers my whole operation
+    i_want: each Ops surface to state what it answers, what it gives me, and whether it is actually shipped
+    so_that: I can tell the built part from the planned part without signing up to find out
+    risk: low
+    status: done
+  - id: S1.4
+    title: The stylesheet gains the maker-ops devices, in tokens only
+    as_a: a builder starting a Sprint 2 section
+    i_want: the layout primitives the new spine needs to already exist
+    so_that: five stories do not each invent their own grid and the drift guard has nothing to catch
+    risk: low
+    status: done
+---
 # Maker ops — Sprint 1: Shared surface
 
 **Status:** ✅ done

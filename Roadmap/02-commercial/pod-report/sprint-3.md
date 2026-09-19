@@ -1,3 +1,33 @@
+---
+epic: pod-report
+sprint: 3
+title: Share links + backfill (the flip)
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Scoped share links (dark)
+    as_a: Daniel
+    i_want: "share links with per-audience lenses — team (everything) · client (their pod's journey + their Pod Report, never other tenants' data) · investor (portfolio horizon + momentum, no per-story internals) — as opaque revocable tokens in the path (E1 connector pattern; one credential taxonomy with E2's `api_keys` scoped rows), behind a `REPORT_SHARES_ENABLED` env gate that ships dark/OFF"
+    so_that: externals glance at a link, never an account
+    risk: high
+    status: done
+  - id: S3.2
+    title: "Landing §5 backfill + hub dogfood"
+    as_a: the landing
+    i_want: "§5 (Pods & proof) flipped teaser → live Pod Report section via E1's section↔epic registry (backfill contract), and the hub instrumented by the engine itself (view events per lens tracked as engine events)"
+    so_that: we sell what we use
+    risk: low
+    status: done
+  - id: S3.3
+    title: Launch
+    as_a: Daniel
+    i_want: "the launch: flip `REPORT_SHARES_ENABLED` in production, mint the first real investor + client links, verify revocation kills a link, announce"
+    so_that: the roadmap is something we show, live
+    risk: high
+    status: done
+---
 # Pod Report + Roadmap Hub — Sprint 3: Share links + backfill (the flip)
 
 **Status:** ✅ SHIPPED 2026-07-26 — PR [#33](https://github.com/danybgoode/golden-beans/pull/33)

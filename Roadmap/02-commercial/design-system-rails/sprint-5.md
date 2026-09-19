@@ -1,3 +1,54 @@
+---
+epic: design-system-rails
+sprint: 5
+title: "Measure and Today — the pages nobody designed"
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S5.1
+    title: "The charting primitives ✳ D7 — architect-owned, done first"
+    as_a: a person using an analytics product
+    i_want: to see the numbers
+    so_that: "the product whose whole pitch is \"see the funnel, see the North Star, see the lift\" shows them"
+    risk: high
+    status: done
+  - id: S5.2
+    title: Today
+    as_a: a person opening the product
+    i_want: to know what changed while I was away
+    so_that: the home page answers a question instead of listing routes
+    risk: high
+    status: done
+  - id: S5.3
+    title: Funnel and Impact
+    as_a: a person
+    i_want: the namesake framework to look like one
+    so_that: "the funnel is a funnel rather than a `<dl>`"
+    risk: high
+    status: done
+  - id: S5.4
+    title: "Experiments, list and detail ✳ carries DA2"
+    as_a: a person running an experiment
+    i_want: lift and decision to be visible
+    so_that: the comparison bar has somewhere to live
+    risk: high
+    status: done
+  - id: S5.5
+    title: Journeys, list and detail
+    as_a: a person
+    i_want: journeys on the system
+    so_that: the section is whole
+    risk: high
+    status: done
+  - id: S5.6
+    title: Tasks, Scenarios and Onboarding
+    as_a: a person
+    i_want: the last console surfaces on the system
+    so_that: "`/app` is finished"
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 5: Measure and Today — the pages nobody designed
 
 **Status:** ✅ **SHIPPED & LIVE 2026-09-01** — merged as `a896f9c` (PR #133), deployed to production

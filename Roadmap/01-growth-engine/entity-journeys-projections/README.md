@@ -2,6 +2,13 @@
 status: shipped
 slug: entity-journeys-projections
 build_order: 5
+title: "Entity journeys — configurable lifecycle projections beyond fixed TARS"
+area: 01-growth-engine
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 0
 ---
 
 # Epic: Entity journeys — configurable lifecycle projections beyond fixed TARS

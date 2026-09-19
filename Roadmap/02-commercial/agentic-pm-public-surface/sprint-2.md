@@ -1,3 +1,40 @@
+---
+epic: agentic-pm-public-surface
+sprint: 2
+title: "The landing's structure"
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S2.1
+    title: The hero hands the reader a prompt
+    as_a: a maker landing here for the first time
+    i_want: the first thing I meet to be something I can use
+    so_that: I can check this product with my own agent instead of being shown a picture of one
+    risk: low
+    status: done
+  - id: S2.2
+    title: One section about the operating context, not two
+    as_a: a reader
+    i_want: the page to make its operating-context argument once
+    so_that: I am not shown the same idea twice under two headings
+    risk: low
+    status: done
+  - id: S2.3
+    title: "§proof comes out, and the nav and the stamps come out with it"
+    as_a: a reader
+    i_want: the page to reach its offer without a detour through our own delivery history
+    so_that: the argument closes where the ask is
+    risk: low
+    status: done
+  - id: S2.4
+    title: The new hero survives a phone
+    as_a: a reader on a phone
+    i_want: the hero to fit
+    so_that: the first thing I meet is not a prompt card overflowing its column
+    risk: low
+    status: done
+---
 # Agentic PM public surface — Sprint 2: The landing's structure
 
 **Status:** ✅ shipped — [`66ea12e`](https://github.com/danybgoode/golden-beans/pull/113)

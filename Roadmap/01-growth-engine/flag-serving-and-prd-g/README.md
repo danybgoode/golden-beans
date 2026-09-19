@@ -2,6 +2,13 @@
 status: shipped
 slug: flag-serving-and-prd-g
 build_order: 11
+title: Flag control plane + Miyagi migration + resilience/SecOps
+area: 01-growth-engine
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 4
+stories_total: 20
 ---
 
 # Epic: Flag control plane + Miyagi migration + resilience/SecOps

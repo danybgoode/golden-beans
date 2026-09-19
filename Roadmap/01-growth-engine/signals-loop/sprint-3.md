@@ -1,3 +1,40 @@
+---
+epic: signals-loop
+sprint: 3
+title: The closed loop (writes + flip)
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: The agent_write credential scope
+    as_a: Daniel
+    i_want: "write-capable agent credentials as a third `scope` on the existing `api_keys` taxonomy — hashed, revocable, expirable, audited, on their own dashboard screen —"
+    so_that: the first public mutation surface is authorized by a secret that has never been printed on a public page
+    risk: high
+    status: done
+  - id: S3.2
+    title: "Staged write tools (the connector's first public mutation path)"
+    as_a: "a PM's agent"
+    i_want: "staged write tools — claim/resolve/dismiss via propose→confirm→apply (propose returns a preview + a single-use confirmation token; nothing mutates without apply) — dark behind `CONNECTOR_WRITES_ENABLED`, requiring both the connector token and an `agent_write` Bearer key that resolve to the same project, fully audited"
+    so_that: the loop actually closes in my agent, not in a dashboard click
+    risk: high
+    status: done
+  - id: S3.3
+    title: "Landing §4 backfill, the dogfood loop, and ladder evidence"
+    as_a: the landing
+    i_want: "§4 flipped teaser → live inverted-loop section (side-by-side with the integrated-AI alternative, via the section↔epic registry) and the dogfood loop running — gb's own errors → tasks → our agent fixes, loop events tracked in the engine itself —"
+    so_that: we demo what we run
+    risk: low
+    status: done
+  - id: S3.4
+    title: Launch (flip + full-loop smoke)
+    as_a: Daniel
+    i_want: "the launch: flip `SIGNALS_ENABLED` then `CONNECTOR_WRITES_ENABLED`, run the loop end-to-end in a fresh session — a customer's-own-agent-shaped session pulls a real task, claims via propose→confirm→apply, resolves with an evidence pointer — then revoke-confirm-dead"
+    so_that: the differentiator demo is real before anyone hears about it
+    risk: high
+    status: done
+---
 # Signals loop — Sprint 3: The closed loop (writes + flip)
 
 **Status:** ✅ SHIPPED & LIVE (2026-07-27) — full production write smoke run end-to-end, see below. PR [#38](https://github.com/danybgoode/golden-beans/pull/38), 8 cross-review rounds (alternating families) to a clean Blocking-free round. Both gates still OFF; Story 3.4 flips them.

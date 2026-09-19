@@ -4,6 +4,13 @@ slug: design-system-rails
 build_order: 26      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+title: "✅ Epic: One design system, every surface — the rails that make a design outlive an epic"
+area: 02-commercial
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 6
+stories_total: 34
 ---
 
 # ✅ Epic: One design system, every surface — the rails that make a design outlive an epic

@@ -1,3 +1,33 @@
+---
+epic: app-shell-and-agent-rail
+sprint: 2
+title: The agent rail
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: extract ActivityFeedItem and put the landing on it
+    as_a: a builder
+    i_want: one tool-call line component
+    so_that: the product and the landing page cannot drift into two different devices for the same brand promise
+    risk: low
+    status: done
+  - id: S2.2
+    title: the rail, behind AGENT_RAIL_ENABLED
+    as_a: a PM
+    i_want: to see what my agent has been doing without reading JSON
+    so_that: I can tell at a glance whether anything happened that I should know about
+    risk: high
+    status: done
+  - id: S2.3
+    title: pending agent proposals
+    as_a: a PM
+    i_want: to see what my agent is waiting on me for
+    so_that: I can validate or override it instead of discovering it later
+    risk: high
+    status: done
+---
 # App shell and agent rail — Sprint 2: The agent rail
 
 **Status:** ✅ complete — `87f2948` (2.1) · `8ba7438` (2.2 + 2.3) · `36c4e69` (QA)
