@@ -105,13 +105,27 @@ function readEpic(root, slug) {
   };
 }
 
-/** The default branch's tip to measure "this branch's commits" from, or null. */
+/**
+ * The base to measure "this branch's commits" from: of every default-branch candidate that exists, the one
+ * whose merge-base with HEAD is the NEWEST. A stale `origin/main` (local `main` fetched since, or advanced)
+ * would otherwise put main's own commits inside base..HEAD and let them name the story (codex, on a
+ * consumer copy-in). Returns { ref, mergeBase } or nulls.
+ */
 function baseRef(git) {
   const head = tryGit(git, ['symbolic-ref', '-q', '--short', 'refs/remotes/origin/HEAD']);
+  let best = { ref: null, mergeBase: null };
   for (const ref of [head, 'origin/main', 'main', 'origin/master', 'master'].filter(Boolean)) {
-    if (tryGit(git, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])) return ref;
+    if (!tryGit(git, ['rev-parse', '--verify', '-q', `${ref}^{commit}`])) continue;
+    const mb = tryGit(git, ['merge-base', ref, 'HEAD']);
+    if (!mb) continue;
+    // "Newest" by ANCESTRY, not by commit date: two candidates' merge-bases can share a timestamp to the
+    // second (they do in the tests, and in a fast scripted sequence), and a date comparison then keeps
+    // whichever came first in the list.
+    const advances =
+      !best.mergeBase || tryGit(git, ['merge-base', '--is-ancestor', best.mergeBase, mb]) !== null;
+    if (advances) best = { ref, mergeBase: mb };
   }
-  return null;
+  return best;
 }
 
 function readJournalLocal(git) {
@@ -195,8 +209,8 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   const scope = parsed.sprint === null ? 'this epic' : `sprint ${parsed.sprint} of this epic`;
 
   // D2 — commits first, then the journal, then unknown.
-  const base = baseRef(git);
-  const range = base ? `${base}..HEAD` : null;
+  const { ref: base, mergeBase } = baseRef(git);
+  const range = mergeBase ? `${mergeBase}..HEAD` : null;
   const subjects = range
     ? (tryGit(git, ['log', '--format=%s', range]) || '').split('\n').filter(Boolean)
     : [];
@@ -204,11 +218,22 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   const foreign = [...new Set(subjects.flatMap(storyIdsIn).filter((id) => !accepts(id)))];
   let story = null;
   let storySource = 'unknown';
+  let unlisted = null;
   for (const subject of subjects) {
-    const ids = storyIdsIn(subject).filter(accepts);
-    if (ids.length) {
-      story = byId.get(ids.at(-1));
+    const ids = storyIdsIn(subject);
+    if (!ids.length) continue;
+    const mine = ids.filter(accepts);
+    if (mine.length) {
+      story = byId.get(mine.at(-1));
       storySource = 'commit';
+      break;
+    }
+    // An id this epic does not list AT ALL stops the walk: the newest story commit is the claim about what
+    // is in flight, and answering with an older one would be a guess (D2, codex on a consumer copy-in).
+    // An id of ANOTHER SPRINT of this epic is different — a stacked branch inherits those — so it is
+    // skipped and the walk continues (the fresh reviewer's finding on the same file).
+    if (ids.some((id) => !byId.has(id))) {
+      unlisted = ids.filter((id) => !byId.has(id));
       break;
     }
   }
@@ -221,7 +246,10 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
     const journal = readJournalLocal(git);
     journalRef = journal.ref;
     for (const entry of [...journal.entries].reverse()) {
-      const text = [entry.text, ...(entry.refs || [])].join(' ');
+      // A journal line is only JSON — `refs` may be anything, and spreading a non-array threw, which the
+      // outer guard then reported as "not in flight" on a perfectly good branch (codex, consumer copy-in).
+      const refs = Array.isArray(entry.refs) ? entry.refs : [];
+      const text = [entry.text, ...refs].filter((v) => typeof v === 'string').join(' ');
       const ids = namesSlug(text, epic.slug) ? storyIdsIn(text).filter(accepts) : [];
       if (ids.length) {
         story = byId.get(ids.at(-1));
@@ -232,13 +260,19 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   }
   const storyNote = story
     ? null
-    : foreign.length
-      ? `commits here name ${foreign.join(', ')} — none of them ${scope}'s; no journal entry names one either`
-      : `no commit on this branch names a story of ${scope}, and the session journal names none either`;
+    : unlisted
+      ? `the newest story commit names ${unlisted.join(', ')}, which no sprint of this epic lists`
+      : foreign.length
+        ? `commits here name ${foreign.join(', ')} — none of them ${scope}'s; no journal entry names one either`
+        : `no commit on this branch names a story of ${scope}, and the session journal names none either`;
 
   // The sprint: the story's, else the branch's -s<N>, else none — never "the first unshipped one".
   const sprintN = story ? story.sprint : parsed.sprint;
   const sprint = epic.sprints.find((s) => s.n === sprintN) || null;
+  // A sprint whose frontmatter could not be read is not "a sprint with no stories": say so, rather than
+  // serving the epic's phase as if it were the sprint's (codex, consumer copy-in).
+  const unreadableSprint =
+    sprint && !sprint.contract ? `Roadmap/…/sprint-${sprint.n}.md frontmatter could not be read` : null;
 
   // D7 — the written phase, advanced only by direct evidence.
   const phaseWritten = (sprint && sprint.phase) || epic.phase;
@@ -283,7 +317,8 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
         }
       : null,
     story_source: storySource,
-    story_note: storyNote,
+    story_note: unreadableSprint ? `${unreadableSprint}${storyNote ? ` — ${storyNote}` : ''}` : storyNote,
+    warning: unreadableSprint,
     progress: {
       story: story ? story.ordinal : null,
       stories: allStories.length,
@@ -295,6 +330,7 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
     phase_written: phaseWritten,
     evidence: {
       base,
+      merge_base: mergeBase,
       story_commits: storyCommits,
       pr,
       gh: offline ? 'skipped (--offline)' : ghChecked ? 'ok' : 'unavailable',

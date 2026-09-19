@@ -165,7 +165,7 @@ test('a commit naming a story this epic does not list → unknown, with the reas
     f.commit('S9.9 — something from another epic');
     const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
     assert.equal(s.story, null);
-    assert.match(s.story_note, /commits here name S9\.9 — none of them this epic's/);
+    assert.match(s.story_note, /the newest story commit names S9\.9, which no sprint of this epic lists/);
   } finally {
     f.done();
   }
@@ -402,6 +402,77 @@ test('codex (#188): with both `aws` and `aws-s3` on the board, feat/aws-s3 is th
       ['aws', 2],
       'with no aws-s2 epic, -s2 is still a sprint suffix'
     );
+  } finally {
+    f.done();
+  }
+});
+
+test('codex round 2: an unlisted id in the NEWEST story commit wins over an older valid one', () => {
+  const f = fixture();
+  try {
+    f.git('switch', '-qc', 'feat/arranged-only');
+    f.commit('S2.1 — agent surface parity');
+    f.commit('S9.9 — a typo, or another epic');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.equal(s.story, null, 'the older S2.1 is not served as the answer');
+    assert.match(s.story_note, /names S9\.9, which no sprint of this epic lists/);
+  } finally {
+    f.done();
+  }
+});
+
+test('codex round 2: a journal line whose refs are not an array cannot break the branch', () => {
+  const f = fixture();
+  try {
+    f.git('switch', '-q', '--orphan', 'claude/session-journal');
+    writeFileSync(
+      join(f.root, 'session-journal.jsonl'),
+      `${JSON.stringify({ ts: 't', kind: 'doing', text: 'arranged-only S2.1', refs: {} })}\n` +
+        `${JSON.stringify({ refs: 42 })}\n`
+    );
+    f.git('add', 'session-journal.jsonl');
+    f.git('commit', '-qm', 'journal');
+    f.git('switch', '-q', 'main');
+    f.git('switch', '-qc', 'feat/arranged-only');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.equal(s.in_flight, true, 'a malformed journal line must not make a good branch "not in flight"');
+    assert.equal(s.story.id, 'S2.1');
+  } finally {
+    f.done();
+  }
+});
+
+test('codex round 2: a stale origin/main does not put main’s own commits inside base..HEAD', () => {
+  const f = fixture();
+  try {
+    // origin/main is left at the scaffold commit; local main moves on, and the branch is cut from THAT.
+    f.git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+    f.commit('S1.1 — landed on main after the last fetch');
+    // No -s<N> suffix: nothing but the base choice can keep main's own S1.1 out of this branch's range.
+    f.git('switch', '-qc', 'feat/arranged-only');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.equal(s.story, null, "main's own S1.1 commit is not this branch's story");
+    assert.equal(s.evidence.story_commits, 0);
+    f.commit("S2.1 — the branch's own work");
+    assert.equal(resolveBuildState({ root: f.root, offline: true, gh: noGh }).story.id, 'S2.1');
+  } finally {
+    f.done();
+  }
+});
+
+test('codex round 2: a sprint whose frontmatter cannot be read says so', () => {
+  const f = fixture();
+  try {
+    writeFileSync(
+      join(f.root, 'Roadmap', '04-shipping', 'arranged-only', 'sprint-2.md'),
+      '# no frontmatter here\n'
+    );
+    f.git('add', '-A');
+    f.git('commit', '-qm', 'break sprint 2');
+    f.git('switch', '-qc', 'feat/arranged-only-s2');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.match(s.warning, /sprint-2\.md frontmatter could not be read/);
+    assert.equal(s.story, null);
   } finally {
     f.done();
   }
