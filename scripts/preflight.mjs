@@ -201,7 +201,11 @@ export function evaluatePreflight({ cli, sdk = { found: false, source: null }, e
       detail: `${ENV_FILE} carries no ${ENV_KEYS.flagRead}. Flags cannot be read without one.`,
     });
   } else {
-    checks.push({ id: 'flag-read-key', status: 'ok', detail: `${ENV_KEYS.flagRead} present (value never printed).` });
+    checks.push({
+      id: 'flag-read-key',
+      status: 'ok',
+      detail: `${ENV_KEYS.flagRead} present (value never printed).`,
+    });
   }
 
   // ── 6. does the credential actually resolve a snapshot — the only check that can lie ──────
@@ -377,7 +381,8 @@ export async function probeSnapshot({ url, key, environment, fetchImpl = globalT
       environment: served,
     };
   } catch (err) {
-    const why = err?.name === 'AbortError' ? `no answer in ${PROBE_TIMEOUT_MS}ms` : (err?.message ?? String(err));
+    const why =
+      err?.name === 'AbortError' ? `no answer in ${PROBE_TIMEOUT_MS}ms` : (err?.message ?? String(err));
     return {
       state: 'unreachable',
       detail: `Could not reach ${endpoint} (${why}). NOT a failure — the SDK resolves against your compile-time defaults (D1).`,

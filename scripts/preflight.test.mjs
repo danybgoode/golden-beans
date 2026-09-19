@@ -46,7 +46,12 @@ test('all good: every check passes and the exit code is 0', () => {
 
 test('no project: an absent .env.local fails hard and prints the install remedy', () => {
   const env = { exists: false, path: '/repo/.env.local', url: null, key: null, environment: null };
-  const result = evaluatePreflight({ cli: CLI_OK, sdk: SDK_OK, env, probe: { state: 'skipped', detail: 'no key' } });
+  const result = evaluatePreflight({
+    cli: CLI_OK,
+    sdk: SDK_OK,
+    env,
+    probe: { state: 'skipped', detail: 'no key' },
+  });
   assert.equal(result.exitCode, 1);
   assert.equal(status(result, 'project'), 'fail');
   assert.equal(status(result, 'flag-read-key'), 'skipped', 'no file means the key check cannot run');
@@ -63,7 +68,12 @@ test('no project: a .env.local written by something other than `gf init` also fa
 
 test('no key: a linked project with no flag_read credential fails hard', () => {
   const env = { ...ENV_OK, key: null };
-  const result = evaluatePreflight({ cli: CLI_OK, sdk: SDK_OK, env, probe: { state: 'skipped', detail: 'no key' } });
+  const result = evaluatePreflight({
+    cli: CLI_OK,
+    sdk: SDK_OK,
+    env,
+    probe: { state: 'skipped', detail: 'no key' },
+  });
   assert.equal(result.exitCode, 1);
   assert.equal(status(result, 'project'), 'ok');
   assert.equal(status(result, 'flag-read-key'), 'fail');
@@ -89,8 +99,24 @@ test('CLI outdated: an older gf cannot complete a kill-switch story, so it fails
 });
 
 test('CLI newer than the floor passes; an unreadable version warns rather than failing', () => {
-  assert.equal(status(evaluatePreflight({ cli: { found: true, version: '9.9.9', source: 'x' }, sdk: SDK_OK, env: ENV_OK, probe: PROBE_OK }), 'cli-version'), 'ok');
-  const odd = evaluatePreflight({ cli: { found: true, version: 'dev-build', source: 'x' }, sdk: SDK_OK, env: ENV_OK, probe: PROBE_OK });
+  assert.equal(
+    status(
+      evaluatePreflight({
+        cli: { found: true, version: '9.9.9', source: 'x' },
+        sdk: SDK_OK,
+        env: ENV_OK,
+        probe: PROBE_OK,
+      }),
+      'cli-version'
+    ),
+    'ok'
+  );
+  const odd = evaluatePreflight({
+    cli: { found: true, version: 'dev-build', source: 'x' },
+    sdk: SDK_OK,
+    env: ENV_OK,
+    probe: PROBE_OK,
+  });
   assert.equal(status(odd, 'cli-version'), 'warn');
   assert.equal(odd.exitCode, 0, 'a fork or a local build is not a misconfiguration');
 });
@@ -98,7 +124,10 @@ test('CLI newer than the floor passes; an unreadable version warns rather than f
 // ── D1: the fail-soft case. The load-bearing one ──────────────────────────────────────────────
 
 test('D1: an UNREACHABLE deployment is a warning and the preflight still exits 0', () => {
-  const probe = { state: 'unreachable', detail: 'Could not reach https://goldenfrijoles.com/... (fetch failed).' };
+  const probe = {
+    state: 'unreachable',
+    detail: 'Could not reach https://goldenfrijoles.com/... (fetch failed).',
+  };
   const result = evaluatePreflight({ cli: CLI_OK, sdk: SDK_OK, env: ENV_OK, probe });
   assert.equal(status(result, 'snapshot'), 'warn');
   assert.equal(result.ok, true);
@@ -126,7 +155,11 @@ test('probeSnapshot: a 200 naming this environment is live', async () => {
     url: 'https://example.test/',
     key: 'k',
     environment: 'development',
-    fetchImpl: async () => new Response(JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 7, flags: [] }), { status: 200 }),
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 7, flags: [] }),
+        { status: 200 }
+      ),
   });
   assert.equal(probe.state, 'live');
   assert.match(probe.detail, /v7/);
@@ -137,14 +170,25 @@ test('probeSnapshot: a 200 naming a DIFFERENT environment is wrong-environment, 
     url: 'https://example.test',
     key: 'k',
     environment: 'production',
-    fetchImpl: async () => new Response(JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 1, flags: [] }), { status: 200 }),
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 1, flags: [] }),
+        { status: 200 }
+      ),
   });
   assert.equal(probe.state, 'wrong-environment');
 });
 
 test('probeSnapshot: 401 is dead; 404 and 500 are unreachable, never dead', async () => {
   const at = async (code) =>
-    (await probeSnapshot({ url: 'https://example.test', key: 'k', environment: null, fetchImpl: async () => new Response('', { status: code }) })).state;
+    (
+      await probeSnapshot({
+        url: 'https://example.test',
+        key: 'k',
+        environment: null,
+        fetchImpl: async () => new Response('', { status: code }),
+      })
+    ).state;
   assert.equal(await at(401), 'dead');
   // 404 is what a deployment with flag serving switched off returns. Treating it as `dead` would
   // fail every project the moment someone flipped that switch.
@@ -173,10 +217,17 @@ test('probeSnapshot: the key is sent as its own Bearer credential, to the snapsh
     environment: null,
     fetchImpl: async (url, init) => {
       seen = { url, auth: init.headers.authorization };
-      return new Response(JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 1, flags: [] }), { status: 200 });
+      return new Response(
+        JSON.stringify({ contractVersion: 1, environment: 'development', snapshotVersion: 1, flags: [] }),
+        { status: 200 }
+      );
     },
   });
-  assert.equal(seen.url, 'https://example.test/api/v1/flags/snapshot', 'the trailing slash must not double up');
+  assert.equal(
+    seen.url,
+    'https://example.test/api/v1/flags/snapshot',
+    'the trailing slash must not double up'
+  );
   assert.equal(seen.auth, 'Bearer k');
 });
 
@@ -215,7 +266,10 @@ test('readEnvFile: the process environment never overrides what the file actuall
   const dir = mkdtempSync(join(tmpdir(), 'preflight-'));
   const file = join(dir, '.env.local');
   writeFileSync(file, `${ENV_KEYS.url}=https://from-the-file.test\n`);
-  const env = readEnvFile(file, { [ENV_KEYS.url]: 'https://from-the-shell.test', [ENV_KEYS.flagRead]: 'gf_flagread_ci' });
+  const env = readEnvFile(file, {
+    [ENV_KEYS.url]: 'https://from-the-shell.test',
+    [ENV_KEYS.flagRead]: 'gf_flagread_ci',
+  });
   assert.equal(env.url, 'https://from-the-file.test');
   assert.equal(env.key, 'gf_flagread_ci', 'but a name the file lacks still falls back');
 });
@@ -228,7 +282,10 @@ test('compareVersions: unparseable input is null, which callers must not collaps
 });
 
 test('findCli: a spawn that always fails reports found:false rather than throwing', () => {
-  const cli = findCli({ cwd: '/repo', spawn: () => ({ error: new Error('ENOENT'), status: null, stdout: '' }) });
+  const cli = findCli({
+    cwd: '/repo',
+    spawn: () => ({ error: new Error('ENOENT'), status: null, stdout: '' }),
+  });
   assert.deepEqual(cli, { found: false, version: null, source: null });
 });
 
@@ -316,14 +373,30 @@ test('probeSnapshot: a 200 without contractVersion 1 is unreachable, never wrong
 });
 
 test('probeSnapshot: a real snapshot still resolves live, and a real mismatch still fails', async () => {
-  const snapshot = (environment) =>
-    async () => new Response(JSON.stringify({ contractVersion: 1, environment, snapshotVersion: 4, flags: [] }), { status: 200 });
+  const snapshot = (environment) => async () =>
+    new Response(JSON.stringify({ contractVersion: 1, environment, snapshotVersion: 4, flags: [] }), {
+      status: 200,
+    });
   assert.equal(
-    (await probeSnapshot({ url: 'https://example.test', key: 'k', environment: 'production', fetchImpl: snapshot('production') })).state,
+    (
+      await probeSnapshot({
+        url: 'https://example.test',
+        key: 'k',
+        environment: 'production',
+        fetchImpl: snapshot('production'),
+      })
+    ).state,
     'live'
   );
   assert.equal(
-    (await probeSnapshot({ url: 'https://example.test', key: 'k', environment: 'production', fetchImpl: snapshot('development') })).state,
+    (
+      await probeSnapshot({
+        url: 'https://example.test',
+        key: 'k',
+        environment: 'production',
+        fetchImpl: snapshot('development'),
+      })
+    ).state,
     'wrong-environment'
   );
 });
