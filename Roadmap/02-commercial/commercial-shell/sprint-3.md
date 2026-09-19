@@ -1,3 +1,33 @@
+---
+epic: commercial-shell
+sprint: 3
+title: Launch & dogfood
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Dogfood instrumentation
+    as_a: the team
+    i_want: "the landing instrumented by the engine itself (`golden-beans` as its own tenant: visitor → waitlist TARS funnel via the real SDK)"
+    so_that: "we sell what we use and the epic's Grower signal is measurable"
+    risk: low
+    status: done
+  - id: S3.2
+    title: SEO/OG + agent-readable manifest
+    as_a: a searcher (human or agent)
+    i_want: "correct meta/OG unfurls and an `llms.txt`-style manifest listing the public routes and connector docs"
+    so_that: both audiences parse the offer
+    risk: low
+    status: done
+  - id: S3.3
+    title: Launch checklist
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+---
 # Commercial shell — Sprint 3: Launch & dogfood
 
 **Status:** ✅ Done (2026-07-20) — Stories 3.1 + 3.2 merged to `main` ([PR #11](https://github.com/danybgoode/golden-beans/pull/11), squash `7b24502`); Story 3.3 launch executed the same day (self-tracking project seeded in prod, demo connector token minted, `CONNECTOR_ENABLED` flipped ON). Domain: staying on `golden-beans-gamma.vercel.app` for v1 (Daniel's call, zero-cost outcome). Announce: owner-owned.

@@ -1,3 +1,47 @@
+---
+epic: frijoles-rebrand-closeout
+sprint: 1
+title: Identity, cleanup, and owed rails
+risk: low
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S1.1
+    title: Canonical Golden Frijoles workspace and SDK package
+    as_a: an application engineer
+    i_want: the package and every current integration import to use the Golden Frijoles identity
+    so_that: the setup command I copy is the package the product owns
+    risk: low
+    status: done
+  - id: S1.2
+    title: Breaking provider identity made explicit and tested
+    as_a: an OpenFeature consumer
+    i_want: provider metadata to report the renamed product under a version that declares the break
+    so_that: runtime assertions do not change invisibly
+    risk: low
+    status: done
+  - id: S1.3
+    title: Footer ledger and public residue removed without losing honesty
+    as_a: a landing reader
+    i_want: claims explained at their source instead of in a footer ledger
+    so_that: the page ends cleanly and remains trustworthy
+    risk: low
+    status: done
+  - id: S1.4
+    title: Real signed-in mobile sweep on the existing auth rail
+    as_a: a signed-in owner on a phone
+    i_want: operating routes to fit and remain tappable
+    so_that: product quality is measured after login rather than against a redirect
+    risk: low
+    status: done
+  - id: S1.5
+    title: Publish, review, deploy, verify, and clear the owed ledger
+    as_a: the product owner
+    i_want: the rename released and the carry-over ledger resolved with evidence
+    so_that: completion means installable, reviewed, deployed, and observed
+    risk: low
+    status: done
+---
 # Golden Frijoles rebrand close-out — Sprint 1: Identity, cleanup, and owed rails
 
 **Status:** ✅ shipped 2026-08-13 — PR #96, merge `0a0beb0`

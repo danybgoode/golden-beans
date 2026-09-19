@@ -1,3 +1,33 @@
+---
+epic: experiment-governance-v2
+sprint: 2
+title: Trust diagnostics, metrics and segments
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: Primary and guardrail metric analysis
+    as_a: an experiment owner
+    i_want: primary and guardrail results joined to real product events
+    so_that: the report measures behavior rather than a test-only payload shape
+    risk: low
+    status: done
+  - id: S2.2
+    title: SRM and exposure-integrity diagnostics
+    as_a: an experiment owner
+    i_want: data-quality checks evaluated before lift
+    so_that: broken assignment or telemetry is not mistaken for a product result
+    risk: low
+    status: done
+  - id: S2.3
+    title: Minimum-sample guidance and bounded segments
+    as_a: a product lead
+    i_want: declared sample guidance and safe segment cuts
+    so_that: I can inspect the planned population without fishing across arbitrary metadata
+    risk: low
+    status: done
+---
 # Experiment governance v2 — Sprint 2: Trust diagnostics, metrics and segments
 
 **Status:** ✅ shipped in PR [#22](https://github.com/danybgoode/golden-beans/pull/22)

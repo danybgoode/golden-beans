@@ -1,3 +1,33 @@
+---
+epic: signals-loop
+sprint: 2
+title: Tasks out (structuring + the read surface)
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: "Signal→task promotion, the evidence bundle, and the fan-out"
+    as_a: a PM
+    i_want: "signals promoted to structured `tasks` — promotion thresholds as data; dedupe (an open task absorbs new matching signals) — each carrying the evidence bundle: feature, flag state, funnel position, experiment variant, scrubbed sample events"
+    so_that: what reaches an agent is actionable, not raw
+    risk: high
+    status: done
+  - id: S2.2
+    title: Dashboard task views (humans see what agents see)
+    as_a: a team member
+    i_want: "dashboard task views — list ranked by impact, detail with the full evidence bundle, lifecycle actions — in the design language (`references/design-direction.md`)"
+    so_that: the task queue is inspectable without an agent
+    risk: low
+    status: done
+  - id: S2.3
+    title: "Connector read tools: list_tasks / get_task"
+    as_a: "a PM's agent"
+    i_want: "connector read tools — `list_tasks` (ranked) and `get_task` (full evidence) — additive siblings of the existing funnel/north-star/experiment/journey tools, same tokens"
+    so_that: my agent pulls work items, not raw logs
+    risk: low
+    status: done
+---
 # Signals loop — Sprint 2: Tasks out (structuring + the read surface)
 
 **Status:** ✅ Merged — PR #37 (`3b76d48`), migrations applied to production 2026-07-26. Both gates remain OFF.

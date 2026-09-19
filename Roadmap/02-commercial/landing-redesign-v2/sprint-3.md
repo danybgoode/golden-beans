@@ -1,3 +1,33 @@
+---
+epic: landing-redesign-v2
+sprint: 3
+title: Ship it
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Reconcile the coupled specs
+    as_a: a contributor
+    i_want: the suite to assert the page that now exists
+    so_that: green means something
+    risk: low
+    status: done
+  - id: S3.2
+    title: The gate, actually run
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S3.3
+    title: Review, merge, verify
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Landing redesign v2 — Sprint 3: Ship it
 
 **Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.

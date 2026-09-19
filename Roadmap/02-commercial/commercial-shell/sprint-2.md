@@ -1,3 +1,33 @@
+---
+epic: commercial-shell
+sprint: 2
+title: The operate routes
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: Read-only MCP connector v1 (ships dark)
+    as_a: "a PM's agent"
+    i_want: "a tokenized MCP endpoint (opaque revocable per-project credential in the URL path, pattern-lifted from mb `seller-agent-connect-mcp-url`) exposing read-only tools — funnel, north-star, experiments for your project —"
+    so_that: the headline operate route is real
+    risk: high
+    status: done
+  - id: S2.2
+    title: Install page
+    as_a: a visitor
+    i_want: "the install page (copy-your-URL field, \"Add to Claude\" deep-link, `npx` wizard docs, plugin route teased for E2)"
+    so_that: each persona has a route in
+    risk: low
+    status: done
+  - id: S2.3
+    title: Design-direction polish pass
+    as_a: the brand
+    i_want: "a polish pass applying `references/design-direction.md` (roastery world · agent-window frame · kraft/foil + dark-roast + brass materials · voice guardrails) with the mb `frontend-design` heuristics checklist"
+    so_that: the PostHog bar is met, not approximated
+    risk: low
+    status: done
+---
 # Commercial shell — Sprint 2: The operate routes
 
 **Status:** ✅ Merged — [PR #9](https://github.com/danybgoode/golden-beans/pull/9) (`b475a90`), CI

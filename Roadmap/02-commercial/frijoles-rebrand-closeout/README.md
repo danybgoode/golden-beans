@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived.
 slug: frijoles-rebrand-closeout
 build_order: 19
+title: Golden Frijoles rebrand close-out
+area: 02-commercial
+risk: low
+type: chore
+phase: Shipped
+sprints_total: 1
+stories_total: 5
 ---
 
 # Epic: Golden Frijoles rebrand close-out

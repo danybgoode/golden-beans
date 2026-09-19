@@ -1,3 +1,40 @@
+---
+epic: signals-loop
+sprint: 1
+title: Signals in (capture + grouping, internal)
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.0
+    title: The shared surface (architect-owned, built first)
+    as_a: the team
+    i_want: the flags, migrations and pure logic seams that every later story imports landed first and in one commit
+    so_that: parallel story branches inherit a stable foundation instead of conflicting over it
+    risk: high
+    status: done
+  - id: S1.1
+    title: Error capture through the existing envelope
+    as_a: an app builder
+    i_want: "`captureError` + a global error handler in the SDK — batched, sampled, payload-capped, PII/secret-scrubbed at SDK and ingest — landing as reserved `$error` events through the existing `/v1/track` envelope (`tags`/`metadata`, `track-schema.ts`)"
+    so_that: error capture is a one-line add and needs no schema migration
+    risk: low
+    status: done
+  - id: S1.2
+    title: Deterministic grouping into signals
+    as_a: the engine
+    i_want: "`$error` events grouped deterministically into `signals` rows — fingerprint on message + stack-frame + feature; first/last seen, event count, users affected — with an impact rank (users × frequency, the language PostHog speaks)"
+    so_that: a thousand repeats read as one problem
+    risk: high
+    status: done
+  - id: S1.3
+    title: Derived friction detectors (rules as data, lazily evaluated)
+    as_a: a PM
+    i_want: "friction detectors — rules declared as data over existing funnel aggregates (`tars-query.ts`): adoption drop-off, dead-end, abandoned-adoption — emitting `$friction` signals with conservative default thresholds"
+    so_that: friction detection needs zero new client code and can be tuned without deploys
+    risk: high
+    status: done
+---
 # Signals loop — Sprint 1: Signals in (capture + grouping, internal)
 
 **Status:** ⬜ not started

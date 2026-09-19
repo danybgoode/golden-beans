@@ -1,3 +1,33 @@
+---
+epic: growth-engine-v1
+sprint: 1
+title: Events flow end-to-end (skateboard)
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: POST /v1/track ingest + store
+    as_a: a builder
+    i_want: "`POST /v1/track` to reject malformed events (missing/invalid API key; missing `userId`/`event`; `featureId` optional) and persist valid ones to Postgres"
+    so_that: funnels stay accurate
+    risk: low
+    status: done
+  - id: S1.2
+    title: TS SDK (track, trackAdoption)
+    as_a: an app builder
+    i_want: "a TS SDK exposing `track(event, props)` and `trackAdoption(featureKey)` that auto-appends context"
+    so_that: integrating a new app takes minutes
+    risk: low
+    status: done
+  - id: S1.3
+    title: Setup-guide funnel instrumented behind growth.telemetry_enabled
+    as_a: a PM
+    i_want: "the setup-guide funnel instrumented behind `growth.telemetry_enabled` (enablement flag in `platform_flags`, default OFF)"
+    so_that: real traffic proves the loop with an instant off-switch
+    risk: low
+    status: done
+---
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
 **Status:** ✅ **Sprint 1 fully closed 2026-07-14.** All 3 stories shipped to `main` in both

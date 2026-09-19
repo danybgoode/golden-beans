@@ -1,3 +1,33 @@
+---
+epic: scenarios-pm-operable
+sprint: 2
+title: Launch and kill
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: Launch a run
+    as_a: a PM
+    i_want: to start a scenario I defined against a verified target
+    so_that: I can run a resilience exercise myself
+    risk: high
+    status: done
+  - id: S2.2
+    title: Stop a run
+    as_a: a PM
+    i_want: one button that stops what I started
+    so_that: I can run an exercise without needing an engineer to end it
+    risk: high
+    status: done
+  - id: S2.3
+    title: Automatic breaker policy is a separate thing, named separately
+    as_a: a PM
+    i_want: "to tell the difference between \"stop this run\" and \"the system trips on its own\""
+    so_that: "I never think I've stopped something I haven't"
+    risk: high
+    status: done
+---
 # Scenarios made PM-operable — Sprint 2: Launch and kill
 
 **Status:** ✅ merged in PR #98 (`5bca24c`); built in `cf1b971` + hardening through `00b1a86`

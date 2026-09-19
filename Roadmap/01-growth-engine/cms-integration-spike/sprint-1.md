@@ -1,3 +1,33 @@
+---
+epic: cms-integration-spike
+sprint: 1
+title: Miyagi reference contract
+risk: low
+phase: Shaping
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Current-code ownership and sequence trace
+    as_a: the product owner
+    i_want: the integration traced through real Miyagi and Golden code
+    so_that: the decision does not rely on an obsolete seed or generic CMS architecture
+    risk: low
+    status: planned
+  - id: S1.2
+    title: CMS-neutral contract and failure table
+    as_a: an application builder
+    i_want: a precise integration contract
+    so_that: any CMS can participate without Golden owning its content
+    risk: low
+    status: planned
+  - id: S1.3
+    title: Miyagi fit and constraint evidence
+    as_a: the Miyagi owner
+    i_want: the existing CMS tested against the contract
+    so_that: we know which gaps are real rather than aspirational
+    risk: low
+    status: planned
+---
 # CMS-neutral experiment integration + Payload go/no-go — Sprint 1: Miyagi reference contract
 
 **Status:** ⬜ not started

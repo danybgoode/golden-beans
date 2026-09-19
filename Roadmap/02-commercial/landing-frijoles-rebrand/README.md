@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: landing-frijoles-rebrand
 build_order: 17
+title: "Golden Frijoles — the rebrand, the material pass, and the controls that were broken"
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 16
 ---
 
 # Epic: Golden Frijoles — the rebrand, the material pass, and the controls that were broken

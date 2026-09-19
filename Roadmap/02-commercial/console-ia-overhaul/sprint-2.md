@@ -1,3 +1,33 @@
+---
+epic: console-ia-overhaul
+sprint: 2
+title: Setup
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: "Setup › Connect: your own connector URL"
+    as_a: a signed-in operator
+    i_want: "to copy my own project's connector URL from inside the product"
+    so_that: "I can connect Claude to my data instead of to the demo project's"
+    risk: high
+    status: done
+  - id: S2.2
+    title: The signed-in Connect link stops pointing at /install
+    as_a: a signed-in operator
+    i_want: Connect to take me somewhere inside the product
+    so_that: I am not dropped onto the marketing site mid-task
+    risk: low
+    status: done
+  - id: S2.3
+    title: "One Setup › Keys"
+    as_a: an owner
+    i_want: one page listing everything that has access to this project
+    so_that: I do not have to know which subsystem minted a key in order to find it
+    risk: high
+    status: done
+---
 # Four destinations — an information architecture for the signed-in console — Sprint 2: Setup
 
 **Status:** ✅ **SHIPPED & LIVE 2026-08-28** — PR #123, squash `e6bb22b`, deployed to production

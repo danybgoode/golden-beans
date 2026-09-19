@@ -1,3 +1,40 @@
+---
+epic: landing-frijoles-rebrand
+sprint: 3
+title: Material, motion, and ship
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: The page feels smooth, not jumpy
+    as_a: a reader scrolling this page
+    i_want: it to settle rather than twitch
+    so_that: the product reads as considered
+    risk: low
+    status: done
+  - id: S3.2
+    title: The materials are one system
+    as_a: the product owner
+    i_want: the three material families used deliberately
+    so_that: the page reads as one object rather than as a stack of panels
+    risk: low
+    status: done
+  - id: S3.3
+    title: The page proves what it claims
+    as_a: a future contributor
+    i_want: "the epic's claims pinned by specs"
+    so_that: the next change to this page fails loudly instead of quietly
+    risk: low
+    status: done
+  - id: S3.4
+    title: Ship it
+    as_a: the product owner
+    i_want: this live on goldenfrijoles.com
+    so_that: the domain I bought serves the product it names
+    risk: low
+    status: done
+---
 # Golden Frijoles — Sprint 3: Material, motion, and ship
 
 **Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.

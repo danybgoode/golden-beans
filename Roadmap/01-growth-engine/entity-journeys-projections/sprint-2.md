@@ -1,3 +1,12 @@
+---
+epic: entity-journeys-projections
+sprint: 2
+title: Cohort, aging and trustworthy operating reads
+risk: high
+phase: Shipped
+stories_total: 0
+stories: []
+---
 # Entity journeys — Sprint 2: Cohort, aging and trustworthy operating reads
 
 **Status:** ✅ complete — merged in PR #18 at `5005044`; migration aligned and production OFF smoke complete

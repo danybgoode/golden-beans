@@ -1,3 +1,40 @@
+---
+epic: growth-engine-v1
+sprint: 3
+title: North Star engine v1
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: North Star metric + leading-inputs data model
+    as_a: a PM
+    i_want: a North Star metric defined with its leading inputs modeled
+    so_that: feature impact has a place to roll up to
+    risk: low
+    status: done
+  - id: S3.2
+    title: "Feature → input linkage"
+    as_a: a PM
+    i_want: "features linked to the North Star inputs they're expected to move"
+    so_that: the per-feature report (3.4) has something to report against
+    risk: low
+    status: done
+  - id: S3.3
+    title: "Revenue ingest + one-command sync from Miyagi's real ledger"
+    as_a: a PM
+    i_want: "`attributed_revenue` backed by Miyagi's real, already-shipped `financial_event` revenue ledger"
+    so_that: the North Star report reflects real money, not a fixture
+    risk: high
+    status: done
+  - id: S3.4
+    title: Per-feature input-impact report over time
+    as_a: a PM
+    i_want: "a report showing a feature's linked-input movement over time"
+    so_that: I can see whether shipping the feature moved the number
+    risk: low
+    status: done
+---
 # Growth Engine v1 — Sprint 3: North Star engine v1
 
 **Status:** ✅ Sprint 3 fully closed 2026-07-15. PR #3 (squash `bd154f1`) + PR #4 (squash `75134a7`,

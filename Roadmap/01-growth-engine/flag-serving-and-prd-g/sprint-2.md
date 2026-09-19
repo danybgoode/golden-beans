@@ -1,3 +1,47 @@
+---
+epic: flag-serving-and-prd-g
+sprint: 2
+title: Complete Miyagi migration
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: Inventory, import and parity oracle
+    as_a: the Miyagi owner
+    i_want: every current flag imported with its exact semantics
+    so_that: the provider can change without silently changing the product
+    risk: high
+    status: done
+  - id: S2.2
+    title: Preserve both isEnabled() seams with Golden primary
+    as_a: a Miyagi builder
+    i_want: existing call sites unchanged
+    so_that: flag migration cannot accidentally rewrite commerce behavior
+    risk: high
+    status: done
+  - id: S2.3
+    title: Golden-backed Miyagi flag operations
+    as_a: a Miyagi admin
+    i_want: "the familiar flag surface to operate Golden's source of truth"
+    so_that: one audited change governs both apps
+    risk: high
+    status: done
+  - id: S2.4
+    title: Staged full-inventory cutover
+    as_a: the product owner
+    i_want: a reversible cutover from safe to critical flags
+    so_that: Golden becomes the actual control plane with evidence rather than aspiration
+    risk: high
+    status: done
+  - id: S2.5
+    title: Evaluation telemetry without a second pipeline
+    as_a: a product owner
+    i_want: sampled flag evaluation/exposure facts
+    so_that: I can connect rollouts to outcomes without turning every request into noisy analytics
+    risk: high
+    status: done
+---
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 2: Complete Miyagi migration
 
 **Status:** ✅ implementation and cutover complete — the 40-key migration inventory is

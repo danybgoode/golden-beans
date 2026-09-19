@@ -1,3 +1,47 @@
+---
+epic: design-system-rails
+sprint: 6
+title: The doors, the hub, and deleting the old world
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S6.1
+    title: "The second seam ✳ executes D6's open question"
+    as_a: a product owner
+    i_want: "the nine non-`ProductShell` routes behind a switch too"
+    so_that: the redesign covers the whole product rather than 21 of 30 routes
+    risk: high
+    status: done
+  - id: S6.2
+    title: The doors
+    as_a: a person arriving at the product
+    i_want: "the first screens to speak the product's language"
+    so_that: signing in is not a change of visual worlds
+    risk: high
+    status: done
+  - id: S6.3
+    title: The hub
+    as_a: an internal reader
+    i_want: the roadmap hub on the system
+    so_that: "the four `/hub` routes stop being a separate product"
+    risk: high
+    status: done
+  - id: S6.4
+    title: "Delete the old world ✳ Sweeper"
+    as_a: a builder on the next epic
+    i_want: exactly one stylesheet to reason about
+    so_that: a rule I write cannot be silently overridden by the design this epic replaced
+    risk: high
+    status: done
+  - id: S6.5
+    title: 27 of 27, and the ratchet on
+    as_a: a product owner
+    i_want: coverage to be complete and unable to slip
+    so_that: the next epic inherits the rails instead of rebuilding them
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 6: The doors, the hub, and deleting the old world
 
 **Status:** ✅ **SHIPPED & LIVE 2026-09-02** — merged as `3258381` (PR #135), deployed to production

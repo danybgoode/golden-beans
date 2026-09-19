@@ -1,3 +1,40 @@
+---
+epic: design-system-lift
+sprint: 2
+title: Product shell and loaders
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S2.1
+    title: A product shell instead of bare HTML
+    as_a: a signed-in operator
+    i_want: every dashboard page to inherit a branded shell and sane component defaults
+    so_that: the product feels deliberate even before a page receives bespoke composition
+    risk: low
+    status: done
+  - id: S2.2
+    title: Waiting that belongs to Golden Beans
+    as_a: a user waiting on a dynamic route
+    i_want: a distinctive progress state
+    so_that: the product feels alive without inventing progress or data
+    risk: low
+    status: done
+  - id: S2.3
+    title: Representative browser proof
+    as_a: a product owner
+    i_want: rendered desktop/mobile evidence
+    so_that: the lift is judged on the actual interface rather than source code
+    risk: low
+    status: done
+  - id: S2.4
+    title: The rails fail closed on drift
+    as_a: a future builder
+    i_want: design-system drift rejected automatically
+    so_that: a new page cannot silently reintroduce inline landing styles, UI emoji, or raw color literals
+    risk: low
+    status: done
+---
 # Sprint 2 — Product shell and loaders
 
 **Status:** ✅ Shipped — Golden Beans PRs [#51](https://github.com/danybgoode/golden-beans/pull/51)

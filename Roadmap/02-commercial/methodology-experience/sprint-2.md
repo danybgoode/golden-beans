@@ -1,3 +1,40 @@
+---
+epic: methodology-experience
+sprint: 2
+title: "`/methodology` skateboard"
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S2.1
+    title: The methodology is one typed module (architect, first, shared surface)
+    as_a: a future agent or builder
+    i_want: the six chapters to live in one typed module
+    so_that: the prose has exactly one source and the page, the TOC, the metadata and any downloadable edition all derive from it instead of drifting apart
+    risk: low
+    status: done
+  - id: S2.2
+    title: A methodology index I can link to
+    as_a: a maker
+    i_want: a methodology index at its own URL
+    so_that: I can find the method without hunting the landing page, and send someone the whole thing in one link
+    risk: low
+    status: done
+  - id: S2.3
+    title: Every chapter at its own URL
+    as_a: a maker
+    i_want: each chapter to have its own URL
+    so_that: "I can send someone straight to the one that matters instead of \"scroll to chapter 4\""
+    risk: low
+    status: done
+  - id: S2.4
+    title: The promise gets its destination
+    as_a: "a visitor who just read \"explore the methodology\""
+    i_want: the button to take me there
+    so_that: the page stops making an offer it cannot keep
+    risk: low
+    status: done
+---
 # Methodology experience — Sprint 2: `/methodology` skateboard
 
 **Status:** ✅ **Shipped and verified in production** — PR [#105](https://github.com/danybgoode/golden-beans/pull/105), squashed to `main` as `066d5c2`, Production deployment `6004005562` reported `success` for that exact SHA.

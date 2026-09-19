@@ -1,3 +1,54 @@
+---
+epic: design-system-rails
+sprint: 4
+title: Ship and Setup, finished
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S4.1
+    title: "Ship › Features"
+    as_a: a person operating a project
+    i_want: the features list to read as the approved design
+    so_that: what Production is serving is legible on one screen
+    risk: high
+    status: done
+  - id: S4.2
+    title: The feature destination and its tabs
+    as_a: a person
+    i_want: one page that answers the whole loop for one feature
+    so_that: value, environments, funnel and impact are tabs rather than routes I type a key into
+    risk: high
+    status: done
+  - id: S4.3
+    title: "Ship › Activity and Scheduled changes"
+    as_a: a person
+    i_want: to see who changed what, where and why
+    so_that: "the section's other two surfaces are on the system too"
+    risk: high
+    status: done
+  - id: S4.4
+    title: "Setup › Connect gets its teaching half ✳ Daniel's complaint"
+    as_a: a person connecting an agent
+    i_want: the page to teach the job and then hand me the control
+    so_that: setup is a task rather than a credential screen
+    risk: high
+    status: done
+  - id: S4.5
+    title: "Setup › Keys mints, and the three legacy routes retire ✳ Daniel's complaint"
+    as_a: an owner
+    i_want: one page that owns credentials
+    so_that: the page named for the job can do the job
+    risk: high
+    status: done
+  - id: S4.6
+    title: Destinations and Share links
+    as_a: a person
+    i_want: "Setup's remaining two surfaces on the system"
+    so_that: the section is finished rather than mostly finished
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 4: Ship and Setup, finished
 
 **Status:** ✅ **SHIPPED & LIVE 2026-09-01** — merged as `3229652` (PR #132), deployed to

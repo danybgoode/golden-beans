@@ -1,3 +1,33 @@
+---
+epic: app-shell-and-agent-rail
+sprint: 3
+title: Command Center
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: StatCard and the North Star / TARS strip
+    as_a: a PM
+    i_want: the front door to lead with the numbers that matter
+    so_that: "I don't have to know a URL to find out whether the business moved"
+    risk: low
+    status: done
+  - id: S3.2
+    title: FunnelBars on real TARS data
+    as_a: a PM
+    i_want: the funnel to look like a funnel
+    so_that: I can read a drop-off instead of parsing three numbers in a definition list
+    risk: low
+    status: done
+  - id: S3.3
+    title: "Command Center replaces the bare <ul>"
+    as_a: a PM
+    i_want: "`/app` to answer \"did anything need me today\""
+    so_that: I can use this product in short bursts between meetings
+    risk: low
+    status: done
+---
 # App shell and agent rail — Sprint 3: Command Center
 
 **Status:** ✅ complete — `4ee6242` (3.1 + 3.2 + 3.3)

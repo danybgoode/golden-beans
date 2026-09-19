@@ -1,3 +1,33 @@
+---
+epic: landing-redesign-v2
+sprint: 1
+title: Mobile rails + the v2 skin
+risk: low
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Mobile heuristics as global rails
+    as_a: a person opening Golden Beans on a phone
+    i_want: "every page to behave — no sideways scroll, no tap target I miss, no code block that pushes the layout off-screen —"
+    so_that: the product is usable on the device I actually have with me
+    risk: low
+    status: done
+  - id: S1.2
+    title: One guard spec that sweeps many routes
+    as_a: a future contributor
+    i_want: adding a route to the mobile check to be appending a path
+    so_that: coverage accretes instead of being copy-pasted per page
+    risk: low
+    status: done
+  - id: S1.3
+    title: The v2 component classes
+    as_a: a builder in Sprint 2
+    i_want: every visual device the mockup uses to exist as a named class
+    so_that: the landing components carry zero inline styles (D3)
+    risk: low
+    status: done
+---
 # Landing redesign v2 — Sprint 1: Mobile rails + the v2 skin
 
 **Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.

@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: event-destination-router
 build_order: 4
+title: "Event destination router — reliable fan-out to CRM and downstream tools"
+area: 01-growth-engine
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 7
 ---
 
 # Epic: Event destination router — reliable fan-out to CRM and downstream tools

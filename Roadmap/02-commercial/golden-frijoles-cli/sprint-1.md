@@ -1,3 +1,47 @@
+---
+epic: golden-frijoles-cli
+sprint: 1
+title: something real, installed and authenticated
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S1.1
+    title: packages/cli skeleton
+    as_a: an agent
+    i_want: "`gf` to be a real binary with a stable contract"
+    so_that: I can drive it without scraping prose
+    risk: low
+    status: done
+  - id: S1.2
+    title: gf login / gf whoami
+    as_a: an agent with no browser
+    i_want: to authenticate headlessly
+    so_that: the session does not stop for a human click
+    risk: high
+    status: done
+  - id: S1.3
+    title: gf projects ls / create / use
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S1.4
+    title: gf init
+    as_a: a product owner
+    i_want: one verb to do the whole onboarding
+    so_that: a fresh agent gets from nothing to a working SDK call without a browser
+    risk: high
+    status: done
+  - id: S1.5
+    title: gf flags ls / gf flags get / gf doctor
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Golden Frijoles CLI — Sprint 1: something real, installed and authenticated
 
 **Status:** ✅ Shipped — PR #149, `43c5ca6` (2026-09-18)

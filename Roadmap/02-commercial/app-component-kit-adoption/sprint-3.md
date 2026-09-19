@@ -1,3 +1,40 @@
+---
+epic: app-component-kit-adoption
+sprint: 3
+title: Confirm every destructive action
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: Inventory every irreversible action
+    as_a: a product owner
+    i_want: "a list of every one-click action in `/app` that cannot be undone"
+    so_that: the confirmation work is complete rather than approximately complete
+    risk: low
+    status: done
+  - id: S3.2
+    title: Wire ConfirmDialog to every unconfirmed action
+    as_a: a PM
+    i_want: every irreversible action to ask first and name what it will do
+    so_that: I can operate keys, destinations and experiments without a one-click accident
+    risk: low
+    status: done
+  - id: S3.3
+    title: Say what stops
+    as_a: a PM
+    i_want: the dialog to tell me the consequence, not just the verb
+    so_that: "\"revoke\" means something to me before I click it"
+    risk: low
+    status: done
+  - id: S3.4
+    title: the inventory (every one-click action in /app, enumerated from the code)
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Component-kit adoption sweep — Sprint 3: Confirm every destructive action
 
 **Status:** ✅ Shipped — PR [#84](https://github.com/danybgoode/golden-beans/pull/84), merged as `b0aa85e`. Live in production.

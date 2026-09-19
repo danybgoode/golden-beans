@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: app-component-kit-adoption
 build_order: 13
+title: "Component-kit adoption sweep — bring the remaining /app routes onto the design system"
+area: 02-commercial
+risk: low
+type: chore
+phase: Shipped
+sprints_total: 3
+stories_total: 12
 ---
 
 # Epic: Component-kit adoption sweep — bring the remaining /app routes onto the design system

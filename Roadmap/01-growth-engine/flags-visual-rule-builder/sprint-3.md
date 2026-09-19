@@ -1,3 +1,33 @@
+---
+epic: flags-visual-rule-builder
+sprint: 3
+title: Preview as a user
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Evaluate a context, server-side
+    as_a: a PM
+    i_want: "to ask \"what would this user see\""
+    so_that: "I can check a flag's targeting before I trust it"
+    risk: low
+    status: done
+  - id: S3.2
+    title: Say why
+    as_a: a PM
+    i_want: to see which rule matched and why
+    so_that: a surprising result teaches me something instead of just contradicting me
+    risk: low
+    status: done
+  - id: S3.3
+    title: Reachable from where the question is asked
+    as_a: a PM
+    i_want: "the preview where I'm already looking at the flag"
+    so_that: I use it
+    risk: low
+    status: done
+---
 # Flags — a visual rule builder — Sprint 3: Preview as a user
 
 **Status:** 🟢 built, review CLEAN — PR [#89](https://github.com/danybgoode/golden-beans/pull/89),

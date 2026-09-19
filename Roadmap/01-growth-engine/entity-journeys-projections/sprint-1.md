@@ -1,3 +1,12 @@
+---
+epic: entity-journeys-projections
+sprint: 1
+title: Definition contract and deterministic subject projection
+risk: high
+phase: Shipped
+stories_total: 0
+stories: []
+---
 # Entity journeys — Sprint 1: Definition contract and deterministic subject projection
 
 **Status:** ✅ complete — merged in PR #17 at `ed6397c`; production OFF smoke complete

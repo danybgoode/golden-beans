@@ -1,3 +1,33 @@
+---
+epic: multi-tenant-activation
+sprint: 1
+title: The account boundary (auth hardening core)
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Supabase Auth + membership + authed /app shell
+    as_a: a tenant user
+    i_want: "to sign in (Supabase Auth: email+password with email confirm; magic link ok) and see only my projects"
+    so_that: my data has a front door
+    risk: high
+    status: done
+  - id: S1.2
+    title: Dashboards behind per-tenant authorization
+    as_a: a tenant
+    i_want: the funnel/impact/experiments pages behind that boundary
+    so_that: slug-guessing dies
+    risk: high
+    status: done
+  - id: S1.3
+    title: API keys as a lifecycle
+    as_a: a tenant
+    i_want: "API keys as first-class rows (label · created · revoked_at) with issue/rotate/revoke in the dashboard"
+    so_that: a leaked key is a row-delete, not a migration
+    risk: high
+    status: done
+---
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
 **Status:** ✅ **MERGED + LIVE IN PRODUCTION** (2026-07-21) — PR #13 squash-merged as `e032867`,

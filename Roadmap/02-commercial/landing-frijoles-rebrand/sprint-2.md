@@ -1,3 +1,47 @@
+---
+epic: landing-frijoles-rebrand
+sprint: 2
+title: The product-feel surfaces
+risk: low
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: Agent surfaces look like a conversation
+    as_a: a reader deciding whether this is for me
+    i_want: the illustrated agent windows to look like the chat I already use
+    so_that: I can picture the product in the tool I actually work in
+    risk: low
+    status: done
+  - id: S2.2
+    title: The shameless infomercial
+    as_a: a reader who has just been told this is serious
+    i_want: one section that is openly a joke
+    so_that: the page has a voice and I trust its serious claims more, not less
+    risk: low
+    status: done
+  - id: S2.3
+    title: "Break glass, on purpose — and honestly"
+    as_a: a PM
+    i_want: to see that chaos drills and security simulations are part of this product
+    so_that: I know the launch-day question has an answer here
+    risk: low
+    status: done
+  - id: S2.4
+    title: The journey, side by side
+    as_a: a reader
+    i_want: "to see today's context treasure hunt against the shorter path"
+    so_that: "the claim \"less coordination\" is something I can count rather than something I am told"
+    risk: low
+    status: done
+  - id: S2.5
+    title: The release room
+    as_a: a reader
+    i_want: "§4's staged proposal to look like a plan two parties shaped"
+    so_that: "\"conservative about actions\" reads as collaboration rather than as approval bureaucracy"
+    risk: low
+    status: done
+---
 # Golden Frijoles — Sprint 2: The product-feel surfaces
 
 **Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.

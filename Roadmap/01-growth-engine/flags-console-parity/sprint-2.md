@@ -1,3 +1,33 @@
+---
+epic: flags-console-parity
+sprint: 2
+title: "One feature, in Flagsmith's shape"
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S2.1
+    title: A per-feature destination
+    as_a: a PM
+    i_want: editing one feature to be its own place
+    so_that: "I'm not scrolling past 41 others to change one thing"
+    risk: low
+    status: done
+  - id: S2.2
+    title: One clear enable/disable control
+    as_a: a PM
+    i_want: one control that says what it will do
+    so_that: I never turn something off without knowing what stops
+    risk: high
+    status: done
+  - id: S2.3
+    title: "\"Never turned on here\" is not \"turned off\" (re-scoped 2026-08-24 — see Amendment 2)"
+    as_a: a PM
+    i_want: an environment that was never switched on to say so
+    so_that: "I can tell a deliberate \"off\" from a flag nobody has ever set up here"
+    risk: low
+    status: done
+---
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 2: One feature, in Flagsmith's shape
 
 **Status:** ✅ built — all three stories committed on `feat/flags-console-parity-s2` (stacked on

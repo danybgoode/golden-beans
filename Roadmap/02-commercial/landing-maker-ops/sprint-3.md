@@ -1,3 +1,26 @@
+---
+epic: landing-maker-ops
+sprint: 3
+title: Copy, adversarially
+risk: low
+phase: Shipped
+stories_total: 2
+stories:
+  - id: S3.1
+    title: Two foreign families read the copy
+    as_a: a product owner
+    i_want: "the page's prose reviewed by model families that did not write it"
+    so_that: "brand drift, clichés, flat rhythm and filler transitions get caught by someone who cannot see them as normal"
+    risk: low
+    status: done
+  - id: S3.2
+    title: The de-slop sweep
+    as_a: a reader
+    i_want: the page free of the words that make software copy sound like every other piece of software copy
+    so_that: the voice reads like a person wrote it
+    risk: low
+    status: done
+---
 # Maker ops — Sprint 3: Copy, adversarially
 
 **Status:** ✅ done — both passes run, ledger below.

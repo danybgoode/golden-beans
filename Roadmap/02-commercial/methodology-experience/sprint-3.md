@@ -1,3 +1,40 @@
+---
+epic: methodology-experience
+sprint: 3
+title: The reading experience
+risk: low
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: The chapter shell
+    as_a: a reader working through the method
+    i_want: to see where I am and jump between chapters without going back to the index
+    so_that: six chapters read as one guide rather than six pages
+    risk: low
+    status: done
+  - id: S3.2
+    title: The work-block family as primitives
+    as_a: a reader
+    i_want: "\"do this\", \"use your agent\", \"look for\" and \"what you just learned\" to be visually distinct"
+    so_that: I can tell the instruction from the explanation while skimming
+    risk: low
+    status: done
+  - id: S3.3
+    title: The Apple-materials pass, with its fallbacks
+    as_a: a reader
+    i_want: the methodology to feel materially different from the sales page
+    so_that: "I know I have moved from being sold to, to being taught — and as a reader with reduced transparency or increased contrast turned on, I want it to stay legible"
+    risk: low
+    status: done
+  - id: S3.4
+    title: Real progress, or no progress
+    as_a: a returning reader
+    i_want: the page to show what I have actually read
+    so_that: the progress rail is information rather than decoration
+    risk: low
+    status: done
+---
 # Methodology experience — Sprint 3: The reading experience
 
 **Status:** ✅ **Shipped and verified in production** — PR [#107](https://github.com/danybgoode/golden-beans/pull/107), squashed to `main` as `3196171`, Production deployment `6008591605` reported `success` for that exact SHA.

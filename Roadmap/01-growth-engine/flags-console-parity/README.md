@@ -4,6 +4,13 @@ slug: flags-console-parity
 build_order: null    # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+title: "The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics"
+area: 01-growth-engine
+risk: high
+type: feature
+phase: Shipped
+sprints_total: 3
+stories_total: 11
 ---
 
 # Epic: The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics

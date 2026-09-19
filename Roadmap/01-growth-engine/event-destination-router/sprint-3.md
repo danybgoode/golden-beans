@@ -1,3 +1,33 @@
+---
+epic: event-destination-router
+sprint: 3
+title: CRM proof and operating view
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S3.1
+    title: Miyagi merchant-lifecycle projection proof
+    as_a: "Miyagi's activation team"
+    i_want: merchant lifecycle events delivered into a Miyagi-owned projection
+    so_that: product behavior updates the relationship pipeline without manual reconciliation
+    risk: high
+    status: done
+  - id: S3.2
+    title: Optional Attio adapter proof
+    as_a: a three-person pilot team
+    i_want: an optional Attio mirror
+    so_that: I can operate in a polished CRM UI while Miyagi remains canonical
+    risk: high
+    status: done
+  - id: S3.3
+    title: Delivery operating view and public-offer backfill
+    as_a: a tenant owner
+    i_want: "destination health summarized in `/app` and the public primitive described honestly"
+    so_that: I can see whether delivery works and prospects understand what is actually shipped
+    risk: low
+    status: done
+---
 # Event destination router — Sprint 3: CRM proof and operating view
 
 **Status:** ✅ 3.1 consumer SHIPPED (medusa-bonsai) + delivery LIVE 2026-07-22; 3.3 SHIPPED (landing flipped ✅); 3.2 deliberately DEFERRED (optional, needs Attio token)

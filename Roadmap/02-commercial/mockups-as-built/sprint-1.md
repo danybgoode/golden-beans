@@ -1,3 +1,33 @@
+---
+epic: mockups-as-built
+sprint: 1
+title: The gate that can fail
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: The gate reads the approved design
+    as_a: a product owner
+    i_want: CI to compare each built route against the picture I approved
+    so_that: "\"matches the approved design\" stops being a presence check"
+    risk: high
+    status: done
+  - id: S1.2
+    title: "Prove it red, then prove it green ✳ the sprint's whole point — D2"
+    as_a: a product owner
+    i_want: to watch the gate fail on a page I know is wrong
+    so_that: I know it can fail at all
+    risk: high
+    status: done
+  - id: S1.3
+    title: "Coverage stops being typed ✳ D5"
+    as_a: a product owner
+    i_want: the coverage number to come from the gate
+    so_that: 27/27 means twenty-seven routes matched a picture
+    risk: high
+    status: done
+---
 # The mockups, as built — Sprint 1: The gate that can fail
 
 **Status:** 🟦 in review — the gate is built and OBSERVED RED on Journeys

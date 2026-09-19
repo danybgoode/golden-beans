@@ -1,3 +1,40 @@
+---
+epic: flags-visual-rule-builder
+sprint: 1
+title: The rule builder
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: The basis-points seam, first
+    as_a: a builder
+    i_want: "the percent↔basis-points conversion to exist in one tested place before anything renders a rollout"
+    so_that: a factor-of-100 error cannot reach a production flag
+    risk: high
+    status: done
+  - id: S1.2
+    title: RuleBuilderRow
+    as_a: a PM
+    i_want: to pick a targeting field, an operator and a value from controls
+    so_that: I can express who a flag applies to without typing JSON
+    risk: high
+    status: done
+  - id: S1.3
+    title: The rule card
+    as_a: a PM
+    i_want: a rule to show its priority, its clauses, its rollout and the variant it serves
+    so_that: I can read the rule as one thing instead of four fields
+    risk: high
+    status: done
+  - id: S1.4
+    title: Create a flag without typing JSON, behind the gate
+    as_a: a PM
+    i_want: to create a working flag end to end from the builder
+    so_that: the flag control plane is something I can actually use
+    risk: high
+    status: done
+---
 # Flags — a visual rule builder — Sprint 1: The rule builder
 
 **Status:** ✅ Shipped — PR [#87](https://github.com/danybgoode/golden-beans/pull/87) squash-merged

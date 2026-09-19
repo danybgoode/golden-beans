@@ -2,6 +2,13 @@
 status: scaffolded
 slug: cms-integration-spike
 build_order: 18
+title: CMS-neutral experiment integration + Payload go/no-go
+area: 01-growth-engine
+risk: low
+type: spike
+phase: Shaping
+sprints_total: 2
+stories_total: 6
 ---
 
 # Epic: CMS-neutral experiment integration + Payload go/no-go

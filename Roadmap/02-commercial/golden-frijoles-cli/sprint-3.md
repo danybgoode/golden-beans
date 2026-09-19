@@ -1,3 +1,47 @@
+---
+epic: golden-frijoles-cli
+sprint: 3
+title: distribution, CI, and MCP parity
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S3.1
+    title: the one-line installer and the npx path
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S3.2
+    title: CI mode
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S3.3
+    title: the MCP parity audit (a table, no code)
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S3.4
+    title: MCP write tools behind the shared command core
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S3.5
+    title: "/install and the docs teach the CLI"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+---
 # Golden Frijoles CLI — Sprint 3: distribution, CI, and MCP parity
 
 **Status:** ✅ Shipped — PR #151, `cb4b8c5`; release PR #152, `185744f` (2026-09-18)

@@ -1,3 +1,40 @@
+---
+epic: pod-report
+sprint: 2
+title: The Pod Report (computed, not claimed)
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S2.1
+    title: Delivery metrics from the medusa-bonsai dataset
+    as_a: the pods pitch
+    i_want: "delivery metrics computed from the mb dogfood dataset (velocity points/sprint, throughput stories+epics/period, cycle + lead time, the DORA five — deploy frequency, change lead time, CFR, failed-deployment recovery time, rework rate — and cost-per-shipped-point), human-baseline era vs agent-augmented-pod era of the same repo, pushed as a report artifact"
+    so_that: every number is reproducible, never claimed
+    risk: low
+    status: done
+  - id: S2.2
+    title: The outcome layer
+    as_a: a decision-maker
+    i_want: "the outcome layer joined in — TARS adoption, North-Star input movement, revenue-per-feature — queried from the engine (Medusa-truth boundary respected: revenue reads attribution telemetry + derived reports, never a commerce replica)"
+    so_that: "the report says \"shipped and it mattered*\", not just \"shipped fast\""
+    risk: low
+    status: done
+  - id: S2.3
+    title: "The report surface (speed × stability, cited context)"
+    as_a: the brand
+    i_want: "the Pod Report rendered in the design language with speed and stability paired (DORA-2025 honesty: CFR/recovery/rework beside velocity — AI-era throughput without stability is the known failure mode) plus benchmark context lines (DORA levels · LinearB 2026 · DX Core 4 · Steps of AI Adoption — Cherny, 2026-07-16 — cited + linked, never republished wholesale)"
+    so_that: it survives a skeptical PM
+    risk: low
+    status: done
+  - id: S2.4
+    title: The AI-adoption maturity lens
+    as_a: a product-org decision-maker
+    i_want: "the Pod Report to place the pod on the published Steps-of-AI-Adoption ladder (0–4), criterion by criterion, with computed evidence beside every claimed criterion and an explicit \"not instrumented\" marker where we cannot measure"
+    so_that: "\"agent-augmented pod\" becomes an auditable position on a named external scale instead of an adjective"
+    risk: low
+    status: done
+---
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
 **Status:** ✅ SHIPPED — computation in PR [#32](https://github.com/danybgoode/golden-beans/pull/32)

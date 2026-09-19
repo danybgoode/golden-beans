@@ -1,3 +1,40 @@
+---
+epic: flags-console-parity
+sprint: 3
+title: The split and the language
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S3.1
+    title: Credentials move to their own route
+    as_a: a project owner
+    i_want: key management to be its own place
+    so_that: the flag list starts at the top of the flags page instead of below three forms
+    risk: high
+    status: done
+  - id: S3.2
+    title: Lifecycle audit moves to its own route
+    as_a: a PM
+    i_want: the audit somewhere I go deliberately
+    so_that: "it isn't the last third of the page I use daily"
+    risk: low
+    status: done
+  - id: S3.3
+    title: One module owns every user-facing flag word
+    as_a: a reader
+    i_want: one vocabulary
+    so_that: "two screens can't call one thing two names"
+    risk: low
+    status: done
+  - id: S3.4
+    title: Guards and specs reach the new surfaces
+    as_a: a builder
+    i_want: the rails to cover what we just built
+    so_that: "the next epic can't regress it silently"
+    risk: low
+    status: done
+---
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 3: The split and the language
 
 **Status:** ✅ built — all four stories on `feat/flags-console-parity-s3` (stacked on Sprint 2, which

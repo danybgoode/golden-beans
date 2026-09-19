@@ -1,3 +1,47 @@
+---
+epic: mockups-as-built
+sprint: 2
+title: Delete the disclosures, build the screens
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: "Journeys ✳ measure-journeys, measure-journey — D7"
+    as_a: a person
+    i_want: the Journeys screens I approved
+    so_that: a journey is a list I can read rather than a JSON definition I expand
+    risk: high
+    status: done
+  - id: S2.2
+    title: "Scenarios ✳ measure-scenarios"
+    as_a: a person
+    i_want: the Scenarios screen I approved
+    so_that: it reads as a tool I operate rather than a log I expand
+    risk: high
+    status: done
+  - id: S2.3
+    title: "Experiments ✳ ship-experiments, experiment-ready, experiment-blocked"
+    as_a: a person
+    i_want: the Experiments screens I approved
+    so_that: I can see whether a decision is available and why not
+    risk: high
+    status: done
+  - id: S2.4
+    title: "Destinations and Today ✳ setup-destinations, today"
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S2.5
+    title: "Scenario evidence leaves the authoring control ✳ measure-scenarios — Daniel, 2026-09-10"
+    as_a: a person who cannot author
+    i_want: "a drill's evidence from the drill's own row"
+    so_that: reading the run history does not mean opening a control that says it starts something
+    risk: high
+    status: done
+---
 # The mockups, as built — Sprint 2: Delete the disclosures, build the screens
 
 **Status:** ✅ COMPLETE — part 1 `20cecfb`, part 2 this branch. **All seven routes match.**

@@ -1,3 +1,61 @@
+---
+epic: landing-frijoles-rebrand
+sprint: 1
+title: The name, the domain, and the broken controls
+risk: low
+phase: Shipped
+stories_total: 7
+stories:
+  - id: S1.1
+    title: The product is called Golden Frijoles
+    as_a: "a reader who just landed from `goldenfrijoles.com`"
+    i_want: the page, its tab title, its link preview and the prompts it hands my agent to all use one name
+    so_that: I am not left wondering which product I am actually looking at
+    risk: low
+    status: done
+  - id: S1.2
+    title: The domain is goldenfrijoles.com
+    as_a: a reader who copies the handoff prompt
+    i_want: the URLs inside it to be the real product domain
+    so_that: my agent fetches a document that exists at the address I was just shown
+    risk: low
+    status: done
+  - id: S1.3
+    title: A primary CTA never loses its label
+    as_a: anyone with a pointer
+    i_want: the main call to action to stay readable while I am hovering the thing I am about to click
+    so_that: I can tell what I am clicking
+    risk: low
+    status: done
+  - id: S1.4
+    title: Selecting a paragraph looks like a highlight, not a brick
+    as_a: someone quoting a line from this page on my phone
+    i_want: the selection to read as a highlighter pass over the words
+    so_that: I can still see what I selected
+    risk: low
+    status: done
+  - id: S1.5
+    title: The section number is legible
+    as_a: a reader scanning the page
+    i_want: the numbered section stamps to be readable
+    so_that: the kraft dividers work as navigation rather than as texture
+    risk: low
+    status: done
+  - id: S1.6
+    title: Icons where the mockup asks for icons
+    as_a: a builder in Sprint 2
+    i_want: every glyph the new sections need to exist in the one icon seam
+    so_that: no section reaches for a second library or an emoji
+    risk: low
+    status: done
+  - id: S1.7
+    title: Titles carry no terminal period
+    as_a: the product owner
+    i_want: headings to read as titles rather than as sentences
+    so_that: "the page's typographic voice is consistent"
+    risk: low
+    status: done
+---
 # Golden Frijoles — Sprint 1: The name, the domain, and the broken controls
 
 **Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.

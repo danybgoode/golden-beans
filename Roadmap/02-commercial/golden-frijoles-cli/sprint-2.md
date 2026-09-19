@@ -1,3 +1,54 @@
+---
+epic: golden-frijoles-cli
+sprint: 2
+title: the write path
+risk: high
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S2.1
+    title: gf flags create with polarity and --all-envs
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S2.2
+    title: gf flags set / rollout / rules
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S2.3
+    title: gf flags kill
+    as_a: an on-call operator at 3am
+    i_want: one verb
+    so_that: I do not compose it from two
+    risk: high
+    status: done
+  - id: S2.4
+    title: gf flags diff / history
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S2.5
+    title: gf flags sync
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S2.6
+    title: gf keys ls/create/revoke
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+---
 # Golden Frijoles CLI — Sprint 2: the write path
 
 **Status:** ✅ Shipped — PR #150, `6aecdb0` (2026-09-18)

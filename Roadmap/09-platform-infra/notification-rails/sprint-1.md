@@ -1,3 +1,33 @@
+---
+epic: notification-rails
+sprint: 1
+title: Slack parity
+risk: high
+phase: Shipped
+stories_total: 3
+stories:
+  - id: S1.1
+    title: Mechanical CI/CD pings
+    as_a: an operator
+    i_want: push and production-deploy results in Slack
+    so_that: the channel has the same deployment facts as Telegram
+    risk: high
+    status: done
+  - id: S1.2
+    title: Product prose reports
+    as_a: a product stakeholder
+    i_want: the reviewed merge report in Slack too
+    so_that: the product meaning accompanies the mechanical deployment facts
+    risk: high
+    status: done
+  - id: S1.3
+    title: Regression and operating notes
+    as_a: a future maintainer
+    i_want: the escaping, response, credential, and state semantics pinned
+    so_that: "adding another channel does not rediscover this rail’s failures"
+    risk: high
+    status: done
+---
 # Sprint 1 — Slack parity
 
 **Status:** ✅ Shipped — Golden Beans PR [#51](https://github.com/danybgoode/golden-beans/pull/51),

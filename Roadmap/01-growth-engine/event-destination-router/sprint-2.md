@@ -1,3 +1,26 @@
+---
+epic: event-destination-router
+sprint: 2
+title: Destinations and reliable delivery
+risk: high
+phase: Shipped
+stories_total: 2
+stories:
+  - id: S2.1
+    title: Tenant destination lifecycle and signed webhook
+    as_a: a tenant owner
+    i_want: to create, test, disable and rotate a filtered signed-webhook destination
+    so_that: only intended project events leave Golden Beans and the receiver can verify origin
+    risk: high
+    status: done
+  - id: S2.2
+    title: Retry, terminal failure, history and replay
+    as_a: an operator
+    i_want: bounded retries, visible delivery history, terminal failure and manual replay
+    so_that: I can recover a destination without resending source events
+    risk: high
+    status: done
+---
 # Event destination router — Sprint 2: Destinations and reliable delivery
 
 **Status:** ✅ MERGED (`015eae4`, PR #16) · migrations live in prod · **DELIVERY LIVE** (flag flipped 2026-07-22)

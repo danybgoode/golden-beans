@@ -1,3 +1,40 @@
+---
+epic: flags-console-parity
+sprint: 1
+title: The list becomes a list
+risk: high
+phase: Shipped
+stories_total: 4
+stories:
+  - id: S1.1
+    title: FLAG_CONSOLE_ENABLED, created disabled in every environment
+    as_a: a product owner
+    i_want: the new console to merge dark behind its own gate
+    so_that: a half-landed redesign can never become the only way to reach the control that kills a live checkout
+    risk: high
+    status: done
+  - id: S1.2
+    title: Pure list math in lib/flag-list-view.ts
+    as_a: a builder
+    i_want: search, filter, sort and pagination as pure functions
+    so_that: the gate covers them without a browser
+    risk: low
+    status: done
+  - id: S1.3
+    title: One feature list
+    as_a: a PM
+    i_want: one scannable list instead of an editor per flag
+    so_that: I can find a feature in seconds
+    risk: low
+    status: done
+  - id: S1.4
+    title: Environment selector
+    as_a: a PM
+    i_want: to pick an environment once
+    so_that: "the list tells me about the environment I'm actually asking about"
+    risk: low
+    status: done
+---
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 1: The list becomes a list
 
 **Status:** ✅ built · CI green · cross-family review clean — **PR [#118](https://github.com/danybgoode/golden-beans/pull/118), held as DRAFT.**

@@ -1,3 +1,54 @@
+---
+epic: methodology-experience
+sprint: 4
+title: Evidence, honesty, close-out
+risk: low
+phase: Shipped
+stories_total: 6
+stories:
+  - id: S4.1
+    title: The methodology reader becomes evidence
+    as_a: the product owner
+    i_want: to know whether anyone actually reads this
+    so_that: the next Bet on the methodology is placed on Evidence rather than on how good the page looks
+    risk: low
+    status: done
+  - id: S4.2
+    title: The downloadable edition is generated, or the button is cut
+    as_a: a reader who wants the guide offline
+    i_want: the download to give me the same text the site shows
+    so_that: I am not carrying a stale fork of the methodology around
+    risk: low
+    status: done
+  - id: S4.3
+    title: Accessible, crawlable, drift-free
+    as_a: anyone arriving from a search result, a screen reader or a link preview
+    i_want: the methodology to work
+    so_that: the guide is readable by more than a sighted mouse user on Chrome
+    risk: low
+    status: done
+  - id: S4.4
+    title: Ship it, then prove it shipped
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: high
+    status: done
+  - id: S4.5
+    title: Close the epic
+    as_a: null
+    i_want: null
+    so_that: null
+    risk: low
+    status: done
+  - id: S4.6
+    title: Any agent can read the methodology (amendment A6)
+    as_a: "a maker's agent — Claude, ChatGPT, Gemini, or whatever they run —"
+    i_want: to read the whole method from this site without executing JavaScript or guessing at URLs
+    so_that: my human can hand me a link instead of pasting a document
+    risk: low
+    status: done
+---
 # Methodology experience — Sprint 4: Evidence, honesty, close-out
 
 **Status:** ✅ **Shipped and verified in production** — PR [#108](https://github.com/danybgoode/golden-beans/pull/108), squashed to `main` as `727fc04`, Production deployment `6009582820` reported `success` for that exact SHA.

@@ -1,3 +1,47 @@
+---
+epic: console-ia-overhaul
+sprint: 3
+title: Ship
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S3.1
+    title: null
+    as_a: an operator
+    i_want: "the flags page to answer \"what is on here, and why\" in the first screen"
+    so_that: I stop scrolling past forty rows that all say the same thing
+    risk: low
+    status: done
+  - id: S3.2
+    title: null
+    as_a: an operator
+    i_want: "a feature's funnel and its impact on the same page as its switch"
+    so_that: I never have to type a key into the address bar again
+    risk: low
+    status: done
+  - id: S3.3
+    title: null
+    as_a: an operator
+    i_want: the flags page to contain no JSON and no talk of immutable versions
+    so_that: the page is about my job rather than about how a row is stored
+    risk: high
+    status: done
+  - id: S3.4
+    title: null
+    as_a: an operator with 42 features
+    i_want: "to type a feature's name from anywhere"
+    so_that: the fastest path to anything is its name
+    risk: low
+    status: done
+  - id: S3.5
+    title: null
+    as_a: a product owner
+    i_want: the new console live and the old chrome gone
+    so_that: the product has one navigation rather than two behind a switch
+    risk: high
+    status: done
+---
 # Four destinations — an information architecture for the signed-in console — Sprint 3: Ship
 
 **Status:** ✅ **SHIPPED & LIVE** — Part A `4ba9665` (#124); Part B `8f556ce` (**#125**),

@@ -2,6 +2,13 @@
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: landing-maker-ops
 build_order: 20
+title: "Maker ops — the landing repositions from a growth engine to an operating context"
+area: 02-commercial
+risk: low
+type: feature
+phase: Shipped
+sprints_total: 5
+stories_total: 21
 ---
 
 # Epic: Maker ops — the landing repositions from a growth engine to an operating context

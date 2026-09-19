@@ -1,3 +1,47 @@
+---
+epic: design-system-rails
+sprint: 2
+title: The language, systematised
+risk: high
+phase: Shipped
+stories_total: 5
+stories:
+  - id: S2.1
+    title: The type and space scale, on a specimen that renders from the system
+    as_a: a builder
+    i_want: one type scale, one space scale and one elevation set
+    so_that: "a page's spacing is a choice from a scale rather than a number someone typed"
+    risk: high
+    status: done
+  - id: S2.2
+    title: Every primitive has all nine states
+    as_a: a person using the product
+    i_want: every control to tell me what it will do, that it is working, and what happened
+    so_that: I never have to click something to find out what it does
+    risk: high
+    status: done
+  - id: S2.3
+    title: The primitive set the approved states are built from
+    as_a: a builder
+    i_want: the components the mockups already show
+    so_that: a page is assembled rather than hand-drawn in CSS
+    risk: high
+    status: done
+  - id: S2.4
+    title: "Icons ✳ D4 — and the reason there were none"
+    as_a: a person scanning the rail
+    i_want: a leading icon on every item
+    so_that: a 36px single-line entry is recognisable rather than read
+    risk: high
+    status: done
+  - id: S2.5
+    title: One product vocabulary
+    as_a: a person using the product
+    i_want: the words to be about my job
+    so_that: the page stops describing the storage model
+    risk: high
+    status: done
+---
 # One design system, every surface — Sprint 2: The language, systematised
 
 **Status:** ✅ **SHIPPED & LIVE 2026-08-31** — merged as `97254b3` (PR #129), deployed to
