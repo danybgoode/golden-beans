@@ -15,9 +15,9 @@
 //          sprint. A branch that names no epic under Roadmap/ is "nothing in flight", said plainly. So are
 //          the default branch and a detached HEAD. It never guesses the nearest epic.
 // Story  — D2: the newest commit on the branch (base..HEAD) whose subject names `S<n>.<m>` / `Story n.m`,
-//          else the newest session-journal entry naming one, else `unknown`. A named story that no sprint
-//          of this epic lists is `unknown` too — a confident wrong story is the failure this exists to
-//          prevent. The journal is read from the LOCAL refs (as last fetched): this runs every turn, and a
+//          else the newest session-journal entry naming one AND this epic's slug, else `unknown`. A named
+//          story that no sprint of this epic lists is `unknown` too — a confident wrong story is the
+//          failure this exists to prevent. The journal is read from the LOCAL refs (as last fetched): this runs every turn, and a
 //          network fetch has no place there.
 // Status — D7: the WRITTEN `phase:` of the sprint in flight (else the epic's). Evidence may only ADVANCE
 //          it on the two rungs the cadence makes directly observable: story commits on the branch lift
@@ -138,10 +138,10 @@ function ghOpenPr(root, branch) {
 
 const notInFlight = (reason, extra = {}) => ({ in_flight: false, reason, ...extra });
 
-/** The commit time (ISO) of the point this branch left its base — the journal's lower bound. */
-function forkTime(git, base) {
-  const mb = base && tryGit(git, ['merge-base', base, 'HEAD']);
-  return mb ? tryGit(git, ['log', '-1', '--format=%cI', mb]) : null;
+/** Does `text` name `slug` as a whole slug — `aws` in "aws S1.1", but not inside "aws-s3 S1.1"? */
+export function namesSlug(text, slug) {
+  const esc = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^A-Za-z0-9-])${esc}($|[^A-Za-z0-9-])`).test(String(text));
 }
 
 /**
@@ -167,13 +167,15 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   let parsed = parseBranch(branch);
   if (!parsed)
     return notInFlight(`on ${branch} — not an epic branch (feat/<slug>…), so no epic in flight`, { branch });
-  let epic = readEpic(root, parsed.slug);
-  // A slug that itself ends in -s<N> (`aws-s3`) was cut as a sprint suffix; try it whole before giving up.
-  if (!epic && parsed.sprint !== null) {
+  // An EXACT epic slug wins over reading `-s<N>` as a sprint suffix: with both `aws` and `aws-s3` on the
+  // board, `feat/aws-s3` is the `aws-s3` epic, never sprint 3 of `aws` (codex, miyagi-product-management#188).
+  let epic = null;
+  if (parsed.sprint !== null) {
     const whole = branch.slice(branch.indexOf('/') + 1);
     epic = readEpic(root, whole);
     if (epic) parsed = { slug: whole, sprint: null };
   }
+  if (!epic) epic = readEpic(root, parsed.slug);
   if (!epic)
     return notInFlight(`${branch} names no epic under Roadmap/ (looked for */${parsed.slug}/README.md)`, {
       branch,
@@ -210,18 +212,17 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
       break;
     }
   }
-  // The journal: only an entry that names this epic's slug, or was written after this branch forked —
-  // every epic has an S1.1, so an id alone says nothing about WHICH epic an old entry meant.
+  // The journal: only an entry that NAMES this epic's slug. Every epic has an S1.1, and the journal is
+  // shared by every session in the repo — parallel epics write to it at the same time — so neither an id
+  // nor a timestamp says which epic an entry meant (codex, golden-beans#158 + miyagi-product-management#188).
+  // Journal a story as: node scripts/session-note.mjs --kind doing "<epic-slug> S2.1 — …"
   let journalRef = null;
   if (!story) {
     const journal = readJournalLocal(git);
     journalRef = journal.ref;
-    const since = forkTime(git, base);
     for (const entry of [...journal.entries].reverse()) {
       const text = [entry.text, ...(entry.refs || [])].join(' ');
-      const aboutThisEpic =
-        text.includes(epic.slug) || (since && entry.ts && Date.parse(entry.ts) >= Date.parse(since));
-      const ids = aboutThisEpic ? storyIdsIn(text).filter(accepts) : [];
+      const ids = namesSlug(text, epic.slug) ? storyIdsIn(text).filter(accepts) : [];
       if (ids.length) {
         story = byId.get(ids.at(-1));
         storySource = 'journal';

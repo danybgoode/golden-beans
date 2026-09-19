@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveBuildState, renderLines, parseBranch, storyIdsIn } from './build-state.mjs';
+import { resolveBuildState, renderLines, parseBranch, storyIdsIn, namesSlug } from './build-state.mjs';
 import { PHASES } from './lib/roadmap-contract.mjs';
 
 const EPIC_README = (phase = 'Building') => `---
@@ -348,6 +348,60 @@ test('#27 review: an epic slug that itself ends in -s<N> still resolves', () => 
     const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
     assert.equal(s.in_flight, true);
     assert.equal(s.epic.slug, 'aws-s3');
+  } finally {
+    f.done();
+  }
+});
+
+test('codex (#158/#188): a NEW journal entry about another epic is ignored — only one naming this slug counts', () => {
+  const f = fixture();
+  try {
+    f.git('switch', '-q', '--orphan', 'claude/session-journal');
+    const now = new Date(Date.now() + 60_000).toISOString(); // written after the branch forked
+    writeFileSync(
+      join(f.root, 'session-journal.jsonl'),
+      `${JSON.stringify({ ts: now, kind: 'doing', text: 'arranged-only S2.1 parity', refs: [] })}\n` +
+        `${JSON.stringify({ ts: now, kind: 'doing', text: 'other-epic S2.2 wiring', refs: [] })}\n` +
+        `${JSON.stringify({ ts: now, kind: 'doing', text: 'arranged-only-v2 S1.1', refs: [] })}\n`
+    );
+    f.git('add', 'session-journal.jsonl');
+    f.git('commit', '-qm', 'journal');
+    f.git('switch', '-q', 'main');
+    f.git('switch', '-qc', 'feat/arranged-only');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.equal(s.story.id, 'S2.1', 'the newer other-epic and longer-slug entries are skipped');
+    assert.equal(namesSlug('arranged-only-v2 S1.1', 'arranged-only'), false);
+    assert.equal(namesSlug('(arranged-only) S1.1', 'arranged-only'), true);
+  } finally {
+    f.done();
+  }
+});
+
+test('codex (#188): with both `aws` and `aws-s3` on the board, feat/aws-s3 is the aws-s3 epic', () => {
+  const f = fixture();
+  try {
+    for (const slug of ['aws', 'aws-s3']) {
+      const dir = join(f.root, 'Roadmap', '09-platform-infra', slug);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'README.md'), EPIC_README().replace(/arranged-only/g, slug));
+      const sprints = slug === 'aws' ? [1, 2, 3] : [1];
+      for (const n of sprints)
+        writeFileSync(
+          join(dir, `sprint-${n}.md`),
+          SPRINT(n, 'Building', [[`S${n}.1`, 'x']]).replace(/arranged-only/g, slug)
+        );
+    }
+    f.git('add', '-A');
+    f.git('commit', '-qm', 'two epics');
+    f.git('switch', '-qc', 'feat/aws-s3');
+    assert.equal(resolveBuildState({ root: f.root, offline: true, gh: noGh }).epic.slug, 'aws-s3');
+    f.git('switch', '-qc', 'feat/aws-s2');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.deepEqual(
+      [s.epic.slug, s.sprint.n],
+      ['aws', 2],
+      'with no aws-s2 epic, -s2 is still a sprint suffix'
+    );
   } finally {
     f.done();
   }
