@@ -477,3 +477,36 @@ test('codex round 2: a sprint whose frontmatter cannot be read says so', () => {
     f.done();
   }
 });
+
+test('codex round 3: an unlisted id in the newest story commit outranks a mixed subject and the journal', () => {
+  const f = fixture();
+  try {
+    f.git('switch', '-q', '--orphan', 'claude/session-journal');
+    writeFileSync(
+      join(f.root, 'session-journal.jsonl'),
+      `${JSON.stringify({ ts: 't', kind: 'doing', text: 'arranged-only S2.2 seller toggle', refs: [] })}\n`
+    );
+    f.git('add', 'session-journal.jsonl');
+    f.git('commit', '-qm', 'journal');
+    f.git('switch', '-q', 'main');
+    f.git('switch', '-qc', 'feat/arranged-only');
+    f.commit('S9.9 — an id this epic does not list');
+    const s = resolveBuildState({ root: f.root, offline: true, gh: noGh });
+    assert.equal(s.story, null, 'the journal must not rescue an unlisted newest commit');
+
+    const g = fixture();
+    try {
+      g.git('switch', '-qc', 'feat/arranged-only');
+      g.commit('S2.1 — parity, reverting S9.9');
+      assert.equal(
+        resolveBuildState({ root: g.root, offline: true, gh: noGh }).story,
+        null,
+        'a mixed subject is unknown'
+      );
+    } finally {
+      g.done();
+    }
+  } finally {
+    f.done();
+  }
+});

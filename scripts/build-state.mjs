@@ -222,18 +222,20 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   for (const subject of subjects) {
     const ids = storyIdsIn(subject);
     if (!ids.length) continue;
+    // An id this epic does not list AT ALL stops everything — including the journal fallback below: the
+    // newest story commit is the claim about what is in flight, so answering with an older commit, with
+    // the other id in the same subject, or with a journal entry would each be a guess (D2; codex on the
+    // consumer copy-ins). An id of ANOTHER SPRINT of this epic is different — a stacked branch inherits
+    // those — so it is skipped and the walk continues (the fresh reviewer's finding on #27).
+    const strangers = ids.filter((id) => !byId.has(id));
+    if (strangers.length) {
+      unlisted = strangers;
+      break;
+    }
     const mine = ids.filter(accepts);
     if (mine.length) {
       story = byId.get(mine.at(-1));
       storySource = 'commit';
-      break;
-    }
-    // An id this epic does not list AT ALL stops the walk: the newest story commit is the claim about what
-    // is in flight, and answering with an older one would be a guess (D2, codex on a consumer copy-in).
-    // An id of ANOTHER SPRINT of this epic is different — a stacked branch inherits those — so it is
-    // skipped and the walk continues (the fresh reviewer's finding on the same file).
-    if (ids.some((id) => !byId.has(id))) {
-      unlisted = ids.filter((id) => !byId.has(id));
       break;
     }
   }
@@ -242,7 +244,7 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   // nor a timestamp says which epic an entry meant (codex, on both consumer copy-ins).
   // Journal a story as: node scripts/session-note.mjs --kind doing "<epic-slug> S2.1 — …"
   let journalRef = null;
-  if (!story) {
+  if (!story && !unlisted) {
     const journal = readJournalLocal(git);
     journalRef = journal.ref;
     for (const entry of [...journal.entries].reverse()) {
