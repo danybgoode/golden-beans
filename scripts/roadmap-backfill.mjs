@@ -186,7 +186,7 @@ export function readStories(body, n, { sprintRisk, sprintShipped }) {
   return { stories, findings };
 }
 
-function sprintTitle(body, n) {
+function sprintTitle(body) {
   const h1 = body.split('\n').find((l) => l.startsWith('# ')) || '';
   const m = h1.match(/Sprint\s+\d+\s*[:—–\-]\s*(.+)$/i);
   return m ? clean(m[1]) : null;
@@ -337,7 +337,7 @@ export function planBackfill(root, rows = projection(root)) {
         sprintShipped: phase === 'Shipped',
       });
       for (const r of storyFindings) note(rel(f), r);
-      let title = sprintTitle(text, n);
+      let title = sprintTitle(text);
       if (!title) {
         title = `Sprint ${n}`;
         note(rel(f), `no "# … Sprint ${n}: <title>" H1 — title written "Sprint ${n}"`);

@@ -172,7 +172,7 @@ const EPIC = {
 
 test('epic README: compliant passes; each missing field, bad enum and wrong total is named', () => {
   assert.deepEqual(validateEpicFrontmatter(epicDoc(EPIC), { sprintCount: 2, storyCount: 5 }), []);
-  const { title, ...noTitle } = EPIC;
+  const { title: _title, ...noTitle } = EPIC;
   assert.deepEqual(validateEpicFrontmatter(epicDoc(noTitle)), [
     { rule: 'contract-epic-field-missing', detail: 'no `title:`' },
   ]);
