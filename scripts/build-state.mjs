@@ -168,7 +168,7 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   if (!parsed)
     return notInFlight(`on ${branch} — not an epic branch (feat/<slug>…), so no epic in flight`, { branch });
   // An EXACT epic slug wins over reading `-s<N>` as a sprint suffix: with both `aws` and `aws-s3` on the
-  // board, `feat/aws-s3` is the `aws-s3` epic, never sprint 3 of `aws` (codex, miyagi-product-management#188).
+  // board, `feat/aws-s3` is the `aws-s3` epic, never sprint 3 of `aws` (codex, on a consumer copy-in).
   let epic = null;
   if (parsed.sprint !== null) {
     const whole = branch.slice(branch.indexOf('/') + 1);
@@ -214,7 +214,7 @@ function resolve_({ root, offline = false, git = makeGit(root), gh = ghOpenPr } 
   }
   // The journal: only an entry that NAMES this epic's slug. Every epic has an S1.1, and the journal is
   // shared by every session in the repo — parallel epics write to it at the same time — so neither an id
-  // nor a timestamp says which epic an entry meant (codex, golden-beans#158 + miyagi-product-management#188).
+  // nor a timestamp says which epic an entry meant (codex, on both consumer copy-ins).
   // Journal a story as: node scripts/session-note.mjs --kind doing "<epic-slug> S2.1 — …"
   let journalRef = null;
   if (!story) {
