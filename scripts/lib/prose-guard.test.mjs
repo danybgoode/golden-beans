@@ -63,6 +63,12 @@ test('a no-impact sentence does not launder a separate positive beneficiary clai
   assert.ok(codes(r).includes('invented-beneficiary'));
 });
 
+test('a no-impact BULLET does not launder the next bullet — lines are separate claims', () => {
+  const draft = '- no customer-visible effect\n- users now benefit from faster publishing';
+  const r = checkProse(draft, { allowsBeneficiary: false, allowsMarkdown: true });
+  assert.ok(codes(r).includes('invented-beneficiary'));
+});
+
 test('MEASURED FAILURE 2: an unsupported fix claim is flagged', () => {
   // Verbatim shape of the real run: a commit that only ADDED TESTS claiming it closed the bug.
   const draft =

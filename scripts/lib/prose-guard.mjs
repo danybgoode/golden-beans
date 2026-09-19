@@ -417,8 +417,10 @@ export function checkProse(draft, evidence = {}) {
     // Per SENTENCE: a mention that DENIES impact is the honest internal framing the persona asks for,
     // but it only excuses its own sentence. Tested against the whole draft, one "no customer-visible
     // effect" would launder a separate invented benefit elsewhere — measured failure 1 again.
+    // Split on line breaks too: a bullet list has no terminal punctuation, and "- no customer-visible
+    // effect" must not excuse the NEXT bullet's claim.
     const named = text
-      .split(/(?<=[.!?])\s+/)
+      .split(/(?<=[.!?])\s+|\n+/)
       .some(
         (sentence) =>
           BENEFICIARY_PATTERNS.some((re) => re.test(sentence)) &&
