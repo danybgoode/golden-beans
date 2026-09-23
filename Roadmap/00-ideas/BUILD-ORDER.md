@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-18 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-23 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -48,8 +48,16 @@
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
-## ⬜ Funnel — seeds not yet scaffolded (3)
+## ⬜ Funnel — seeds not yet scaffolded (11)
 
+- [Experiments for humans: a guided five-question flow replaces the JSON textarea](seeds/experiments-for-humans.md) — Raw · Feature · appetite M · audit-wave-A
+- [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
+- [Verify spike: TLA+/Quint on the event outbox and Lean on the flag evaluator, dogfooded on Golden Frijoles](seeds/verify-spike.md) — Raw · Spike · appetite S · audit-wave-B
+- [Board sinks + scrumban on the Hub: one roadmap projection, many destinations](seeds/board-sinks-and-scrumban.md) — Raw · Feature · appetite M · audit-wave-C
+- [FinOps actuals: agent token and cost usage lands in the engine, attributed to skill and epic](seeds/finops-actuals.md) — Raw · Feature · appetite L · audit-wave-C
+- [Portfolio view: every product in a workspace on the Consider · Operate · Exit loop](seeds/portfolio-view.md) — Raw · Feature · appetite M · audit-wave-C
+- [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
+- [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Analytics visualization — the charting-dependency decision (spike), then the layer](seeds/analytics-visualization-layer.md) — Ready · Spike · appetite S · wave-2026-08-08
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
@@ -66,4 +74,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 29 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 29 · seeds in funnel: 11 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
