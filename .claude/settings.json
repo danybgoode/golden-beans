@@ -10,6 +10,9 @@
   "enabledPlugins": {
     "ways-of-work@dobby-foundation": true
   },
+  "env": {
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(git add *)",

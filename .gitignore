@@ -72,3 +72,6 @@ reporting.config.local.json
 
 # Jev decision log (jev-semantic-guards) — local evidence, may quote private text
 .jev/
+
+# Some outputs
+Claude outputs
