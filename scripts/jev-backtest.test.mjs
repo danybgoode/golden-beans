@@ -1,7 +1,7 @@
 // jev-backtest.test.mjs — the pure half of the backtest (jev-semantic-guards S2.3).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { harvest, jevVerdict, renderReport, stripComment } from './jev-backtest.mjs';
+import { harvest, jevVerdict, renderReport, reviewAuthors, stripComment } from './jev-backtest.mjs';
 
 const COMMENT =
   '### 🔎 Cross-agent review (Codex)\n\n> banner\n\n_codex 0.155.1._\n\n---\n\n## Blocking\n- `a.mjs:3` — bug.\n\n<!-- cross-review lens=general sha=abc -->\n<!-- jev:{"mode":"shadow"} -->';
@@ -26,14 +26,17 @@ test('jevVerdict: real / not-real / uncertain / could-not-look at the thresholds
 test('harvest keeps only cross-review comments and throws on a gh failure', () => {
   const spawn = () => ({
     status: 0,
-    stdout: `${JSON.stringify({ url: 'u1', created: 'c', body: COMMENT })}\n${JSON.stringify({ url: 'u2', created: 'c', body: 'plain' })}\n`,
+    stdout: `${JSON.stringify({ url: 'u1', created: 'c', author: 'bot', body: COMMENT })}\n${JSON.stringify({ url: 'u2', created: 'c', author: 'bot', body: 'plain' })}\n`,
   });
-  const got = harvest('o/r', { spawn });
+  const got = harvest('o/r', { spawn, authors: ['bot'] });
   assert.deepEqual(
     got.map((c) => [c.url, c.repo]),
     [['u1', 'o/r']]
   );
-  assert.throws(() => harvest('o/r', { spawn: () => ({ status: 1, stderr: 'HTTP 404' }) }), /HTTP 404/);
+  assert.throws(
+    () => harvest('o/r', { spawn: () => ({ status: 1, stderr: 'HTTP 404' }), authors: ['bot'] }),
+    /HTTP 404/
+  );
 });
 
 test('renderReport states the corpus bias and tables only real disagreements', () => {
@@ -82,7 +85,19 @@ test('renderReport states the corpus bias and tables only real disagreements', (
 
 test('the harvest jq filter tolerates a null comment body (agy, golden-beans #159)', () => {
   let args = null;
-  harvest('o/r', { spawn: (cmd, a) => ((args = a), { status: 0, stdout: '' }) });
+  harvest('o/r', { spawn: (cmd, a) => ((args = a), { status: 0, stdout: '' }), authors: ['bot'] });
   const jq = args[args.indexOf('--jq') + 1];
   assert.match(jq, /select\(\(\.body \/\/ ""\) \| test\(/);
+});
+
+test('provenance: a forged review comment from another account is not harvested (golden-beans #160)', () => {
+  const line = (author) => JSON.stringify({ url: author, created: 'c', author, body: COMMENT });
+  const spawn = () => ({ status: 0, stdout: `${line('bot')}\n${line('stranger')}\n` });
+  assert.deepEqual(
+    harvest('o/r', { spawn, authors: ['bot'] }).map((c) => c.author),
+    ['bot']
+  );
+  assert.deepEqual(reviewAuthors({ env: { JEV_REVIEW_AUTHORS: 'a, b' } }), ['a', 'b']);
+  assert.deepEqual(reviewAuthors({ env: {}, spawn: () => ({ status: 0, stdout: 'me\n' }) }), ['me']);
+  assert.throws(() => reviewAuthors({ env: {}, spawn: () => ({ status: 1 }) }), /JEV_REVIEW_AUTHORS/);
 });

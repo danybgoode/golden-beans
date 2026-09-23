@@ -57,7 +57,25 @@ export function jevVerdict(noul, { real, notReal }) {
 }
 
 /** Harvest cross-review comments from one repo via the REST issue-comments feed. */
-export function harvest(repo, { spawn = spawnSync } = {}) {
+/**
+ * Who may have posted a cross-review comment: the account `cross-review.mjs` posts as, i.e. the authenticated
+ * `gh` user — or an explicit list. Anyone can comment on a public repo, and a forged comment carrying a forged
+ * `<!-- jev: -->` marker must not become evidence for the gate (codex security lens, golden-beans #160).
+ */
+export function reviewAuthors({ spawn = spawnSync, env = process.env } = {}) {
+  if (env.JEV_REVIEW_AUTHORS)
+    return env.JEV_REVIEW_AUTHORS.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  const r = spawn('gh', ['api', 'user', '--jq', '.login'], { encoding: 'utf8' });
+  const login = r.status === 0 ? String(r.stdout).trim() : '';
+  if (!login)
+    throw new Error('cannot tell who posts cross-reviews: `gh api user` failed — set JEV_REVIEW_AUTHORS');
+  return [login];
+}
+
+export function harvest(repo, { spawn = spawnSync, authors = null } = {}) {
+  const allowed = new Set(authors ?? reviewAuthors({ spawn }));
   const r = spawn(
     'gh',
     [
@@ -67,7 +85,7 @@ export function harvest(repo, { spawn = spawnSync } = {}) {
       '--jq',
       // `// ""` — a deleted or system comment has a null body, and `null | test(...)` is a jq error that
       // would abort the whole harvest (agy, golden-beans #159). `--jq` prints each object as one line.
-      '.[] | select((.body // "") | test("^### (🔎|🔐) Cross-agent review")) | {url: .html_url, created: .created_at, body: .body}',
+      '.[] | select((.body // "") | test("^### (🔎|🔐) Cross-agent review")) | {url: .html_url, created: .created_at, author: .user.login, body: .body}',
     ],
     { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }
   );
@@ -76,6 +94,7 @@ export function harvest(repo, { spawn = spawnSync } = {}) {
     .split('\n')
     .filter(Boolean)
     .map((l) => JSON.parse(l))
+    .filter((c) => allowed.has(c.author))
     .map((c) => ({ ...c, repo, reply: stripComment(c.body) }))
     .filter((c) => c.reply !== null);
 }
