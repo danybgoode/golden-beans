@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 // jev-backtest.mjs — replay Jev over every historical cross-review comment (jev-semantic-guards S2.3, D9).
 //
-//   node scripts/jev-backtest.mjs --repo owner/name [--repo owner/name …] [--limit N] [--out <path>]
+//   node scripts/jev-backtest.mjs --repo owner/name [--repo owner/name …] [--limit N] [--out <path>.md]
+//   node scripts/jev-backtest.mjs --prose <file.md> [<file.md> …]
+//
+// `--prose` is the PROSE rail's history: committed close-out prose (retrospectives, posters) replayed through
+// `judgeProse` in shadow with the evidence `prose-draft` uses for those files (fix and beneficiary allowed;
+// liveness and commitment asked), so the S5 report has real prose decisions, not only fixtures.
 //
 // Harvests the machine-posted cross-review comments (`### 🔎 Cross-agent review …` / `### 🔐 … security
 // lens …`) from each repo, strips the header and markers back to the reviewer's own reply, and asks Jev the
@@ -20,6 +25,8 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { judgeProse } from './lib/prose-guard.mjs';
 import { judgeReviewOutput } from './lib/review-guard.mjs';
 import { loadJevConfig, parseJevConfig, readApiKey, repoRoot } from './lib/jev.mjs';
 
@@ -128,8 +135,59 @@ async function mapLimit(items, n, fn) {
   return out;
 }
 
+/** The evidence `prose-draft.mjs` applies to internal close-out artifacts. */
+export const CLOSE_OUT_EVIDENCE = {
+  allowsFixClaim: true,
+  allowsBeneficiary: true,
+  allowsMarkdown: true,
+  liveFlags: [],
+  maxWords: 100_000,
+  minWords: 1,
+};
+
+async function proseBacktest(files, root) {
+  if (!files.length) {
+    process.stderr.write(
+      'usage: node scripts/jev-backtest.mjs --prose <file.md> [<file.md> …] — no files given\n'
+    );
+    process.exit(2);
+  }
+  const key = readApiKey({ root });
+  const base = loadJevConfig({ root });
+  if (!key || !base.egress) {
+    process.stderr.write('jev-backtest --prose needs TYPESAFE_API_KEY and egress:true.\n');
+    process.exit(2);
+  }
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const config = parseJevConfig({
+    model: base.model,
+    egress: base.egress,
+    rails: { ...base.rails, prose: { ...base.rails.prose, mode: 'shadow', shadowExpires: tomorrow } },
+  });
+  let agree = 0;
+  const rows = await mapLimit(files, 6, async (f) => {
+    const v = await judgeProse(readFileSync(f, 'utf8'), CLOSE_OUT_EVIDENCE, { config, key, root });
+    const same = JSON.stringify([...v.regexCodes].sort()) === JSON.stringify([...(v.jevCodes ?? [])].sort());
+    agree += same;
+    return { f, regex: v.regexCodes, jev: v.jevCodes, errors: v.errors ?? [] };
+  });
+  for (const r of rows.filter((x) => JSON.stringify(x.regex.sort()) !== JSON.stringify((x.jev ?? []).sort())))
+    process.stdout.write(
+      `disagree  ${r.f}  regex=[${r.regex}] jev=[${r.jev}]${r.errors.length ? ` (${r.errors[0]})` : ''}\n`
+    );
+  process.stdout.write(
+    `prose backtest: ${rows.length} file(s) scored in shadow · ${agree} agree · ${rows.length - agree} disagree\n`
+  );
+}
+
 async function main() {
   const argv = process.argv.slice(2);
+  const proseIx = argv.indexOf('--prose');
+  if (proseIx >= 0)
+    return proseBacktest(
+      argv.slice(proseIx + 1).filter((a) => !a.startsWith('--')),
+      repoRoot()
+    );
   const repos = argv.flatMap((a, i) =>
     a === '--repo' && argv[i + 1] && !argv[i + 1].startsWith('--') ? [argv[i + 1]] : []
   );

@@ -17,8 +17,8 @@
             "choice": "nit",
             "confidence": 1,
             "probabilities": {
-              "should_fix": 0,
               "clean": 0,
+              "should_fix": 0,
               "blocking": 0,
               "nit": 1
             }
@@ -40,17 +40,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.96
+            "noul": 0.95
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 0.99,
             "probabilities": {
-              "blocking": 0,
-              "clean": 1,
+              "should_fix": 0,
               "nit": 0,
-              "should_fix": 0
+              "blocking": 0,
+              "clean": 1
             }
           }
         }
@@ -70,16 +70,16 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.94
+            "noul": 0.95
           },
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.38,
+            "confidence": 0.36,
             "probabilities": {
               "nit": 0,
-              "clean": 0.4,
               "should_fix": 0.07,
+              "clean": 0.4,
               "blocking": 0.53
             }
           }
@@ -105,12 +105,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.57,
+            "confidence": 0.65,
             "probabilities": {
-              "should_fix": 0.03,
-              "clean": 0.68,
-              "nit": 0,
-              "blocking": 0.29
+              "blocking": 0.24,
+              "should_fix": 0.02,
+              "clean": 0.74,
+              "nit": 0
             }
           }
         }
@@ -135,12 +135,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.63,
+            "confidence": 0.54,
             "probabilities": {
-              "clean": 0.73,
               "nit": 0,
-              "blocking": 0.24,
-              "should_fix": 0.03
+              "clean": 0.67,
+              "should_fix": 0.02,
+              "blocking": 0.31
             }
           }
         }
@@ -165,12 +165,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.32,
+            "confidence": 0.33,
             "probabilities": {
-              "clean": 0.49,
-              "nit": 0.01,
               "should_fix": 0.07,
-              "blocking": 0.43
+              "nit": 0.01,
+              "clean": 0.5,
+              "blocking": 0.42
             }
           }
         }
@@ -190,17 +190,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.92
+            "noul": 0.93
           },
           "severity": {
             "type": "choice",
             "choice": "should_fix",
             "confidence": 1,
             "probabilities": {
-              "clean": 0,
-              "should_fix": 1,
               "blocking": 0,
-              "nit": 0
+              "nit": 0,
+              "clean": 0,
+              "should_fix": 1
             }
           }
         }
@@ -220,7 +220,7 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.92
+            "noul": 0.93
           },
           "severity": {
             "type": "choice",
@@ -228,9 +228,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 0,
-              "should_fix": 1,
               "blocking": 0,
-              "nit": 0
+              "nit": 0,
+              "should_fix": 1
             }
           }
         }
@@ -257,10 +257,10 @@
             "choice": "clean",
             "confidence": 0.99,
             "probabilities": {
+              "clean": 0.99,
               "blocking": 0,
-              "clean": 1,
               "nit": 0,
-              "should_fix": 0
+              "should_fix": 0.01
             }
           }
         }
@@ -317,10 +317,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "should_fix": 0,
+              "clean": 1,
               "blocking": 0,
               "nit": 0,
-              "clean": 1
+              "should_fix": 0
             }
           }
         }
@@ -348,9 +348,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 1,
-              "should_fix": 0,
+              "blocking": 0,
               "nit": 0,
-              "blocking": 0
+              "should_fix": 0
             }
           }
         }
@@ -370,17 +370,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.98
+            "noul": 0.97
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "should_fix": 0,
-              "blocking": 0,
               "clean": 1,
-              "nit": 0
+              "blocking": 0,
+              "nit": 0,
+              "should_fix": 0
             }
           }
         }
@@ -394,66 +394,6 @@
       "id": "corpus-b-14",
       "label": true,
       "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #84#issuecomment-5231995061); anonymised",
-      "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
-      "recorded": {
-        "model": "jev-1.13.0",
-        "answers": {
-          "is_real_review": {
-            "type": "noul",
-            "noul": 0.96
-          },
-          "severity": {
-            "type": "choice",
-            "choice": "clean",
-            "confidence": 1,
-            "probabilities": {
-              "clean": 1,
-              "blocking": 0,
-              "should_fix": 0,
-              "nit": 0
-            }
-          }
-        }
-      },
-      "decision": {
-        "ok": true,
-        "decider": "jev"
-      }
-    },
-    {
-      "id": "corpus-b-15",
-      "label": true,
-      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #86#issuecomment-5233691220); anonymised",
-      "text": "## Findings\n\n**Blocking**\n- `Roadmap/01-growth-engine/flag-serving-and-prd-g/LIVE-PROOF.md:127-145` — the new 2026-08-09 correction says the 2026-08-01 statement is “retained only as the historical claim,” yet that earlier statement still reads as an unqualified, current fact; a reader may act on the unmarked 2026-08-01 text before reaching the later correction. Either strike through or annotate the 2026-08-01 passage, or remove the “retained only” clause and replace it with explicit text such as “This entry supersedes the 2026-08-01 section.”\n\n**Should-fix**\n- None\n\n**Nit**\n- None\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
-      "recorded": {
-        "model": "jev-1.13.0",
-        "answers": {
-          "is_real_review": {
-            "type": "noul",
-            "noul": 0.96
-          },
-          "severity": {
-            "type": "choice",
-            "choice": "blocking",
-            "confidence": 1,
-            "probabilities": {
-              "should_fix": 0,
-              "clean": 0,
-              "nit": 0,
-              "blocking": 1
-            }
-          }
-        }
-      },
-      "decision": {
-        "ok": true,
-        "decider": "jev"
-      }
-    },
-    {
-      "id": "corpus-b-16",
-      "label": true,
-      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5242824030); anonymised",
       "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
       "recorded": {
         "model": "jev-1.13.0",
@@ -481,16 +421,46 @@
       }
     },
     {
-      "id": "corpus-b-17",
+      "id": "corpus-b-15",
       "label": true,
-      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5245713346); anonymised",
-      "text": "Blocking: none.\n\nShould-fix: none.\n\nNit: none.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #86#issuecomment-5233691220); anonymised",
+      "text": "## Findings\n\n**Blocking**\n- `Roadmap/01-growth-engine/flag-serving-and-prd-g/LIVE-PROOF.md:127-145` — the new 2026-08-09 correction says the 2026-08-01 statement is “retained only as the historical claim,” yet that earlier statement still reads as an unqualified, current fact; a reader may act on the unmarked 2026-08-01 text before reaching the later correction. Either strike through or annotate the 2026-08-01 passage, or remove the “retained only” clause and replace it with explicit text such as “This entry supersedes the 2026-08-01 section.”\n\n**Should-fix**\n- None\n\n**Nit**\n- None\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
       "recorded": {
         "model": "jev-1.13.0",
         "answers": {
           "is_real_review": {
             "type": "noul",
             "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "clean": 0,
+              "should_fix": 0,
+              "blocking": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-16",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5242824030); anonymised",
+      "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
           },
           "severity": {
             "type": "choice",
@@ -501,6 +471,36 @@
               "should_fix": 0,
               "clean": 1,
               "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-17",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5245713346); anonymised",
+      "text": "Blocking: none.\n\nShould-fix: none.\n\nNit: none.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0
             }
           }
         }
@@ -527,10 +527,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "nit": 0,
               "should_fix": 0,
               "clean": 1,
-              "blocking": 0
+              "blocking": 0,
+              "nit": 0
             }
           }
         }
@@ -558,9 +558,9 @@
             "confidence": 0.98,
             "probabilities": {
               "clean": 0.99,
-              "nit": 0,
               "should_fix": 0.01,
-              "blocking": 0
+              "blocking": 0,
+              "nit": 0
             }
           }
         }
@@ -586,12 +586,12 @@
           "severity": {
             "type": "choice",
             "choice": "should_fix",
-            "confidence": 0.5,
+            "confidence": 0.46,
             "probabilities": {
-              "clean": 0.16,
-              "nit": 0.19,
+              "should_fix": 0.6,
               "blocking": 0.03,
-              "should_fix": 0.62
+              "clean": 0.17,
+              "nit": 0.2
             }
           }
         }
@@ -612,17 +612,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.06
+            "noul": 0.05
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.93,
+            "confidence": 0.94,
             "probabilities": {
-              "blocking": 0.02,
+              "should_fix": 0.01,
               "clean": 0.95,
-              "nit": 0.02,
-              "should_fix": 0.01
+              "blocking": 0.02,
+              "nit": 0.02
             }
           }
         }
@@ -649,9 +649,9 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "should_fix": 0,
               "blocking": 0,
+              "clean": 1,
               "nit": 0
             }
           }
@@ -672,16 +672,16 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.96
+            "noul": 0.95
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "should_fix": 0,
               "blocking": 0,
+              "clean": 1,
               "nit": 0
             }
           }
@@ -709,9 +709,9 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "clean": 1,
               "blocking": 0,
               "should_fix": 0,
-              "clean": 1,
               "nit": 0
             }
           }
@@ -740,9 +740,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 1,
-              "should_fix": 0,
               "blocking": 0,
-              "nit": 0
+              "nit": 0,
+              "should_fix": 0
             }
           }
         }
@@ -770,9 +770,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 1,
-              "should_fix": 0,
+              "nit": 0,
               "blocking": 0,
-              "nit": 0
+              "should_fix": 0
             }
           }
         }
@@ -792,17 +792,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.95
+            "noul": 0.94
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "blocking": 0,
-              "should_fix": 0,
-              "nit": 0
+              "clean": 1,
+              "nit": 0,
+              "should_fix": 0
             }
           }
         }
@@ -822,17 +822,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.94
+            "noul": 0.95
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "blocking": 0,
               "should_fix": 0,
+              "clean": 1,
               "nit": 0,
-              "clean": 1
+              "blocking": 0
             }
           }
         }
@@ -859,10 +859,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "blocking": 0,
               "nit": 0,
-              "should_fix": 0,
               "clean": 1,
-              "blocking": 0
+              "should_fix": 0
             }
           }
         }
@@ -889,9 +889,9 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "blocking": 0,
               "should_fix": 0,
               "clean": 1,
-              "blocking": 0,
               "nit": 0
             }
           }
@@ -919,10 +919,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "should_fix": 0,
-              "nit": 0,
-              "blocking": 0
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0
             }
           }
         }
@@ -948,12 +948,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.81,
+            "confidence": 0.85,
             "probabilities": {
-              "blocking": 0.05,
-              "should_fix": 0.05,
-              "clean": 0.85,
-              "nit": 0.05
+              "blocking": 0.03,
+              "clean": 0.89,
+              "nit": 0.04,
+              "should_fix": 0.04
             }
           }
         }
@@ -981,8 +981,8 @@
             "confidence": 1,
             "probabilities": {
               "clean": 1,
-              "blocking": 0,
               "should_fix": 0,
+              "blocking": 0,
               "nit": 0
             }
           }
@@ -1003,7 +1003,7 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.97
+            "noul": 0.96
           },
           "severity": {
             "type": "choice",
@@ -1011,9 +1011,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 1,
-              "should_fix": 0,
+              "blocking": 0,
               "nit": 0,
-              "blocking": 0
+              "should_fix": 0
             }
           }
         }
@@ -1040,10 +1040,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "nit": 0,
-              "clean": 1,
               "should_fix": 0,
-              "blocking": 0
+              "nit": 0,
+              "blocking": 0,
+              "clean": 1
             }
           }
         }
@@ -1063,17 +1063,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.96
+            "noul": 0.97
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "nit": 0,
-              "blocking": 0,
-              "should_fix": 0
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0
             }
           }
         }
@@ -1100,10 +1100,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "blocking": 0,
               "nit": 0,
               "should_fix": 0,
-              "clean": 1,
-              "blocking": 0
+              "clean": 1
             }
           }
         }
@@ -1131,9 +1131,9 @@
             "confidence": 1,
             "probabilities": {
               "nit": 0,
-              "should_fix": 1,
               "blocking": 0,
-              "clean": 0
+              "clean": 0,
+              "should_fix": 1
             }
           }
         }
@@ -1158,12 +1158,12 @@
           "severity": {
             "type": "choice",
             "choice": "nit",
-            "confidence": 0.33,
+            "confidence": 0.28,
             "probabilities": {
+              "nit": 0.46,
+              "should_fix": 0.24,
               "clean": 0.02,
-              "blocking": 0.25,
-              "nit": 0.5,
-              "should_fix": 0.23
+              "blocking": 0.28
             }
           }
         }
@@ -1183,17 +1183,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.96
+            "noul": 0.97
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "clean": 1,
               "nit": 0,
-              "blocking": 0,
-              "should_fix": 0
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0
             }
           }
         }
@@ -1220,9 +1220,9 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "nit": 0,
               "clean": 1,
               "should_fix": 0,
-              "nit": 0,
               "blocking": 0
             }
           }
@@ -1250,10 +1250,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "blocking": 0,
-              "clean": 1,
+              "nit": 0,
               "should_fix": 0,
-              "nit": 0
+              "clean": 1,
+              "blocking": 0
             }
           }
         }
@@ -1282,8 +1282,8 @@
             "probabilities": {
               "clean": 1,
               "nit": 0,
-              "should_fix": 0,
-              "blocking": 0
+              "blocking": 0,
+              "should_fix": 0
             }
           }
         }
@@ -1311,8 +1311,8 @@
             "confidence": 1,
             "probabilities": {
               "should_fix": 1,
-              "nit": 0,
               "clean": 0,
+              "nit": 0,
               "blocking": 0
             }
           }
@@ -1338,11 +1338,11 @@
           "severity": {
             "type": "choice",
             "choice": "should_fix",
-            "confidence": 0.96,
+            "confidence": 0.95,
             "probabilities": {
-              "should_fix": 0.97,
+              "should_fix": 0.96,
               "clean": 0,
-              "blocking": 0.03,
+              "blocking": 0.04,
               "nit": 0
             }
           }
@@ -1363,7 +1363,7 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.86
+            "noul": 0.88
           },
           "severity": {
             "type": "choice",
@@ -1372,8 +1372,8 @@
             "probabilities": {
               "clean": 0,
               "blocking": 1,
-              "nit": 0,
-              "should_fix": 0
+              "should_fix": 0,
+              "nit": 0
             }
           }
         }
@@ -1401,9 +1401,9 @@
             "confidence": 0.71,
             "probabilities": {
               "clean": 0,
-              "nit": 0,
               "blocking": 0.21,
-              "should_fix": 0.79
+              "should_fix": 0.79,
+              "nit": 0
             }
           }
         }
@@ -1428,11 +1428,11 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.92,
+            "confidence": 0.94,
             "probabilities": {
-              "clean": 0.94,
-              "should_fix": 0.04,
               "blocking": 0.01,
+              "should_fix": 0.03,
+              "clean": 0.95,
               "nit": 0.01
             }
           }
@@ -1461,8 +1461,8 @@
             "confidence": 1,
             "probabilities": {
               "clean": 0,
-              "should_fix": 0,
               "blocking": 1,
+              "should_fix": 0,
               "nit": 0
             }
           }
@@ -1513,17 +1513,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.93
+            "noul": 0.91
           },
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.94,
+            "confidence": 0.98,
             "probabilities": {
-              "blocking": 0.96,
+              "clean": 0,
+              "blocking": 0.99,
               "nit": 0,
-              "should_fix": 0.04,
-              "clean": 0
+              "should_fix": 0.01
             }
           }
         }
@@ -1550,10 +1550,10 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
-              "blocking": 0,
               "nit": 0,
               "should_fix": 0,
-              "clean": 1
+              "clean": 1,
+              "blocking": 0
             }
           }
         }
@@ -1580,8 +1580,8 @@
             "choice": "clean",
             "confidence": 0.99,
             "probabilities": {
-              "clean": 1,
               "should_fix": 0,
+              "clean": 1,
               "blocking": 0,
               "nit": 0
             }
@@ -1610,10 +1610,10 @@
             "choice": "blocking",
             "confidence": 0.99,
             "probabilities": {
-              "blocking": 0.99,
-              "nit": 0,
               "clean": 0,
-              "should_fix": 0.01
+              "should_fix": 0.01,
+              "blocking": 0.99,
+              "nit": 0
             }
           }
         }
@@ -1638,12 +1638,12 @@
           "severity": {
             "type": "choice",
             "choice": "nit",
-            "confidence": 0.97,
+            "confidence": 0.95,
             "probabilities": {
+              "clean": 0.04,
+              "nit": 0.96,
               "blocking": 0,
-              "nit": 0.98,
-              "should_fix": 0,
-              "clean": 0.02
+              "should_fix": 0
             }
           }
         }
@@ -1663,17 +1663,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.96
+            "noul": 0.97
           },
           "severity": {
             "type": "choice",
             "choice": "should_fix",
             "confidence": 1,
             "probabilities": {
+              "clean": 0,
               "blocking": 0,
               "nit": 0,
-              "should_fix": 1,
-              "clean": 0
+              "should_fix": 1
             }
           }
         }
@@ -1700,8 +1700,8 @@
             "choice": "should_fix",
             "confidence": 1,
             "probabilities": {
-              "clean": 0,
               "nit": 0,
+              "clean": 0,
               "should_fix": 1,
               "blocking": 0
             }
@@ -1731,9 +1731,9 @@
             "confidence": 1,
             "probabilities": {
               "clean": 0,
+              "blocking": 1,
               "nit": 0,
-              "should_fix": 0,
-              "blocking": 1
+              "should_fix": 0
             }
           }
         }
@@ -1762,8 +1762,8 @@
             "probabilities": {
               "clean": 0,
               "should_fix": 0,
-              "blocking": 1,
-              "nit": 0
+              "nit": 0,
+              "blocking": 1
             }
           }
         }
@@ -1790,10 +1790,10 @@
             "choice": "should_fix",
             "confidence": 1,
             "probabilities": {
-              "clean": 0,
-              "blocking": 0,
               "should_fix": 1,
-              "nit": 0
+              "nit": 0,
+              "blocking": 0,
+              "clean": 0
             }
           }
         }
@@ -1820,10 +1820,10 @@
             "choice": "should_fix",
             "confidence": 1,
             "probabilities": {
-              "blocking": 0,
-              "clean": 0,
               "should_fix": 1,
-              "nit": 0
+              "nit": 0,
+              "blocking": 0,
+              "clean": 0
             }
           }
         }
@@ -1850,10 +1850,10 @@
             "choice": "clean",
             "confidence": 0.93,
             "probabilities": {
-              "nit": 0.02,
               "blocking": 0.02,
-              "clean": 0.95,
-              "should_fix": 0.01
+              "should_fix": 0.01,
+              "nit": 0.02,
+              "clean": 0.95
             }
           }
         }
@@ -1878,12 +1878,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.96,
+            "confidence": 0.97,
             "probabilities": {
-              "clean": 0.98,
-              "should_fix": 0,
+              "nit": 0,
               "blocking": 0.02,
-              "nit": 0
+              "clean": 0.98,
+              "should_fix": 0
             }
           }
         }
@@ -1907,13 +1907,13 @@
           },
           "severity": {
             "type": "choice",
-            "choice": "blocking",
-            "confidence": 0.32,
+            "choice": "clean",
+            "confidence": 0.3,
             "probabilities": {
-              "clean": 0.42,
-              "blocking": 0.49,
+              "blocking": 0.44,
               "nit": 0.06,
-              "should_fix": 0.03
+              "clean": 0.45999999999999996,
+              "should_fix": 0.04
             }
           }
         }
@@ -1933,24 +1933,24 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.17
+            "noul": 0.16
           },
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.96,
+            "confidence": 0.95,
             "probabilities": {
-              "clean": 0.02,
-              "should_fix": 0.01,
+              "blocking": 0.97,
               "nit": 0,
-              "blocking": 0.97
+              "should_fix": 0.01,
+              "clean": 0.02
             }
           }
         }
       },
       "decision": {
-        "ok": true,
-        "decider": "regex"
+        "ok": false,
+        "decider": "jev"
       }
     },
     {
@@ -1963,16 +1963,16 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.08
+            "noul": 0.07
           },
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.96,
+            "confidence": 0.97,
             "probabilities": {
-              "clean": 0.02,
-              "blocking": 0.97,
               "nit": 0,
+              "blocking": 0.98,
+              "clean": 0.01,
               "should_fix": 0.01
             }
           }
@@ -2000,10 +2000,10 @@
             "choice": "clean",
             "confidence": 0.99,
             "probabilities": {
-              "nit": 0.01,
-              "should_fix": 0,
               "blocking": 0,
-              "clean": 0.99
+              "nit": 0,
+              "clean": 1,
+              "should_fix": 0
             }
           }
         }
@@ -2028,12 +2028,12 @@
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.44,
+            "confidence": 0.37,
             "probabilities": {
-              "clean": 0.37,
-              "blocking": 0.58,
               "nit": 0.02,
-              "should_fix": 0.03
+              "should_fix": 0.03,
+              "clean": 0.42,
+              "blocking": 0.53
             }
           }
         }
@@ -2058,12 +2058,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.7,
+            "confidence": 0.6,
             "probabilities": {
-              "clean": 0.77,
-              "blocking": 0.19,
+              "should_fix": 0.03,
               "nit": 0.01,
-              "should_fix": 0.03
+              "blocking": 0.25,
+              "clean": 0.71
             }
           }
         }
@@ -2090,10 +2090,10 @@
             "choice": "clean",
             "confidence": 0.99,
             "probabilities": {
-              "clean": 0.99,
-              "blocking": 0,
+              "should_fix": 0,
               "nit": 0.01,
-              "should_fix": 0
+              "blocking": 0,
+              "clean": 0.99
             }
           }
         }
@@ -2118,12 +2118,12 @@
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.55,
+            "confidence": 0.56,
             "probabilities": {
               "nit": 0,
+              "blocking": 0.31,
               "should_fix": 0.02,
-              "clean": 0.66,
-              "blocking": 0.32
+              "clean": 0.67
             }
           }
         }
@@ -2143,17 +2143,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.06
+            "noul": 0.07
           },
           "severity": {
             "type": "choice",
             "choice": "clean",
-            "confidence": 0.38,
+            "confidence": 0.37,
             "probabilities": {
-              "nit": 0.01,
-              "clean": 0.54,
-              "should_fix": 0.07,
-              "blocking": 0.38
+              "clean": 0.53,
+              "blocking": 0.38,
+              "should_fix": 0.08,
+              "nit": 0.01
             }
           }
         }
@@ -2180,10 +2180,10 @@
             "choice": "clean",
             "confidence": 0.98,
             "probabilities": {
-              "blocking": 0,
+              "clean": 0.98,
+              "blocking": 0.01,
               "should_fix": 0,
-              "nit": 0.01,
-              "clean": 0.99
+              "nit": 0.01
             }
           }
         }
@@ -2208,12 +2208,12 @@
           "severity": {
             "type": "choice",
             "choice": "blocking",
-            "confidence": 0.9,
+            "confidence": 0.91,
             "probabilities": {
-              "clean": 0.07,
-              "blocking": 0.93,
               "should_fix": 0,
-              "nit": 0
+              "nit": 0,
+              "clean": 0.06,
+              "blocking": 0.94
             }
           }
         }
@@ -2233,17 +2233,17 @@
         "answers": {
           "is_real_review": {
             "type": "noul",
-            "noul": 0.9
+            "noul": 0.88
           },
           "severity": {
             "type": "choice",
             "choice": "blocking",
             "confidence": 0.99,
             "probabilities": {
-              "blocking": 0.99,
-              "nit": 0,
+              "clean": 0,
               "should_fix": 0.01,
-              "clean": 0
+              "blocking": 0.99,
+              "nit": 0
             }
           }
         }
@@ -2270,10 +2270,41 @@
             "choice": "clean",
             "confidence": 1,
             "probabilities": {
+              "clean": 1,
               "nit": 0,
-              "should_fix": 0,
               "blocking": 0,
-              "clean": 1
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-trail",
+      "label": false,
+      "source": "backtest 2026-09-23 — a builder's \"review trail\" summary posted under the review header in consuming project B; anonymised",
+      "note": "Not a reviewer's reply: a builder summarising earlier review rounds. The regex rejected it; Jev scored it a real review. Labelled not-a-review (review of PR #39: excluding it overstated the gate).",
+      "text": "### Review trail for this PR\n\n| Round | Family | Blocking | Should-fix |\n|---|---|---|---|\n| 1 | Codex (`gpt-5.6-terra`, high) | **2** — raw secrets persisted in `events`; friction bypassed the canonical TARS seam | 2 |\n| 2 | Codex (`gpt-5.6-terra`, high) | **2** — flag/doc mismatch; `evaluateFrictionForProject` has no caller | 1 |\n| 3 | Agy (`gemini-3.6-flash-high`) | **0** | 2 + 1 nit |\n\nStopping here per `LEARNINGS`: *stop when a round from the **other** family comes back clean, not when your usual reviewer does.* Codex opened with Blocking findings in both its rounds; Gemini found none on the stabilized head.\n\n⚠️ One earlier comment on this PR was **retracted in place** — it was posted under a \"Codex\" header but produced by agy, because `runReview()` called `runAntigravity()` unconditionally. Fixed in this PR.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "blocking": 1,
+              "nit": 0,
+              "should_fix": 0
             }
           }
         }
@@ -2309,7 +2340,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.15
+            "noul": 0.17
           },
           "s0_commitment": {
             "type": "noul",
@@ -2317,15 +2348,15 @@
           },
           "s1_fix": {
             "type": "noul",
-            "noul": 0.14
+            "noul": 0.13
           },
           "s1_beneficiary": {
             "type": "noul",
-            "noul": 0.06
+            "noul": 0.05
           },
           "s1_live": {
             "type": "noul",
-            "noul": 0.38
+            "noul": 0.35
           },
           "s1_commitment": {
             "type": "noul",
@@ -2360,11 +2391,11 @@
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.95
+            "noul": 0.96
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.27
+            "noul": 0.26
           },
           "s0_commitment": {
             "type": "noul",
@@ -2399,7 +2430,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.3
+            "noul": 0.31
           },
           "s0_commitment": {
             "type": "noul",
@@ -2487,7 +2518,7 @@
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.03
+            "noul": 0.04
           },
           "s0_live": {
             "type": "noul",
@@ -2499,7 +2530,7 @@
           },
           "s1_fix": {
             "type": "noul",
-            "noul": 0.2
+            "noul": 0.17
           },
           "s1_beneficiary": {
             "type": "noul",
@@ -2556,7 +2587,7 @@
           },
           "s1_fix": {
             "type": "noul",
-            "noul": 0.06
+            "noul": 0.07
           },
           "s1_beneficiary": {
             "type": "noul",
@@ -2601,7 +2632,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.08
+            "noul": 0.09
           },
           "s0_commitment": {
             "type": "noul",
@@ -2640,7 +2671,7 @@
           },
           "s1_live": {
             "type": "noul",
-            "noul": 0.65
+            "noul": 0.64
           },
           "s1_commitment": {
             "type": "noul",
@@ -2649,9 +2680,7 @@
         }
       },
       "decision": {
-        "codes": [
-          "flag-state-claim"
-        ],
+        "codes": [],
         "decider": "jev"
       }
     },
@@ -2825,7 +2854,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.13
+            "noul": 0.15
           },
           "s0_commitment": {
             "type": "noul",
@@ -2834,9 +2863,7 @@
         }
       },
       "decision": {
-        "codes": [
-          "unsupported-fix-claim"
-        ],
+        "codes": [],
         "decider": "jev"
       }
     },
@@ -2895,7 +2922,7 @@
         "answers": {
           "s0_live": {
             "type": "noul",
-            "noul": 0.01
+            "noul": 0.02
           },
           "s0_commitment": {
             "type": "noul",
@@ -2961,7 +2988,7 @@
         "answers": {
           "s0_live": {
             "type": "noul",
-            "noul": 0.13
+            "noul": 0.15
           },
           "s0_commitment": {
             "type": "noul",
@@ -2994,7 +3021,7 @@
         "answers": {
           "s0_live": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.01
           },
           "s0_commitment": {
             "type": "noul",
@@ -3027,11 +3054,11 @@
         "answers": {
           "s0_live": {
             "type": "noul",
-            "noul": 0.03
+            "noul": 0.02
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.97
+            "noul": 0.96
           }
         }
       },
@@ -3103,7 +3130,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.16
+            "noul": 0.13
           }
         }
       },
@@ -3167,11 +3194,11 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.04
+            "noul": 0.05
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.95
+            "noul": 0.94
           },
           "s0_commitment": {
             "type": "noul",
@@ -3204,7 +3231,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           },
           "s0_live": {
             "type": "noul",
@@ -3212,7 +3239,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           },
           "s1_fix": {
             "type": "noul",
@@ -3259,7 +3286,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           }
         }
       },
@@ -3333,7 +3360,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.01
+            "noul": 0.02
           },
           "s0_commitment": {
             "type": "noul",
@@ -3438,7 +3465,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.04
+            "noul": 0.05
           },
           "s0_live": {
             "type": "noul",
@@ -3520,7 +3547,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           }
         }
       },
@@ -3627,7 +3654,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.92
+            "noul": 0.91
           },
           "s0_commitment": {
             "type": "noul",
@@ -3693,7 +3720,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.45
+            "noul": 0.47
           },
           "s0_live": {
             "type": "noul",
@@ -3701,7 +3728,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.07
+            "noul": 0.06
           }
         }
       },
@@ -3763,7 +3790,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.08
+            "noul": 0.07
           },
           "s0_beneficiary": {
             "type": "noul",
@@ -3816,7 +3843,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.29
+            "noul": 0.3
           },
           "s0_beneficiary": {
             "type": "noul",
@@ -3856,11 +3883,11 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.08
+            "noul": 0.07
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.98
+            "noul": 0.99
           },
           "s0_live": {
             "type": "noul",
@@ -3908,11 +3935,11 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.03
+            "noul": 0.02
           },
           "s1_fix": {
             "type": "noul",
-            "noul": 0.12
+            "noul": 0.11
           },
           "s1_beneficiary": {
             "type": "noul",
@@ -3951,7 +3978,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.98
+            "noul": 0.97
           },
           "s0_live": {
             "type": "noul",
@@ -3992,7 +4019,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.13
+            "noul": 0.14
           },
           "s0_commitment": {
             "type": "noul",
@@ -4029,7 +4056,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.18
+            "noul": 0.17
           },
           "s0_commitment": {
             "type": "noul",
@@ -4117,7 +4144,7 @@
           },
           "s1_beneficiary": {
             "type": "noul",
-            "noul": 0.03
+            "noul": 0.04
           },
           "s1_live": {
             "type": "noul",
@@ -4226,7 +4253,7 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.88
+            "noul": 0.86
           }
         }
       },
@@ -4259,14 +4286,12 @@
           },
           "s0_commitment": {
             "type": "noul",
-            "noul": 0.58
+            "noul": 0.56
           }
         }
       },
       "decision": {
-        "codes": [
-          "invented-commitment"
-        ],
+        "codes": [],
         "decider": "jev"
       }
     },
@@ -4395,11 +4420,11 @@
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.62
+            "noul": 0.63
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.99
+            "noul": 0.98
           },
           "s0_commitment": {
             "type": "noul",
@@ -4408,9 +4433,7 @@
         }
       },
       "decision": {
-        "codes": [
-          "invented-beneficiary"
-        ],
+        "codes": [],
         "decider": "jev"
       }
     },
@@ -4430,11 +4453,11 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.05
+            "noul": 0.04
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.08
+            "noul": 0.07
           },
           "s0_live": {
             "type": "noul",
@@ -4471,7 +4494,7 @@
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.05
+            "noul": 0.04
           },
           "s0_live": {
             "type": "noul",
@@ -4543,7 +4566,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.12
+            "noul": 0.11
           },
           "s0_beneficiary": {
             "type": "noul",
@@ -4584,15 +4607,15 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.11
+            "noul": 0.1
           },
           "s0_beneficiary": {
             "type": "noul",
-            "noul": 0.97
+            "noul": 0.98
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.04
+            "noul": 0.05
           },
           "s0_commitment": {
             "type": "noul",
@@ -4623,7 +4646,7 @@
         "answers": {
           "s0_fix": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           },
           "s0_beneficiary": {
             "type": "noul",
@@ -4631,7 +4654,7 @@
           },
           "s0_live": {
             "type": "noul",
-            "noul": 0.02
+            "noul": 0.03
           },
           "s0_commitment": {
             "type": "noul",
@@ -4710,6 +4733,3137 @@
       },
       "decision": {
         "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-0",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "~~Flipping the gate~~ — **done 2026-08-10: `FLAG_RULE_BUILDER_ENABLED=true` in Production and",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-1",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Preview**, and verified on the live signed-in page against a real flag.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.33
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-2",
+      "label": [],
+      "draft": "The bars, the diff sentence",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-3",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**All three sprints merged and LIVE in production**, gate on._",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-5",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-7",
+      "label": [],
+      "draft": "| 1 | [#71](https://github.com/danybgoode/golden-beans/pull/71) → `3b99fed` | `lib/agent-activity.ts` + `lib/pending-confirmations.ts` (the two read seams), the section nav rendering `PROJECT_ROUTE_INVENTORY`, `check:design-drift` extended to `components/{ui,product,brand}` |",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-8",
+      "label": [],
+      "draft": "SDK 0.5.0 shipped first.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.75
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-10",
+      "label": [],
+      "draft": "**Shipped:** 2026-09-18 — PRs #149, #150, #151, release #152 · **Appetite:** L (three waves) · **Risk:** high",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.76
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.06
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-11",
+      "label": [],
+      "draft": "The engine got a write surface an agent can drive.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.55
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-13",
+      "label": [],
+      "draft": "**Two live prod credentials from the walkthrough** — an API key and a share link, both labelled",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.71
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-14",
+      "label": [],
+      "draft": "Real and working;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.64
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-16",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Shipped:** 2026-06-08 — all 3 sprints to prod.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-17",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-19",
+      "label": [],
+      "draft": "type (product / service / rental / digital / subscription) via a chip rail in `SearchBar`, and",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-21",
+      "label": [],
+      "draft": "**Shipped:** 2026-06-21 · single sprint · frontend-only · PR [#95](https://github.com/danybgoode/project/pull/95) squash `3213f6c` · Risk: LOW.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.67
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-23",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Closed 2026-06-09.** Three sprints, all shipped to prod.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.81
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-24",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-25",
+      "label": [],
+      "draft": "**S1 — Two-sided off-platform refund state machine.** BE PR #16 (→ Cloud Run) + FE #54 (`3698fa0`).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-28",
+      "label": [],
+      "draft": "The next daily production smoke should remain green;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.26
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-30",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "live-Stripe money path) · **Closed:** 2026-07-01 (S6 live) · **6 sprints**, ~15 stories, be #44–#54 · fe #139–#154.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.2
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-31",
+      "label": [],
+      "draft": "> epic shipped without its Definition-of-Done close (retro, poster, status frontmatter), which is itself the",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.51
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-32",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "> started\") while fully live.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-34",
+      "label": [],
+      "draft": "**S1 — Connect + linkage (the spine):** a commerce-engine module (`apps/backend/src/modules/mercadolibre/`) owning",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-35",
+      "label": [],
+      "draft": "linkage** (409 on conflict), secret-gated `/internal/ml/*` routes, and the `/shop/manage/mercadolibre`",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-36",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Flag `ml.connect_enabled` ON in prod from day one.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.86
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.29
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-39",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Live on prod 2026-07-01 (revision `commerce-engine`), plus the #54 hotfix below.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.6
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-40",
+      "label": [],
+      "draft": "with zero user-visible risk: each feature behind its own enablement flag (connect ON, the rest dark until",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.35
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-41",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Shipped:** 2026-06-03 · all stories live · live QA passed · zero defects found.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-42",
+      "label": [],
+      "draft": "Unblocked the World Cup *\"Sube tus promos a",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.8
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-43",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "project\"* acquisition campaign: sellers can now turn their existing promos into real, redeemable codes.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-46",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-48",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-49",
+      "label": [],
+      "draft": "One atomic frontend release: [#385](https://github.com/danybgoode/project/pull/385),",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.76
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-50",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "squashed as `936b42d` and deployed through Cloud Build",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.44
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-51",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "`4276cd94-332d-4c82-97be-d6c0542b9039` to Cloud Run `project` (100% traffic).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.79
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-52",
+      "label": [],
+      "draft": "## Outcome",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-53",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Shipped the whole \"Maqueta\" builder end to end and deployed it.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-55",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Delivered:** 7 user stories · ~9 commits to `main` · every story type-check + lint + build clean · 1 new isolated Cloud Run service deployed and verified in production.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-56",
+      "label": [],
+      "draft": "**End-to-end ownership.** Code → verify → ship → deploy (GCP + Vercel) → live test, all in-session, with green lights on the money/infra steps.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.37
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-57",
+      "label": [],
+      "draft": "## Review — quality & follow-ups",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-58",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The shipped work is solid and live.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-60",
+      "label": [],
+      "draft": "**Shipped:** 2026-06-23 · 2 sprints · area 07-agentic-and-federated-commerce · risk high (live coupon mint).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.85
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-62",
+      "label": [],
+      "draft": "**S2.2 / S2.3** — the product owner minted the live coupon;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-63",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "it reads **0/100 · activo** and is present in the Stripe",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.48
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-64",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The giveaway is redeemable.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.67
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-65",
+      "label": [],
+      "draft": "## What Shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-66",
+      "label": [],
+      "draft": "## Verification",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-68",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "backend Cloud Build `04cb012` succeeded and Cloud Run `commerce-engine` serves 100% traffic.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.59
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-70",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "backend `/store/sellers/me/support-product` is deployed and auth-gated.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.88
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-71",
+      "label": [],
+      "draft": "the active backend pipeline is Cloud Build `us-east4` -> Cloud Run `commerce-engine`.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.79
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-72",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "emission walk wrote write-once cross-repo milestones behind only `growth.telemetry_enabled` (ON in",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.66
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-75",
+      "label": [],
+      "draft": "→ Jul 29;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.5
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-76",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "_Closed: 2026-07-24 (shipped & live — all 3 PRs merged 2026-07-24, migrations verified live, `promoter.activation_crm_enabled` flipped ON by the product owner;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-77",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-78",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "live.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-79",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "That exact string was live — rendering inside the promoter page's own AI",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-80",
+      "label": [],
+      "draft": "`partnersRecruiting.landing` and `.application` as editable since the namespace shipped, while the",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.67
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-81",
+      "label": [],
+      "draft": "**Three live `monta` strings sat outside the dictionary**, in `agent-prompt.ts`, `email.ts` and the",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.63
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-82",
+      "label": [],
+      "draft": "Production has a",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-83",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Golden definition serving default-ON, and #384 gave the scoped catalog its own snapshot lane.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.77
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-84",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-85",
+      "label": [],
+      "draft": "reason and one of them was hiding a string that was live in production.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.68
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-87",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "`20260817210000_operator_details_v2.sql` is **applied and verified live** (2026-08-17).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-89",
+      "label": [],
+      "draft": "**Live conversion read** (Clarity funnel `/vende/* → /sell → publish`, and whether the new benchmark /",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.56
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-90",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "AI-channel sections move it) is operational, owed to the product owner — the pages are instrumented (GTM/Clarity +",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.78
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.07
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-91",
+      "label": [],
+      "draft": "UTM), but no post-launch review is recorded here.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.17
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-92",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "**Spawned, out of this epic** (per the README): retire/repurpose `/vende/mundial` after the World Cup",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.54
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-93",
+      "label": [],
+      "draft": "(Jul 19);",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.23
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-94",
+      "label": [],
+      "draft": "re-verify at the next publish** — competitor fees drift, and the",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.67
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-95",
+      "label": [],
+      "draft": "_Shipped: 2026-06-25 → 2026-06-26 · 4 sprints · frontend-only, LOW risk throughout._",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.76
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.1
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-96",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-98",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Live surface: `app/(shell)/vende/` (`_components/SellerAcquisitionSections.tsx` shared renderer +",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-99",
+      "label": [],
+      "draft": "**Macro-section:** 09 · Platform & Infra · **Status:** ✅ shipped 2026-06-23 · **Sprints:** 4 · **Repo:** `apps/project` (one backend *read* in S4.0).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.88
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.06
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-100",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-101",
+      "label": [],
+      "draft": "The platform went from a scattered, secret-in-URL admin to **one coherent in-repo, Clerk-gated admin** with an audit trail and tenant management:",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.45
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-103",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-104",
+      "label": [],
+      "draft": "**Shipped:** 2026-06-24 · **2 sprints, all LOW** · monorepo-root (`infra/`, `scripts/`) + app repo.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.6
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-107",
+      "label": [],
+      "draft": "(see `sprint-2.md` → Live confirmation).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.68
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-110",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-112",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Net: one flip in `/admin/flags` now governs both apps within 60 s, on owned infra, with no third-party",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.47
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.14
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-114",
+      "label": [],
+      "draft": "backend is now the in-house store;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.44
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-116",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**S1 — one SDK, one name.** `sdk-v0.4.0` released from `danybgoode/golden-beans` under the renamed",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.83
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-118",
+      "label": [],
+      "draft": "**S2 — nothing to do, and proving that was the work.** Production was already at the target state.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.16
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-120",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "ON, and five shops were locked out of subdomains they already had (#364).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.34
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-121",
+      "label": [],
+      "draft": "Backfilled, 30/30, verified",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.18
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-122",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "live.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-124",
+      "label": [],
+      "draft": "## What shipped",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {}
+      },
+      "decision": {
+        "codes": [],
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "retro-127",
+      "label": [],
+      "draft": "With the backend now reading Cloud SQL over the private VPC (unmetered),",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.64
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-130",
+      "label": [],
+      "draft": "`deploy-staging.sh` gained the connector + `private-ranges-only` egress;",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.26
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-131",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**S2 — Production cutover** (PR #22 `8d0bacc`, executed live 2026-06-22, the product owner authorized + present).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.04
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-132",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Prod commerce now on Cloud SQL (rev `commerce-engine`, `min=1`).",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-135",
+      "label": [],
+      "draft": "had a README.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-136",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The code + the `NEXT_PUBLIC_GTM_ID=GTM-MWHVLJ3M` Vercel env (prod + preview + dev) are **live**.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-137",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "container already loads.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.49
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-140",
+      "label": [],
+      "draft": "epic (decision 2) — analytics shipped now, the cookie banner later.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.84
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.13
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-141",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Outcome:** a **single GTM container** (`GTM-MWHVLJ3M`) now loads across every platform surface, gated",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence from a committed RETROSPECTIVE.md in the three repos (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.72
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-rx-conditional",
+      "label": [],
+      "draft": "The storefront UX once the domain is live is **another task** (\"Own shop experience\"), out of scope.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence the regex flagged as a liveness claim and Jev did not (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.18
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-rx-can-now",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "**Net capability:** the platform admin can now edit any keyed marketing string and run scheduled,",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence the regex flagged as a liveness claim and Jev did not (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-rx-shipped-to-prod",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Shipped to prod 2026-06-06.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence the regex flagged as a liveness claim and Jev did not (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.1
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-rx-table-header",
+      "label": [],
+      "draft": "| Sprint | PR | What is now live |",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence the regex flagged as a liveness claim and Jev did not (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.44
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "retro-rx-template-comment",
+      "label": [],
+      "draft": "<!-- The capability now live, by sprint, with commit/PR refs.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "allowsMarkdown": true,
+        "liveFlags": [],
+        "maxWords": 100000,
+        "minWords": 1
+      },
+      "source": "a sentence the regex flagged as a liveness claim and Jev did not (2026-09-23 prose backtest), anonymised; builder-labelled",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
         "decider": "jev"
       }
     }

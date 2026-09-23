@@ -41,8 +41,10 @@ export const DEFAULT_CONFIG = Object.freeze({
   model: DEFAULT_MODEL,
   egress: true,
   rails: {
-    review: { mode: 'off', thresholds: { real: 0.85, notReal: 0.15 }, shadowExpires: null },
-    prose: { mode: 'off', thresholds: { claim: 0.5 }, shadowExpires: null },
+    // Modes stay `off` for a repo with NO jev.config.json: it never opted in to sending text to Jev. The
+    // thresholds are the MEASURED ones (jev-semantic-guards S5.2, sprint-5.md), not the pitch's starting guesses.
+    review: { mode: 'off', thresholds: { real: 0.85, notReal: 0.3 }, shadowExpires: null },
+    prose: { mode: 'off', thresholds: { claim: 0.8 }, shadowExpires: null },
   },
 });
 
@@ -296,6 +298,7 @@ export function logDecision(entry, deps = {}) {
       text: text.length > LOG_TEXT_LIMIT ? `${text.slice(0, LOG_TEXT_LIMIT)}…[truncated]` : text,
       ...(entry.sha ? { sha: entry.sha } : {}),
       ...(entry.source ? { source: entry.source } : {}),
+      ...(entry.evidence ? { evidence: entry.evidence } : {}),
       ...(entry.error ? { error: entry.error } : {}),
       ts: now(),
     };

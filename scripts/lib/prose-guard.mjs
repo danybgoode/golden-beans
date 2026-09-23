@@ -5,6 +5,14 @@
 // not decoration: nearly every rule records a *measured* failure of a real draft, and the reason a
 // rule exists is the only thing that stops someone deleting it as noise.
 //
+// ── Since jev-semantic-guards (2026-09-23): the four SEMANTIC families are decided by Jev ──────────
+// Fix claim, invented beneficiary, liveness claim and invented commitment are judged by `judgeProse` (bottom of
+// this file) whenever jev.config.json → rails.prose.mode is `jev`. The regex families below are now the
+// OFFLINE FALLBACK — they decide, unchanged, when Jev cannot look or the rail is off, and `checkProse` still
+// supplies the mechanical rules (length, banned words, tool names, unfinished) every time. Measured on 158
+// labelled drafts: the judge 88.0%, these regexes alone 72.2%, every family at or above them (sprint-5.md).
+// The incident comments on each family stay: they are the fallback's reasoning, and the eval fixtures.
+//
 // ── Why this exists ───────────────────────────────────────────────────────────────────────────
 // Prompt instructions reduce hallucination; they do not eliminate it. Measured on golden-beans'
 // commit-report rail (2026-07-25), a cheap model given a dense engineering commit produced material
@@ -610,10 +618,15 @@ export function semanticNote(code, { liveFlags = [], sentence = '' } = {}) {
  * (which has no terminal punctuation) is its own unit — the same reason the beneficiary rule splits on `\n`.
  */
 export function proseUnits(text) {
-  return sentences(text)
-    .flatMap((s) => s.split(/\n+/))
-    .map((s) => s.replace(/^\s*(?:[-*+]|\d+\.)\s+/, '').trim())
-    .filter((s) => /[a-z]/i.test(s));
+  return (
+    sentences(text)
+      .flatMap((s) => s.split(/\n+/))
+      // A markdown HEADING is structure, never a claim: "## What shipped" scored 0.50–0.78 as a liveness
+      // claim across the 2026-09-23 retrospective backtest, and no heading can assert anything on its own.
+      .filter((s) => !/^\s*#{1,6}\s/.test(s))
+      .map((s) => s.replace(/^\s*(?:[-*+]|\d+\.)\s+/, '').trim())
+      .filter((s) => /[a-z]/i.test(s))
+  );
 }
 
 /** Is this liveness sentence corroborated by the pack? The same token test `checkProse` applies. */
@@ -733,6 +746,15 @@ export async function judgeProse(draft, evidence = {}, deps = {}) {
     jev: jevCodes,
     confidence: Number(jev.confidence.toFixed(3)),
     text: draft,
+    // What the draft was judged against, so a disagreement can become a labelled fixture (jev-report).
+    evidence: {
+      allowsFixClaim: Boolean(evidence.allowsFixClaim),
+      allowsBeneficiary: Boolean(evidence.allowsBeneficiary),
+      allowsMarkdown: Boolean(evidence.allowsMarkdown),
+      liveFlags: evidence.liveFlags ?? [],
+      ...(evidence.maxWords ? { maxWords: evidence.maxWords } : {}),
+      ...(evidence.minWords ? { minWords: evidence.minWords } : {}),
+    },
     error: errors.length ? errors[0] : null,
   });
   return { ...out, mode: ctx.mode, regexCodes, jevCodes, fallback, errors };
