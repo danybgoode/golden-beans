@@ -7,6 +7,9 @@ playwright-report
 test-results
 .vercel
 package-lock.json
+# Machine-written by `node scripts/jev-eval.mjs --live` (recorded Jev answers), and byte-identical to
+# dobby-foundation's template copy — formatting it here would fork a shared rail (jev-semantic-guards).
+scripts/jev-eval.fixtures.json
 references
 apps/web/supabase/migrations
 Roadmap

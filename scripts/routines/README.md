@@ -39,6 +39,13 @@ was spawned.
 5. **Output:** one advisory PR comment / `claude/` docs PR / notification message per run. **Never**
    merges, deploys, or becomes a required check.
 
+## Jev semantic guards — `TYPESAFE_API_KEY` for routines  *(jev-semantic-guards S4.3)*
+
+This project runs no live routine yet (only the example above). When one runs `standup.mjs`,
+`weekly-recap.mjs`, `prose-draft.mjs` or `cross-review.mjs`, its environment needs **`TYPESAFE_API_KEY`**
+as an env var **and** **`api.typesafe.ai`** on Network access → Custom → Allowed-domains, or the guards log
+`jev could not look` and decide exactly as before (the regex) — degraded, never broken.
+
 ## Daily-cap budget (Pro)
 
 The **daily routine-run cap (Pro = 5/day) bites the SCHEDULED runs** — GitHub-event and API triggers

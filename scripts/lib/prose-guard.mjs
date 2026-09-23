@@ -23,6 +23,8 @@
 // regardless of which model wrote it (README D2 — the same module runs on the local rail and on the
 // routine's `--post` step), so promoting or swapping the writer never silently drops the check.
 
+import { jevContext } from './jev.mjs';
+
 /**
  * Marketing vocabulary that signals the model has drifted from reporting into selling. Each one is
  * a word that adds emphasis without adding information — the tell that a sentence is decorating a
@@ -234,7 +236,7 @@ const LIVENESS_NEGATORS =
 const NEGATOR_WINDOW = 40;
 
 /** Split into sentence-ish spans. Not linguistics — enough to scope a negation to its own clause. */
-function sentences(text) {
+export function sentences(text) {
   return String(text ?? '')
     .split(/(?<=[.!?;])\s+/)
     .map((s) => s.trim())
@@ -481,4 +483,257 @@ export function findingsToRevisionNote(findings) {
     '',
     'Output only the corrected report — no preamble, no explanation of the changes.',
   ].join('\n');
+}
+
+// ── Jev decides the SEMANTIC families (jev-semantic-guards D4/D6) ───────────────────────────────────
+// Four of the rules above are language judgements wearing regexes: a FIX claim, an invented BENEFICIARY, a
+// LIVENESS claim, an invented COMMITMENT. Each carries an incident comment for the phrasing it missed last
+// time, and NO_IMPACT_PATTERNS exists only because honest negations ("rather than anything a shopper would
+// see") kept tripping them. `judgeProse` asks Jev those four questions instead — one Noul per sentence per
+// family, in one batched call — by `jev.config.json → rails.prose.mode`:
+//   off    → exactly `checkProse`; no call, no log line. The kill-switch.
+//   shadow → `checkProse` decides; Jev is asked and both verdicts are logged.
+//   jev    → the mechanical rules (length, banned phrases, tool names, unfinished) still come from
+//            `checkProse` — they are real if-statements. Each semantic family comes from Jev (claim at
+//            noul ≥ thresholds.claim); a family Jev could not look at falls back to the regex, alone.
+// What Jev does NOT decide: the EVIDENCE. `allowsFixClaim` / `allowsBeneficiary` still skip those families
+// outright, and a liveness claim is still cleared only by a `liveFlags` token in the same sentence — Jev says
+// whether the sentence ASSERTS liveness, code says whether the pack CORROBORATES it. And invented-commitment
+// still has no evidence flag that disables it. Findings carry the same codes and the same notes as
+// `checkProse`, so the writer's revision loop does not change.
+
+export const SEMANTIC_CODES = [
+  'unsupported-fix-claim',
+  'invented-beneficiary',
+  'flag-state-claim',
+  'invented-commitment',
+];
+
+/** More (sentence × family) questions than this are split into parallel calls. */
+export const PROSE_CHUNK = 120;
+
+// The wording below is MEASURED, not guessed — on the 62 labelled prose fixtures in jev-eval.fixtures.json
+// (2026-09-23, jev-1.13.0, claim ≥ 0.5). The first liveness question ("does it assert something is live,
+// enabled… or usable now?") flagged 12 sentences that merely describe behaviour ("now groups", "no longer
+// breaks"); separating RELEASE STATE from BEHAVIOUR took whole-draft accuracy from 48/62 to 60/62, against
+// the regex's 53/62, with every family at or above the regex. Re-measure with `jev-eval --live` before
+// changing a word.
+export const PROSE_FAMILIES = [
+  {
+    code: 'unsupported-fix-claim',
+    key: 'fix',
+    skip: (ev) => Boolean(ev.allowsFixClaim),
+    question:
+      'Does `sentence` claim that the change being reported FIXED, resolved, closed, patched, prevented or eliminated a specific bug, vulnerability or problem — as an accomplished outcome of this change?',
+    criteria: {
+      true: 'It asserts this change fixed, resolved, prevented, removed or closed a specific defect or risk (any tense or phrasing, including "…, eliminating X", "X no longer happens", "won\'t get stuck anymore").',
+      false:
+        'It only describes a check, test or process that detects or catches mistakes; or it describes what the change adds; or it mentions a past incident as context; or it denies a fix.',
+    },
+  },
+  {
+    code: 'invented-beneficiary',
+    key: 'beneficiary',
+    skip: (ev) => Boolean(ev.allowsBeneficiary),
+    question:
+      'Does `sentence` claim that end users of the product — customers, users, merchants, sellers, buyers, shoppers, tenants, clients, subscribers, or "the people buying from us" — gain, notice or experience something because of this change?',
+    criteria: {
+      true: 'It says or implies a named group of end users benefits, notices, gets or can do something because of this change.',
+      false:
+        'No end-user group is claimed to benefit: "everyone"/"anyone"/"nobody" used only to describe availability; a statement that nobody can use it yet; or it says end users are NOT affected / would see nothing / the work is internal.',
+    },
+  },
+  {
+    code: 'flag-state-claim',
+    key: 'live',
+    skip: () => false,
+    question:
+      'Does `sentence` claim that a capability has been SWITCHED ON for real use — its release state, not its behaviour? Examples of such claims: "is live", "went live", "is now enabled", "is rolled out to everyone", "is now available", "is running in production", "the switch has been flipped", "X can now do Y" (a newly usable capability), "as of this morning people can…".',
+    criteria: {
+      true: 'It states as fact that something is on / live / released / available for use now.',
+      false:
+        'It only describes what a change does or how something behaves ("now groups", "now checks", "no longer breaks", "now caught in seconds", "benefit from", "validates", "won\'t get stuck"); or it claims a fix or a benefit without claiming a release state; or it says the thing is NOT live, dark, off, or not yet available.',
+    },
+  },
+  {
+    code: 'invented-commitment',
+    key: 'commitment',
+    skip: () => false,
+    question:
+      'Does `sentence` state a deadline, a due date, a scheduled date, or a sign-off or approval owed by some time (today, tomorrow, a weekday, next week, end of day…)?',
+    criteria: {
+      true: 'It binds something to a future time: "by Friday", "due tomorrow", "sign-off is owed before the demo", "will ship next week".',
+      false: 'No future time is attached: past facts, or something owed with no date.',
+    },
+  },
+];
+
+/** The notes `checkProse` writes for each semantic family — one map, held to its text by a spec. */
+export function semanticNote(code, { liveFlags = [], sentence = '' } = {}) {
+  switch (code) {
+    case 'unsupported-fix-claim':
+      return (
+        'The draft claims something was fixed, resolved or prevented, but the source data does not show this change making that fix. ' +
+        'Commit messages and sprint docs here often mention a PAST incident to explain why the present work matters — that is context, never the outcome. ' +
+        'Describe what this change itself did.'
+      );
+    case 'invented-commitment':
+      return (
+        'The draft states a deadline, due date or sign-off that appears nowhere in the source data. ' +
+        'Commits and roadmap docs contain no deadlines, so any date or commitment here is invented — ' +
+        'and a report that manufactures obligations makes people chase work nobody agreed to. ' +
+        'Remove it. If something is genuinely owed, say what and to whom, with no date attached.'
+      );
+    case 'invented-beneficiary':
+      return (
+        'The draft names customers/merchants/users, but this change does not touch a surface they can observe. ' +
+        'Say plainly that it is internal, and name the real beneficiary and the real effect — a bug class that can no longer reach production, ' +
+        'a mistake caught in seconds instead of after a deploy.'
+      );
+    case 'flag-state-claim':
+      return (
+        'The draft says a capability is live, enabled or in production, and the evidence pack does not show that. ' +
+        (liveFlags.length
+          ? `The only capabilities the pack proves are on are: ${liveFlags.join(', ')}. `
+          : 'The pack lists NO capability as on. ') +
+        'Almost everything here ships dark behind a default-off flag and is flipped later, so "it landed" and "it is live" are different facts and only one of them is in evidence. ' +
+        'Say what shipped and say plainly that it is off until the flag is flipped. ' +
+        `Rewrite this: "${sentence}"`
+      );
+    default:
+      return '';
+  }
+}
+
+/**
+ * The units Jev judges: the guard's own `sentences()`, further split on line breaks so each bullet of a list
+ * (which has no terminal punctuation) is its own unit — the same reason the beneficiary rule splits on `\n`.
+ */
+export function proseUnits(text) {
+  return sentences(text)
+    .flatMap((s) => s.split(/\n+/))
+    .map((s) => s.replace(/^\s*(?:[-*+]|\d+\.)\s+/, '').trim())
+    .filter((s) => /[a-z]/i.test(s));
+}
+
+/** Is this liveness sentence corroborated by the pack? The same token test `checkProse` applies. */
+const corroborated = (sentence, liveFlags) => {
+  const sl = sentence.toLowerCase();
+  return liveFlags.some((f) => {
+    const tokens = flagTokens(f);
+    return tokens.length > 0 && tokens.some((t) => sl.includes(t));
+  });
+};
+
+/** Build the batched questions for a draft. Pure. Returns [{ id, unit, family, question }]. */
+export function proseQuestions(units, evidence = {}) {
+  const families = PROSE_FAMILIES.filter((f) => !f.skip(evidence));
+  return units.flatMap((unit, i) =>
+    families.map((f) => ({
+      id: `s${i}_${f.key}`,
+      unit: i,
+      family: f.code,
+      question: {
+        type: 'noul',
+        instructions: { sentence: unit, question: f.question },
+        criteria: f.criteria,
+      },
+    }))
+  );
+}
+
+/**
+ * Pure: the semantic findings Jev's answers imply. answers: { [id]: noul }. Families whose answers are missing
+ * are returned in `unanswered` so the caller can fall back to the regex for exactly those.
+ */
+export function decideProse({ units, questions, answers, evidence = {}, threshold }) {
+  const liveFlags = evidence.liveFlags ?? [];
+  const byFamily = new Map();
+  const unanswered = new Set();
+  let confidence = 0;
+  for (const q of questions) {
+    const noul = answers[q.id];
+    if (typeof noul !== 'number' || noul < 0 || noul > 1) {
+      unanswered.add(q.family);
+      continue;
+    }
+    confidence = Math.max(confidence, noul);
+    if (noul < threshold) continue;
+    const sentence = units[q.unit];
+    if (q.family === 'flag-state-claim' && corroborated(sentence, liveFlags)) continue;
+    if (!byFamily.has(q.family)) byFamily.set(q.family, { sentence, noul });
+  }
+  // Every claim Jev DID find is a finding — including in a family where some other chunk could not look.
+  // Dropping those would let a caught claim through whenever one chunk hit a 529 (fresh review, PR #36);
+  // the caller unions them with the regex for exactly those families.
+  const findings = SEMANTIC_CODES.filter((c) => byFamily.has(c)).map((code) => {
+    const { sentence, noul } = byFamily.get(code);
+    const note = semanticNote(code, { liveFlags, sentence });
+    return {
+      code,
+      note: code === 'flag-state-claim' ? note : `${note} The sentence: "${sentence}"`,
+      sentence,
+      noul,
+    };
+  });
+  return { findings, unanswered: [...unanswered], confidence };
+}
+
+/** The draft as Jev sees it: the full text for context; each question points at one `sentence`. */
+const proseState = (draft) => ({ report_draft: String(draft) });
+
+/**
+ * THE JUDGE. async; never throws on a Jev failure (a malformed jev.config.json DOES throw — loudly).
+ * Returns the `checkProse` shape `{ ok, findings }` plus `{ decider, mode, regexCodes, jevCodes, fallback }`.
+ * deps: see jevContext (config, key, ask, log, root) — the same injection as the review judge.
+ */
+export async function judgeProse(draft, evidence = {}, deps = {}) {
+  const regex = checkProse(draft, evidence);
+  const ctx = jevContext('prose', deps);
+  const regexCodes = regex.findings.map((f) => f.code).filter((c) => SEMANTIC_CODES.includes(c));
+  const units = proseUnits(draft);
+  const questions = proseQuestions(units, evidence);
+  if (ctx.mode === 'off' || !questions.length || !String(draft ?? '').trim()) {
+    return { ...regex, decider: 'regex', mode: ctx.mode, regexCodes, jevCodes: null, fallback: [] };
+  }
+
+  const chunks = [];
+  for (let i = 0; i < questions.length; i += PROSE_CHUNK) chunks.push(questions.slice(i, i + PROSE_CHUNK));
+  const results = await Promise.all(
+    chunks.map((c) =>
+      ctx.ask({ state: proseState(draft), questions: Object.fromEntries(c.map((q) => [q.id, q.question])) })
+    )
+  );
+  const answers = {};
+  const errors = [];
+  results.forEach((r) => {
+    if (!r.ok) return errors.push(r.error);
+    for (const [id, a] of Object.entries(r.answers ?? {})) answers[id] = a?.noul;
+  });
+  const jev = decideProse({ units, questions, answers, evidence, threshold: ctx.rail.thresholds.claim });
+  const jevCodes = jev.findings.map((f) => f.code);
+  const fallback = jev.unanswered;
+
+  let out;
+  if (ctx.mode === 'shadow') {
+    out = { ...regex, decider: 'regex' };
+  } else {
+    const mechanical = regex.findings.filter((f) => !SEMANTIC_CODES.includes(f.code));
+    // A fallback family is the UNION of the regex's verdict and whatever Jev found in the chunks that answered.
+    const jevHit = new Set(jevCodes);
+    const fromRegex = regex.findings.filter((f) => fallback.includes(f.code) && !jevHit.has(f.code));
+    const findings = [...mechanical, ...jev.findings, ...fromRegex];
+    out = { ok: findings.length === 0, findings, decider: fallback.length ? 'jev+regex' : 'jev' };
+  }
+  ctx.log({
+    rail: 'prose',
+    mode: ctx.mode,
+    decider: out.decider,
+    regex: regexCodes,
+    jev: jevCodes,
+    confidence: Number(jev.confidence.toFixed(3)),
+    text: draft,
+    error: errors.length ? errors[0] : null,
+  });
+  return { ...out, mode: ctx.mode, regexCodes, jevCodes, fallback, errors };
 }

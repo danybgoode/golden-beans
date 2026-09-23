@@ -45,7 +45,7 @@ import { formatPrList, telegramHtmlToConsoleText } from './lib/telegram-format.m
 import { readLogFromBranch, appendLineToBranch } from './lib/log-branch.mjs';
 import { appendStandupArtifactsToMessage, buildStandupArtifacts } from './lib/standup-deck.mjs';
 import { upgradeArtifactLinks } from './lib/report-registry.mjs';
-import { checkProse, findingsToRevisionNote } from './lib/prose-guard.mjs';
+import { findingsToRevisionNote, judgeProse } from './lib/prose-guard.mjs';
 import {
   buildEvidencePack,
   buildQuietBrief,
@@ -552,10 +552,14 @@ async function main() {
       liveFlags: gatherLiveFlags(config.liveFlags).flags,
       maxWords: STANDUP_MAX_WORDS,
     });
-    const verdict = checkProse(draft, {
+    // jev-semantic-guards S3.2: the semantic families are judged by Jev per jev.config.json → rails.prose.mode;
+    // `checkProse` is the fallback and, with the rail off, the whole of it. The decider is on the result.
+    const verdict = await judgeProse(draft, {
       ...evidence,
       extraBannedToolNames: config.prose.extraBannedToolNames,
     });
+    const found = verdict.findings.map((f) => f.code).join(', ');
+    process.stderr.write(`prose guard: decided by ${verdict.decider} (${verdict.mode}) — ${found || 'clean'}\n`);
     if (!verdict.ok && !FORCE_POST) {
       // Non-zero exit + the numbered revision note. The routine revises once and re-runs with
       // --force-post (D3: a labelled imperfect report beats a missing one).

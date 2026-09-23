@@ -1,0 +1,24 @@
+# The Jev shadow rot guard, on a clock (jev-semantic-guards D8). `guards.yml` is PR-only and path-filtered,
+# so a rail left in `shadow` on a quiet repo would sit past its `shadowExpires` with nothing going red. Expiry
+# is a date, not a diff: this runs daily and fails loudly — the same `node scripts/jev-eval.mjs` the PR check
+# runs (offline replay of recorded answers; never calls the API, needs no secret).
+name: jev-expiry
+
+on:
+  schedule:
+    - cron: '17 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jev-expiry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: jev — eval replay + shadow expiry
+        run: node scripts/jev-eval.mjs
