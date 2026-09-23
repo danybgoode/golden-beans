@@ -4,11 +4,13 @@ import { DismissKeyButton } from './dismiss-key-button'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
 import { isConnectorEnabled } from '@/lib/flags'
 import { getSiteUrl } from '@/lib/site-url'
+import { INSTALL_PROMPT } from '@/lib/install-prompt'
 import { STARTER_FEATURE_KEY, STARTER_TARGET_EVENT } from '@/lib/provisioning'
 import { ProductShell } from '@/components/product/ProductShell'
 import { Icon } from '@/components/ui/Icon'
 import { Callout, Card, Crumb, Crumbs, PageHead, ShownOnce, Step, Steps } from '@/design-system/primitives'
 import { CopyField } from '@/design-system/copy-field'
+import { CopyPromptCard } from '@/components/landing/CopyPromptCard'
 
 // multi-tenant-activation · Sprint 2, Story 2.3 — the first-run screen a freshly confirmed
 // signup lands on: the one-time key reveal, a ≤5-line SDK snippet pre-filled with it, and (gated)
@@ -160,6 +162,20 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
             </Steps>
           </Card>
         ) : null}
+
+        {/* golden-frijoles-plugin · Sprint 3, Story 3.3 — the install prompt, one of the three
+            surfaces INSTALL_PROMPT ships on (the others: the landing's closing CTA, /install). No
+            approved-state contract governs this page (X9: an onboarding state isn't among the
+            33 `APPROVED_STATES`), so this is a plain `Card` like its siblings above — no structural
+            signature to preserve here. */}
+        <Card>
+          <span className="ds-label">Plan and build with an agent</span>
+          <p className="ds-hint">
+            The steps above wire your product&apos;s data in. This wires an agent up to actually build with —
+            paste it into Claude Code, Codex, or anything <code>npx skills</code> supports.
+          </p>
+          <CopyPromptCard label="Paste this into your agent" prompt={INSTALL_PROMPT} />
+        </Card>
 
         <Callout>
           Fired the snippet?{' '}
