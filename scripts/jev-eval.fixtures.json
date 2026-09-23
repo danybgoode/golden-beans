@@ -1,0 +1,4717 @@
+{
+  "review": [
+    {
+      "id": "corpus-a-1",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #68#issuecomment-4895614659); anonymised",
+      "text": "**Blocking** – none.\n\n**Should‑fix** – none.\n\n**Nit**  \n- `.claude/agents/pr-reviewer.md` – the `tools` list uses capitalised names (`Read`, `Grep`, `Glob`, `Bash`). Tool identifiers in the system are case‑sensitive (e.g., `read_file`, `grep_search`, `run_command`). Aligning the names would avoid confusion, though it does not affect current functionality.  \n\n*Advisory only — not a gate. CI + the Claude reviewer + the risk‑tier rule decide",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "nit",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "clean": 0,
+              "blocking": 0,
+              "nit": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-2",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #121#issuecomment-5205782394); anonymised",
+      "text": "The diff looks clean. This is an epic architecture lock and roadmap status update moving `project` from `scaffolded` to `in-progress` with live-evidence decisions `D1–D13`. No executable code or schema migrations are changed in this PR.\n\n### Blocking\n*None.*\n\n### Should-fix\n*None.*\n\n### Nit\n*None.*\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.99,
+            "probabilities": {
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-3",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #122#issuecomment-5229049041); anonymised",
+      "text": "Diff is clean.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.38,
+            "probabilities": {
+              "nit": 0,
+              "clean": 0.4,
+              "should_fix": 0.07,
+              "blocking": 0.53
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-4",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #122#issuecomment-5233578288); anonymised",
+      "text": "Clean.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.57,
+            "probabilities": {
+              "should_fix": 0.03,
+              "clean": 0.68,
+              "nit": 0,
+              "blocking": 0.29
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-5",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #124#issuecomment-5233680572); anonymised",
+      "text": "Clean.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.63,
+            "probabilities": {
+              "clean": 0.73,
+              "nit": 0,
+              "blocking": 0.24,
+              "should_fix": 0.03
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-6",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #124#issuecomment-5233735573); anonymised",
+      "text": "Diff looks clean.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.32,
+            "probabilities": {
+              "clean": 0.49,
+              "nit": 0.01,
+              "should_fix": 0.07,
+              "blocking": 0.43
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-7",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5381482487); anonymised",
+      "text": "## Review Findings\n\n**Blocking**\n\nNone.\n\n**Should-fix**\n\n- **sprint-1.md:2** — smoke step 3 (\"its linked PDP\") is underspecified; a first-time reader cannot reproduce which PDP URL to open without consulting the locked `PRODUCT_ID` constant. Use an explicit path or reference the constant.\n\n- **sprint-2.md:2.2 acceptance** — \"Unclaimed, preview-private, unresolved and query-bearing responses are `no-store`\" conflates implementation detail with behavior. D10 states these \"bypass edge caching,\" which may be achieved via origin headers *or* Cloudflare rule exclusions. Clarify that `no-store` is the origin contract, while Cloudflare exclusion is a separate, additive guard.\n\n**Nit**\n\n- **README: D14** — \"touches none of those imports or any payment/checkout file\" is slightly imprecise; Story 3.2 *must* touch spec files that name those imports. Rewrite as \"touches no payment/checkout *implementation* files.\"\n\n---\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "should_fix": 1,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-8",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #166#issuecomment-5398217699); anonymised",
+      "text": "Blocking: None\n\n**Should-fix:**\n- `Roadmap/09-platform-infra/hyper-performant-runtime/README.md` DoD: The unchecked \"Feature branch deletion\" item conflates a claimed completion (\"superseded S1/S2/S3 stack refs are deleted\") with a future action (\"then must be deleted and verified\"). Split into separate checkboxes or reword to remove ambiguity about what is actually done.\n\n**Nit:**\n- `Roadmap/09-platform-infra/hyper-performant-runtime/README.md` DoD: Team memory reference uses an absolute local path `~/.claude/projects/-Users-cosmo-dobby-commerce-engine/memory/`; prefer a project-relative or generic description.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "should_fix": 1,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-9",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #178#issuecomment-5706826061); anonymised",
+      "text": "No Blocking or Should-fix findings.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.99,
+            "probabilities": {
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-10",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #183#issuecomment-5734385443); anonymised",
+      "text": "Clean.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "blocking": 0,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-11",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #184#issuecomment-5739092175); anonymised",
+      "text": "No security issues found.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0,
+              "clean": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-12",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #69#issuecomment-5200261293); anonymised",
+      "text": "Clean.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "nit": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-13",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #77#issuecomment-5220524046); anonymised",
+      "text": "Clean.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-14",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #84#issuecomment-5231995061); anonymised",
+      "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "blocking": 0,
+              "should_fix": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-15",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #86#issuecomment-5233691220); anonymised",
+      "text": "## Findings\n\n**Blocking**\n- `Roadmap/01-growth-engine/flag-serving-and-prd-g/LIVE-PROOF.md:127-145` — the new 2026-08-09 correction says the 2026-08-01 statement is “retained only as the historical claim,” yet that earlier statement still reads as an unqualified, current fact; a reader may act on the unmarked 2026-08-01 text before reaching the later correction. Either strike through or annotate the 2026-08-01 passage, or remove the “retained only” clause and replace it with explicit text such as “This entry supersedes the 2026-08-01 section.”\n\n**Should-fix**\n- None\n\n**Nit**\n- None\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "clean": 0,
+              "nit": 0,
+              "blocking": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-16",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5242824030); anonymised",
+      "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "blocking": 0,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-17",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #88#issuecomment-5245713346); anonymised",
+      "text": "Blocking: none.\n\nShould-fix: none.\n\nNit: none.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-18",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #89#issuecomment-5245858017); anonymised",
+      "text": "No findings.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-19",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #92#issuecomment-5273370372); anonymised",
+      "text": "**Scope: CODE ONLY.** 6 documentation file(s) were withheld from this reviewer to fit agy's 256 KB argv limit, so it did NOT see the sprint docs, the epic README or any migration prose — it could not check the code against its own stated acceptance criteria. Withheld: Roadmap/00-ideas/BUILD-ORDER.md, Roadmap/02-commercial/landing-redesign-v2/README.md, Roadmap/02-commercial/landing-redesign-v2/sprint-1.md, Roadmap/02-commercial/landing-redesign-v2/sprint-2.md, Roadmap/02-commercial/landing-redesign-v2/sprint-3.md, references/landing-end-state.md.\n\n---\n\nThe diff looks clean.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.98,
+            "probabilities": {
+              "clean": 0.99,
+              "nit": 0,
+              "should_fix": 0.01,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-20",
+      "label": false,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #100#issuecomment-5346013265); anonymised",
+      "text": "**Scope: 34 FILE(S) ONLY.** This reviewer was given a targeted subset of the PR — the diff exceeds agy's 256 KB argv limit in full, so the alternative was no second-family review at all. It saw: apps/web/components/landing/ArgumentSection.tsx, apps/web/components/landing/AuthoritySection.tsx, apps/web/components/landing/BuildItYourselfSection.tsx, apps/web/components/landing/ClosingCta.tsx, apps/web/components/landing/ConnectSection.tsx, apps/web/components/landing/FinOpsSection.tsx, apps/web/components/landing/Footer.tsx, apps/web/components/landing/Hero.tsx, apps/web/components/landing/HowItGrowsSection.tsx, apps/web/components/landing/InfomercialSection.tsx, apps/web/components/landing/LeverageSection.tsx, apps/web/components/landing/MakerClosingCta.tsx, apps/web/components/landing/MakerHero.tsx, apps/web/components/landing/MakerLoopSection.tsx, apps/web/components/landing/MethodologySection.tsx, apps/web/components/landing/Nav.tsx, apps/web/components/landing/OperatingContextSection.tsx, apps/web/components/landing/OpinionsSection.tsx, apps/web/components/landing/OpsSection.tsx, apps/web/components/landing/OpsTabs.tsx, apps/web/components/landing/PricingSection.tsx, apps/web/components/landing/PrincipleSection.tsx, apps/web/components/landing/ProductContextSection.tsx, apps/web/components/landing/ProofSection.tsx, apps/web/components/landing/ResilienceSection.tsx, apps/web/components/landing/RunYourFirstBet.tsx, apps/web/components/landing/SdkSection.tsx, apps/web/components/landing/TryItSection.tsx, apps/web/lib/booking.ts, apps/web/lib/landing-sections.ts, apps/web/lib/maker-ops.test.ts, apps/web/lib/maker-ops.ts, apps/web/lib/primary-cta.test.ts, apps/web/lib/primary-cta.ts. It did NOT see 23 other changed file(s), and could not check any of this against the sprint docs.\n\n---\n\nwrite_fileßerdem{\"file_path\": \"/Users/cosmo/.vibe/plans/1787162134-mighty-swift-sage.md\", \"content\": \"# Review Plan: landing-maker-ops PR\\n\\n## Scope\\nLarge landing page refactor: retire 11 old sections (Opinions, Argument, ProductContext, Resilience, Principle, Leverage, BuildItYourself, TryIt, Closing, Hero, HowItGrows, Infomercial), add 10 new sections (MakerHero, MakerLoop, OperatingContext, Ops, Authority, FinOps, Methodology, MakerClosing, OpsTabs, RunYourFirstBet), rewrite landing-sections registry, add supporting modules (booking.ts, primary-cta.ts, maker-ops.ts) and unit tests.\\n\\n## Critical Rule Check\\n- **Rule 1 (telemetry)**: No parallel pipelines, no direct inserts. ✓ (UI-only changes)\\n- **Rule 2 (public API)**: No new public routes. ✓\\n- **Rule 3 (MCP gating)**: No connector bypasses. ✓ (ConnectSection still uses /install)\\n- **Rule 4 (deploy)**: No manual vercel commands. ✓\\n- **Rule 5 (URLs)**: No Host header fallbacks. ✓ (uses getSiteUrl pattern, root-relative paths)\\n\\n## Deep Dive Areas\\n1. **Gate reading patterns** in MakerHero, OpsSection, AuthoritySection – verify server-side fresh reads\\n2. **Badge status consistency** across hero bag, OpsTabs, AuthoritySection\\n3. **Section ID registry** completeness and DOM id alignment\\n4. **Nav link root-relative fix** for cross-route rendering\\n5. **Primary CTA routing** logic and test coverage\\n\\n## Potential Findings to Validate\\n- Badge `status=\\\"next\\\"` hardcoded in OpsTabs/MakerHero for both 'gated' and 'next' semantic states – check if Badge styling distinguishes these\\n- MakerHero comment claims \\\"One badge, on the one row that needs it\\\" but implementation adds badges to all non-live surfaces (dev, sec, fin) – comment may be outdated\\n- Booking.ts URL construction – verify Cal.com accepts empty-value `embed=` param\\n\\n## Files Requiring Cross-Check\\n- `apps/web/components/landing/MakerHero.tsx` (not fully provided – verify GoldenFrijolMark import)\\n- `apps/web/components/landing/SurfaceNote.tsx` (not in diff – verify exists)\\n- `apps/web/components/ui/Badge.tsx` (not in diff – verify status prop handling)\\n\"}",
+      "note": "A vibe tool-call transcript that writes a review PLAN and never delivers a review; the regex accepted it because the plan names severity headings. Found by the 2026-09-23 backtest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 0.5,
+            "probabilities": {
+              "clean": 0.16,
+              "nit": 0.19,
+              "blocking": 0.03,
+              "should_fix": 0.62
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-21",
+      "label": false,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #100#issuecomment-5346034909); anonymised",
+      "text": "**Scope: 42 FILE(S) ONLY.** This reviewer was given a targeted subset of the PR — the diff exceeds agy's 256 KB argv limit in full, so the alternative was no second-family review at all. It saw: apps/web/app/globals.css, apps/web/app/layout.tsx, apps/web/app/page.tsx, apps/web/app/talk/page.tsx, apps/web/components/landing/ArgumentSection.tsx, apps/web/components/landing/AuthoritySection.tsx, apps/web/components/landing/BuildItYourselfSection.tsx, apps/web/components/landing/ClosingCta.tsx, apps/web/components/landing/ConnectSection.tsx, apps/web/components/landing/FinOpsSection.tsx, apps/web/components/landing/Footer.tsx, apps/web/components/landing/Hero.tsx, apps/web/components/landing/HowItGrowsSection.tsx, apps/web/components/landing/InfomercialSection.tsx, apps/web/components/landing/LeverageSection.tsx, apps/web/components/landing/MakerClosingCta.tsx, apps/web/components/landing/MakerHero.tsx, apps/web/components/landing/MakerLoopSection.tsx, apps/web/components/landing/MethodologySection.tsx, apps/web/components/landing/Nav.tsx, apps/web/components/landing/OperatingContextSection.tsx, apps/web/components/landing/OpinionsSection.tsx, apps/web/components/landing/OpsSection.tsx, apps/web/components/landing/OpsTabs.tsx, apps/web/components/landing/PricingSection.tsx, apps/web/components/landing/PrincipleSection.tsx, apps/web/components/landing/ProductContextSection.tsx, apps/web/components/landing/ProofSection.tsx, apps/web/components/landing/ResilienceSection.tsx, apps/web/components/landing/RunYourFirstBet.tsx, apps/web/components/landing/SdkSection.tsx, apps/web/components/landing/TryItSection.tsx, apps/web/components/ui/AgentWindow.tsx, apps/web/e2e/design-system.browser.spec.ts, apps/web/e2e/landing.browser.spec.ts, apps/web/e2e/mobile-heuristics.browser.spec.ts, apps/web/lib/booking.ts, apps/web/lib/landing-sections.ts, apps/web/lib/maker-ops.test.ts, apps/web/lib/maker-ops.ts, apps/web/lib/primary-cta.test.ts, apps/web/lib/primary-cta.ts. It did NOT see 15 other changed file(s), and could not check any of this against the sprint docs.\n\n---\n\nread_file{\"file_path\": \"/Users/cosmo/.vibe/plans/1787162079-wild-smooth-storm.md\"}aught with this PR.\n\nLet me start by reviewing the full diff carefully and systematically.\n\n## Plan\n\n1. **Understand the scope**: This is a landing page redesign PR (landing-maker-ops) that replaces many sections and components\n2. **Check for rule violations**: Verify the 5 critical rules from AGENTS.md\n3. **Check for correctness issues**: Look for bugs, null hazards, race conditions, broken error handling\n4. **Check for architectural issues**: Look for parallel pipelines, improper reuse, etc.\n5. **Check for dead code**: Unused imports, silent no-ops, etc.\n6. **Verify the narrative**: Ensure the page still tells a coherent story\n\nLet me start by reviewing the key changes:\n\n### Step 1: Rule violations check\n\n**Rule 1 - Growth engine owns telemetry**: Need to verify no direct DB inserts or parallel pipelines\n**Rule 2 - /api/v1/public/* demo only**: Check if any public routes serve non-demo projects\n**Rule 3 - MCP connector gating**: Verify CONNECTOR_ENABLED and token checks are maintained\n\n\n**Rule 4 - Merging to main is deploy**: Check for manual vercel deploy commands\n**Rule 5 - Site URLs use getSiteUrl()**: Verify no Host header fallbacks\n\n### Step 2: Correctness check\n\n- Review new components for null/undefined hazards\n- Check async handling\n- Verify error boundaries\n- Check for race conditions\n\n### Step 3: A\n\n[… omitted for fixture size …]\n\nn PR. The plan needs to cover rule violations, correctness checks, and architectural concerns systematically. I'll add precise, actionable steps that directly address the review requirements. Each new step will be concise and contribute to a thorough assessment. I'm tracking the plan's development carefully to meet the user's instructions. I need to continue the plan by adding the next concrete verification steps. The plan is incomplete, so I'll add precise, actionable steps that cover rule violations, correctness, and architectural concerns for the landing page redesign PR. I'll ensure each new step is concise and directly addresses the review requirements. I'm tracking the plan's development to meet the user's instructions for a systematic review approach.\n\nI see the user wants me to create or edit a plan file at a specific path. They've provided a file path and want me to build the plan incrementally. I should start by writing the initial plan content to that file.\n\nThe user has given me a complex PR diff to review, and wants me to act as a fresh reviewer. But they've also put me in \"plan mode\" which means I should only write to the plan file or scratchpad, not make any edits to the repo.\n\nLet me create the plan file with a systematic approach to reviewing this PR. Based on the diff, this is a landing page redesign (landing-maker-ops) with many component changes.\n\nI'll create a comprehensive but concise plan that covers:\n1. Understanding the scope\n2. Rule violations check\n3. Correctness check\n4. Architectural check\n5. Specific findings to look for\n\nLet me write this to the plan file. Based on the warning message, I need to create or edit the plan file at `/Users/cosmo/.vibe/plans/1787162079-wild-smooth-storm.md` and only make changes to that file (or scratchpad). I cannot make any edits to the repo itself.\n\nLet me create a comprehensive plan for reviewing this PR. I'll write it to the specified plan file. Based on the diff provided, this is a major landing page redesign (landing-maker-ops). I need to create a systematic plan to review it.\n\nHere's my plan: I'll create a structured approach that covers:\n1. Understanding the scope and changes\n2. Checking for rule violations (the 5 critical rules)\n3. Checking for correctness issues\n4. Checking for architectural issues\n5. Verifying specific concerns\n\nLet me write this to the plan file. write_file{\"file_path\": \"/Users/cosmo/.vibe/plans/1787162079-wild-smooth-storm.md\", \"content\": \"# Review Plan: landing-maker-ops PR\\n\\n## 0. Orientation\\n- **PR scope**: Complete landing page redesign (Sprint 2), replacing the v2 narrative with a \\\"maker-ops\\\" spine\\n- **Scale**: 30+ files touched, 12 new components, 10 deleted components, major CSS refactor\\n- **Key change**: Repositions product from \\\"growth engine your agent operates\\\" to \\\"make more, grow what works\\\"\\n\\n---\\n\\n## 1. Rule Violations Check (AGENTS.md § rules that cannot be violated)\\n\\n### Rule 1 — Growth engine owns telemetry\\n- **Check**: No dir\n\n[… omitted for fixture size …]\n\n entries match actual rendered sections\\n  - New sections (`loop`, `ops`, `authority`, `finops`, `methodology`) have entries\\n  - Deleted sections entries removed\\n- **Action**: Cross-reference with `page.tsx` imports\\n\\n### 4.5 Flag Reading\\n- **Files**: `MakerHero.tsx`, `OpsSection.tsx`, `AuthoritySection.tsx`\\n- **Check**:\\n  - Flags read fresh per request (`force-dynamic`)\\n  - Flag values not hardcoded\\n  - Gate logic correctly implemented\\n- **Action**: Verify `isSignupEnabled()`, `isDestinationDeliveryEnabled()`, etc. usage\\n\\n### 4.6 Badge Consistency\\n- **Files**: `MakerHero.tsx`, `OpsTabs.tsx`, `AuthoritySection.tsx`, `FinOpsSection.tsx`\\n- **Check**:\\n  - Badge text consistent across all views\\n  - Badge status values (`live`, `next`, `gated`) used correctly\\n  - No decoration-only badges\\n- **Action**: Verify `surfaceBadgeLabel` function usage\\n\\n---\\n\\n## 5. Honesty & Accuracy Check\\n\\n### 5.1 FinOps Section\\n- **File**: `apps/web/components/landing/FinOpsSection.tsx`\\n- **Check**: Clearly labeled as not built (epic D4)\\n- **Action**: \\n  - Verify \\\"Next build\\\" badge present\\n  - Verify explanatory text \\\"None of that exists yet\\\"\\n  - Verify no live claims\\n\\n### 5.2 Authority Section\\n- **File**: `apps/web/components/landing/AuthoritySection.tsx`\\n- **Check**: Gate claims match actual route state\\n- **Action**:\\n  - Verify reads `isResilienceScenariosEnabled()` and `isSecuritySimulationsEnabled()`\\n  - Verify badge text matches gate state\\n\\n### 5.3 Metadata\\n- **File**: `apps/web/app/layout.tsx`\\n- **Check**: Title and description accurately describe current product\\n- **Action**: \\n  - Verify no mention of unbuilt features (FinOps)\\n  - Verify positioning matches new narrative\\n\\n---\\n\\n## 6. Test Coverage Check\\n\\n### 6.1 New Tests\\n- **Files**: `apps/web/lib/maker-ops.test.ts`, `apps/web/lib/primary-cta.test.ts`\\n- **Check**: Tests cover all branches and edge cases\\n- **Action**: Verify test coverage for new logic\\n\\n### 6.2 Updated Tests\\n- **Files**: `apps/web/e2e/landing.browser.spec.ts`, `apps/web/e2e/design-system.browser.spec.ts`, `apps/web/e2e/mobile-heuristics.browser.spec.ts`\\n- **Check**: Tests updated to match new narrative\\n- **Action**:\\n  - Verify section count assertions updated\\n  - Verify nav link assertions updated\\n  - Verify new `/talk` route added to mobile sweep\\n\\n---\\n\\n## 7. Execution Order\\n\\n1. **Quick scan** (10 min): \\n   - Skim all diffs for obvious red flags (hardcoded secrets, direct DB calls, manual deploys)\\n   - Verify no AGENTS.md rule violations jump out\\n\\n2. **Rule violations pass** (15 min):\\n   - Execute checks from Section 1\\n   - Mark any violations as BLOCKING\\n\\n3. **Correctness pass** (20 min):\\n   - Execute checks from Section 2\\n   - Focus on new components and modified logic\\n\\n4. **Architecture pass** (15 min):\\n   - Execute checks from Section 3\\n   - Verify proper reuse and no parallel pipelines\\n\\n5. **Deep dives** (30 min):\\n   - Focus on Sections 4, 5, 6 based on findings from earlier passes\\n   - Verify specific concerns\\n\\n6. **Final synthesis** (10 min):\\n   - Group findings by severity\\n   - Write up Blocking/Should-fix/Nit list\\n\\n---\\n\\n## 8. Severity Guide\\n\\n- **Blocking**: Real bug, rule violation, or correctness issue that must be fixed before merge\\n- **Should-fix**: Design/UX issue, minor inaccuracy, or technical debt that should be addressed\\n- **Nit**: Cosmetic, style, or minor optimization opportunity\\n\\n---\\n\\n*Plan created. Ready to execute.*\\n\"}",
+      "note": "A vibe tool-call transcript that writes a review PLAN and never delivers a review; the regex accepted it because the plan names severity headings. Found by the 2026-09-23 backtest. Trimmed from 124433 chars to head + the heading the regex fires on + tail.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.93,
+            "probabilities": {
+              "blocking": 0.02,
+              "clean": 0.95,
+              "nit": 0.02,
+              "should_fix": 0.01
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-22",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #100#issuecomment-5346402185); anonymised",
+      "text": "**Blocking**\n\n- None.\n\n**Should-fix**\n\n- None.\n\n**Nit**\n\n- None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-23",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #104#issuecomment-5351128179); anonymised",
+      "text": "**Blocking:** None.\n\n**Should-fix:** None.\n\n**Nit:** None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-24",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #105#issuecomment-5356332068); anonymised",
+      "text": "**Blocking:** None.\n\n**Should-fix:** None.\n\n**Nit:** None.\n\n*This is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "should_fix": 0,
+              "clean": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-25",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #107#issuecomment-5358999734); anonymised",
+      "text": "No findings.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-26",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #108#issuecomment-5360847839); anonymised",
+      "text": "**Blocking**\n\n- None.\n\n**Should-fix**\n\n- None.\n\n**Nit**\n\n- None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-27",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #113#issuecomment-5363893720); anonymised",
+      "text": "No findings.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "blocking": 0,
+              "should_fix": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-28",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #114#issuecomment-5364048426); anonymised",
+      "text": "No findings.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "should_fix": 0,
+              "nit": 0,
+              "clean": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-29",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #116#issuecomment-5365037371); anonymised",
+      "text": "**Blocking**\n\n- None.\n\n**Should-fix**\n\n- None.\n\n**Nit**\n\n- None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-30",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #118#issuecomment-5403714003); anonymised",
+      "text": "Blocking: None.\n\nShould-fix: None.\n\nNit: None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-31",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #119#issuecomment-5415875649); anonymised",
+      "text": "Blocking: None.\n\nShould-fix: None.\n\nNit: None.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "nit": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-32",
+      "label": false,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #121#issuecomment-5418751750); anonymised",
+      "text": "**Scope: CODE ONLY.** 2 documentation file(s) were withheld from this reviewer to fit Mistral Vibe's 256 KB argv limit, so it did NOT see the sprint docs, the epic README or any migration prose — it could not check the code against its own stated acceptance criteria. Withheld: Roadmap/01-growth-engine/flags-console-parity/IN-FLIGHT.md, Roadmap/01-growth-engine/flags-console-parity/sprint-3.md.\n\n---\n\nread_file{\"file_path\": \"/Users/cosmo/dobby/golden-beans/apps/web/lib/flag-vocabulary-surfaces.test.ts\", \"offset\": 180, \"limit\": 40}",
+      "note": "Scope header followed by a raw read_file tool call: no review.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.81,
+            "probabilities": {
+              "blocking": 0.05,
+              "should_fix": 0.05,
+              "clean": 0.85,
+              "nit": 0.05
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-33",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #151#issuecomment-5724421556); anonymised",
+      "text": "Clean.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "blocking": 0,
+              "should_fix": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-34",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #154#issuecomment-5737195393); anonymised",
+      "text": "Clean.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "nit": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-35",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #154#issuecomment-5739089385); anonymised",
+      "text": "Clean.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-36",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #154#issuecomment-5739207982); anonymised",
+      "text": "Clean.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "nit": 0,
+              "blocking": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-f-37",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project F (PR #20#issuecomment-5730714579); anonymised",
+      "text": "No security findings.\n\nSecurity lens — advisory, single-pass, not SAST. Findings are resolved or answered before merge; CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0,
+              "clean": 1,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-f-38",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project F (PR #23#issuecomment-5739295567); anonymised",
+      "text": "### Should-fix\n- Roadmap/09-platform-infra/plugin-audit-and-extraction/README.md:187 — \"No third copy exists\" contradicts parenthetical that surviving forks exist with written reasons; rephrase to reflect documented exceptions.\n\n### Nit\n- Roadmap/00-ideas/BUILD-ORDER.md:1 — generated date 2026-09-19 does not match RETROSPECTIVE.md:3 close date 2026-09-18.\n\nCross-agent pass — findings are resolved or answered before merge; this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 1,
+              "blocking": 0,
+              "clean": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-39",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5381506382); anonymised",
+      "text": "Clean.\n\n**Nit**\n- `s1-production-baseline-2026-08-22.json`: add a header comment documenting it is generated by `node scripts/perf-probe.mjs --json --revision <sha>` to align with AGENTS rule #2 on generated artifacts.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "nit",
+            "confidence": 0.33,
+            "probabilities": {
+              "clean": 0.02,
+              "blocking": 0.25,
+              "nit": 0.5,
+              "should_fix": 0.23
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-40",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #78#issuecomment-5220467980); anonymised",
+      "text": "Diff looks clean.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "nit": 0,
+              "blocking": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-41",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #97#issuecomment-5281825680); anonymised",
+      "text": "Diff looks clean.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "nit": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-42",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #145#issuecomment-5706821564); anonymised",
+      "text": "No security findings in this diff.\n\nSecurity lens — advisory, single-pass, not SAST. Findings are resolved or answered before merge; CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "clean": 1,
+              "should_fix": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-f-43",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project F (PR #22#issuecomment-5737195248); anonymised",
+      "text": "Security review complete.\n\n**No findings.**\n\nSecurity lens — advisory, single-pass, not SAST. Findings are resolved or answered before merge; CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 1,
+              "nit": 0,
+              "should_fix": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-44",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #67#issuecomment-4895440290); anonymised",
+      "text": "**Blocking**  \n- *None.* The diff only modifies markdown documentation and adds retrospectives; it does not introduce code changes that could violate the five commerce‑ownership rules, auth layer, or bilingual UI requirements.\n\n**Should‑fix**  \n- **Roadmap/README.md – Mercado Libre sync bullet** – the description still mixes English prose with Spanish terms (e.g., “self‑serve as a paid SKU ($299/año o $30/mes)”). For strict bilingual compliance the UI‑facing text referenced here should have a matching entry in both `locales/es.json` and `locales/en.json`.  \n- **Roadmap/04‑shipping‑and‑delivery/envia‑killswitch/README.md** – the status line now references a “Retro: `RETROSPECTIVE.md`” without a relative link; adding a markdown link (`[RETROSPECTIVE.md](RETROSPECTIVE.md)`) would keep documentation navigation consistent.\n\n**Nit**  \n- Updated `updated:` timestamps across several roadmap seeds to `2026‑07‑06`; consider normalising the date format (ISO 8601) across all roadmap files for consistency.  \n- In `Roadmap/00‑ideas/seeds/buyer‑notifications‑money‑path.md` the note *“hardcoded locked‑pronto”* still points to `BuyerNotificationPreferences.tsx`; if that code path is intended to be removed soon, a TODO comment in the source file could help prevent future regressions.  \n\n*Advisory only — not a gate. CI + the Claude reviewer + the risk‑tier rule decide.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "should_fix": 1,
+              "nit": 0,
+              "clean": 0,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-45",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5382575671); anonymised",
+      "text": "**Should-fix:**\n- `Roadmap/09-platform-infra/hyper-performant-runtime/sprint-3.md:42` — Acceptance criterion references stale **\"309 KB\"** baseline; should match corrected 315,519 bytes or reference Story 1.3’s probe exclusively\n\n**Nit:**\n- `Roadmap/09-platform-infra/hyper-performant-runtime/sprint-1.md:101` — Step 4 is marked *\"owed to the product owner by name\"* but the session notes it was not executed; clarify whether the ≥1-hour idle check is a hard gate or perception-only\n\nNo blocking issues. The architecture lock corrections are properly implemented, all five rules are preserved, and code paths are tested.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.93
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 0.96,
+            "probabilities": {
+              "should_fix": 0.97,
+              "clean": 0,
+              "blocking": 0.03,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-46",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5382592960); anonymised",
+      "text": "**Blocking:**\n- Roadmap/00-ideas/BUILD-ORDER.md: Generated artifact modified. AGENTS rule #2 explicitly prohibits hand-editing generated artifacts; they must be regenerated via `node scripts/build-order.mjs`. Hand-edited changes are silently reverted by the next regeneration run.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.86
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "blocking": 1,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-47",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5382616002); anonymised",
+      "text": "Blocking\n\n- **Wrong epic story count in BUILD-ORDER.md** — `Roadmap/00-ideas/BUILD-ORDER.md:15` lists the epic as `3/10 stories`, but the three Sprint 1 stories (1.1, 1.2, 1.3) are marked ✅ shipped in the sprint docs, which should make the epic `3/10` correct; however, the BUILD-ORDER also moved the epic from the \"Ready to build\" section (which had 1 item) to \"Building now\" (which went from 3 to 4 items), and the math checks out. The count itself is consistent with the content, but the epic README frontmatter still says `status: in-progress` while Sprint 1 is done. This is not a count mismatch, but a status presentation nuance that does not block.\n\nShould-fix\n\n- **Redundant D18 correction could be clearer** — `Roadmap/09-platform-infra/hyper-performant-runtime/README.md` D18 is extremely long and embeds a review-time discovery narrative. Consider moving the detailed rollback staging to a LEARNINGS entry and keeping D18 as a concise decision record.\n\nNit\n\n- **Inconsistent date formatting in baseline** — `s1-production-baseline-2026-08-22.json:3` uses `2026-08-22T16:21:27.277Z`; consider matching the repo's existing ISO format without milliseconds for consistency.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.88
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 0.71,
+            "probabilities": {
+              "clean": 0,
+              "nit": 0,
+              "blocking": 0.21,
+              "should_fix": 0.79
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-48",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #163#issuecomment-5382519267); anonymised",
+      "text": "## Blocking\n\nNone.\n\n## Should-fix\n\nNone. All acceptance criteria for the completed Sprint 1 stories are either met or explicitly deferred as product-owner observations; unresolved items belong to Sprint 2/3 which remain in-progress.\n\n## Nit\n\nNone.\n\nClean diff — architecture lock (D1–D18) is comprehensive, scripts are well-tested with honest three-state handling, deploy invariants are asserted at the source, and all five non-violable rules are preserved.\n\nRequired cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.92,
+            "probabilities": {
+              "clean": 0.94,
+              "should_fix": 0.04,
+              "blocking": 0.01,
+              "nit": 0.01
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-49",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #100#issuecomment-5345612214); anonymised",
+      "text": "## Blocking\n\n- `RunYourFirstBet` falls back to `#pricing`, which is a dead anchor on `/talk` when signup is disabled. `Nav` is rendered there, so its primary CTA silently does nothing in that gate state. Use `/#pricing` for the fallback (and update its unit expectation). [primary-cta.ts](/Users/cosmo/dobby/golden-beans/apps/web/lib/primary-cta.ts:18)\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "should_fix": 0,
+              "blocking": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-50",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #68#issuecomment-5200295236); anonymised",
+      "text": "**Review complete.**\n\nDiff is clean — pure documentation update correctly archiving the harness-portability seed and regenerating BUILD-ORDER.md. No rule violations, no correctness issues.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "clean": 1,
+              "nit": 0,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-51",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #118#issuecomment-5200427601); anonymised",
+      "text": "**Blocking**\n\n- The iframe check can pass an explicitly non-embeddable page — `scripts/prod-smoke.mjs`, `embed-iframe`. A `200 text/html` response with `Content-Security-Policy: frame-ancestors 'none'` or `'self'` satisfies the substring check, although third-party seller sites cannot frame it.\n\n**Should-fix**\n\n- The iframe check has no page-identity assertion — `scripts/prod-smoke.mjs`, `embed-iframe`. Any generic `200` HTML error page carrying a permissive CSP passes, contradicting the stated requirement that rendered-page checks verify structural identity.\n- An observed catalog defect is misclassified as transport unavailability — `firstShopSlug` / `resolvePath`. For `200 application/json` with `{\"items\":[{\"shop\":{\"slug\":\"\"}}]}`, the catalog passes and the iframe becomes `UNAVAILABLE`; this is evidence of the historical empty-slug regression and should produce a failure, not the same state as DNS or timeout.\n\n**Nit**\n\nNone.\n\n*Required cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.93
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.94,
+            "probabilities": {
+              "blocking": 0.96,
+              "nit": 0,
+              "should_fix": 0.04,
+              "clean": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-52",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #86#issuecomment-5233678848); anonymised",
+      "text": "### Summary of Findings\n\nThe diff contains documentation-only updates to `LIVE-PROOF.md` and `LEARNINGS.md`, clarifying the project identity correction (`project` as the owner-operated catalog vs. historical notes on `project`) and updating operating notes accordingly. No application code, database migrations, or configuration rules were modified.\n\n**Blocking:** None.  \n**Should-fix:** None.  \n**Nit:** None.\n\nThe diff is clean and free of correctness or project rule violations.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "nit": 0,
+              "should_fix": 0,
+              "clean": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-53",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #125#issuecomment-5457554608); anonymised",
+      "text": "**Scope: 5 FILE(S) ONLY.** This reviewer was given a targeted subset of the PR — the diff exceeds Mistral Vibe's 256 KB argv limit in full, so the alternative was no second-family review at all. It saw: .github/workflows/ci.yml, apps/web/app/app/flags/[projectSlug]/[flagKey]/feature-panes.tsx, apps/web/app/app/flags/[projectSlug]/flag-console.tsx, apps/web/app/console.css, apps/web/app/globals.css. It did NOT see 41 other changed file(s), and could not check any of this against the sprint docs.\n\n---\n\nBlocking\n- **None**\n\nShould-fix\n- **None**\n\nNit\n- **None**\n\nThe diff is clean. It adds the feature panes (Funnel/Impact) to the feature page, wires the FlagSwitch into the flag console list with correct gating and column math, ports the approved dialog and modal CSS from the reference, and wires the visual gate into CI — all without violating any of the project's invariants.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.99,
+            "probabilities": {
+              "clean": 1,
+              "should_fix": 0,
+              "blocking": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-a-54",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project A (PR #71#issuecomment-4932155329); anonymised",
+      "text": "**Blocking**\n- **Missing app code and test files (Silent no-op):** `sprint-2.md` claims that two routing bugs were fixed in `middleware.ts` and `lib/subdomain.ts`, and that three test files (`e2e/subdomain.spec.ts`, `e2e/edge-bot-mitigation-api.spec.ts`, `e2e/origin-header-passthrough-api.spec.ts`) were written/updated. None of these files are in the diff. The actual fixes and specs were omitted from the commit.\n\n**Should-fix**\n- **Cloud Armor allowlist drops IPs on drift:** `infra/gcp/provision-alb-frontend.sh` — The IP provisioning loop checks `describe \"$PRIORITY\" || create`. If Cloudflare adds or removes an IP from their published lists in the future, the sorted array shifts. The script will see that priority `N` already exists and silently skip it, failing to update the existing rule and permanently dropping the new CIDR from the allowlist. It must either update the rule if the CIDR differs or search by CIDR rather than priority index.\n\n**Nit**\n- **Non-JSON error bodies will crash the API wrapper:** `cfApi` (across the `*.mjs` scripts) calls `await r.json()` before checking `r.ok`. If Cloudflare returns a 502/504 HTML error page during an outage, the JSON parse will throw a `SyntaxError`, masking the real HTTP status. \n\nAdvisory only — not a gate. CI + the Claude reviewer + the risk-tier rule decide.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.99,
+            "probabilities": {
+              "blocking": 0.99,
+              "nit": 0,
+              "clean": 0,
+              "should_fix": 0.01
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-55",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #18#issuecomment-5060087117); anonymised",
+      "text": "### Findings\n\n#### Blocking\n*None.* The diff is correct, clean, and strictly respects all repository rules:\n- **Telemetry ownership:** No app-level parallel telemetry or direct database event writes.\n- **MCP enablement:** `get_journey_cohort` is dual-gated by both `CONNECTOR_ENABLED` and `JOURNEY_PROJECTIONS_ENABLED` via `isJourneyMcpToolEnabled()` and requires a valid revocable `connector_tokens` row.\n- **Data safety & PII:** The PostgreSQL snapshot function (`private.journey_safe_tags`) explicitly strips non-allowed tags and enforces strict 50,000-fact / 10,000-subject / 32-MiB resource caps. RPC functions strictly revoke access from `PUBLIC`, `anon`, and `authenticated`.\n- **API contracts & routing:** OFF flag states cleanly return 404 before auth/validation; timezone and timestamp parsing handle microsecond precision safely without JavaScript number overflow.\n\n#### Should-fix\n*None.*\n\n#### Nit\n- Parameter naming in `computeRetention` (`apps/web/lib/journey-cohort.ts`): The helper function's third argument is named `to: JourneyTimestamp`, but the caller passes the observation snapshot `asOf`. Renaming the parameter to `asOf` would improve internal code clarity.\n\n---\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "nit",
+            "confidence": 0.97,
+            "probabilities": {
+              "blocking": 0,
+              "nit": 0.98,
+              "should_fix": 0,
+              "clean": 0.02
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-56",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #84#issuecomment-5232084700); anonymised",
+      "text": "### Blocking\n\nNone.\n\n### Should-fix\n\n- **Missing `try/catch` wrapper around server action calls in `agent-key-manager.tsx` and `destination-manager.tsx`** — `apps/web/app/app/agent-keys/[projectSlug]/agent-key-manager.tsx` (`onRevoke`) and `apps/web/app/app/destinations/[projectSlug]/destination-manager.tsx` (`onRotate`, `onDelete`) — if `revokeAgentKeyAction`, `rotateSecretAction`, or `deleteDestinationAction` throws an unhandled network error or server exception during the transition, `setConfirming(null)` is bypassed and the dialog remains stuck in an open/pending state rather than closing and displaying an error notice to the user.\n\n### Nit\n\nNone.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "nit": 0,
+              "should_fix": 1,
+              "clean": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-57",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #107#issuecomment-5360199156); anonymised",
+      "text": "## Blocking\n\nNone.\n\n## Should-fix\n\n- `apps/web/e2e/helpers/css-color.ts`: `contrastRatio()` ignores alpha, so it produces invalid ratios for translucent foreground/background colours rather than compositing them. Current work-card surfaces appear opaque, but the helper’s documented contract is broader and could silently validate an inaccessible translucent surface later.\n\n## Nit\n\n- The CSS and test additions are exceptionally comment-heavy; several long historical-review narratives duplicate sprint documentation and will make ongoing stylesheet maintenance harder.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "nit": 0,
+              "should_fix": 1,
+              "blocking": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-58",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #133#issuecomment-5499895733); anonymised",
+      "text": "**Scope: CODE ONLY.** 2 documentation file(s) were withheld from this reviewer to fit Antigravity's 256 KB argv limit, so it did NOT see the sprint docs, the epic README or any migration prose — it could not check the code against its own stated acceptance criteria. Withheld: Roadmap/02-commercial/design-system-rails/sprint-5.md, apps/web/design-system/MEASURED-SPEC.md.\n\n**Scope: 30 FILE(S) ONLY.** This reviewer was given a targeted subset of the PR — the diff exceeds Antigravity's 256 KB argv limit in full, so the alternative was no second-family review at all. It saw: apps/web/lib/active-project.test.ts, apps/web/lib/active-project.ts, apps/web/lib/breaker-evidence.test.ts, apps/web/lib/console-palette.test.ts, apps/web/lib/console-shell.test.ts, apps/web/lib/console-shell.ts, apps/web/lib/experiment-analysis.ts, apps/web/lib/experiment-blocker-words.test.ts, apps/web/lib/experiment-blocker-words.ts, apps/web/lib/experiment-interval.test.ts, apps/web/lib/experiment-interval.ts, apps/web/lib/experiment-list-view.test.ts, apps/web/lib/experiment-list-view.ts, apps/web/lib/funnel-geometry.test.ts, apps/web/lib/funnel-geometry.ts, apps/web/lib/journey-list-view.test.ts, apps/web/lib/journey-list-view.ts, apps/web/lib/project-route-inventory.test.ts, apps/web/lib/project-route-inventory.ts, apps/web/lib/rollout-percent.ts, apps/web/lib/scenario-impact.test.ts, apps/web/lib/scenario-list-view.test.ts, apps/web/lib/scenario-list-view.ts, apps/web/lib/stat-figures.test.ts, apps/web/lib/stat-figures.ts, apps/web/lib/tars-query.ts, apps/web/lib/tars.test.ts, apps/web/lib/tars.ts, apps/web/lib/today-bands.test.ts, apps/web/lib/today-bands.ts. It did NOT see 53 other changed file(s), and could not check any of this against the sprint docs.\n\n---\n\n### Blocking\n\n- **Uncaught `TypeError` when experiment control variant is missing or invalid**\n  - `apps/web/lib/experiment-analysis.ts` (inside `metricResult`)\n  - **Why it matters:** If `definition.controlVariantKey` does not match any entry in `definition.variants`, `controlRow` evaluates to `undefined`. While `controlRate`, `absoluteDeltaFromControl`, and `liftFromControl` safely check for missing control rows and fall back to `null`, `liftInterval` dereferences `controlRow.exposedSubjects` unconditionally. This throws an unhandled runtime `TypeError` instead of returning `liftInterval: null`.\n\n---\n\n### Should-fix\n\n*None.*\n\n---\n\n### Nit\n\n*None.*\n\n---\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "nit": 0,
+              "should_fix": 0,
+              "blocking": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-59",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #38#issuecomment-5086719365); anonymised",
+      "text": "**Scope: CODE ONLY.** 4 documentation file(s) were withheld from this reviewer to fit agy's 256 KB argv limit, so it did NOT see the sprint docs, the epic README or any migration prose — it could not check the code against its own stated acceptance criteria. Withheld: .gitignore, AGENTS.md, CODE-QUALITY.md, Roadmap/01-growth-engine/signals-loop/IN-FLIGHT.md.\n\n---\n\n### Blocking\n\n* **Credential binding bypass when `applyingKeyId` is null/omitted**\n  * **File:** `apps/web/lib/task-write-staging.ts#L255-L259`\n  * **Why it matters:** The credential binding check is written as `if (data.agent_key_id && applyingKeyId && data.agent_key_id !== applyingKeyId)`. If a proposal is staged with an `agent_key_id` (e.g. Key A), but `applyTaskChange` is called with `applyingKeyId = null` (or by a caller where `applyingKeyId` is not provided), `data.agent_key_id && applyingKeyId` evaluates to `null` (falsy). This bypasses the guard entirely and allows an unauthenticated or keyless caller to spend a confirmation token staged by a specific write key. The check should be `if (data.agent_key_id && data.agent_key_id !== applyingKeyId)` so any missing or non-matching key is rejected with `wrong_credential`.\n\n---\n\n### Should-fix\n\n* **Incomplete preflight for `invalid_resolution` during staging**\n  * **File:** `apps/web/lib/task-write-staging.ts#L104-L117`\n  * **Why it matters:** `proposeTaskChange` preflights `already_terminal`, `actor_required`, and `already_claimed`, but does not preflight whether an invalid `resolution` parameter was supplied for a `resolve` action. If an invalid resolution string is passed, a confirmation token is issued and previewed, only to immediately fail with `invalid_resolution` when applied. Validating resolution enum values during `propose` keeps the preview contract honest and prevents issuing single-use tokens that are guaranteed to burn on apply.\n\n---\n\n### Nit\n\n* **Implicit label associations in Key Manager UI**\n  * **File:** `apps/web/app/app/agent-keys/[projectSlug]/agent-key-manager.tsx#L99-L121`\n  * **Why it matters:** Label elements wrap `<input>` and `<select>` fields implicitly without explicit `htmlFor` and `id` attributes. Adding explicit IDs improves accessibility tree resolution and browser test selector targeting.\n\n---\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "should_fix": 0,
+              "blocking": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-b-60",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project B (PR #107#issuecomment-5360142395); anonymised",
+      "text": "**Scope: 3 FILE(S) ONLY.** This reviewer was given a targeted subset of the PR — the diff exceeds agy's 256 KB argv limit in full, so the alternative was no second-family review at all. It saw: apps/web/e2e/helpers/css-color.test.ts, apps/web/e2e/helpers/css-color.ts, apps/web/e2e/methodology-materials.browser.spec.ts. It did NOT see 17 other changed file(s), and could not check any of this against the sprint docs.\n\n---\n\n### Blocking\nNone. The implementation correctly handles CSS Color Module Level 4 parsing, prevents silent false passes in e2e transparency assertions, and respects all project-level rules in `AGENTS.md`.\n\n### Should-fix\n- `parseCssColor` silently accepts malformed input containing multiple slashes (`apps/web/e2e/helpers/css-color.ts`): Destructuring `legacy[1].split('/')` or `srgb[1].split('/')` into `[channels, alpha]` drops additional array elements without validation, allowing invalid inputs like `rgb(1 2 3 / 0.5 / 0.2)` or `color(srgb 0.1 0.2 0.3 / 0.5 / 0.2)` to parse without throwing under the fail-closed rule.\n\n### Nit\n- `parseCssColor` accepts invalid space-separated 4-component syntax (`apps/web/e2e/helpers/css-color.ts`): Splitting `channels` on `/[,\\s]+/` allows `rgb(22 18 13 0.72)` (missing the mandatory CSS Level 4 `/` delimiter before alpha) to parse as a 4-element legacy array rather than being rejected as malformed syntax.\n\nThis is the judgment-layer review, not a second CI — CI (green/red) and the risk-tier rule (who merges) decide the rest.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "clean": 0,
+              "blocking": 0,
+              "should_fix": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "corpus-f-61",
+      "label": true,
+      "source": "backtest 2026-09-23 — a posted cross-review reply in consuming project F (PR #4#issuecomment-5025414574); anonymised",
+      "text": "**Blocking**\n- None. The diff is clean, regex edge cases (like accepting hyphens/en-dashes) are well handled, and template pathing safely roots against `__dirname` instead of `cwd`.\n\n**Should-fix**\n- **Inline comment hazard in `parseFrontmatter`**: The custom frontmatter parser does not strip trailing inline comments. If the `slug:` line in an epic's `README.md` contains one (e.g., `slug: my-epic   # note`), `frontmatter.slug` will include the comment text. The subsequent strict check `frontmatter.slug !== slug` will fail, causing the script to aggressively crash (`die`) when the underlying data is actually fine.\n\n**Nit**\n- **`--key=value` argument parsing**: `parseArgs` only supports space-separated arguments (`--epic my-slug`). If a user runs `node emit-kickoff.mjs --epic=my-slug`, it registers as a boolean flag named `epic=my-slug` and fails with a confusing `missing required flag(s): --epic` error.\n\n*Required cross-agent pass — findings must be resolved or answered before merge, but this is not a merge authorization. CI + the risk-tier rule decide.*",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "should_fix",
+            "confidence": 1,
+            "probabilities": {
+              "blocking": 0,
+              "clean": 0,
+              "should_fix": 1,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "timed-out-banner-2026-09-19",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "## Findings\n(reviewer timed out before completing analysis)",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.93,
+            "probabilities": {
+              "nit": 0.02,
+              "blocking": 0.02,
+              "clean": 0.95,
+              "should_fix": 0.01
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "codex-cli-banner",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "OpenAI Codex v0.155.1 (research preview)\n--------\nworkdir: /tmp/review\nmodel: gpt-5.6-terra\nprovider: openai\napproval: never\nsandbox: read-only\n--------\nuser\nReview the following diff.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.96,
+            "probabilities": {
+              "clean": 0.98,
+              "should_fix": 0,
+              "blocking": 0.02,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "quota-under-findings",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "## Findings\n\nYou've hit your usage limit. Upgrade to Pro (https://openai.com/chatgpt/pricing) or try again in 3 days 4 hours.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.32,
+            "probabilities": {
+              "clean": 0.42,
+              "blocking": 0.49,
+              "nit": 0.06,
+              "should_fix": 0.03
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "empty-severity-headings",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "## Blocking\n\n## Should-fix\n\n## Nits\n",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.17
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.96,
+            "probabilities": {
+              "clean": 0.02,
+              "should_fix": 0.01,
+              "nit": 0,
+              "blocking": 0.97
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "regex"
+      }
+    },
+    {
+      "id": "headings-then-context-exceeded",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "## Blocking\n\n## Should-fix\n\n## Nits\n\n(analysis incomplete — context window exceeded)",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.96,
+            "probabilities": {
+              "clean": 0.02,
+              "blocking": 0.97,
+              "nit": 0,
+              "should_fix": 0.01
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "preamble-only",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "I'll start by reading the diff carefully to understand the changes, then check each file against the repository rules.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.99,
+            "probabilities": {
+              "nit": 0.01,
+              "should_fix": 0,
+              "blocking": 0,
+              "clean": 0.99
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "auth-error",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "Error: 401 Unauthorized — your session has expired. Please run `codex login` and try again.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.44,
+            "probabilities": {
+              "clean": 0.37,
+              "blocking": 0.58,
+              "nit": 0.02,
+              "should_fix": 0.03
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "could-not-access-files",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "## Findings\n\nI was unable to access the repository files needed to complete this review, so I cannot assess the change.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.7,
+            "probabilities": {
+              "clean": 0.77,
+              "blocking": 0.19,
+              "nit": 0.01,
+              "should_fix": 0.03
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "thinking-stub",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "Reviewing PR #182…\n\nThinking…",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.99,
+            "probabilities": {
+              "clean": 0.99,
+              "blocking": 0,
+              "nit": 0.01,
+              "should_fix": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "html-error-page",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center><hr><center>cloudflare</center></body></html>",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.55,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0.02,
+              "clean": 0.66,
+              "blocking": 0.32
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "empty-model-response",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "**Findings**\n\nThe model returned an empty response.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.38,
+            "probabilities": {
+              "nit": 0.01,
+              "clean": 0.54,
+              "should_fix": 0.07,
+              "blocking": 0.38
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "agy-help-text",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "Usage: agy [options] [command]\n\nAntigravity CLI\n\nOptions:\n  -p, --print <prompt>   print a response and exit\n  -m, --model <model>    model to use\n  -h, --help             display help for command",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 0.98,
+            "probabilities": {
+              "blocking": 0,
+              "should_fix": 0,
+              "nit": 0.01,
+              "clean": 0.99
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "rate-limited-retry-later",
+      "label": false,
+      "source": "synthetic — a failure shape recorded in review-guard.mjs / LEARNINGS",
+      "text": "**Blocking**\n\nRate limit reached for gemini-3.6-flash-high. Please retry after 60 seconds.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.9,
+            "probabilities": {
+              "clean": 0.07,
+              "blocking": 0.93,
+              "should_fix": 0,
+              "nit": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": false,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "prose-finding-2026-09-19",
+      "label": true,
+      "source": "synthetic — the shape the regex rejected on 2026-09-19",
+      "text": "The new check in prod-smoke.mjs exits with code 1 when the storefront returns a 5xx, but the routine's triage step treats exit 1 as 'spec drift' and only exit 2 as 'product regression' (smoke-triage-scope.mjs:41). A real outage will therefore be filed as drift and nobody is paged. Return 2 for HTTP 5xx instead.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "blocking",
+            "confidence": 0.99,
+            "probabilities": {
+              "blocking": 0.99,
+              "nit": 0,
+              "should_fix": 0.01,
+              "clean": 0
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "plain-prose-clean",
+      "label": true,
+      "source": "synthetic — the shape the regex rejected on 2026-09-19",
+      "text": "I read every hunk. The change renames `loadConfig` to `readConfig` and updates both call sites; the tests were updated accordingly and nothing else moves. I have nothing to flag.",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "is_real_review": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "severity": {
+            "type": "choice",
+            "choice": "clean",
+            "confidence": 1,
+            "probabilities": {
+              "nit": 0,
+              "should_fix": 0,
+              "blocking": 0,
+              "clean": 1
+            }
+          }
+        }
+      },
+      "decision": {
+        "ok": true,
+        "decider": "jev"
+      }
+    }
+  ],
+  "prose": [
+    {
+      "id": "clean-internal",
+      "label": [],
+      "draft": "Whoever ships next gets faster feedback. A whole class of mistake is now caught in seconds rather than after a deploy, and the checks run on every change without anyone remembering to.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.15
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.14
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.38
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "beneficiary-tenants",
+      "label": [
+        "invented-beneficiary"
+      ],
+      "draft": "Tenants now benefit from a faster test suite that validates core functions in milliseconds.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "a measured incident recorded in prose-guard.mjs",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.27
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "beneficiary-allowed",
+      "label": [],
+      "draft": "Merchants can hand a partner a portfolio and see what that partner did with it.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.3
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-disclosure",
+      "label": [],
+      "draft": "The roadmap now records the agreed operating boundary. There was no customer-visible effect.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-does-not-launder",
+      "label": [
+        "invented-beneficiary"
+      ],
+      "draft": "There was no customer-visible effect. Users now benefit from faster and safer publishing.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.2
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.13
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-bullet-does-not-launder",
+      "label": [
+        "invented-beneficiary"
+      ],
+      "draft": "- no customer-visible effect\n- users now benefit from faster publishing",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.14
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-participle-incident",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "The previous backslash bypass is blocked, eliminating a potential open-redirect attack for everyone.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "a measured incident recorded in prose-guard.mjs",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-genuine-allowed",
+      "label": [],
+      "draft": "A sign-in that failed for some people is fixed; they can reach their account again.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.18
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.65
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-resolves",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "This resolves the crash people were hitting.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-now-closed",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "The leak is now closed.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-no-longer",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "Sign-in no longer breaks on a slow connection.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-removed",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "The vulnerability was removed.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-now-secure",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "The flow is now secure.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.72
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.13
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-prevents",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "This prevents the duplicate charge.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-incident",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "Nothing is currently blocked, though design sign-off on the Sprint 2 layout is owed before tomorrow.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "a measured incident recorded in prose-guard.mjs",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.99
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-friday",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "The review is due by Friday.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.99
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-next-week",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "This will ship next week.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.13
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.94
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-end-of-week",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "Approval is pending and needed by end of week.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.98
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-tomorrow",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "The migration is scheduled for tomorrow.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.97
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-monday",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "It will be ready by Monday.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.97
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "owed-without-date",
+      "label": [],
+      "draft": "The product owner still needs to add a repository secret before the automatic push turns on, and to read the three views themselves.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.16
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-flag-off",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The partner portfolio is live, so anyone handed a shop can now see what they are responsible for.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-corroborated",
+      "label": [],
+      "draft": "The activation crm is live, and the emission rail behind it now runs on every change.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [
+          "promoter.activation_crm_enabled"
+        ],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-one-flag-no-launder",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The activation crm is live. The partner portfolio is live too, ready for whoever gets handed one.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [
+          "promoter.activation_crm_enabled"
+        ],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "dark-honest-1",
+      "label": [],
+      "draft": "The rail is built and nothing is live yet, because the flag it sits behind has never been flipped.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "dark-honest-2",
+      "label": [],
+      "draft": "Everything landed dark; no part of it is enabled for anyone until the product owner flips the switch themselves.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.05
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "dark-honest-3",
+      "label": [],
+      "draft": "The portfolio is not live and will stay dark until someone reads it end to end.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.06
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-later-negation",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The partner portfolio is live for every shop, and no smoke test has been run against it.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-is-live",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The portfolio is live.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-now-enabled",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The reminder cron is now enabled.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-went-live",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The scorecard went live this morning.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-rolled-out",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The intake form is rolled out to everyone.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-in-production",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The emission rail is running in production.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-now-available",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The consent preview is now available.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "can-now-uncorroborated",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "A shop owner can now hand a partner one shop instead of the whole account.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "can-now-corroborated",
+      "label": [],
+      "draft": "A shop owner can now hand a partner one shop instead of the whole account.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [
+          "promoter.partner_handoff_enabled"
+        ],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "can-now-negated",
+      "label": [],
+      "draft": "Nobody can now hand a partner a shop, because the rail stays dark until the flag flips.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.45
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.07
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-shopper",
+      "label": [],
+      "draft": "Most of today went into the delivery rail rather than anything a shopper would see, and the work is internal.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "a measured incident recorded in prose-guard.mjs",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-user-visible",
+      "label": [],
+      "draft": "This has no user-visible effect; the beneficiary is whoever builds here next and the effect is a bug class caught earlier.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.13
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-unaffected",
+      "label": [],
+      "draft": "Merchants are unaffected by this work, which tightened an internal check that used to depend on memory.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.29
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "beneficiary-and-live",
+      "label": [
+        "invented-beneficiary",
+        "flag-state-claim"
+      ],
+      "draft": "Merchants can now hand a shop to a partner and buyers get a faster checkout as a result.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "prose-guard.test.mjs — the expected codes that spec pins",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim",
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "negation-and-dark",
+      "label": [],
+      "draft": "The release tooling now checks every migration before it runs, rather than anything a shopper would see. Nothing is live until the flag is flipped.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.07
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.12
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-paraphrase-door",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "This change closes the door on the open-redirect trick that let a crafted link bounce visitors elsewhere.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-paraphrase-stuck",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "Sellers' payouts won't get stuck anymore.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.13
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-participle-now-validates",
+      "label": [
+        "unsupported-fix-claim"
+      ],
+      "draft": "Login now validates the return address, eliminating a potential open-redirect attack.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.18
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "unsupported-fix-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-denied",
+      "label": [],
+      "draft": "This does not fix the slow export — that remains open.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "fix-nothing",
+      "label": [],
+      "draft": "We fixed nothing in this pass; the work was all documentation.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "past-incident-context",
+      "label": [],
+      "draft": "The new test pins the redirect check that a July change introduced, so a regression would fail the build.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.07
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-bless-thursday",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "Design needs to bless the new layout before the Thursday demo.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.98
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-land-wednesday",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "Expect the migration to land Wednesday.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.06
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.88
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "commitment-next-quarter",
+      "label": [
+        "invented-commitment"
+      ],
+      "draft": "The team plans to revisit pricing next quarter.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.58
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-commitment"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "owed-no-date",
+      "label": [],
+      "draft": "Owed to the product owner: one smoke run on a phone, no date set.",
+      "evidence": {
+        "allowsFixClaim": true,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-paraphrase-this-morning",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "Partners can hand a shop to a colleague from their dashboard as of this morning.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.07
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-paraphrase-switch-flipped",
+      "label": [
+        "flag-state-claim"
+      ],
+      "draft": "The switch has been flipped, so the new onboarding is what every newcomer sees now.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": true,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "flag-state-claim"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "live-corroborated-everyone",
+      "label": [],
+      "draft": "Shop hand-off is live for everyone.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [
+          "promoter.shop_handoff_enabled"
+        ],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.62
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "dark-nobody-yet",
+      "label": [],
+      "draft": "The flag stays off, so nobody can use the new export yet.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.08
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "dark-not-yet-available",
+      "label": [],
+      "draft": "The export is not yet available to anyone.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.05
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.01
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "describes-behaviour-now",
+      "label": [],
+      "draft": "The weekly report now groups merged pull requests by epic and names the story each one advanced.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.2
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "beneficiary-paraphrase-shoppers",
+      "label": [
+        "invented-beneficiary"
+      ],
+      "draft": "Shoppers will notice pages load noticeably quicker.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.12
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.07
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "beneficiary-paraphrase-people-buying",
+      "label": [
+        "invented-beneficiary"
+      ],
+      "draft": "Checkout feels snappier for the people buying from us.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.01
+          }
+        }
+      },
+      "decision": {
+        "codes": [
+          "invented-beneficiary"
+        ],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-not-visible",
+      "label": [],
+      "draft": "Nothing about this is visible to merchants; it only tightens the release checklist.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    },
+    {
+      "id": "no-impact-no-customer-notice",
+      "label": [],
+      "draft": "No customer will notice; the change only reorders internal checks.",
+      "evidence": {
+        "allowsFixClaim": false,
+        "allowsBeneficiary": false,
+        "liveFlags": [],
+        "minWords": 1
+      },
+      "source": "hand-written hard case — a paraphrase the regex misses, or an honest sentence it flags",
+      "recorded": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "s0_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_live": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s0_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_fix": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_beneficiary": {
+            "type": "noul",
+            "noul": 0.03
+          },
+          "s1_live": {
+            "type": "noul",
+            "noul": 0.02
+          },
+          "s1_commitment": {
+            "type": "noul",
+            "noul": 0.02
+          }
+        }
+      },
+      "decision": {
+        "codes": [],
+        "decider": "jev"
+      }
+    }
+  ]
+}

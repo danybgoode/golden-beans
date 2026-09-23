@@ -30,6 +30,7 @@
 // Zero deps — Node 18+.
 
 import { spawnSync } from 'node:child_process';
+import { jevContext } from './jev.mjs';
 
 /** Codex CLI version last observed producing a real, structured review. Bump after a verified run. */
 export const CODEX_VERIFIED = '0.154.0';
@@ -262,3 +263,182 @@ export function isReReview(commentBodies = [], lens = null, headSha = null) {
 
 export const RE_REVIEW_NOTE =
   '\n\n## RE-REVIEW\nA previous pass already reviewed this PR and the author has pushed changes since. Report **Blocking and Should-fix findings only** — no nits, and do not repeat a finding the author has already fixed or answered on the PR.\n';
+
+// ── 4. Jev decides the SEMANTIC question (jev-semantic-guards D4/D5) ────────────────────────────────
+// `assertReviewOutput` above is a regex asking a language question — "did the reviewer actually review?" —
+// and on 2026-09-19 it answered it wrong in both directions: it REJECTED a real finding written as plain
+// prose, and ACCEPTED `## Findings` followed by "(reviewer timed out before completing analysis)". Jev
+// (TypeSafe's calibrated typed-judgement model) got both right. So the judge below asks Jev, by
+// `jev.config.json → rails.review.mode`:
+//   off    → exactly `assertReviewOutput`; no call, no log line. The kill-switch.
+//   shadow → the regex decides; Jev is asked and BOTH verdicts are logged (.jev/decisions.jsonl + marker).
+//   jev    → Jev decides at noul ≥ thresholds.real / ≤ thresholds.notReal; the regex decides in the band
+//            between ("uncertain") or when Jev could not look (no key, 429, timeout…). Never a guess.
+// Two SHAPES stay mechanical and are decided before Jev is asked: an empty reply and a raw tool-call
+// transcript. Those are not language judgements, and a model has nothing to add to them.
+// `reason` always names who decided, so a regex fallback can never be read as a Jev verdict.
+
+/** Reviewer replies are truncated to this for Jev (the 32k-token state budget), with a note. */
+export const REVIEW_STATE_CHARS = 60_000;
+
+export const REVIEW_QUESTIONS = {
+  // Wording MEASURED, not guessed — on the 76 labelled review fixtures in jev-eval.fixtures.json (2026-09-23,
+  // jev-1.13.0), at real ≥ 0.85 / not-real ≤ 0.15. "Is this a genuine review?" scored a real prose finding
+  // 0.73. "Does it contain an assessment of a code change?" decided only 38/76, because terse clean verdicts
+  // ("Clean.", "Blocking: None.") sat in the uncertain band. This wording, which names the terse verdicts
+  // and the failure shapes, decided 74/76 and got all 74 right (the regex alone: 66/76). Re-measure with
+  // `node scripts/jev-eval.mjs --live` before changing a word of it.
+  is_real_review: {
+    type: 'noul',
+    instructions:
+      'This is the output of an automated code reviewer. Did the reviewer deliver a verdict on the change?',
+    criteria: {
+      true: 'Yes: it reports at least one finding about the code, OR it states a verdict that there is nothing to fix — e.g. "Clean.", "No findings.", "Blocking: None. Should-fix: None.", "Diff looks clean." A short clean verdict counts, and boilerplate footers after it do not change that.',
+      false:
+        'No: the reviewer did not finish or never started — empty severity headings, a timeout or "analysis incomplete" note, a quota, rate-limit, login or HTTP error, a CLI banner or help text, a preamble or plan saying what it will do, or a raw tool-call transcript.',
+    },
+  },
+  severity: {
+    type: 'choice',
+    instructions: 'What is the most severe finding this review reports?',
+    criteria: {
+      blocking:
+        'At least one finding the reviewer says must be fixed before merge (a bug, a broken contract, a security hole).',
+      should_fix: 'Nothing blocking, but at least one finding the reviewer says should be fixed.',
+      nit: 'Only minor or stylistic remarks.',
+      clean: 'No findings: the reviewer says the change is clean, or reports nothing to fix.',
+    },
+  },
+};
+
+/**
+ * The state Jev sees: the reply, or — when it would not fit — its HEAD and TAIL with a note between. The tail
+ * matters most: a reviewer states its verdict last, and a head-only cut of a 124k-character reply showed Jev
+ * nothing but a file-list preamble (2026-09-23 backtest). Pure.
+ */
+export function reviewState(text) {
+  const t = String(text ?? '');
+  if (t.length <= REVIEW_STATE_CHARS) return t;
+  const head = Math.floor(REVIEW_STATE_CHARS / 3);
+  const tail = REVIEW_STATE_CHARS - head;
+  return `${t.slice(0, head)}\n\n[… ${t.length - REVIEW_STATE_CHARS} characters omitted from the middle for length …]\n\n${t.slice(-tail)}`;
+}
+
+/**
+ * Pure: the decision, given the regex verdict, Jev's result and the rail config. Exported so the eval
+ * harness and the specs pin the policy without a network.
+ */
+export function decideReview({ regex, jev, mode, thresholds, error = null }) {
+  const base = { mode, regexOk: regex.ok, jev: jev ?? null, error };
+  if (mode === 'off') return { ...base, ok: regex.ok, decider: 'regex', reason: regex.reason };
+  if (mode === 'shadow')
+    return {
+      ...base,
+      ok: regex.ok,
+      decider: 'regex',
+      reason: `${regex.reason} — decided by regex (shadow${jev ? `; jev ${jev.noul.toFixed(2)}` : `; jev could not look (${error})`})`,
+    };
+  if (!jev)
+    return {
+      ...base,
+      ok: regex.ok,
+      decider: 'regex',
+      reason: `${regex.reason} — decided by regex: jev could not look (${error})`,
+    };
+  if (jev.noul >= thresholds.real)
+    return {
+      ...base,
+      ok: true,
+      decider: 'jev',
+      reason: `a real review (${jev.severity}) — decided by jev (${jev.noul.toFixed(2)})`,
+    };
+  if (jev.noul <= thresholds.notReal)
+    return {
+      ...base,
+      ok: false,
+      decider: 'jev',
+      reason: `the reviewer's reply is not a review — decided by jev (${jev.noul.toFixed(2)}); first line: "${String(regex.firstLine ?? '').slice(0, 120)}"`,
+    };
+  return {
+    ...base,
+    ok: regex.ok,
+    decider: 'regex',
+    reason: `${regex.reason} — decided by regex: jev uncertain (${jev.noul.toFixed(2)})`,
+  };
+}
+
+/**
+ * THE JUDGE. async; never throws on a Jev failure (a malformed jev.config.json DOES throw — loudly).
+ * Returns { ok, reason, decider, mode, regexOk, jev: {noul, severity, model} | null, error }.
+ * opts: { sha, source } for the log. deps: see jevContext (config, key, ask, log, root).
+ */
+export async function judgeReviewOutput(text, opts = {}, deps = {}) {
+  const t = String(text ?? '').trim();
+  const regex = { ...assertReviewOutput(t), firstLine: t.split('\n')[0] };
+  const ctx = jevContext('review', deps);
+  const mechanical = !t || TOOL_TRANSCRIPT.test(t);
+  if (ctx.mode === 'off' || mechanical) {
+    const d = decideReview({ regex, jev: null, mode: 'off', thresholds: ctx.rail.thresholds });
+    return { ...d, mode: ctx.mode, why: mechanical ? 'mechanical shape' : ctx.why };
+  }
+  const res = await ctx.ask({ state: reviewState(t), questions: REVIEW_QUESTIONS });
+  // Only a real probability is a verdict. `Number()` would turn `true`, "1" or 5 into a Jev-decided PASS and
+  // null or "" into a FAIL (fresh review, PR #35) — any other shape is could-not-look and the regex decides.
+  const raw = res.ok ? res.answers?.is_real_review?.noul : undefined;
+  const valid = typeof raw === 'number' && raw >= 0 && raw <= 1;
+  const jev = res.ok
+    ? { noul: raw, severity: res.answers?.severity?.choice ?? null, model: res.model }
+    : null;
+  const d = decideReview({
+    regex,
+    jev: valid ? jev : null,
+    mode: ctx.mode,
+    thresholds: ctx.rail.thresholds,
+    error: res.ok ? (valid ? null : `invalid noul (${JSON.stringify(raw)})`) : res.error,
+  });
+  ctx.log({
+    rail: 'review',
+    mode: d.mode,
+    decider: d.decider,
+    regex: regex.ok,
+    jev: d.jev ? d.jev.noul >= 0.5 : null,
+    confidence: d.jev ? d.jev.noul : null,
+    text: t,
+    sha: opts.sha ?? null,
+    source: opts.source ?? null,
+    error: d.error,
+  });
+  return d;
+}
+
+/**
+ * The hidden marker a posted cross-review comment carries, so a verdict made in a cloud routine (whose
+ * .jev/ log dies with the session) can be harvested later with `gh api`. Never carries the reply text.
+ */
+export function jevMarker(verdict) {
+  // `model` comes from the API response; a `-->` in it would close the comment early (fresh review, PR #35).
+  const payload = {
+    mode: verdict?.mode ?? 'off',
+    decider: verdict?.decider ?? 'regex',
+    noul: typeof verdict?.jev?.noul === 'number' ? Number(verdict.jev.noul.toFixed(3)) : null,
+    severity: verdict?.jev?.severity ?? null,
+    model: verdict?.jev?.model ?? null,
+  };
+  return `\n<!-- jev:${JSON.stringify(payload).replace(/--/g, '-\\u002d')} -->`;
+}
+
+/**
+ * Parse a jev marker back out of a comment body (the S5 report's harvest). null when absent. The LAST marker
+ * wins: the reviewer's reply comes before the real one, and a reply shaped by the diff could carry a forged
+ * marker (fresh review, PR #35).
+ */
+export function parseJevMarker(body) {
+  const all = [...String(body ?? '').matchAll(/<!-- jev:(\{.*?\}) -->/g)];
+  const m = all[all.length - 1];
+  if (!m) return null;
+  try {
+    return JSON.parse(m[1]);
+  } catch {
+    return null;
+  }
+}

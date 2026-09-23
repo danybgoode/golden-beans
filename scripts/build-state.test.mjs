@@ -41,10 +41,37 @@ ${stories
 # Arranged-only delivery — Sprint ${n}: title
 `;
 
+// ⚠️ SEALED against the repository this file runs in — the same leak pre-push-hook.test.mjs records. git
+// exports GIT_DIR (and friends) into hooks, and from a LINKED WORKTREE they point at the real repo's gitdir;
+// GIT_DIR overrides `cwd`. Unsealed, this fixture's `git init` / `config user.*` / `commit` rewrote a real
+// repository on 2026-09-23 (a consumer's pre-push from a worktree: `core.bare = true`, identity `t <t@t>`,
+// three "plan: scaffold" commits on its local main). git-fixtures-sealed.test.mjs now fails any spec that
+// runs `git init` without this.
+const GIT_ENV_TO_CLEAR = [
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_WORK_TREE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_CEILING_DIRECTORIES',
+  'GIT_PREFIX',
+];
+function sealedEnv(base = process.env) {
+  const env = { ...base };
+  for (const k of GIT_ENV_TO_CLEAR) delete env[k];
+  return env;
+}
+
 function fixture({ sprint1 = 'Shipped', sprint2 = 'Building', epicPhase = 'Building' } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'build-state-'));
   const git = (...a) =>
-    execFileSync('git', a, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    execFileSync('git', a, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      env: sealedEnv(),
+    }).trim();
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 't@t');
   git('config', 'user.name', 't');
@@ -325,6 +352,7 @@ test('#27 review: it never throws, and the CLI works through a symlinked path', 
     symlinkSync(dirname(fileURLToPath(import.meta.url)), link);
     const out = execFileSync('node', [join(link, 'build-state.mjs'), '--repo-root', f.root, '--offline'], {
       encoding: 'utf8',
+      env: sealedEnv(),
     });
     assert.match(out, /^No epic in flight — /, 'a symlinked invocation still prints the view');
   } finally {

@@ -58,7 +58,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkProse, findingsToRevisionNote } from './prose-guard.mjs';
+import { findingsToRevisionNote, judgeProse } from './prose-guard.mjs';
 import { loadReportingConfig, ReportingConfigError } from './reporting-config.mjs';
 import {
   runAntigravity,
@@ -311,13 +311,15 @@ export function projectBannedToolNames({ load = loadReportingConfig } = {}) {
   }
 }
 
-export function writeProse({ prompt, evidence, preferred }, deps = {}) {
+// async since jev-semantic-guards S3.2: the default guard is `judgeProse`, which may ask Jev. An injected
+// `guard` may still be synchronous — it is awaited either way.
+export async function writeProse({ prompt, evidence, preferred }, deps = {}) {
   const {
     devin = draftWithDevin,
     agy = draftWithAgy,
     codex = draftWithCodex,
     has = hasCmd,
-    guard = checkProse,
+    guard = judgeProse,
     warn = (m) => process.stderr.write(`${m}\n`),
     extraBannedToolNames = projectBannedToolNames,
   } = deps;
@@ -372,7 +374,7 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
         break; // a broken writer will not be fixed by a revision note
       }
 
-      const verdict = guard(result.text, evidence);
+      const verdict = await guard(result.text, evidence);
       if (verdict.ok)
         return {
           ok: true,

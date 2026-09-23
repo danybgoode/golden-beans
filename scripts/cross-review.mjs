@@ -69,7 +69,6 @@ import {
   reviewersFor,
 } from './lib/cross-agent-cli.mjs';
 import {
-  assertReviewOutput,
   changedFileCount,
   cliVersionNote,
   decideSecurityPass,
@@ -78,7 +77,10 @@ import {
   postReviewStatus,
   reviewMarker,
   RE_REVIEW_NOTE,
+  jevMarker,
+  judgeReviewOutput,
 } from './lib/review-guard.mjs';
+import { jevContext } from './lib/jev.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
@@ -345,7 +347,7 @@ function postComment(pr, repo, body) {
   return (r.stdout || '').trim(); // gh prints the comment URL
 }
 
-function main() {
+async function main() {
   let {
     pr,
     agent,
@@ -452,6 +454,10 @@ function main() {
       process.exit(0);
     }
   }
+
+  // jev-semantic-guards: resolve the Jev config BEFORE a review is paid for — a malformed jev.config.json
+  // throws, and throwing after the reviewer ran would lose its reply and strand the status at `pending`.
+  jevContext('review');
 
   // Pin the commit being reviewed BEFORE the reviewer runs: a push mid-review would otherwise move the
   // status onto a commit nobody read, and the re-review check needs to tell a new commit from a retry.
@@ -628,7 +634,10 @@ function main() {
   // THE GUARD (ways-of-work-lean-pass D9). With one external pass, a CLI that exits 0 with nothing to say
   // reads exactly like a clean review and nothing contradicts it. A structureless reply FAILS the run and
   // fails the PR's `cross-review/<lens>` status rather than posting a comment that looks like a pass.
-  const verdict = assertReviewOutput(findings);
+  // jev-semantic-guards D5: Jev decides "is this a real review?" per jev.config.json → rails.review.mode;
+  // `assertReviewOutput` is the fallback when Jev cannot look or is unsure, and the whole of it when `off`.
+  const verdict = await judgeReviewOutput(findings, { sha: reviewedSha });
+  process.stderr.write(`review guard: ${verdict.reason}\n`);
   if (!verdict.ok) {
     if (!dryRun) {
       const st = postReviewStatus({
@@ -658,7 +667,7 @@ function main() {
       version: cliVersionNote(agent),
       reReview,
       securityOwed,
-    }) + reviewMarker({ lens, sha: reviewedSha });
+    }) + reviewMarker({ lens, sha: reviewedSha }) + jevMarker(verdict);
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
@@ -682,4 +691,8 @@ function main() {
 
 // Guarded so importing this module for its pure helpers does not run a review.
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) main();
+if (isMain)
+  main().catch((e) => {
+    process.stderr.write(`cross-review: ${e?.message || e}\n`);
+    process.exit(1);
+  });

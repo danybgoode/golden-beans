@@ -41,7 +41,7 @@ import { loadReportingConfig, chatIdFor, shortRepo, ReportingConfigError } from 
 import { searchMergedPrs } from './lib/gh-rest.mjs';
 import { formatPrList, truncateForTelegram } from './lib/telegram-format.mjs';
 import { readLogFromBranch, appendLineToBranch } from './lib/log-branch.mjs';
-import { checkProse, findingsToRevisionNote } from './lib/prose-guard.mjs';
+import { findingsToRevisionNote, judgeProse } from './lib/prose-guard.mjs';
 import {
   buildEvidencePack,
   buildQuietBrief,
@@ -469,10 +469,14 @@ async function main() {
     const subjects = repoResults.flatMap((r) => (r.available ? r.prs.map((p) => p.title || '') : []));
     const areas = shippedEpics.available && shippedEpics.epics.length ? ['customer-facing pages'] : [];
     const evidence = deriveEvidenceFlags({ subjects, areas, liveFlags: [], maxWords: WEEKLY_MAX_WORDS });
-    const verdict = checkProse(draft, {
+    // jev-semantic-guards S3.2: the semantic families are judged by Jev per jev.config.json → rails.prose.mode;
+    // `checkProse` is the fallback and, with the rail off, the whole of it. The decider is on the result.
+    const verdict = await judgeProse(draft, {
       ...evidence,
       extraBannedToolNames: config.prose.extraBannedToolNames,
     });
+    const found = verdict.findings.map((f) => f.code).join(', ');
+    process.stderr.write(`prose guard: decided by ${verdict.decider} (${verdict.mode}) — ${found || 'clean'}\n`);
     if (!verdict.ok && !FORCE_POST) {
       process.stderr.write(`${findingsToRevisionNote(verdict.findings)}\n`);
       process.exit(2);

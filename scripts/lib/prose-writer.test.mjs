@@ -26,6 +26,13 @@ import {
   draftWithCodex,
   PROSE_MODEL,
 } from './prose-writer.mjs';
+import { checkProse } from './prose-guard.mjs';
+
+// writeProse is async since jev-semantic-guards S3.2 and its default guard is judgeProse. These specs pin
+// the WRITER's behaviour, so they inject the regex guard explicitly: with a consumer's jev.config.json in
+// `jev` and a key in .env.local, the default would otherwise reach the network from a unit test.
+const writeProseOffline = (args, deps = {}) => writeProse(args, { guard: checkProse, ...deps });
+
 
 const CLEAN =
   'Whoever ships next gets faster feedback, and a whole class of mistake is caught before it lands.';
@@ -37,29 +44,29 @@ const silent = () => {};
 
 // ── The router ──────────────────────────────────────────────────────────────────────────────
 
-test('planWriters: DEVIN leads, agy follows — the division of labour, expressed as policy', () => {
+test('planWriters: DEVIN leads, agy follows — the division of labour, expressed as policy', async () => {
   // Devin is the dedicated prose writer so agy's and codex's quota stays free for review and
   // building. This assertion IS the policy: if it changes, every report in the repo changes writer.
   assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true }), ['devin', 'agy']);
 });
 
-test('planWriters: devin carries it alone when agy is missing (a real, separate quota pool)', () => {
+test('planWriters: devin carries it alone when agy is missing (a real, separate quota pool)', async () => {
   assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: false }), ['devin']);
 });
 
-test('planWriters: agy carries it alone when devin is missing', () => {
+test('planWriters: agy carries it alone when devin is missing', async () => {
   assert.deepEqual(planWriters({ devinAvailable: false, agyAvailable: true }), ['agy']);
 });
 
-test('planWriters: an explicit preference wins, and yields nothing when unavailable', () => {
+test('planWriters: an explicit preference wins, and yields nothing when unavailable', async () => {
   assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true, preferred: 'agy' }), ['agy']);
   assert.deepEqual(planWriters({ devinAvailable: false, agyAvailable: true, preferred: 'devin' }), []);
 });
 
 // ── Guard-and-retry ─────────────────────────────────────────────────────────────────────────
 
-test('a clean first draft is returned immediately, with one attempt', () => {
-  const r = writeProse(
+test('a clean first draft is returned immediately, with one attempt', async () => {
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: okWriter(CLEAN), agy: failWriter('should not be reached'), has: () => true, warn: silent }
   );
@@ -68,7 +75,7 @@ test('a clean first draft is returned immediately, with one attempt', () => {
   assert.equal(r.attempts, 1);
 });
 
-test('a rejected draft is RETRIED with the findings, not discarded', () => {
+test('a rejected draft is RETRIED with the findings, not discarded', async () => {
   // The core behaviour: the guard's job is to trigger a correction, not merely to say no.
   const prompts = [];
   const writer = (prompt) => {
@@ -79,7 +86,7 @@ test('a rejected draft is RETRIED with the findings, not discarded', () => {
   // relied on devin running first, so the day the router order flipped it reached the REAL agy CLI
   // and hung for two minutes. A unit test that can invoke a network CLI when a policy constant
   // changes is a trap for whoever changes the constant.
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'BASE', evidence: {} },
     { agy: writer, devin: writer, has: () => true, warn: silent }
   );
@@ -103,14 +110,14 @@ test('a rejected draft is RETRIED with the findings, not discarded', () => {
   );
 });
 
-test('the LATEST draft is kept as the fallback, never the first', () => {
+test('the LATEST draft is kept as the fallback, never the first', async () => {
   // golden-beans' cross-review caught exactly this: an `if (!best)` pinned the pass-0 draft, so a
   // revision that also tripped a rule was thrown away and the UNREVISED text was returned — making
   // the whole retry pass pure cost. The revision is better informed even when still imperfect.
   const drafts = ['Tenants are delighted that the bug is fixed.', 'Customers are delighted, honestly.'];
   let i = 0;
   const writer = () => ({ ok: true, text: drafts[Math.min(i++, drafts.length - 1)] });
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: writer, agy: failWriter('unavailable'), has: (c) => c === 'devin', warn: silent }
   );
@@ -119,14 +126,14 @@ test('the LATEST draft is kept as the fallback, never the first', () => {
   assert.equal(r.attempts, 2);
 });
 
-test('a writer that FAILS is skipped without burning its retry on a revision note', () => {
+test('a writer that FAILS is skipped without burning its retry on a revision note', async () => {
   // A broken CLI is not fixed by being told its prose was bad; move to the next writer instead.
   let firstCalls = 0;
   const failing = () => {
     firstCalls++;
     return { ok: false, text: '', error: 'the lead writer exploded', retryable: false };
   };
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: failing, agy: okWriter(CLEAN), has: () => true, warn: silent }
   );
@@ -135,7 +142,7 @@ test('a writer that FAILS is skipped without burning its retry on a revision not
   assert.equal(r.writer, 'agy', 'the fallback picked it up');
 });
 
-test('a RETRYABLE failure buys exactly one more attempt before demoting the writer', () => {
+test('a RETRYABLE failure buys exactly one more attempt before demoting the writer', async () => {
   // Measured transient (2026-07-25): devin exited 0 with empty stdout on a 9 KB prompt and the
   // identical prompt succeeded moments later. Falling straight through would cost the better writer
   // for a hiccup — but a genuine outage must still demote, so it is ONE retry, not a loop.
@@ -146,7 +153,7 @@ test('a RETRYABLE failure buys exactly one more attempt before demoting the writ
       ? { ok: false, text: '', error: 'devin returned no output', retryable: true }
       : { ok: true, text: CLEAN };
   };
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: flaky, agy: failWriter('must not be reached'), has: () => true, warn: silent }
   );
@@ -156,13 +163,13 @@ test('a RETRYABLE failure buys exactly one more attempt before demoting the writ
   assert.equal(r.attempts, 2);
 });
 
-test('a persistent retryable failure still demotes — the retry is resilience, not denial', () => {
+test('a persistent retryable failure still demotes — the retry is resilience, not denial', async () => {
   let calls = 0;
   const dead = () => {
     calls++;
     return { ok: false, text: '', error: 'devin returned no output', retryable: true };
   };
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: dead, agy: okWriter(CLEAN), has: () => true, warn: silent }
   );
@@ -170,8 +177,8 @@ test('a persistent retryable failure still demotes — the retry is resilience, 
   assert.equal(r.writer, 'agy');
 });
 
-test('runs agy alone when devin is not installed at all', () => {
-  const r = writeProse(
+test('runs agy alone when devin is not installed at all', async () => {
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: failWriter('never called'), agy: okWriter(CLEAN), has: (c) => c === 'agy', warn: silent }
   );
@@ -179,11 +186,11 @@ test('runs agy alone when devin is not installed at all', () => {
   assert.equal(r.writer, 'agy');
 });
 
-test('a draft that never satisfies the guard is STILL RETURNED, flagged, never silently passed', () => {
+test('a draft that never satisfies the guard is STILL RETURNED, flagged, never silently passed', async () => {
   // The most important case. Returning nothing would make the caller fail closed with no output to
   // learn from; returning it as `ok` would launder a known-bad draft into the channel. So: return
   // it, with ok:false and the findings attached, and let the caller surface them (D3).
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     { devin: okWriter(DIRTY), agy: okWriter(DIRTY), codex: okWriter(DIRTY), has: () => true, warn: silent }
   );
@@ -193,11 +200,11 @@ test('a draft that never satisfies the guard is STILL RETURNED, flagged, never s
   assert.ok(r.guard.findings.some((f) => f.code === 'invented-beneficiary'));
 });
 
-test('the evidence pack reaches the guard — a flag-OFF claim is caught through the rail', () => {
+test('the evidence pack reaches the guard — a flag-OFF claim is caught through the rail', async () => {
   // The whole point of threading `evidence` through: D6's rule is only as good as the pack the
   // writer rail hands it.
   const draft = 'The partner portfolio is live, and every shop owner can see it right now.';
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: { allowsBeneficiary: true, liveFlags: [], minWords: 1 } },
     { devin: okWriter(draft), agy: okWriter(draft), codex: okWriter(draft), has: () => true, warn: silent }
   );
@@ -205,8 +212,8 @@ test('the evidence pack reaches the guard — a flag-OFF claim is caught through
   assert.ok(r.guard.findings.some((f) => f.code === 'flag-state-claim'), JSON.stringify(r.guard));
 });
 
-test('no writer available is an honest failure, not an empty success', () => {
-  const r = writeProse({ prompt: 'p', evidence: {} }, { has: () => false, warn: silent });
+test('no writer available is an honest failure, not an empty success', async () => {
+  const r = await writeProseOffline({ prompt: 'p', evidence: {} }, { has: () => false, warn: silent });
   assert.equal(r.ok, false);
   assert.equal(r.text, '');
   assert.equal(r.attempts, 0);
@@ -215,7 +222,7 @@ test('no writer available is an honest failure, not an empty success', () => {
 
 // ── Prompt assembly + lessons ───────────────────────────────────────────────────────────────
 
-test('buildWriterPrompt orders style → lessons → task, and omits an empty lessons block', () => {
+test('buildWriterPrompt orders style → lessons → task, and omits an empty lessons block', async () => {
   const withLessons = buildWriterPrompt({ style: 'STYLE', lessons: 'LESSON', task: 'TASK' });
   assert.ok(withLessons.indexOf('STYLE') < withLessons.indexOf('LESSON'));
   assert.ok(withLessons.indexOf('LESSON') < withLessons.indexOf('TASK'));
@@ -225,14 +232,14 @@ test('buildWriterPrompt orders style → lessons → task, and omits an empty le
   assert.ok(!without.includes('Lessons from previous drafts'), 'an empty lessons block must be omitted');
 });
 
-test('loadLessons strips the notes-to-humans header above the first ---', () => {
+test('loadLessons strips the notes-to-humans header above the first ---', async () => {
   const raw = '<!-- how to use this file -->\n---\nNever invent a beneficiary.';
   const out = loadLessons({ read: () => raw, exists: () => true, path: 'x' });
   assert.equal(out, 'Never invent a beneficiary.');
   assert.ok(!out.includes('how to use this file'));
 });
 
-test('loadLessons degrades to empty when the file is absent — never kills a report', () => {
+test('loadLessons degrades to empty when the file is absent — never kills a report', async () => {
   // Deliberately NOT loadPromptBody, which die()s. A missing lessons file is a legitimate state.
   const out = loadLessons({
     exists: () => false,
@@ -246,7 +253,7 @@ test('loadLessons degrades to empty when the file is absent — never kills a re
 
 // ── The signature adaptation (our runners return string-or-null, not { ok, text }) ───────────
 
-test('draftWithDevin: a string return is a draft; a NULL return is a failure, not an empty success', () => {
+test('draftWithDevin: a string return is a draft; a NULL return is a failure, not an empty success', async () => {
   // Getting this backwards makes every capped/unauthenticated writer look like a clean draft, and
   // the guard would then be checking an empty string. `soft: true` must be passed or the runner
   // die()s the whole process instead of returning.
@@ -262,7 +269,7 @@ test('draftWithDevin: a string return is a draft; a NULL return is a failure, no
   assert.equal(bad.retryable, true, 'a devin failure is worth exactly one retry');
 });
 
-test('draftWithAgy: runs the SINGLE prose model, in soft mode', () => {
+test('draftWithAgy: runs the SINGLE prose model, in soft mode', async () => {
   let seen;
   const r = draftWithAgy('p', { run: (_p, o) => ((seen = o), 'drafted') });
   assert.deepEqual(seen.models, [PROSE_MODEL], 'one model — a second one would silently change the voice');
@@ -271,7 +278,7 @@ test('draftWithAgy: runs the SINGLE prose model, in soft mode', () => {
   assert.equal(r.model, PROSE_MODEL, 'the model is reported so the banner can name what actually wrote it');
 });
 
-test('PROSE_MODEL is the GPT-OSS model, and emphatically NOT a Gemini one', () => {
+test('PROSE_MODEL is the GPT-OSS model, and emphatically NOT a Gemini one', async () => {
   // `gemini-3.5-flash-high` was prose-draft.mjs's default until this sprint, and it is the exact
   // constant golden-beans found had silently destroyed the register of every report. Pinned here so
   // restoring "a Gemini fallback for resilience" has to argue with a test. Resilience lives at the
@@ -280,7 +287,7 @@ test('PROSE_MODEL is the GPT-OSS model, and emphatically NOT a Gemini one', () =
   assert.ok(!/gemini/i.test(PROSE_MODEL));
 });
 
-test('draftWithAgy: an oversized prompt fails NON-retryably and never reaches the CLI', () => {
+test('draftWithAgy: an oversized prompt fails NON-retryably and never reaches the CLI', async () => {
   // A second identical attempt cannot shrink the prompt — retrying is pure latency, and it delays
   // the fall-through to devin, which rides --prompt-file and has no cap at all.
   const r = draftWithAgy('x'.repeat(50), {
@@ -301,7 +308,7 @@ test('draftWithAgy: an oversized prompt fails NON-retryably and never reaches th
 // pure latency on the last writer in the chain. Same "empty success" trap as the block above: exit
 // 0 with no text is a real codex failure mode and must never reach the guard as a clean draft.
 
-test('planWriters: codex is LAST — the review quota is the scarce one', () => {
+test('planWriters: codex is LAST — the review quota is the scarce one', async () => {
   assert.deepEqual(
     planWriters({ devinAvailable: true, agyAvailable: true, codexAvailable: true }),
     ['devin', 'agy', 'codex']
@@ -313,10 +320,10 @@ test('planWriters: codex is LAST — the review quota is the scarce one', () => 
   );
 });
 
-test('writeProse: falls through to codex when BOTH devin and agy are capped', () => {
+test('writeProse: falls through to codex when BOTH devin and agy are capped', async () => {
   // The measured case: the merge-report log shows devin refusing with "high demand for this model",
   // and agy shares its pool with the review layer.
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     {
       devin: failWriter('capped'),
@@ -330,7 +337,7 @@ test('writeProse: falls through to codex when BOTH devin and agy are capped', ()
   assert.equal(r.writer, 'codex');
 });
 
-test('draftWithCodex: the prompt rides STDIN, never argv', () => {
+test('draftWithCodex: the prompt rides STDIN, never argv', async () => {
   // execCodex puts its `prompt` arg in argv — the exact cap that already bites agy. A prose prompt
   // carries the persona, the lessons and a full evidence pack, so it must not go there.
   let seen;
@@ -344,27 +351,27 @@ test('draftWithCodex: the prompt rides STDIN, never argv', () => {
   assert.ok(!seen.directive.includes('xxx'), 'the material must never reach argv');
 });
 
-test('draftWithCodex: an AUTH lapse is non-retryable — a second try cannot log codex in', () => {
+test('draftWithCodex: an AUTH lapse is non-retryable — a second try cannot log codex in', async () => {
   const r = draftWithCodex('p', { run: () => ({ ok: false, text: '', authFailed: true }) });
   assert.equal(r.ok, false);
   assert.equal(r.retryable, false);
   assert.match(r.error, /codex login/);
 });
 
-test('draftWithCodex: a STALE CLI is non-retryable and names the doctor script', () => {
+test('draftWithCodex: a STALE CLI is non-retryable and names the doctor script', async () => {
   const r = draftWithCodex('p', { run: () => ({ ok: false, text: '', cliOutdated: true }) });
   assert.equal(r.ok, false);
   assert.equal(r.retryable, false);
   assert.match(r.error, /cross-agent-doctor/);
 });
 
-test('draftWithCodex: a quota cap IS retryable — that is the recoverable case', () => {
+test('draftWithCodex: a quota cap IS retryable — that is the recoverable case', async () => {
   const r = draftWithCodex('p', { run: () => ({ ok: false, text: '', stderr: 'rate limited' }) });
   assert.equal(r.ok, false);
   assert.equal(r.retryable, true);
 });
 
-test('draftWithCodex: exit 0 with EMPTY text is a failure, not an empty success', () => {
+test('draftWithCodex: exit 0 with EMPTY text is a failure, not an empty success', async () => {
   // The signature-adaptation trap again: `ok: true` with no text would hand the guard "" and call
   // it a clean draft.
   const r = draftWithCodex('p', { run: () => ({ ok: true, text: '   ' }) });
@@ -378,9 +385,9 @@ test('draftWithCodex: exit 0 with EMPTY text is a failure, not an empty success'
 // recap passed them back, so the merge report silently stopped blocking them. writeProse now applies
 // them itself — these pin that a caller who passes nothing still gets them.
 
-test('writeProse applies the project-configured stack names even when the caller passes none', () => {
+test('writeProse applies the project-configured stack names even when the caller passes none', async () => {
   const seen = [];
-  const r = writeProse(
+  const r = await writeProseOffline(
     { prompt: 'p', evidence: {} },
     {
       devin: okWriter('The Acmecart cart now survives a refresh.'),
@@ -397,9 +404,9 @@ test('writeProse applies the project-configured stack names even when the caller
   assert.equal(r.guard.ok, false);
 });
 
-test('a caller-supplied list wins over the configured one', () => {
+test('a caller-supplied list wins over the configured one', async () => {
   let got;
-  writeProse(
+  await writeProseOffline(
     { prompt: 'p', evidence: { extraBannedToolNames: ['explicit'] } },
     {
       devin: okWriter(CLEAN),
@@ -418,4 +425,22 @@ test('projectBannedToolNames: no reporting config means none configured, not a c
   assert.deepEqual(projectBannedToolNames({ load: () => { throw new ReportingConfigError('absent'); } }), []);
   assert.deepEqual(projectBannedToolNames({ load: () => ({ prose: { extraBannedToolNames: ['x'] } }) }), ['x']);
   assert.throws(() => projectBannedToolNames({ load: () => { throw new TypeError('real bug'); } }), /real bug/);
+});
+
+test('the retry loop AWAITS an async guard (judgeProse is async) — a rejected draft is revised', async () => {
+  const seen = [];
+  let n = 0;
+  const guard = async (text) => {
+    seen.push(text);
+    await new Promise((r) => setTimeout(r, 1));
+    return n++ === 0 ? { ok: false, findings: [{ code: 'invented-commitment', note: 'no dates' }] } : { ok: true, findings: [] };
+  };
+  const drafts = ['first draft.', 'second draft.'];
+  const r = await writeProse(
+    { prompt: 'p', evidence: {} },
+    { has: (c) => c === 'devin', devin: () => ({ ok: true, text: drafts.shift() }), guard, warn: () => {}, extraBannedToolNames: () => [] }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.text, 'second draft.');
+  assert.deepEqual(seen, ['first draft.', 'second draft.']);
 });

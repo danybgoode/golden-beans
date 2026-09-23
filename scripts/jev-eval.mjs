@@ -1,0 +1,287 @@
+#!/usr/bin/env node
+// jev-eval.mjs — the labelled eval set for the Jev guards, and the rot guard on shadow mode
+// (jev-semantic-guards S1.4, D8).
+//
+//   node scripts/jev-eval.mjs                 offline (CI): replay every fixture's RECORDED Jev answers
+//                                             through the real judge, assert the decision still matches the
+//                                             recording, and fail if any rail is in shadow past its expiry.
+//   node scripts/jev-eval.mjs --live          re-ask Jev for every fixture, REWRITE the recordings, and print
+//                                             accuracy against the labels — regex vs Jev, per rail/family.
+//   node scripts/jev-eval.mjs --rail prose    limit to one rail.
+//
+// Why offline replay exists: a model bump, a threshold change or an edit to a judge's decide logic must
+// show up as a red CI run, not as a quietly different verdict on the next PR. Why --live exists: the
+// recordings are only as current as the model that produced them — run it before bumping `model`.
+//
+// The rot guard: a rail in `shadow` past `shadowExpires` fails this script, so shadow cannot quietly become
+// the permanent "regex and Jev both" the product owner ruled out.
+//
+// Zero deps — Node 18+.
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadJevConfig, parseJevConfig, RAILS, readApiKey, repoRoot } from './lib/jev.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+export const FIXTURES_PATH = join(__dirname, 'jev-eval.fixtures.json');
+
+/** Shadow is a short, expiring measurement: at most this many days out, ever. */
+export const MAX_SHADOW_DAYS = 21;
+/** A judge that exists must be proven on at least this many labelled cases (S1.4 acceptance). */
+export const MIN_FIXTURES = 30;
+
+const addDays = (ymd, n) =>
+  new Date(Date.parse(`${ymd}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+/**
+ * Shadow rails that fail the rot guard. Pure. `today` is the UTC date, YYYY-MM-DD (CI runs in UTC).
+ * Past its date is expired; more than MAX_SHADOW_DAYS out is refused too — `2099-01-01` would otherwise
+ * be a permanent shadow wearing an expiry date, and the gap only ever shrinks, so the cap is safe.
+ */
+export function expiredShadowRails(config, today) {
+  const cap = addDays(today, MAX_SHADOW_DAYS);
+  return Object.entries(config.rails)
+    .filter(
+      ([, r]) => r.mode === 'shadow' && r.shadowExpires && (r.shadowExpires < today || r.shadowExpires > cap)
+    )
+    .map(([name, r]) => ({
+      rail: name,
+      shadowExpires: r.shadowExpires,
+      why: r.shadowExpires < today ? 'past its shadowExpires' : `more than ${MAX_SHADOW_DAYS} days out`,
+    }));
+}
+
+/**
+ * Coverage failures: fixtures with no judge to replay them (a renamed judge must not turn CI green), and a
+ * judge with fewer than MIN_FIXTURES labelled cases. Pure.
+ */
+export function coverageFailures(fixtures, rails) {
+  const out = [];
+  for (const name of RAILS) {
+    const n = (fixtures[name] ?? []).length;
+    if (!rails[name] && n)
+      out.push(`${name}: ${n} fixture(s) but no judge to replay them — was the judge renamed?`);
+    if (rails[name] && n < MIN_FIXTURES)
+      out.push(`${name}: only ${n} labelled fixture(s); a judge needs ≥${MIN_FIXTURES}`);
+  }
+  return out;
+}
+
+/** An `ask` that answers ONLY from a recording — a missing answer is could-not-look, i.e. a stale fixture. */
+export function replayAsk(recorded) {
+  return async ({ questions }) => {
+    const ids = Object.keys(questions);
+    const missing = ids.filter((id) => !recorded?.answers?.[id]);
+    if (missing.length)
+      return {
+        ok: false,
+        state: 'could-not-look',
+        error: `no recording for ${missing.slice(0, 3).join(', ')}`,
+      };
+    return {
+      ok: true,
+      answers: Object.fromEntries(ids.map((id) => [id, recorded.answers[id]])),
+      usage: null,
+      model: recorded.model,
+    };
+  };
+}
+
+/**
+ * An `ask` that forwards to live Jev and captures every answer, so the recording can be rewritten. A
+ * could-not-look is RECORDED as a failure: the judge would fall back to the regex, and scoring that as
+ * Jev's answer — or baking it into the recording — would corrupt the flip gate (fresh review, PR #34).
+ */
+function recordingAsk(ask, sink) {
+  return async (req) => {
+    const r = await ask(req);
+    if (r.ok) {
+      Object.assign(sink.answers, r.answers);
+      sink.model = r.model;
+    } else sink.errors.push(r.error);
+    return r;
+  };
+}
+
+const SEMANTIC_CODES = [
+  'unsupported-fix-claim',
+  'invented-beneficiary',
+  'flag-state-claim',
+  'invented-commitment',
+];
+const sortedCodes = (findings) =>
+  [...new Set((findings ?? []).map((f) => f.code).filter((c) => SEMANTIC_CODES.includes(c)))].sort();
+
+/**
+ * The rails this harness can evaluate. Each judge is looked up by name so a rail whose judge has not
+ * landed yet is SKIPPED loudly instead of failing the import.
+ */
+export async function loadRails() {
+  const rails = {};
+  const review = await import('./lib/review-guard.mjs');
+  if (typeof review.judgeReviewOutput === 'function')
+    rails.review = {
+      run: (fx, deps) => review.judgeReviewOutput(fx.text, {}, deps),
+      regex: (fx) => review.assertReviewOutput(fx.text).ok,
+      predicted: (d) => d.ok,
+      expected: (fx) => fx.label,
+      summary: (d) => ({ ok: d.ok, decider: d.decider }),
+    };
+  const prose = await import('./lib/prose-guard.mjs');
+  if (typeof prose.judgeProse === 'function')
+    rails.prose = {
+      run: (fx, deps) => prose.judgeProse(fx.draft, fx.evidence ?? {}, deps),
+      regex: (fx) => sortedCodes(prose.checkProse(fx.draft, fx.evidence ?? {}).findings),
+      predicted: (d) => sortedCodes(d.findings),
+      expected: (fx) => [...fx.label].sort(),
+      summary: (d) => ({ codes: sortedCodes(d.findings), decider: d.decider }),
+    };
+  return rails;
+}
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Jev config for evaluation: the rail forced to `jev` so Jev's answer — not the regex — is what is scored. */
+const evalConfig = (base, rail) =>
+  parseJevConfig({
+    model: base.model,
+    rails: { ...base.rails, [rail]: { ...base.rails[rail], mode: 'jev', shadowExpires: null } },
+  });
+
+/**
+ * Evaluate. Returns { failures, report, fixtures } — pure over its deps apart from the judge calls.
+ * live=false replays recordings; live=true re-asks through deps.ask and rewrites them.
+ */
+export async function evaluate({ fixtures, rails, config, live = false, ask = null, only = null }) {
+  const failures = [];
+  const report = {};
+  for (const [name, rail] of Object.entries(rails)) {
+    if (only && only !== name) continue;
+    const cases = fixtures[name] ?? [];
+    const cfg = evalConfig(config, name);
+    const tally = { n: cases.length, jevRight: 0, regexRight: 0, disagreements: 0, families: {} };
+    for (const fx of cases) {
+      const sink = { answers: {}, model: null, errors: [] };
+      const deps = {
+        config: cfg,
+        key: 'eval',
+        log: () => {},
+        ask: live ? recordingAsk(ask, sink) : replayAsk(fx.recorded),
+      };
+      // A recording answers for the model that produced it. Replaying it under a bumped `model` would pass
+      // while proving nothing about the new one (codex, PR #34): re-record with --live first.
+      if (!live && fx.recorded?.model !== config.model) {
+        failures.push(
+          `${name}/${fx.id}: recorded by ${fx.recorded?.model ?? 'nothing'}, config pins ${config.model} — run --live`
+        );
+        continue;
+      }
+      const decision = await rail.run(fx, deps);
+      const summary = rail.summary(decision);
+      if (live && sink.errors.length) {
+        failures.push(
+          `${name}/${fx.id}: jev could not look (${sink.errors[0]}) — not scored, recording kept`
+        );
+        tally.n--;
+        continue;
+      }
+      if (live) {
+        fx.recorded = { model: sink.model, answers: sink.answers };
+        fx.decision = summary;
+      } else if (!same(summary, fx.decision)) {
+        failures.push(
+          `${name}/${fx.id}: replay gave ${JSON.stringify(summary)}, recorded ${JSON.stringify(fx.decision)}`
+        );
+      }
+      const expected = rail.expected(fx);
+      const jevRight = same(rail.predicted(decision), expected);
+      const regexRight = same(rail.regex(fx), expected);
+      tally.jevRight += jevRight;
+      tally.regexRight += regexRight;
+      tally.disagreements += !same(rail.predicted(decision), rail.regex(fx));
+      if (name === 'prose')
+        for (const code of SEMANTIC_CODES) {
+          const f = (tally.families[code] ??= { jevRight: 0, regexRight: 0, n: 0 });
+          const want = expected.includes(code);
+          f.n++;
+          f.jevRight += rail.predicted(decision).includes(code) === want;
+          f.regexRight += rail.regex(fx).includes(code) === want;
+        }
+    }
+    report[name] = tally;
+  }
+  return { failures, report, fixtures };
+}
+
+const pct = (a, n) => (n ? `${((100 * a) / n).toFixed(1)}%` : 'n/a');
+
+export function formatReport(report) {
+  const lines = [];
+  for (const [rail, t] of Object.entries(report)) {
+    lines.push(
+      `${rail}: ${t.n} labelled · jev ${pct(t.jevRight, t.n)} · regex ${pct(t.regexRight, t.n)} · ${t.disagreements} disagreement(s)`
+    );
+    for (const [code, f] of Object.entries(t.families))
+      lines.push(`  ${code.padEnd(24)} jev ${pct(f.jevRight, f.n)} · regex ${pct(f.regexRight, f.n)}`);
+  }
+  return lines.join('\n');
+}
+
+async function main() {
+  const argv = process.argv.slice(2);
+  const live = argv.includes('--live');
+  const railIx = argv.indexOf('--rail');
+  const only = railIx >= 0 ? argv[railIx + 1] : null;
+  if (railIx >= 0 && !RAILS.includes(only)) {
+    process.stderr.write(`jev-eval: --rail must be one of ${RAILS.join(', ')}\n`);
+    process.exit(2);
+  }
+  const root = repoRoot();
+  const config = loadJevConfig({ root });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const expired = expiredShadowRails(config, today);
+
+  const fixtures = JSON.parse(readFileSync(FIXTURES_PATH, 'utf8'));
+  const rails = await loadRails();
+  for (const name of ['review', 'prose'])
+    if (!rails[name]) process.stdout.write(`${name}: no judge in this checkout yet — skipped\n`);
+
+  let ask = null;
+  if (live) {
+    const key = readApiKey({ root });
+    if (!key) {
+      process.stderr.write('jev-eval --live needs TYPESAFE_API_KEY (env or .env.local).\n');
+      process.exit(2);
+    }
+    const { askJev } = await import('./lib/jev.mjs');
+    ask = (req) => askJev(req, { key, model: config.model });
+  }
+
+  const { failures, report } = await evaluate({ fixtures, rails, config, live, ask, only });
+  failures.push(...coverageFailures(fixtures, rails));
+  const n = Object.values(report).reduce((s, t) => s + t.n, 0);
+  if (live && failures.length) {
+    process.stderr.write('jev-eval --live: failures below — the recordings were NOT rewritten.\n');
+  } else if (live) {
+    writeFileSync(FIXTURES_PATH, `${JSON.stringify(fixtures, null, 2)}\n`);
+    process.stdout.write(`live: re-scored ${n} fixtures against ${config.model}; recordings rewritten.\n`);
+  } else {
+    process.stdout.write(`offline: ${n - failures.length}/${n} fixtures match recordings\n`);
+  }
+  process.stdout.write(`${formatReport(report)}\n`);
+  for (const f of failures) process.stderr.write(`✗ ${f}\n`);
+  for (const e of expired)
+    process.stderr.write(
+      `✗ rails.${e.rail} is in shadow ${e.why} (${e.shadowExpires}) — promote it to jev or set it off.\n`
+    );
+  if (failures.length || expired.length) process.exit(1);
+}
+
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain)
+  main().catch((e) => {
+    process.stderr.write(`jev-eval: ${e.message}\n`);
+    process.exit(1);
+  });

@@ -69,3 +69,6 @@ Roadmap/**/design/reference/
 
 # Local overlay for reporting.config.json — the chat id this PUBLIC repo does not commit
 reporting.config.local.json
+
+# Jev decision log (jev-semantic-guards) — local evidence, may quote private text
+.jev/

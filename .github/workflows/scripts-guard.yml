@@ -14,11 +14,13 @@ on:
       - 'scripts/**'
       - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
+      - 'jev.config.json'
   pull_request:
     paths:
       - 'scripts/**'
       - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
+      - 'jev.config.json'
 
 jobs:
   cli-tests:
@@ -33,5 +35,10 @@ jobs:
       # The committed permission rules: every deny/ask rule cited in .claude/permissions-ledger.json,
       # verb-class allow list, no project-level auto mode. Static only — the --live replay spends real
       # sessions, so it is run by hand when rules change.
+      # Jev semantic guards (dobby-foundation jev-semantic-guards D8): replay the labelled fixtures' RECORDED
+      # Jev answers through the real judges (offline — never calls the API, needs no secret), and fail when a
+      # rail has sat in `shadow` past its `shadowExpires`.
+      - name: jev — eval replay + shadow expiry
+        run: node scripts/jev-eval.mjs
       - name: permissions contract
         run: node scripts/permissions-smoke.mjs

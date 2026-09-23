@@ -1,0 +1,13 @@
+{
+  "$comment": "Jev semantic guards (dobby-foundation jev-semantic-guards). rails.<review|prose>.mode: off | shadow | jev is the kill-switch AND the promotion lever: one reviewed line. off = the regex-only guards exactly as before. shadow = the regex decides, Jev is asked and both are logged (.jev/decisions.jsonl + the <!-- jev: --> marker on cross-review comments); it REQUIRES shadowExpires and CI fails once it passes. jev = Jev decides; the regex decides only when Jev cannot look (no key, 429, timeout) or is unsure. No TYPESAFE_API_KEY, or egress:false, behaves exactly as off.",
+  "model": "jev-1.13.0",
+  "egress": true,
+  "rails": {
+    "review": {
+      "mode": "shadow",
+      "thresholds": { "real": 0.85, "notReal": 0.15 },
+      "shadowExpires": "2026-10-07"
+    },
+    "prose": { "mode": "shadow", "thresholds": { "claim": 0.5 }, "shadowExpires": "2026-10-07" }
+  }
+}

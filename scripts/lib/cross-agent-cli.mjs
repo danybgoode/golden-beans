@@ -53,10 +53,10 @@ export const AGENT_BIN = {
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-09-19 against 1.2.7.
+// agy-doctor: last verified 2026-09-23 against 1.2.8.
 //   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.2.7';
+export const AGY_PINNED = '1.2.8';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -493,8 +493,10 @@ export function decideTrivialSkip({ files, minLines = 10 } = {}) {
 // basenames, replacing each with a one-line placeholder so the reviewer still sees THAT the file changed —
 // just not its (often huge, low-signal) content. Pure string logic, no git/gh dependency, so it's directly
 // unit-testable against a hand-built diff fixture.
+// `jev-eval.fixtures.json` (jev-semantic-guards): recorded Jev answers that `jev-eval --live` rewrites — ~100 KB of
+// machine-written JSON that alone pushed a 20-file PR past agy's/vibe's 256 KB argv limit.
 const GENERATED_FILE_RE =
-  /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Gemfile\.lock|Cargo\.lock|poetry\.lock|reports-data\.json)$/;
+  /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Gemfile\.lock|Cargo\.lock|poetry\.lock|reports-data\.json|jev-eval\.fixtures\.json)$/;
 
 export function stripGeneratedFileDiffs(diffText, { extraPatterns = [] } = {}) {
   if (!diffText) return { diff: diffText, strippedFiles: [] };

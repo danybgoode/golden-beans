@@ -16,6 +16,7 @@ back — never fork them here.** A fork is how a rail ends up with three impleme
 | Browser smoke | `live-smoke.mjs`, `apps/web/e2e/_live/ad-hoc.browser.spec.ts`, `apps/web/e2e/_helpers/auth.ts` | `live-smoke.config.json` (unauthed; the authed rail stays this repo's own `authed` Playwright project) |
 | Roadmap frontmatter contract | `lib/roadmap-contract.mjs` (the one definition), `doc-format.mjs` (enforces it), `roadmap-backfill.mjs` (brought this repo's 29 epics onto it — findings in `Roadmap/00-ideas/audits/frontmatter-backfill-2026-09-19.md`) (+ tests) | none — `doc-format.enforced.json` already enforces all of `Roadmap/`, so every epic doc is held to the contract from this PR on |
 | The build view resolver | `build-state.mjs` (+ test), `lib/session-journal.mjs` (the journal line format it reads) | none — `node scripts/build-state.mjs [--json] [--offline]` answers "what is being built right now" from the frontmatter contract, git and one `gh` call; read-only |
+| Jev semantic guards | `lib/jev.mjs` (the one TypeSafe client), `lib/review-guard.mjs` (`judgeReviewOutput`), `lib/prose-guard.mjs` (`judgeProse`), `jev-eval.mjs` + `jev-eval.fixtures.json` (labelled replay; CI), `jev-backtest.mjs`, `git-fixtures-sealed.test.mjs` (+ tests) | the committed root **`jev.config.json`** (per-rail `mode: off \| shadow \| jev`, the kill-switch); the key is `TYPESAFE_API_KEY` in the env or the gitignored `.env.local` |
 | Golden Frijoles preflight | `preflight.mjs`, `lib/golden-onboarding.mjs` (+ tests) | **Reports FAIL here, correctly — see the note below.** `groom` declares it, so it must exist; nothing in this repo is meant to pass it |
 
 `lib/cross-agent-cli.mjs` is this project's own (see below) but gained the template's `runDevin` export,
@@ -60,7 +61,12 @@ re-check before "unifying" it.
   *artifact* this product serves. The template's `pmo-report.mjs` reports on the project's own delivery.
 - **The review rail** — `lib/cross-agent-cli.mjs` (the CLI driver), `cross-review.mjs`,
   `cross-panel.mjs`, their prompts and `lib/vibe-invocation.test.mjs` — forked by the review-stack work
-  before this epic. Unifying it is that rail's job, not this one's.
+  before this epic. Unifying it is that rail's job, not this one's. **Hand-patched for
+  jev-semantic-guards (2026-09-23)**, the same patch the template's copy carries: `main()` is `async`;
+  `jevContext('review')` is resolved before the pending status; the guard line is
+  `await judgeReviewOutput(findings, { sha })` (was `assertReviewOutput`), printing `review guard: <reason>`;
+  the posted comment appends `jevMarker(verdict)`; and `lib/cross-agent-cli.mjs` strips
+  `jev-eval.fixtures.json` from reviewer diffs as generated data. Nothing else in the fork moved.
 - **Project fill-ins** — `prose-lessons.md` (this project's own lessons), `routines/README.md` and
   `review-config.json` (its routines and review routing; the template ships both as fill-ins). `prose/cpo-persona.md` is
   still the template's NEUTRAL copy (generic example people), byte-identical on purpose until someone
