@@ -58,7 +58,9 @@ export function harvest(repo, { spawn = spawnSync } = {}) {
       '--paginate',
       `repos/${repo}/issues/comments?per_page=100`,
       '--jq',
-      '.[] | select(.body | test("^### (🔎|🔐) Cross-agent review")) | {url: .html_url, created: .created_at, body: .body}',
+      // `// ""` — a deleted or system comment has a null body, and `null | test(...)` is a jq error that
+      // would abort the whole harvest (agy, golden-beans #159). `--jq` prints each object as one line.
+      '.[] | select((.body // "") | test("^### (🔎|🔐) Cross-agent review")) | {url: .html_url, created: .created_at, body: .body}',
     ],
     { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }
   );
@@ -135,9 +137,9 @@ async function main() {
   const limit = limitIx >= 0 ? Number(argv[limitIx + 1]) : Infinity;
   const outIx = argv.indexOf('--out');
   const outArg = outIx >= 0 ? argv[outIx + 1] : null;
-  if (!repos.length || (outIx >= 0 && (!outArg || outArg.startsWith('--')))) {
+  if (!repos.length || (outIx >= 0 && (!outArg || outArg.startsWith('--') || !outArg.endsWith('.md')))) {
     process.stderr.write(
-      'usage: node scripts/jev-backtest.mjs --repo owner/name [--repo …] [--limit N] [--out path]\n'
+      'usage: node scripts/jev-backtest.mjs --repo owner/name [--repo …] [--limit N] [--out <path>.md]\n'
     );
     process.exit(2);
   }

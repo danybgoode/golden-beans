@@ -79,3 +79,10 @@ test('renderReport states the corpus bias and tables only real disagreements', (
   assert.match(md, /x \\\| y/, 'pipes escaped');
   assert.ok(!md.includes('(u2) |'), 'agreement is not a disagreement row');
 });
+
+test('the harvest jq filter tolerates a null comment body (agy, golden-beans #159)', () => {
+  let args = null;
+  harvest('o/r', { spawn: (cmd, a) => ((args = a), { status: 0, stdout: '' }) });
+  const jq = args[args.indexOf('--jq') + 1];
+  assert.match(jq, /select\(\(\.body \/\/ ""\) \| test\(/);
+});

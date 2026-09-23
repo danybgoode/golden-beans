@@ -146,6 +146,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const evalConfig = (base, rail) =>
   parseJevConfig({
     model: base.model,
+    egress: base.egress,
     rails: { ...base.rails, [rail]: { ...base.rails[rail], mode: 'jev', shadowExpires: null } },
   });
 
@@ -249,6 +250,13 @@ async function main() {
     if (!rails[name]) process.stdout.write(`${name}: no judge in this checkout yet — skipped\n`);
 
   let ask = null;
+  if (live && !config.egress) {
+    // egress:false means no text leaves this machine — `--live` sends every fixture (agy, golden-beans #159).
+    process.stderr.write(
+      'jev-eval --live: jev.config.json sets egress:false — refusing to send fixtures to Jev.\n'
+    );
+    process.exit(2);
+  }
   if (live) {
     const key = readApiKey({ root });
     if (!key) {
