@@ -209,3 +209,7 @@ test('one chunk failing does not discard what Jev found in the chunks that answe
   assert.ok(v.jevCodes.includes('invented-commitment'), 'and shadow data records it');
   assert.equal(v.decider, 'jev+regex');
 });
+
+test('proseUnits: a markdown heading is structure, never a unit Jev is asked about', () => {
+  assert.deepEqual(proseUnits('## What shipped\n\nThe rail is live.'), ['The rail is live.']);
+});

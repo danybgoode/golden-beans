@@ -163,6 +163,7 @@ test('jevMarker: carries mode, decider, noul, severity, model — never the repl
   assert.deepEqual(parseJevMarker(`body${m}`), {
     mode: 'jev',
     decider: 'jev',
+    regexOk: false,
     noul: 0.97,
     severity: 'blocking',
     model: 'jev-1.13.0',
@@ -170,6 +171,7 @@ test('jevMarker: carries mode, decider, noul, severity, model — never the repl
   assert.deepEqual(parseJevMarker(jevMarker(null)), {
     mode: 'off',
     decider: 'regex',
+    regexOk: null,
     noul: null,
     severity: null,
     model: null,
@@ -226,4 +228,10 @@ test('an ask that says ok with no answers object falls back, it does not throw (
     parseJevMarker(jevMarker({ mode: 'jev', decider: 'jev', jev: { severity: 'nit' } })).noul,
     null
   );
+});
+
+test('configured for jev with no key: the regex decides, and the reason SAYS jev could not look', async () => {
+  const v = await judgeReviewOutput(PROSE_FINDING, {}, { config: cfg('jev'), key: null, log: () => {} });
+  assert.equal(v.ok, assertReviewOutput(PROSE_FINDING).ok);
+  assert.match(v.reason, /decided by regex: jev could not look \(no TYPESAFE_API_KEY\)$/);
 });

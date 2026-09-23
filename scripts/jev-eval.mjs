@@ -188,7 +188,9 @@ export async function evaluate({ fixtures, rails, config, live = false, ask = nu
         continue;
       }
       if (live) {
-        fx.recorded = { model: sink.model, answers: sink.answers };
+        // A draft the judge needed no answers for (e.g. a heading-only unit, which is never asked about) is
+        // recorded as answered by the pinned model with no answers — replaying it asks nothing.
+        fx.recorded = { model: sink.model ?? cfg.model, answers: sink.answers };
         fx.decision = summary;
       } else if (!same(summary, fx.decision)) {
         failures.push(

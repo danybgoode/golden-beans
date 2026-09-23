@@ -3,6 +3,12 @@
 // Byte-identical in dobby-foundation's template and every consuming project (ways-of-work-lean-pass
 // D11). Project-specific values live in `scripts/review-config.json`, never in this file.
 //
+// ── Since jev-semantic-guards (2026-09-23): Jev DECIDES "is this a real review?"; the regex below is the
+// OFFLINE FALLBACK ── `judgeReviewOutput` (section 4) is what cross-review calls. `assertReviewOutput` still
+// decides, byte-unchanged, whenever Jev cannot look (no key, egress:false, 429, timeout) or is unsure, and
+// always when jev.config.json → rails.review.mode is `off`. Measured on 76 labelled replies: the judge 100%,
+// this regex alone 86.8% — it rejected real prose findings and accepted plan transcripts (sprint-5.md).
+//
 // ── 1. A silent reviewer is a FAILED run (D9) ──────────────────────────────────────────────────────
 // With two external passes, a CLI that exited 0 and printed nothing was contradicted by the other one.
 // With one, nothing contradicts it: an empty or structureless reply reads exactly like "looks clean".
@@ -379,7 +385,15 @@ export async function judgeReviewOutput(text, opts = {}, deps = {}) {
   const mechanical = !t || TOOL_TRANSCRIPT.test(t);
   if (ctx.mode === 'off' || mechanical) {
     const d = decideReview({ regex, jev: null, mode: 'off', thresholds: ctx.rail.thresholds });
-    return { ...d, mode: ctx.mode, why: mechanical ? 'mechanical shape' : ctx.why };
+    // Configured for Jev but it cannot be asked (no key, egress:false): say so, so the fallback never reads
+    // like the configured path. The kill-switch itself (`mode: off`) stays exactly assertReviewOutput.
+    const degraded = !mechanical && ctx.configured !== 'off';
+    return {
+      ...d,
+      mode: ctx.mode,
+      why: mechanical ? 'mechanical shape' : ctx.why,
+      ...(degraded ? { reason: `${d.reason} — decided by regex: jev could not look (${ctx.why})` } : {}),
+    };
   }
   const res = await ctx.ask({ state: reviewState(t), questions: REVIEW_QUESTIONS });
   // Only a real probability is a verdict. `Number()` would turn `true`, "1" or 5 into a Jev-decided PASS and
@@ -420,6 +434,9 @@ export function jevMarker(verdict) {
   const payload = {
     mode: verdict?.mode ?? 'off',
     decider: verdict?.decider ?? 'regex',
+    // The regex's OWN verdict. Once Jev decides, a posted comment is no longer proof the regex accepted the
+    // reply — without this, the report would count Jev-only passes as agreement (review of PR #39).
+    regexOk: typeof verdict?.regexOk === 'boolean' ? verdict.regexOk : null,
     noul: typeof verdict?.jev?.noul === 'number' ? Number(verdict.jev.noul.toFixed(3)) : null,
     severity: verdict?.jev?.severity ?? null,
     model: verdict?.jev?.model ?? null,
