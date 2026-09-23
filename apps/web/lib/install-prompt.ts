@@ -29,7 +29,7 @@
 export const INSTALL_PROMPT =
   "Install the golden-frijoles plugin. If you're in Claude Code, run `claude plugin marketplace add " +
   "golden-frijoles/skills`, then `claude plugin install golden-frijoles@golden-frijoles`. If you're in " +
-  'another agent, run `npx skills add golden-frijoles/skills --skill golden-frijoles` and select your ' +
+  "another agent, run `npx skills add golden-frijoles/skills --skill '*'` and select your " +
   'agent. Use one installation method. You can read the skill directly at ' +
   'https://github.com/golden-frijoles/skills/blob/main/plugins/golden-frijoles/skills/golden-frijoles/SKILL.md ' +
   '(raw: https://raw.githubusercontent.com/golden-frijoles/skills/main/plugins/golden-frijoles/skills/golden-frijoles/SKILL.md). ' +

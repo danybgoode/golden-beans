@@ -13,7 +13,9 @@ import { INSTALL_PROMPT } from './install-prompt.ts'
 test('names both installation methods, and exactly one plugin/marketplace pair', () => {
   assert.match(INSTALL_PROMPT, /claude plugin marketplace add golden-frijoles\/skills/)
   assert.match(INSTALL_PROMPT, /claude plugin install golden-frijoles@golden-frijoles/)
-  assert.match(INSTALL_PROMPT, /npx skills add golden-frijoles\/skills --skill golden-frijoles/)
+  // Every skill, not just the umbrella: with `--skill golden-frijoles` alone only the umbrella installs and its
+  // hand-off to groom dead-ends (measured, golden-frijoles-plugin X12).
+  assert.match(INSTALL_PROMPT, /npx skills add golden-frijoles\/skills --skill '\*'/)
 })
 
 test('names only github.com / raw.githubusercontent.com URLs — never a goldenfrijoles.com host', () => {
