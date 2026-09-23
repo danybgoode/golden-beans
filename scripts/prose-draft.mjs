@@ -26,9 +26,10 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hasCmd, loadPromptBody, die, need } from './lib/cross-agent-cli.mjs';
 import { writeProse, buildWriterPrompt, loadLessons } from './lib/prose-writer.mjs';
+import { projectAsset, projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..');
+const REPO_ROOT = projectRoot(); // D2
 
 // The model/router lives in scripts/lib/prose-writer.mjs now — deliberately NOT here.
 //
@@ -114,7 +115,7 @@ export function gatherSprintSources(
 // its internal-artifact rules moved into prose/internal.task.md.)
 export function loadStylePrompt() {
   return [
-    loadPromptBody(join(__dirname, 'prose', 'cpo-persona.md')),
+    loadPromptBody(projectAsset('prose/cpo-persona.md')), // a TEMPLATE FILL-IN the project owns
     loadPromptBody(join(__dirname, 'prose', 'internal.task.md')),
   ].join('\n\n');
 }

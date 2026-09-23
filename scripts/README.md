@@ -2,22 +2,46 @@
 
 Two kinds of script live here, and the difference matters when you change one.
 
-## Shared rails — byte-identical to `dobby-foundation/template/scripts/`
+## Served by `@golden-frijoles/kit`, not copied here (golden-frijoles-plugin S2.5)
 
-These are the ways-of-work plugin's skills' scripts, ported by dobby-foundation's
-`plugin-audit-and-extraction` epic (Sprint 3, story 3.3). **Change them in dobby-foundation and copy
-back — never fork them here.** A fork is how a rail ends up with three implementations.
+The `golden-frijoles` plugin's skills run `scripts/<name>.mjs` when this repo has it, and otherwise the pinned
+`npx -y @golden-frijoles/kit@<version> <name>` (the run rule is stamped into every SKILL.md). These were
+unmodified copies of the template, and nothing this repo keeps (CI, hooks, `package.json`, another kept
+script or test) reaches them, so they were deleted and the kit serves them. Their old tests passed 52/52
+against the kit build before the deletion.
+
+| Deleted | So these skill steps run from the kit |
+|---|---|
+| `babysit-pr.mjs` (+ test) | `babysit-pr`, entirely |
+| `doc-hygiene.mjs` | `doc-hygiene`'s entry (`doc-format.mjs` stays: its contract test runs here) |
+| `preflight.mjs`, `lib/golden-onboarding.mjs` (+ test) | `groom`'s provider check. It still fails here, correctly; see the note below |
+
+`node <foundation>/scripts/check-skill-scripts.mjs --repo-root .` checks this split: a local script needs its
+whole closure, an absent one is served by the kit.
+
+**`build-order-sync.mjs` stays here on purpose.** Through the kit it runs the kit's own extractor, but this repo's
+`roadmap-extract.mjs` is a fork (it delegates to the Notion sync and labels areas this project's way). Measured
+in S2.5, the kit's `--dry-run` wanted to rewrite 58 lines of `BUILD-ORDER.md` that the local run calls up to
+date. A skill moves to the kit only when its output is unchanged. Delete this copy only after the extractor
+fork is gone.
+
+## Shared rails — byte-identical to `golden-frijoles/skills` `template/scripts/`
+
+These are the golden-frijoles plugin's skills' scripts, ported by the foundation's
+`plugin-audit-and-extraction` epic (Sprint 3, story 3.3). **Change them in the template and copy
+back — never fork them here.** A fork is how a rail ends up with three implementations. They resolve
+paths through `lib/project-root.mjs` (golden-frijoles-plugin D2), which is why a copy here and the kit
+run the same bytes.
 
 | Rail | Files | This project's values |
 |---|---|---|
 | Prose writer + guard | `lib/prose-writer.mjs`, `lib/prose-guard.mjs`, `prose-draft.mjs`, `prose/cpo-persona.md`, `prose/internal.task.md` (+ tests) | `reporting.config.json` → `prose.extraBannedToolNames` |
 | Reporting skills | `standup.mjs`, `weekly-recap.mjs`, `pmo-report.mjs`, `lib/{reporting-config,prose-brief,telegram-format,log-branch,gh-rest,standup-deck,report-registry,pmo-*}.mjs`, `prose/`, `pmo/`, `standup/` | `reporting.config.json` (committed; `vercelProject` names the project the stale-preview count reads; the chat id is NOT in it — this repo is public: `TELEGRAM_CHAT_ID`, or a gitignored `reporting.config.local.json`) |
-| PR / board / docs skills | `babysit-pr.mjs`, `build-order.mjs`, `lib/roadmap-status-buckets.mjs`, `build-order-sync.mjs`, `doc-hygiene.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
+| PR / board / docs skills | `build-order.mjs`, `lib/roadmap-status-buckets.mjs`, `build-order-sync.mjs`, `doc-format.mjs`, `vercel-prune-previews.mjs` (the kit serves `babysit-pr` and `doc-hygiene`, above) | `doc-format.enforced.json` (all of `Roadmap/` — every doc was brought to the template shape on adoption) |
 | Browser smoke | `live-smoke.mjs`, `apps/web/e2e/_live/ad-hoc.browser.spec.ts`, `apps/web/e2e/_helpers/auth.ts` | `live-smoke.config.json` (unauthed; the authed rail stays this repo's own `authed` Playwright project) |
 | Roadmap frontmatter contract | `lib/roadmap-contract.mjs` (the one definition), `doc-format.mjs` (enforces it), `roadmap-backfill.mjs` (brought this repo's 29 epics onto it — findings in `Roadmap/00-ideas/audits/frontmatter-backfill-2026-09-19.md`) (+ tests) | none — `doc-format.enforced.json` already enforces all of `Roadmap/`, so every epic doc is held to the contract from this PR on |
 | The build view resolver | `build-state.mjs` (+ test), `lib/session-journal.mjs` (the journal line format it reads) | none — `node scripts/build-state.mjs [--json] [--offline]` answers "what is being built right now" from the frontmatter contract, git and one `gh` call; read-only |
 | Jev semantic guards | `lib/jev.mjs` (the one TypeSafe client), `lib/review-guard.mjs` (`judgeReviewOutput`), `lib/prose-guard.mjs` (`judgeProse`), `jev-eval.mjs` + `jev-eval.fixtures.json` (labelled replay; CI), `jev-backtest.mjs`, `git-fixtures-sealed.test.mjs` (+ tests) | the committed root **`jev.config.json`** (per-rail `mode: off \| shadow \| jev`, the kill-switch); the key is `TYPESAFE_API_KEY` in the env or the gitignored `.env.local` |
-| Golden Frijoles preflight | `preflight.mjs`, `lib/golden-onboarding.mjs` (+ tests) | **Reports FAIL here, correctly — see the note below.** `groom` declares it, so it must exist; nothing in this repo is meant to pass it |
 
 `lib/cross-agent-cli.mjs` is this project's own (see below) but gained the template's `runDevin` export,
 which the shared prose writer needs.
@@ -25,7 +49,7 @@ which the shared prose writer needs.
 `roadmap-extract.mjs` **delegates** to this project's `roadmap-to-notion.mjs --extract` rather than forking
 the extractor — that script drives the live Notion board.
 
-### `preflight.mjs` fails in THIS repo, and that is the right answer
+### `preflight` fails in THIS repo, and that is the right answer
 
 It is the ways-of-work mandate that a project spawned from the template reads its flags from Golden
 Frijoles: `preflight.mjs` checks that a project is linked, that a `flag_read` key resolves a
@@ -34,11 +58,10 @@ snapshot, and that the CLI is installed and current. **This repo is the other en
 `.env.local` carries this product's own service configuration, not a `GOLDEN_FRIJOLES_FLAG_READ_KEY`
 pointing at itself.
 
-So a bare `node scripts/preflight.mjs` here prints ✅ for the CLI, the version and the SDK (both are
-workspace packages) and ❌ for `project` and `flag-read-key`. That is the check telling the truth: this
-repo is not a consumer. It lives here because `groom`'s `requires_scripts` declares it and
-`check-skill-scripts.mjs` is checked against this repo — a skill whose script is absent must say so
-and stop, and the honest way to satisfy that is the real script, not a stub.
+So `npx -y @golden-frijoles/kit@<version> preflight` here prints ✅ for the CLI, the version and the SDK (both
+are workspace packages) and ❌ for `project` and `flag-read-key`. That is the check telling the truth: this
+repo is not a consumer. (It used to live here as a copy because a skill's script had to exist locally. Since
+S2.5 the kit serves it, which is the honest version of the same thing: the real script, not a stub.)
 
 **Do not "fix" the red by inventing a self-pointing key.** If you ever do want to exercise it against
 a real project, point it at one with the three `GOLDEN_FRIJOLES_*` variables in the environment.

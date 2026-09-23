@@ -28,10 +28,9 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { projectRoot } from './project-root.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DEFAULT_ROOT = resolve(__dirname, '..', '..');
+export const DEFAULT_ROOT = projectRoot(); // D2
 export const CONFIG_FILENAME = 'reporting.config.json';
 export const EXAMPLE_FILENAME = 'reporting.config.example.json';
 export const LOCAL_FILENAME = 'reporting.config.local.json';

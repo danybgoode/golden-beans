@@ -1,12 +1,10 @@
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
+import { kitRoot } from './project-root.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..', '..');
-const TEMPLATE_DIR = join(ROOT, 'scripts', 'pmo', 'templates');
+
+const TEMPLATE_DIR = join(kitRoot(), 'pmo', 'templates'); // D2: a kit asset
 
 const TEMPLATE_FILES = {
   weekly: 'weekly-story-deck.md',

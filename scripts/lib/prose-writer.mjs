@@ -68,12 +68,13 @@ import {
   loadPromptBody,
   AGY_ARG_LIMIT,
 } from './cross-agent-cli.mjs';
+import { projectAsset } from './project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = join(__dirname, '..');
-export const LESSONS_PATH = join(SCRIPTS_DIR, 'prose-lessons.md');
+export const LESSONS_PATH = projectAsset('prose-lessons.md'); // grows per project; kit default
 export const PROSE_DIR = join(SCRIPTS_DIR, 'prose');
-export const PERSONA_PATH = join(PROSE_DIR, 'cpo-persona.md');
+export const PERSONA_PATH = projectAsset('prose/cpo-persona.md'); // a TEMPLATE FILL-IN the project owns
 
 /** Per-surface task files (README D5). Plain files so both backends read the same words. */
 export const SURFACES = ['standup', 'weekly', 'internal'];
