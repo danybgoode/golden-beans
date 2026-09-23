@@ -98,7 +98,7 @@ Four rules: **an exhausted bet returns to shaping**, never extends in flight; **
 boundaries** into `Roadmap/bets/<wave>.md`, three lines each, recording what they displaced; and **uphill
 work stays on the strongest model**. Not every ask earns the betting table — `groom` sorts shaped bets
 from fixed scope (appetite S, straight to a builder) and reactive/ops work. Why it works this way:
-[`references/shapeup/`](https://github.com/danybgoode/dobby-foundation/blob/main/template/references/shapeup/README.md).
+[`references/shapeup/`](https://github.com/golden-frijoles/skills/blob/main/template/references/shapeup/README.md).
 
 ## Review & merge
 
@@ -129,7 +129,7 @@ full reply, exits non-zero and fails the PR's `cross-review/<lens>` status. Both
 (`scripts/cross-review.prompt.md`): one pass, a `file:line` citation or the finding is not posted, at most
 3 nits, skip what CI enforces, Blocking/Should-fix only on a re-review. `/security-review` is available
 locally as a pre-push self-check, never a gate. Why this shape:
-[`references/review-stack.md`](https://github.com/danybgoode/dobby-foundation/blob/main/template/references/review-stack.md).
+[`references/review-stack.md`](https://github.com/golden-frijoles/skills/blob/main/template/references/review-stack.md).
 
 **Every finding is fixed or answered on the PR; neither pass authorizes anything.** **HIGH** = money
 (payments, checkout, fulfillment), auth and authorization boundaries, tenancy, DB migrations, shared infra;

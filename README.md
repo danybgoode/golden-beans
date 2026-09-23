@@ -3,8 +3,8 @@
 **Golden Beans — Unified Growth Engine.** A standalone product (flags + A/B + telemetry routing +
 North Star/TARS dashboards), maintained on its own — not a fork of any other project.
 
-Spawned from the [`dobby-foundation`](https://github.com/danybgoode/dobby-foundation) project
-template (`dobby-foundation` Sprint 1, Story 1.4) — it consumes the same `ways-of-work` plugin every
+Spawned from the [`dobby-foundation`](https://github.com/golden-frijoles/skills) project
+template (`dobby-foundation` Sprint 1, Story 1.4) — it consumes the same `golden-frijoles` plugin every
 `~/dobby/` sibling project does (see `.claude/settings.json`), so groom/skills/CI conventions land
 here from one versioned place, not a copy-paste fork.
 
