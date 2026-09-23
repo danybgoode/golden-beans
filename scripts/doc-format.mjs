@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // doc-format.mjs — check Roadmap/ epic docs (README.md, sprint-N.md, RETROSPECTIVE.md) against the
-// canonical shape: the `groom` plugin's scaffolding templates (dobby-foundation/ways-of-work,
+// canonical shape: the `groom` plugin's scaffolding templates (golden-frijoles/skills,
 // skills/groom/templates/) — proven canonical in the project this was ported from by a zero-drift
 // control group (81 seeds, one authoring path, identical shape; epic READMEs drift because they get
 // hand-edited after scaffolding, away from the template). dobby-foundation's CI renders a scaffolded
