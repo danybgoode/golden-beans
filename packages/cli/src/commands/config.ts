@@ -44,7 +44,8 @@ const show = (value: unknown) => (typeof value === 'string' ? value : JSON.strin
 
 export const configListCommand: Command = {
   path: ['config', 'list'],
-  summary: 'every setting in golden-frijoles.config.json and the legacy files, and which files each section came from',
+  summary:
+    'every setting in golden-frijoles.config.json and the legacy files, and which files each section came from',
   usage: 'gf config list [--json]',
   needsAuth: false,
   detail: `Reads the project's golden-frijoles.config.json and any legacy config files
@@ -52,7 +53,10 @@ export const configListCommand: Command = {
   flags: [],
   async run(context): Promise<ExitCode> {
     if (context.args.positionals.length > 0) {
-      context.emit.fail('invalid', 'Usage: `gf config list` takes no arguments. For one setting: `gf config get <key>`.')
+      context.emit.fail(
+        'invalid',
+        'Usage: `gf config list` takes no arguments. For one setting: `gf config get <key>`.'
+      )
       return EXIT.USAGE
     }
     const loaded = await coreOrFail(context)

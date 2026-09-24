@@ -30,7 +30,14 @@ export type ModuleLine = {
   fix: string | null
 }
 
-export const MODULE_ORDER: readonly RegistryEntry['module'][] = ['Plan', 'Build', 'Ship', 'Measure', 'Spend', 'Operate']
+export const MODULE_ORDER: readonly RegistryEntry['module'][] = [
+  'Plan',
+  'Build',
+  'Ship',
+  'Measure',
+  'Spend',
+  'Operate',
+]
 
 /** `.env.local` carries a Golden Frijoles project (what `gf init` writes). Where a `store: 'env'` answer lives. */
 function accountConnected(root: string, hasCredential: boolean): boolean {
@@ -73,7 +80,9 @@ export function moduleLines(
           : (entry.required || entry.default === null) && answeredValue(core, entry.key, root) === undefined
       )
       if (missing.length === 0) {
-        const answered = asked.filter((entry) => entry.store !== 'env' && answeredValue(core, entry.key, root) !== undefined)
+        const answered = asked.filter(
+          (entry) => entry.store !== 'env' && answeredValue(core, entry.key, root) !== undefined
+        )
         return {
           module,
           state: 'configured',

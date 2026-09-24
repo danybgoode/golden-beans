@@ -76,7 +76,9 @@ export function loadConfigCore(): Promise<ConfigCore> {
   if (!cached) {
     cached = (async () => {
       const pkg = kitPackageJson()
-      return (await importEsm(pathToFileURL(join(dirname(pkg), 'dist', 'lib', 'config.mjs')).href)) as ConfigCore
+      return (await importEsm(
+        pathToFileURL(join(dirname(pkg), 'dist', 'lib', 'config.mjs')).href
+      )) as ConfigCore
     })()
     // A failed load is not cached: the next call tries again rather than repeating a stale error.
     cached.catch(() => {

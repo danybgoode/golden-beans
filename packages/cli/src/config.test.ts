@@ -26,7 +26,10 @@ registerHooks({
       specifier.startsWith('.') &&
       !specifier.endsWith('.ts')
     ) {
-      return nextResolve(specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`, context)
+      return nextResolve(
+        specifier.endsWith('/commands') ? `${specifier}/index.ts` : `${specifier}.ts`,
+        context
+      )
     }
     return nextResolve(specifier, context)
   },
@@ -178,9 +181,17 @@ test('gf setup --yes saves the defaults, never the account answer, and says what
   const setup = await gf(['setup', '--yes', '--json'], env)
   assert.equal(setup.code, EXIT.OK)
   const body = JSON.parse(setup.out)
-  assert.deepEqual(body.answers, { 'project.mode': 'existing', 'project.startPoint': 'idea', 'project.account': 'later' })
+  assert.deepEqual(body.answers, {
+    'project.mode': 'existing',
+    'project.startPoint': 'idea',
+    'project.account': 'later',
+  })
   const written = JSON.parse(readFileSync(join(root, CONFIG), 'utf8'))
-  assert.deepEqual(written.project, { mode: 'existing', startPoint: 'idea' }, 'store:env answers never reach the file')
+  assert.deepEqual(
+    written.project,
+    { mode: 'existing', startPoint: 'idea' },
+    'store:env answers never reach the file'
+  )
   assert.ok(body.next.some((step: string) => /groom/.test(step)))
 })
 
@@ -236,7 +247,11 @@ test('stepChoice: arrows wrap, Enter chooses, Esc takes the default, Ctrl-C abor
 })
 
 test('nextSteps pins the kit version it prints', () => {
-  assert.ok(nextSteps({ 'project.mode': 'existing' }, '0.4.0').some((step) => step.includes('@golden-frijoles/kit@0.4.0 init')))
+  assert.ok(
+    nextSteps({ 'project.mode': 'existing' }, '0.4.0').some((step) =>
+      step.includes('@golden-frijoles/kit@0.4.0 init')
+    )
+  )
 })
 
 // ── gf doctor's module lines (S5.3, D13) ──────────────────────────────────────────────────────
@@ -296,7 +311,9 @@ test('doctor: a malformed config file — every module is could not look, never 
       // The path is a temp dir and the parser's wording is Node's, so neither is part of the contract.
       modules.map((line) => ({
         ...line,
-        detail: line.detail.replace(/\/[^\s]*gf-config-[^/\s]+/g, '<project>').replace(/not valid JSON.*$/, 'not valid JSON …'),
+        detail: line.detail
+          .replace(/\/[^\s]*gf-config-[^/\s]+/g, '<project>')
+          .replace(/not valid JSON.*$/, 'not valid JSON …'),
       })),
       null,
       2
@@ -304,10 +321,12 @@ test('doctor: a malformed config file — every module is could not look, never 
   )
 })
 
-test('⚠️ D13: module states never change doctor\'s exit code', async () => {
+test("⚠️ D13: module states never change doctor's exit code", async () => {
   const fresh = await doctorModules(project().env)
   const broken = await doctorModules(project({ [CONFIG]: '{ not json' }).env)
-  const answered = await doctorModules(project({ [CONFIG]: JSON.stringify({ project: { mode: 'new' } }) }).env)
+  const answered = await doctorModules(
+    project({ [CONFIG]: JSON.stringify({ project: { mode: 'new' } }) }).env
+  )
   assert.equal(fresh.code, EXIT.AUTH, 'no credential — the checks decide')
   assert.equal(broken.code, fresh.code)
   assert.equal(answered.code, fresh.code)
