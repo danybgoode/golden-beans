@@ -20,8 +20,8 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { projectRoot } from './project-root.mjs';
 
 export const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 export const DEFAULT_MODEL = 'jev-1.13.0';
@@ -34,8 +34,8 @@ export const DEFAULT_TIMEOUT_MS = 8_000;
 const RETRY_STATUSES = new Set([429, 529]);
 const MAX_RETRIES = 2;
 
-/** The repo root: `scripts/lib/..`/.. — the directory that holds `scripts/` and `jev.config.json`. */
-export const repoRoot = () => resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+/** The project root — the directory that holds `jev.config.json` (D2: `projectRoot()`, wherever this set runs). */
+export const repoRoot = () => projectRoot();
 
 export const DEFAULT_CONFIG = Object.freeze({
   model: DEFAULT_MODEL,

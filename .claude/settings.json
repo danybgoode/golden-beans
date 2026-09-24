@@ -1,14 +1,14 @@
 {
   "extraKnownMarketplaces": {
-    "dobby-foundation": {
+    "golden-frijoles": {
       "source": {
         "source": "github",
-        "repo": "danybgoode/dobby-foundation"
+        "repo": "golden-frijoles/skills"
       }
     }
   },
   "enabledPlugins": {
-    "ways-of-work@dobby-foundation": true
+    "golden-frijoles@golden-frijoles": true
   },
   "env": {
     "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"

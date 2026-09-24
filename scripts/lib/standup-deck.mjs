@@ -1,16 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import {
   formatTelegramHtmlLink,
   telegramHtmlVisibleLength,
   truncateForTelegram,
 } from './telegram-format.mjs';
 import { buildDocViewerUrl } from './pmo-templates.mjs';
+import { kitRoot } from './project-root.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..', '..');
-const TEMPLATE_PATH = join(ROOT, 'scripts', 'standup', 'templates', 'daily-story-deck.md');
+const TEMPLATE_PATH = join(kitRoot(), 'standup', 'templates', 'daily-story-deck.md'); // D2: a kit asset
 const TELEGRAM_MAX_CHARS = 4096;
 
 export const STANDUP_DECK_ASPECT_RATIO = '16:9';

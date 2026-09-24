@@ -11,7 +11,7 @@ every event is scoped to a `project`, and **no request-derived read path can cro
 not apply to anything that serves a request). It exists so a team can
 run product analytics + experimentation from one primitive set instead of stitching vendors together;
 its first proof-of-use is dogfooding Miyagi's real setup-guide funnel. It is *not* a fork of any
-sibling project — it's maintained on its own, consuming the shared `ways-of-work` plugin for process.
+sibling project — it's maintained on its own, consuming the shared `golden-frijoles` plugin for process.
 
 **Architecture**: **Next.js App Router (`apps/web`) + Supabase Postgres**, deployed on **Vercel**
 (merge to `main` = deploy). Supabase is accessed **service-role only, server-side** — RLS is ON with

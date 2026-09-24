@@ -30,9 +30,10 @@ import { upgradeArtifactLinks } from './lib/report-registry.mjs';
 import { parseStatusFlipsFromLog, filterFlipsToWindow } from './weekly-recap.mjs';
 import { baselineSummary, formatBaselineSummary, summarizePmoMetrics } from './lib/pmo-metrics.mjs';
 import { computePmoWindow, formatPmoReport, lastPmoLogEntry, pmoLogLine } from './lib/pmo-window-log.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = projectRoot(); // D2
 const LOG_BRANCH = 'claude/pmo-reports-log';
 const LOG_BRANCH_PATH = 'pmo-reports.log';
 const LOG_MESSAGE = 'chore(pmo): append operational report window';
@@ -59,11 +60,11 @@ function git(args, opts = {}) {
 }
 
 function runNode(args) {
-  return spawnSync('node', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  return spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 }
 
 function loadRoadmapRows() {
-  const result = runNode(['scripts/roadmap-extract.mjs']);
+  const result = runNode([join(__dirname, 'roadmap-extract.mjs')]); // a sibling, never the project's copy
   if (result.status !== 0) return [];
   try {
     return JSON.parse(result.stdout || '[]');
