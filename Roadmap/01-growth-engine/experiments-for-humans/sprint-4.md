@@ -3,11 +3,31 @@
 **Status:** ⬜ not started · **Wave 2** · branch `feat/experiments-for-humans-s4` (stacked on S3)
 
 ## Build contract (locked by the architect before the builder started)
-<!-- D8 and D10 verified. The cumulative series is ONE extra pure pass over the facts the governed
-     analysis already loaded (the servedDaily precedent), never an analysis per day. Name the results
-     fixture: miyagisanchez's experiments are both `decided`, so gathering/ready states need one. -->
-- Cumulative series: _to be verified_
-- Results fixture: _to be named_
+Cite the README's D-numbers; do not restate them.
+
+- **4.1 → D10** (builder: mid tier). The approved `experiment-results*` states on
+  `/app/experiments/[projectSlug]/[experimentKey]`. The answer line and verdict are a pure module
+  (`lib/experiment-readout.ts`) over the governed analysis — the same `computeExperimentAnalysis`
+  result, never a second statistic. **Cumulative series:** ONE extra pure pass over the facts the
+  analysis already loaded (the `servedDaily` precedent in `lib/tars-query.ts`), never an analysis per
+  day; if it does not fit, it is the first cut (the story says so). "Roll out ‹version›" appears only
+  when `decisionReady`. A running experiment whose bound flag version is **not** the active Production
+  version reads "The split isn't serving" (D7's partial state, and the case where someone edited the
+  feature mid-test). **Results fixture:** production's two experiments are decided, so the spec seeds
+  its own project on local Supabase through the product's write path (`save_experiment_draft` →
+  start → facts via ingest) at three points: waiting, gathering, ready. Plan tab + "Change the plan"
+  opens the builder at Review pre-filled as version n+1. Risk: low.
+- **4.2 → D8** (builder: the architect). Stop → decide (chips) → roll out, three writes, each with its
+  own result; rollout via `planFlagSet` on `stripExperiment(served)`; 10-second undo re-activates the
+  prior version. Corrections move to the chip modal. Spec `e2e/experiment-decide-rollout.spec.ts`:
+  the decision record's row bytes are identical before and after the rollout and after the undo.
+  Risk: **high**.
+- **4.3 → D9** (builder: mid tier, the architect flips the env). Before deleting anything, enumerate
+  what `experiment-manager.tsx` does today — create from JSON, bind, start/stop/invalidate per version
+  — and name each capability's new home (create → builder; bind → Save draft; start → 3.3; stop →
+  the verdict card; invalidate → the Plan tab). The guard: no `<textarea>` and no "Definition JSON"
+  under `app/app/experiments` (a spec that walks the directory, mutation-checked). Gate off ⇒ "+ New
+  experiment" drawn blocked with "Creating experiments is paused". Risk: low.
 
 ## Stories
 
