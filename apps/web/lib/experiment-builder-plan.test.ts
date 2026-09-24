@@ -429,3 +429,37 @@ test('D5 on a thin catalog: no condition and no breakdown are suggested, and the
   assert.deepEqual(resolved.answers.breakdowns, [])
   assert.equal(resolved.gaps.length, 2)
 })
+
+test('check 5 on a fresh plan counts the FULL planned length: needing exactly 14 days fits 2 weeks (agy, PR #169)', () => {
+  const answers = { ...copyAnswers(), weeks: 2 }
+  const probe = buildExperimentPlan(answers, context())
+  assert.ok(probe.ok)
+  // Traffic tuned so the estimate lands on exactly 14 days, at a `now` with seconds on the clock.
+  const perDay = probe.plan.estimate.needPerVersion! / 14 / 0.5 / (0.98 * 0.91)
+  const catalog = prototypeCatalog({ entities: [{ type: 'merchant', subjects14d: perDay * 14 }] })
+  const result = buildExperimentPlan(answers, context({ catalog, now: new Date('2026-09-24T15:00:37.500Z') }))
+  assert.ok(result.ok)
+  assert.equal(result.plan.estimate.days, 14)
+  assert.equal(result.plan.checks.find((check) => check.id === 'window')?.status, 'ok')
+})
+
+test('planning on a feature ALREADY serving an experiment re-plans from the stripped definition (agy, PR #169)', () => {
+  const v1 = buildExperimentPlan(copyAnswers(), context())
+  assert.ok(v1.ok)
+  const live = { ...context().served, definition: v1.plan.flagDefinition }
+  const v2 = buildExperimentPlan({ ...copyAnswers(), split: 20 }, context({ served: live, nextVersion: 2 }))
+  assert.ok(v2.ok, JSON.stringify(!v2.ok && v2.errors))
+  assert.deepEqual(
+    v2.plan.flagDefinition.rules.map((rule) => rule.priority),
+    [0, 10]
+  )
+  assert.equal(v2.plan.flagDefinition.metadata?.experiment_version, 2)
+  assert.deepEqual(stripExperiment(v2.plan.flagDefinition), SERVED)
+})
+
+test('check 2 never says "all 0 guardrails" when the only guardrail is the metric itself', () => {
+  assert.equal(
+    checkOf({ ...copyAnswers(), guardrails: ['application.completed'] }).metrics.detail,
+    'application.completed.'
+  )
+})

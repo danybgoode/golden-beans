@@ -484,8 +484,11 @@ export function buildExperimentPlan(
     if (!served || served.flagKey !== answers.flagKey)
       return { ok: false, errors: ['The feature is not loaded.'] }
     flagKey = served.flagKey
-    flagBase = served.definition
-    const ordered = orderedVariants(served.definition)
+    // ⚠️ STRIPPED first (agy, PR #169). A feature can already be serving an experiment — exactly the
+    // "Change the plan" case, where v1's flag version is live — and planning on it raw would treat
+    // v1's rules as the customer's own and push them (and the already-shifted ones) further down.
+    flagBase = stripExperiment(served.definition)
+    const ordered = orderedVariants(flagBase)
     variantKeys = ordered.map((variant) => variant.key)
     if (variantKeys.length !== names.length)
       errors.push(
@@ -782,7 +785,7 @@ function computeChecks(
           status: 'ok',
           step: 4,
           title: 'Every metric arrived in the last 24 hours',
-          detail: `${answers.metric}${answers.guardrails.length ? `, and all ${metrics.length - 1} guardrail${metrics.length - 1 === 1 ? '' : 's'}` : ''}.`,
+          detail: `${answers.metric}${metrics.length > 1 ? `, and all ${metrics.length - 1} guardrail${metrics.length - 1 === 1 ? '' : 's'}` : ''}.`,
         }
   )
 
@@ -870,9 +873,14 @@ function computeChecks(
   )
 
   // 5 · it runs long enough — measured from NOW for a saved draft (A6)
-  const remainingDays = Math.floor(
-    (derived.endAt.getTime() - Math.max(context.now.getTime(), derived.startAt.getTime())) / DAY_MS
-  )
+  // A fresh plan runs its FULL planned length (its window starts at the minute boundary before `now`,
+  // so measuring from `now` would lose a day to rounding — agy, PR #169). A saved draft's window is
+  // already running down, so it is measured from now.
+  const remainingDays = context.savedWindow
+    ? Math.floor(
+        (derived.endAt.getTime() - Math.max(context.now.getTime(), derived.startAt.getTime())) / DAY_MS
+      )
+    : answers.weeks * 7
   const fitting =
     (WEEK_OPTIONS as readonly number[]).find((weeks) => derived.days !== null && weeks * 7 >= derived.days) ??
     8
