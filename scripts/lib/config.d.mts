@@ -51,6 +51,9 @@ export declare function setKey(
 export declare function migrate(
   opts?: IoOptions & { write?: (path: string, obj: unknown) => void; dryRun?: boolean }
 ): { config: Record<string, unknown>; folded: string[]; skipped: string[] };
+/** What `loadConfig`/`getKey` print in place of a secret-looking value. */
+export declare const REDACTED: string;
+export declare function redactSecrets<T>(key: string, value: T): T;
 export declare function looksLikeSecret(key: string, value: unknown): boolean;
 export declare function needsSettingLine(entry: { key: string; question: string; default: unknown }): string;
 export declare function needSetting(

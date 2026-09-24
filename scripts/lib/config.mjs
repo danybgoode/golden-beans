@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { projectRoot } from './project-root.mjs';
+import { kitRoot, projectRoot } from './project-root.mjs';
 import { REGISTRY } from './config-registry.mjs';
 
 // One import for every front end (D10): the CLI's doctor and setup read the registry through this module too.
@@ -101,11 +101,24 @@ const configFail = (path, e) => {
  */
 function assertContained(path, root, read) {
   if (read !== readFileSync) return;
-  const realRoot = realpathSync(root);
   const real = realpathSync(path);
-  if (real !== realRoot && !real.startsWith(realRoot + sep)) {
+  const within = (dir) => {
+    const r = realpathSync(dir);
+    return real === r || real.startsWith(r + sep);
+  };
+  // The kit's own files (a bundled default, read in installed mode) are not the checkout's to redirect.
+  if (!within(root) && !within(kitRoot())) {
     throw new ConfigError(`${path} resolves outside the project (${real}); refusing to read it.`);
   }
+}
+
+/**
+ * REPORTING_CONFIG is the operator's env, not the checkout's: the file it names may live anywhere. Keyed on the PATH,
+ * so it holds whether a rail passes that path as `legacyPath` (reporting-config.mjs does) or the table resolves it
+ * (copy-in review: the first exemption tested `!legacyPath` and refused the rail's own call).
+ */
+function operatorPath(name, abs, { root, env }) {
+  return name === 'reporting' && !!env.REPORTING_CONFIG && abs === resolve(root, env.REPORTING_CONFIG);
 }
 
 /** The project's `golden-frijoles.config.json`, parsed; `null` when absent. Malformed → ConfigError. */
@@ -176,7 +189,7 @@ export function readSection(
   let fromLegacy;
   if (legacyAbs && legacyExists(legacyAbs)) {
     // REPORTING_CONFIG is the operator's env, not the checkout's: it may name a file anywhere.
-    if (!(name === 'reporting' && env.REPORTING_CONFIG && !legacyPath)) assertContained(legacyAbs, root, legacyRead);
+    if (!operatorPath(name, legacyAbs, { root, env })) assertContained(legacyAbs, root, legacyRead);
     fromLegacy = parseJsonFile(legacyAbs, { read: legacyRead, onError: onLegacyError });
   }
 
@@ -202,8 +215,12 @@ export function loadConfig({ root = projectRoot(), read = readFileSync, exists =
   const unknown = unknownSections(readConfigFile({ root, read, exists }));
   for (const name of [...SECTIONS, ...Object.keys(LEGACY).filter((k) => k.includes('.'))]) {
     const r = readSection(name, { root, read, exists });
-    if (r.raw === null) continue;
-    sections[name] = r.raw;
+    if (r.raw === null) {
+      // Present but JSON null is malformed, not "no settings" (copy-in review).
+      if (r.present) throw new ConfigError(`${r.sources[0] ?? name}: "${name}" must be an object, not null`);
+      continue;
+    }
+    sections[name] = redactSecrets(name, r.raw);
     sources[name] = r.sources;
     for (const k of r.duplicates) duplicates.push(`${name}.${k}`);
   }
@@ -217,7 +234,7 @@ export function getKey(key, opts = {}) {
   const sub = rest.length && LEGACY[`${head}.${rest[0]}`] ? `${head}.${rest.shift()}` : head;
   const { raw } = readSection(sub, opts);
   const value = rest.length ? dig(raw ?? {}, rest.join('.')) : raw ?? undefined;
-  if (value !== undefined) return value;
+  if (value !== undefined) return redactSecrets(key, value);
   const reg = REGISTRY.find((r) => r.key === key);
   return reg ? reg.default : undefined;
 }
@@ -245,6 +262,25 @@ export function looksLikeSecret(key, raw) {
   if (TELEGRAM_BOT_TOKEN.test(value) || SLACK_WEBHOOK.test(value) || URL_WITH_PASSWORD.test(value)) return true;
   const leaf = key.split('.').pop();
   return SECRET_KEY.test(leaf) && !ENV_NAME.test(value);
+}
+
+export const REDACTED = '<redacted: looks like a secret; keep it in .env.local>';
+
+/**
+ * Pure — `value` with every secret-looking string replaced by REDACTED. `loadConfig` and `getKey` are what
+ * `config list/get` and `gf doctor` PRINT, and a legacy file may still hold a literal token the write guard never saw
+ * (copy-in review). Rails read through `readSection`, which is never redacted.
+ */
+export function redactSecrets(key, value) {
+  if (Array.isArray(value)) return value.map((v, i) => redactSecrets(`${key}.${i}`, v));
+  if (isObject(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redactSecrets(`${key}.${k}`, v)]));
+  if (looksLikeSecret(key, value)) return REDACTED;
+  // Stricter than the write guard, because over-redacting a display costs nothing: under a secret-named key, only a
+  // value shaped like an env var NAME with an underscore (TELEGRAM_BOT_TOKEN) is shown. `ABCDEF1234567890` matched
+  // the looser env-name exemption and was printed (review of #53).
+  const leaf = key.split('.').pop();
+  if (typeof value === 'string' && SECRET_KEY.test(leaf) && !/^[A-Z][A-Z0-9]*_[A-Z0-9_]*$/.test(value.trim())) return REDACTED;
+  return value;
 }
 
 /** Pure — every dotted path under `key` whose value looks like a secret, walking nested objects and arrays. */
@@ -322,12 +358,18 @@ export function migrate({
   for (const name of Object.keys(LEGACY)) {
     const abs = legacyPathFor(name, { root, env });
     if (!exists(abs)) continue;
-    if (!(name === 'reporting' && env.REPORTING_CONFIG)) assertContained(abs, root, read);
+    if (!operatorPath(name, abs, { root, env })) assertContained(abs, root, read);
     const legacy = parseJsonFile(abs, { read, onError: configFail });
     if (!isObject(legacy)) continue;
     const [head, sub] = name.split('.');
-    config[head] = isObject(config[head]) ? config[head] : {};
-    const target = sub ? (config[head][sub] = isObject(config[head][sub]) ? config[head][sub] : {}) : config[head];
+    // A section that exists but is not an object is the user's to fix, never silently replaced (copy-in review).
+    const notObject = (v, at) => {
+      if (v !== undefined && !isObject(v)) throw new ConfigError(`${join(root, CONFIG_FILENAME)}: "${at}" must be an object`);
+    };
+    notObject(config[head], head);
+    config[head] = config[head] ?? {};
+    if (sub) notObject(config[head][sub], name);
+    const target = sub ? (config[head][sub] = config[head][sub] ?? {}) : config[head];
     for (const [k, v] of Object.entries(legacy)) {
       if (k.startsWith('$') || k.startsWith('_')) continue; // comments/notes stay with the legacy file
       if (k in target) continue; // the new file wins

@@ -13,6 +13,8 @@ import {
   loadConfig,
   findSecrets,
   looksLikeSecret,
+  REDACTED,
+  redactSecrets,
   migrate,
   needSetting,
   readSection,
@@ -317,4 +319,66 @@ test('looksLikeSecret: surrounding whitespace does not hide a token (security le
   assert.equal(looksLikeSecret('reporting.destination', `gf_pat_${'a'.repeat(32)}\n`), true);
   assert.equal(looksLikeSecret('reporting.destination', '\t postgres://u:pw@db/x'), true);
   assert.equal(looksLikeSecret('reporting.tokenEnv', ' TELEGRAM_BOT_TOKEN '), false, 'an env NAME is still a name');
+});
+
+// ── Review of the wave-2 copy-ins (consumer PRs) ─────────────────────────
+test('REPORTING_CONFIG may name a file outside the project, even when the rail passes it as legacyPath', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const outside = mkdtempSync(join(tmpdir(), 'rep-outside-'));
+  writeFileSync(join(outside, 'reporting.json'), JSON.stringify({ destination: 'terminal' }));
+  const root = mkdtempSync(join(tmpdir(), 'rep-root-'));
+  const env = { REPORTING_CONFIG: join(outside, 'reporting.json') };
+  assert.equal(readSection('reporting', { root, env, legacyPath: env.REPORTING_CONFIG }).raw.destination, 'terminal');
+  // a DIFFERENT outside path passed as legacyPath is still refused
+  assert.throws(() => readSection('reporting', { root, env: {}, legacyPath: env.REPORTING_CONFIG }), /outside the project/);
+});
+
+test('migrate refuses a section that is not an object instead of replacing it with {}', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'mig-bad-'));
+  writeFileSync(join(root, 'golden-frijoles.config.json'), JSON.stringify({ jev: 'bad' }));
+  writeFileSync(join(root, 'jev.config.json'), JSON.stringify({ egress: true }));
+  assert.throws(() => migrate({ root, dryRun: true }), /"jev" must be an object/);
+});
+
+test('config list and get redact secret-looking values a legacy file still holds; readSection does not', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'redact-'));
+  const token = `123456789:${'A'.repeat(35)}`;
+  writeFileSync(join(root, 'reporting.config.json'), JSON.stringify({ telegram: { botToken: token, chatId: '42' } }));
+  const listed = JSON.stringify(loadConfig({ root }));
+  assert.ok(!listed.includes(token));
+  assert.ok(listed.includes('"chatId":"42"'));
+  assert.equal(getKey('reporting.telegram.botToken', { root }), REDACTED);
+  assert.equal(readSection('reporting', { root }).raw.telegram.botToken, token, 'rails still read the real value');
+});
+
+test('config list fails on a legacy file holding JSON null instead of reporting no settings', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'null-'));
+  writeFileSync(join(root, 'jev.config.json'), 'null');
+  assert.throws(() => loadConfig({ root }), /must be an object, not null/);
+});
+
+test('a kit-owned default outside the project is readable (installed mode); other outside files are not', async () => {
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { kitRoot } = await import('./project-root.mjs');
+  const root = mkdtempSync(join(tmpdir(), 'kit-owned-'));
+  assert.ok(readSection('review', { root, legacyPath: join(kitRoot(), 'review-config.json') }).present);
+});
+
+test('redactSecrets: under a secret-named key, only an env-var NAME with an underscore is shown (review of #53)', () => {
+  assert.equal(redactSecrets('reporting.telegram.botToken', 'ABCDEF1234567890'), REDACTED);
+  assert.equal(redactSecrets('reporting.telegram.botToken', 'TELEGRAM_BOT_TOKEN'), 'TELEGRAM_BOT_TOKEN');
+  assert.equal(redactSecrets('reporting.chatId', 'ABCDEF1234567890'), 'ABCDEF1234567890', 'not a secret-named key');
 });

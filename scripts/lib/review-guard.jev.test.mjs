@@ -12,7 +12,7 @@ import {
 } from './review-guard.mjs';
 import { parseJevConfig } from './jev.mjs';
 import { _resetAsked } from './config.mjs';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -98,6 +98,7 @@ test('egress not answered (null): behaves as off, names the reason, asks once, n
   );
   assert.equal(writes.length, 1, 'GF-NEEDS-SETTING is emitted once per process, not once per call');
   _resetAsked();
+  rmSync(root, { recursive: true, force: true });
 });
 
 test('shadow: the regex decides, Jev is asked, both verdicts are logged', async () => {
