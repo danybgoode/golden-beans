@@ -368,6 +368,17 @@ follows `scripts/review-route.mjs`: two external families that did not build the
 `pr-reviewer` subagent on every HIGH-tier PR (all four sprint PRs are HIGH: S1 migration + SDK, S2 a
 shared seam, S3 a migration + Production writes, S4 Production writes).
 
+## Found during the build, outside this epic's scope (follow-ups, not fixed here)
+
+- **`lib/tars-query.ts` and `lib/ab-query.ts` read `events` with no paging.** PostgREST returns at most
+  `max_rows` (1,000 on hosted Supabase) per request, so a tenant with more rows than that in a window
+  gets an undercount with no error. Found while reviewing Story 2.1, whose catalog read now pages
+  (`lib/event-catalog-read.ts`). Production is far below 1,000 today (busiest tenant: 19 events in 14
+  days), which is why nothing shows it yet.
+- **`lib/flag-registry.ts` builds `.in('flag_id', ids)` over every flag in a project.** At ~200 flags the
+  request URL overflows ("URI too long") and the flags page and CLI reads 500. Reproduced locally on an
+  accumulated fixture project (210 flags); production's largest project has 43.
+
 ## Deploy order (locked)
 
 1. **S1:** `20260925100000_experiment_definition_widen.sql` applied to production through the Supabase
