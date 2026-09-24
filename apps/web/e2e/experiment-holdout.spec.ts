@@ -50,10 +50,12 @@ const FLAG: FlagDefinition = {
   },
 }
 
-const at = (second: number) => `${new Date(Date.UTC(2026, 8, 25, 0, 0, second)).toISOString().slice(0, 19)}.000Z`
+const at = (second: number) =>
+  `${new Date(Date.UTC(2026, 8, 25, 0, 0, second)).toISOString().slice(0, 19)}.000Z`
 
 const DEFINITION: ExperimentDefinition = {
-  hypothesis: 'We believe showing New copy to merchants in Mexico or Colombia will raise completed applications.',
+  hypothesis:
+    'We believe showing New copy to merchants in Mexico or Colombia will raise completed applications.',
   assignmentEntityType: 'merchant',
   eligibility: { description: '50% of merchants in Mexico or Colombia', tags: { region: ['MX', 'CO'] } },
   variants: [
@@ -68,7 +70,12 @@ const DEFINITION: ExperimentDefinition = {
   minimumSamplePerVariant: 1,
 }
 
-type Body = { event: string; featureId?: string; tags?: Record<string, unknown>; context?: { subject?: { type: string; id: string } } }
+type Body = {
+  event: string
+  featureId?: string
+  tags?: Record<string, unknown>
+  context?: { subject?: { type: string; id: string } }
+}
 
 /** Runs every subject through evaluate → trackFlagEvaluation and returns what the SDK would POST. */
 async function simulate(options: { holdoutLeaks?: boolean; omitSegments?: boolean } = {}) {
@@ -96,7 +103,8 @@ async function simulate(options: { holdoutLeaks?: boolean; omitSegments?: boolea
     let experiment = experimentForResolution(details)
     if (!experiment && details.variant === 'on') served.heldOutOn += 1
     // The deliberately broken app: it tags EVERY eligible evaluation as an exposure, held-out included.
-    if (options.holdoutLeaks && !experiment && region !== 'US') experiment = { key: EXPERIMENT_KEY, definitionVersion: VERSION }
+    if (options.holdoutLeaks && !experiment && region !== 'US')
+      experiment = { key: EXPERIMENT_KEY, definitionVersion: VERSION }
     const segments: FlagEvaluationSegments | undefined = options.omitSegments ? undefined : { region }
     await growth.trackFlagEvaluation({
       flagKey: FLAG_KEY,
@@ -148,7 +156,9 @@ test.describe('holding people out (D2 = A)', () => {
     const heldOut = evaluated.filter((body) => body.tags?.region !== 'US')
     expect(heldOut.every((body) => body.tags?.variant === 'off')).toBe(true)
     // The US is served `on` by the feature's own rule — and still never exposed.
-    expect(evaluated.filter((body) => body.tags?.region === 'US').every((body) => body.tags?.variant === 'on')).toBe(true)
+    expect(
+      evaluated.filter((body) => body.tags?.region === 'US').every((body) => body.tags?.variant === 'on')
+    ).toBe(true)
     // Nobody outside eligibility is ever exposed.
     expect(exposures.some((body) => body.tags?.region === 'US')).toBe(false)
 
@@ -201,7 +211,8 @@ test('the old path is byte-identical: experiment passed by hand, no segments, no
   await growth.trackFlagEvaluation({ ...input, experiment: { key: EXPERIMENT_KEY, definitionVersion: 3 } })
   await growth.trackFlagEvaluation(input)
   // The exact 0.5.0 request bodies, key order included. A change here is a wire-contract change.
-  const tags = '"flag_key":"growth.founding_merchants_enabled","flag_definition_version":7,"variant":"on","reason":"TARGETING_MATCH","snapshot_version":40,"environment":"production"'
+  const tags =
+    '"flag_key":"growth.founding_merchants_enabled","flag_definition_version":7,"variant":"on","reason":"TARGETING_MATCH","snapshot_version":40,"environment":"production"'
   expect(bodies).toEqual([
     `{"userId":"server","event":"experiment_exposed","tags":{${tags},"experiment_definition_version":3},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"${bodies[0].match(/"idempotencyKey":"([^"]+)"/)![1]}"},"featureId":"founding_copy_test"}`,
     `{"userId":"server","event":"flag_evaluated","tags":{${tags}},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"${bodies[1].match(/"idempotencyKey":"([^"]+)"/)![1]}"},"featureId":"growth.founding_merchants_enabled"}`,

@@ -69,15 +69,33 @@ const experimentMetadata = {
 
 test('experimentForResolution: an experiment rule is an exposure; a fallthrough or a feature rule is not', () => {
   assert.deepEqual(
-    experimentForResolution({ reason: 'TARGETING_MATCH', rulePriority: 10, flagMetadata: experimentMetadata }),
-    { key: 'founding_copy_test', definitionVersion: 3 },
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 10,
+      flagMetadata: experimentMetadata,
+    }),
+    { key: 'founding_copy_test', definitionVersion: 3 }
   )
   // held out: fell through to the default
   assert.equal(experimentForResolution({ reason: 'STATIC', flagMetadata: experimentMetadata }), undefined)
   // served by the feature's own (shifted) rule, not the experiment's
-  assert.equal(experimentForResolution({ reason: 'TARGETING_MATCH', rulePriority: 10000, flagMetadata: experimentMetadata }), undefined)
+  assert.equal(
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 10000,
+      flagMetadata: experimentMetadata,
+    }),
+    undefined
+  )
   // a flag that names no experiment
-  assert.equal(experimentForResolution({ reason: 'TARGETING_MATCH', rulePriority: 0, flagMetadata: { criticality: 'low' } }), undefined)
+  assert.equal(
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 0,
+      flagMetadata: { criticality: 'low' },
+    }),
+    undefined
+  )
 })
 
 test('experimentForResolution is total: malformed metadata is "no experiment", never a throw', () => {
@@ -96,11 +114,17 @@ test('experimentForResolution is total: malformed metadata is "no experiment", n
 })
 
 test('segments: the five allow-listed fields as bounded scalars, nothing else', () => {
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'MX', plan: 1, channel: 'web' } }), true)
+  assert.equal(
+    validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'MX', plan: 1, channel: 'web' } }),
+    true
+  )
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: {} }), true)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { country: 'MX' } }), false)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: ['MX'] } }), false)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }), false)
+  assert.equal(
+    validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }),
+    false
+  )
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '' } }), false)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'M\u0085X' } }), false)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: null }), false)

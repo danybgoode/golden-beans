@@ -129,7 +129,11 @@ test('the approved state list and APPROVED.md still describe the same 38 states'
   for (const id of ALL_STATE_IDS) {
     assert.ok(documented.has(id), `state "${id}" renders but has no approval line in APPROVED.md`)
   }
-  assert.equal(ALL_STATE_IDS.length, 38, 'the approved set is 38 states (33 console + 5 experiments-for-humans) — see APPROVED.md')
+  assert.equal(
+    ALL_STATE_IDS.length,
+    38,
+    'the approved set is 38 states (33 console + 5 experiments-for-humans) — see APPROVED.md'
+  )
 })
 
 test('every navigable surface in the inventory has a manifest row', () => {

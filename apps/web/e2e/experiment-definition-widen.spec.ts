@@ -1,9 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { Client as PgClient } from 'pg'
-import {
-  computeExperimentAnalysis,
-  type ExperimentAnalysisFact,
-} from '@/lib/experiment-analysis'
+import { computeExperimentAnalysis, type ExperimentAnalysisFact } from '@/lib/experiment-analysis'
 import { parseExperimentDefinition, type ExperimentDefinition } from '@/lib/experiment-definition'
 import { requireTestDatabaseUrl } from './helpers/test-db-cleanup'
 
@@ -48,48 +45,150 @@ const twentyValues = Array.from({ length: 20 }, (_, index) => `v${index}`)
 // [name, definition, expected validity]
 const FIXTURES: Array<[string, unknown, boolean]> = [
   ['legacy: no labels, scalar tags', LEGACY, true],
-  ['label on every version', withVariants([
-    { key: 'control', weight: 1, label: 'Current' },
-    { key: 'new-copy', weight: 3, label: 'New copy' },
-  ]), true],
-  ['label on one version only', withVariants([
-    { key: 'control', weight: 1 },
-    { key: 'new-copy', weight: 3, label: 'New copy' },
-  ]), true],
-  ['label of exactly 40 code points (astral)', withVariants([
-    { key: 'control', weight: 1, label: '𝐍'.repeat(40) },
-    { key: 'new-copy', weight: 3 },
-  ]), true],
-  ['label of 40 characters', withVariants([
-    { key: 'control', weight: 1, label: forty },
-    { key: 'new-copy', weight: 3 },
-  ]), true],
-  ['label of 41 characters', withVariants([
-    { key: 'control', weight: 1, label: `${forty}N` },
-    { key: 'new-copy', weight: 3 },
-  ]), false],
-  ['empty label', withVariants([{ key: 'control', weight: 1, label: '' }, { key: 'new-copy', weight: 3 }]), false],
-  ['blank label', withVariants([{ key: 'control', weight: 1, label: '   ' }, { key: 'new-copy', weight: 3 }]), false],
-  ['leading space', withVariants([{ key: 'control', weight: 1, label: ' Current' }, { key: 'new-copy', weight: 3 }]), false],
-  ['trailing no-break space', withVariants([{ key: 'control', weight: 1, label: 'Current ' }, { key: 'new-copy', weight: 3 }]), false],
-  ['inner space is fine', withVariants([{ key: 'control', weight: 1, label: 'Current copy' }, { key: 'new-copy', weight: 3 }]), true],
-  ['U+007F in a label', withVariants([{ key: 'control', weight: 1, label: 'Cur\u007frent' }, { key: 'new-copy', weight: 3 }]), false],
-  ['U+0085 (NEL, a C1 control) in a label', withVariants([{ key: 'control', weight: 1, label: 'Cur\u0085rent' }, { key: 'new-copy', weight: 3 }]), false],
-  ['U+0009 in a label', withVariants([{ key: 'control', weight: 1, label: 'Cur\trent' }, { key: 'new-copy', weight: 3 }]), false],
-  ['U+00A0 inside a label is not a control', withVariants([{ key: 'control', weight: 1, label: 'Cur rent' }, { key: 'new-copy', weight: 3 }]), true],
-  ['label that is a number', withVariants([{ key: 'control', weight: 1, label: 7 }, { key: 'new-copy', weight: 3 }]), false],
-  ['duplicate labels', withVariants([
-    { key: 'control', weight: 1, label: 'Same' },
-    { key: 'new-copy', weight: 3, label: 'Same' },
-  ]), false],
-  ['labels differing only in case are distinct', withVariants([
-    { key: 'control', weight: 1, label: 'Same' },
-    { key: 'new-copy', weight: 3, label: 'same' },
-  ]), true],
-  ['an unknown variant key is still refused', withVariants([
-    { key: 'control', weight: 1, name: 'Current' },
-    { key: 'new-copy', weight: 3 },
-  ]), false],
+  [
+    'label on every version',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Current' },
+      { key: 'new-copy', weight: 3, label: 'New copy' },
+    ]),
+    true,
+  ],
+  [
+    'label on one version only',
+    withVariants([
+      { key: 'control', weight: 1 },
+      { key: 'new-copy', weight: 3, label: 'New copy' },
+    ]),
+    true,
+  ],
+  [
+    'label of exactly 40 code points (astral)',
+    withVariants([
+      { key: 'control', weight: 1, label: '𝐍'.repeat(40) },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    true,
+  ],
+  [
+    'label of 40 characters',
+    withVariants([
+      { key: 'control', weight: 1, label: forty },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    true,
+  ],
+  [
+    'label of 41 characters',
+    withVariants([
+      { key: 'control', weight: 1, label: `${forty}N` },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'empty label',
+    withVariants([
+      { key: 'control', weight: 1, label: '' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'blank label',
+    withVariants([
+      { key: 'control', weight: 1, label: '   ' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'leading space',
+    withVariants([
+      { key: 'control', weight: 1, label: ' Current' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'trailing no-break space',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Current ' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'inner space is fine',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Current copy' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    true,
+  ],
+  [
+    'U+007F in a label',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Cur\u007frent' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'U+0085 (NEL, a C1 control) in a label',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Cur\u0085rent' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'U+0009 in a label',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Cur\trent' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'U+00A0 inside a label is not a control',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Cur rent' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    true,
+  ],
+  [
+    'label that is a number',
+    withVariants([
+      { key: 'control', weight: 1, label: 7 },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
+  [
+    'duplicate labels',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Same' },
+      { key: 'new-copy', weight: 3, label: 'Same' },
+    ]),
+    false,
+  ],
+  [
+    'labels differing only in case are distinct',
+    withVariants([
+      { key: 'control', weight: 1, label: 'Same' },
+      { key: 'new-copy', weight: 3, label: 'same' },
+    ]),
+    true,
+  ],
+  [
+    'an unknown variant key is still refused',
+    withVariants([
+      { key: 'control', weight: 1, name: 'Current' },
+      { key: 'new-copy', weight: 3 },
+    ]),
+    false,
+  ],
   ['one-of list of two', withTags({ region: ['MX', 'CO'] }), true],
   ['one-of list of one', withTags({ region: ['MX'] }), true],
   ['list of exactly 20', withTags({ region: twentyValues }), true],
@@ -125,7 +224,7 @@ test.describe('experiment definition widening (D1) — parser and database agree
       const parsed = parseExperimentDefinition(definition)
       const { rows } = await db.query<{ valid: boolean }>(
         'select private.experiment_definition_is_valid($1::jsonb) as valid',
-        [JSON.stringify(definition)],
+        [JSON.stringify(definition)]
       )
       expect({ parser: parsed.ok, database: rows[0].valid }).toEqual({ parser: expected, database: expected })
     })
@@ -136,13 +235,21 @@ test.describe('experiment definition widening (D1) — parser and database agree
     expect(parsed.ok).toBe(true)
     if (!parsed.ok) return
     expect(JSON.stringify(parsed.definition)).toBe(JSON.stringify(LEGACY))
-    const { rows } = await db.query<{ back: unknown }>('select $1::jsonb as back', [JSON.stringify(parsed.definition)])
+    const { rows } = await db.query<{ back: unknown }>('select $1::jsonb as back', [
+      JSON.stringify(parsed.definition),
+    ])
     expect(rows[0].back).toEqual(LEGACY)
   })
 
   test('the parser keeps labels and lists exactly as given (no normalisation to hide a change)', () => {
     const input = withTags({ region: ['MX', 'CO'] }) as ExperimentDefinition
-    const labelled = { ...input, variants: [{ key: 'control', weight: 1, label: 'Current' }, { key: 'new-copy', weight: 3 }] }
+    const labelled = {
+      ...input,
+      variants: [
+        { key: 'control', weight: 1, label: 'Current' },
+        { key: 'new-copy', weight: 3 },
+      ],
+    }
     const parsed = parseExperimentDefinition(labelled)
     expect(parsed.ok && parsed.definition).toEqual(labelled)
   })
@@ -150,7 +257,7 @@ test.describe('experiment definition widening (D1) — parser and database agree
   test('the widened function is still not executable by anon or authenticated', async () => {
     const { rows } = await db.query<{ anon: boolean; authenticated: boolean }>(
       `select has_function_privilege('anon', 'private.experiment_definition_is_valid(jsonb)', 'EXECUTE') as anon,
-              has_function_privilege('authenticated', 'private.experiment_definition_is_valid(jsonb)', 'EXECUTE') as authenticated`,
+              has_function_privilege('authenticated', 'private.experiment_definition_is_valid(jsonb)', 'EXECUTE') as authenticated`
     )
     expect(rows[0]).toEqual({ anon: false, authenticated: false })
   })
@@ -160,13 +267,17 @@ test.describe('experiment definition widening (D1) — parser and database agree
 // tagsMatch is private to the analysis module, so it is exercised through computeExperimentAnalysis
 // with inputs whose result DIFFERS between the old scalar-only rule and the one-of rule.
 
-const at = (second: number) => `${new Date(Date.UTC(2026, 6, 1, 0, 0, second)).toISOString().slice(0, 19)}.000Z`
+const at = (second: number) =>
+  `${new Date(Date.UTC(2026, 6, 1, 0, 0, second)).toISOString().slice(0, 19)}.000Z`
 
 function oneOfDefinition(tags: ExperimentDefinition['eligibility']['tags']): ExperimentDefinition {
   return {
     ...LEGACY,
     eligibility: { description: 'Mexico or Colombia', tags },
-    variants: [{ key: 'control', weight: 1 }, { key: 'treatment', weight: 1 }],
+    variants: [
+      { key: 'control', weight: 1 },
+      { key: 'treatment', weight: 1 },
+    ],
     controlVariantKey: 'control',
     plannedWindow: { startAt: at(1), endAt: at(50) },
     minimumSamplePerVariant: 1,
@@ -186,7 +297,10 @@ function exposure(subjectId: string, tags: Record<string, unknown>): ExperimentA
   }
 }
 
-function eligibilityOutcome(tags: ExperimentDefinition['eligibility']['tags'], exposureTags: Record<string, unknown>) {
+function eligibilityOutcome(
+  tags: ExperimentDefinition['eligibility']['tags'],
+  exposureTags: Record<string, unknown>
+) {
   const result = computeExperimentAnalysis({
     experimentKey: 'one-of',
     definitionVersion: 1,
@@ -203,10 +317,16 @@ function eligibilityOutcome(tags: ExperimentDefinition['eligibility']['tags'], e
 
 test.describe('tagsMatch: a list is one-of (D1)', () => {
   test('a value in the list matches', () => {
-    expect(eligibilityOutcome({ region: ['MX', 'CO'] }, { region: 'CO' })).toEqual({ valid: 1, mismatched: 0 })
+    expect(eligibilityOutcome({ region: ['MX', 'CO'] }, { region: 'CO' })).toEqual({
+      valid: 1,
+      mismatched: 0,
+    })
   })
   test('a value outside the list does not', () => {
-    expect(eligibilityOutcome({ region: ['MX', 'CO'] }, { region: 'US' })).toEqual({ valid: 0, mismatched: 1 })
+    expect(eligibilityOutcome({ region: ['MX', 'CO'] }, { region: 'US' })).toEqual({
+      valid: 0,
+      mismatched: 1,
+    })
   })
   test('a missing tag matches neither a list nor a scalar', () => {
     expect(eligibilityOutcome({ region: ['MX', 'CO'] }, {})).toEqual({ valid: 0, mismatched: 1 })

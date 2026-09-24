@@ -171,7 +171,9 @@ function validSegments(value: unknown): value is FlagEvaluationSegments {
     ([field, segment]) =>
       (FLAG_EVALUATION_SEGMENT_FIELDS as readonly string[]).includes(field) &&
       (typeof segment === 'boolean' ||
-        (typeof segment === 'number' && Number.isSafeInteger(segment) && Math.abs(segment) <= 1_000_000_000_000_000) ||
+        (typeof segment === 'number' &&
+          Number.isSafeInteger(segment) &&
+          Math.abs(segment) <= 1_000_000_000_000_000) ||
         (typeof segment === 'string' &&
           segment.length > 0 &&
           Array.from(segment).length <= 64 &&
