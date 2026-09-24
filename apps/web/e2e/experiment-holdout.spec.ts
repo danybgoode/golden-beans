@@ -89,7 +89,7 @@ async function simulate(options: { holdoutLeaks?: boolean; omitSegments?: boolea
       return new Response(JSON.stringify({ ok: true, id: String(bodies.length) }), { status: 200 })
     }) as unknown as typeof fetch,
   })
-  const served = { off: 0, on: 0, heldOutOn: 0 }
+  const served = { off: 0, on: 0 }
   for (let index = 0; index < SUBJECTS; index += 1) {
     const id = `merchant-${index}`
     const region = REGIONS[index % REGIONS.length]
@@ -101,7 +101,6 @@ async function simulate(options: { holdoutLeaks?: boolean; omitSegments?: boolea
     })
     served[details.variant as 'off' | 'on'] += 1
     let experiment = experimentForResolution(details)
-    if (!experiment && details.variant === 'on') served.heldOutOn += 1
     // The deliberately broken app: it tags EVERY eligible evaluation as an exposure, held-out included.
     if (options.holdoutLeaks && !experiment && region !== 'US')
       experiment = { key: EXPERIMENT_KEY, definitionVersion: VERSION }
@@ -210,11 +209,49 @@ test('the old path is byte-identical: experiment passed by hand, no segments, no
   }
   await growth.trackFlagEvaluation({ ...input, experiment: { key: EXPERIMENT_KEY, definitionVersion: 3 } })
   await growth.trackFlagEvaluation(input)
-  // The exact 0.5.0 request bodies, key order included. A change here is a wire-contract change.
+  // The exact 0.5.0 request bodies, key order AND idempotency keys included — the keys are literals
+  // taken from main's 0.5.0 build, never read back out of the body under test (fresh reviewer, PR
+  // #167: a changed fingerprint would re-key every caller's dedup across an SDK upgrade and pass).
+  // A change here is a wire-contract change.
   const tags =
     '"flag_key":"growth.founding_merchants_enabled","flag_definition_version":7,"variant":"on","reason":"TARGETING_MATCH","snapshot_version":40,"environment":"production"'
   expect(bodies).toEqual([
-    `{"userId":"server","event":"experiment_exposed","tags":{${tags},"experiment_definition_version":3},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"${bodies[0].match(/"idempotencyKey":"([^"]+)"/)![1]}"},"featureId":"founding_copy_test"}`,
-    `{"userId":"server","event":"flag_evaluated","tags":{${tags}},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"${bodies[1].match(/"idempotencyKey":"([^"]+)"/)![1]}"},"featureId":"growth.founding_merchants_enabled"}`,
+    `{"userId":"server","event":"experiment_exposed","tags":{${tags},"experiment_definition_version":3},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"flag_eval:60fdbee501d945d9"},"featureId":"founding_copy_test"}`,
+    `{"userId":"server","event":"flag_evaluated","tags":{${tags}},"context":{"version":1,"subject":{"type":"merchant","id":"merchant-1"},"idempotencyKey":"flag_eval:0f3e924353a041d7"},"featureId":"growth.founding_merchants_enabled"}`,
   ])
+})
+
+test('a segment value outside the predicate domain drops the TAG, never the exposure', async () => {
+  const bodies: Body[] = []
+  const growth = createGrowthEngineClient({
+    baseUrl: 'https://engine.test',
+    apiKey: 'test',
+    userId: 'server',
+    fetchImpl: (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body) as Body)
+      return new Response(JSON.stringify({ ok: true, id: '1' }), { status: 200 })
+    }) as unknown as typeof fetch,
+  })
+  const result = await growth.trackFlagEvaluation({
+    flagKey: FLAG_KEY,
+    flagVersion: 7,
+    variant: 'on',
+    reason: 'TARGETING_MATCH',
+    snapshotVersion: 40,
+    environment: 'production',
+    subject: { type: 'merchant', id: 'merchant-1' },
+    // A context passed whole: `targetingKey` is not a segment, and the campaign is 65 characters.
+    segments: {
+      targetingKey: 'merchant-1',
+      region: 'MX',
+      campaign: 'x'.repeat(65),
+    } as FlagEvaluationSegments,
+    experiment: { key: EXPERIMENT_KEY, definitionVersion: VERSION },
+  })
+  expect(result.ok).toBe(true)
+  expect(bodies).toHaveLength(1)
+  expect(bodies[0].event).toBe('experiment_exposed')
+  expect(bodies[0].tags?.region).toBe('MX')
+  expect(bodies[0].tags && 'campaign' in bodies[0].tags).toBe(false)
+  expect(bodies[0].tags && 'targetingKey' in bodies[0].tags).toBe(false)
 })

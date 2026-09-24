@@ -27,7 +27,7 @@ screen is typed.**
 ## The design is the contract
 
 Daniel approved the clickable prototype on **2026-09-24 07:44 (America/Mexico_City)**:
-[`approved-prototype.html`](approved-prototype.html) (in this folder — a handoff copy; Story 1.1 moves it into the product and this copy is deleted)
+[`apps/web/design-system/approved-prototype.html`](../../../apps/web/design-system/approved-prototype.html) (moved there byte-for-byte by Story 1.1; the handoff copy in this folder is gone)
 (https://claude.ai/artifact/2MHJPipgJRHLT2tndtdmKx). Per WAYS-OF-WORKING step 1 (amended 2026-08-29),
 **an approved design is scope**. Story 1.1 lands it in `apps/web/design-system/` with an approval
 line and a content hash, beside the 33 pinned console states. Its new states replace the approved

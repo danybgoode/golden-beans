@@ -229,7 +229,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- CREATE OR REPLACE keeps the function's ACL, but the grant is re-asserted rather than assumed
+-- CREATE OR REPLACE keeps the function's ACL, but the REVOKE is re-stated rather than assumed
 -- (LEARNINGS: DROP + CREATE silently restores PUBLIC EXECUTE; a reader should not have to know which
 -- of the two this file did).
 REVOKE ALL ON FUNCTION private.experiment_definition_is_valid(JSONB)

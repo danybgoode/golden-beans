@@ -19,6 +19,7 @@ import {
   FLAG_EVALUATED_EVENT,
   flagEvaluationFingerprint,
   normalizeFlagEvaluationSampleRate,
+  segmentTags,
   shouldSampleFlagEvaluation,
   validateFlagEvaluationTelemetry,
   type FlagEvaluationTelemetryInput,
@@ -540,7 +541,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
         tags: {
           // D2.4 — segments first, so none of the fixed keys below can ever be overwritten by one.
           // (They cannot collide today: the segment fields and these keys are disjoint by name.)
-          ...input.segments,
+          ...segmentTags(input.segments),
           flag_key: input.flagKey,
           flag_definition_version: input.flagVersion,
           variant: input.variant,

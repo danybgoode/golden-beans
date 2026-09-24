@@ -41,6 +41,8 @@ await growth.trackFlagEvaluation({
 - `segments` copies the evaluation context's `source · channel · campaign · plan · region` into the
   event's tags. An experiment's eligibility conditions and its breakdowns are read from the
   exposure's tags; without them every exposure of an experiment with a condition is rejected.
+  Entries that are not one of those five fields, or not a scalar an experiment predicate could hold
+  (at most 64 characters, no NUL), are dropped from the tags — the event itself is still sent.
 - `subject.id` and `targetingKey` must be the same identifier, or one person can be bucketed as two.
 
 A caller that keeps passing `experiment` by hand, with no `segments`, sends exactly the bytes 0.5.0

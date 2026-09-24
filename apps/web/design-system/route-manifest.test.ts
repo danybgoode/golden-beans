@@ -96,7 +96,7 @@ test('the manifest and the repository agree about which routes exist', () => {
   )
 })
 
-test('every reference state is one of the 32 approved ids', () => {
+test('every reference state is one of the approved ids (38: 33 console + 5 experiments-for-humans)', () => {
   // "Adding a state without an approval line is the thing Rail 2 forbids." The inverse matters
   // just as much: citing a state id that was never approved gives a route a contract nobody agreed
   // to, and it fails as a typo rather than as a decision.

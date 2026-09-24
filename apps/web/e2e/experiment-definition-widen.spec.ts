@@ -230,6 +230,52 @@ test.describe('experiment definition widening (D1) — parser and database agree
     })
   }
 
+  // ⚠️ A SWEEP, not a sample (fresh reviewer, PR #167: the 37 fixtures above would not notice
+  // U+3000 or U+FEFF dropped from the DB's whitespace set). Every BMP code point except the
+  // surrogates and NUL, at a label's EDGE and in its MIDDLE, judged by both sides in one query each.
+  // Two whitespace sets, two control-character spellings and two length measures have to agree on
+  // ~130,000 inputs, so a drift in either file is a named code point, not a hunch.
+  for (const position of ['edge', 'inner'] as const) {
+    test(`every BMP code point at a label's ${position}: parser and database agree`, async () => {
+      const labels: string[] = []
+      for (let code = 1; code <= 0xffff; code += 1) {
+        if (code >= 0xd800 && code <= 0xdfff) continue
+        const char = String.fromCharCode(code)
+        labels.push(position === 'edge' ? `${char}Current` : `Cur${char}rent`)
+      }
+      const base = withVariants([
+        { key: 'control', weight: 1, label: 'placeholder' },
+        { key: 'new-copy', weight: 3 },
+      ])
+      const { rows } = await db.query<{ valid: boolean }>(
+        `select private.experiment_definition_is_valid(
+           jsonb_set($1::jsonb, '{variants,0,label}', to_jsonb(label))
+         ) as valid
+         from unnest($2::text[]) with ordinality as l(label, n) order by n`,
+        [JSON.stringify(base), labels]
+      )
+      const disagreements = labels.flatMap((label, index) => {
+        const parser = parseExperimentDefinition({
+          ...(base as ExperimentDefinition),
+          variants: [
+            { key: 'control', weight: 1, label },
+            { key: 'new-copy', weight: 3 },
+          ],
+        }).ok
+        return parser === rows[index].valid
+          ? []
+          : [
+              `U+${label
+                .codePointAt(position === 'edge' ? 0 : 3)!
+                .toString(16)
+                .toUpperCase()
+                .padStart(4, '0')}`,
+            ]
+      })
+      expect(disagreements).toEqual([])
+    })
+  }
+
   test('a legacy definition round-trips byte-identical through the parser and a jsonb cast', async () => {
     const parsed = parseExperimentDefinition(LEGACY)
     expect(parsed.ok).toBe(true)

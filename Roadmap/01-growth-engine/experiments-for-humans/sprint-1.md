@@ -43,7 +43,7 @@ Cite the README's D-numbers; do not restate them. Builder: the architect (never 
 home, hash-pinned, **so that** every later story is checked against the design Daniel approved, not
 against a description of it.
 **Acceptance:**
-- [`approved-prototype.html`](approved-prototype.html) (in this folder — a handoff copy; Story 1.1 moves it into the product and this copy is deleted) copied into `apps/web/design-system/`
+- [`approved-prototype.html`](../../../apps/web/design-system/approved-prototype.html) copied into `apps/web/design-system/`
   unchanged, with an approval line in `APPROVED.md` (Daniel, 2026-09-24 07:44 America/Mexico_City,
   SHA-256 first 16).
 - The new states are named and registered: `wizard-new-experiment` (steps 1–5), `wizard-new-experiment-review`,

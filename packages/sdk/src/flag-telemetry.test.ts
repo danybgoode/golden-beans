@@ -58,7 +58,7 @@ test('sampling and idempotency fingerprint are stable for one decision and versi
 })
 
 // ── experiments-for-humans D2.3 / D2.4 ───────────────────────────────────────────────────────
-import { EXPERIMENT_METADATA_KEYS, experimentForResolution } from './flag-telemetry.ts'
+import { EXPERIMENT_METADATA_KEYS, experimentForResolution, segmentTags } from './flag-telemetry.ts'
 
 const experimentMetadata = {
   [EXPERIMENT_METADATA_KEYS.key]: 'founding_copy_test',
@@ -115,22 +115,23 @@ test('experimentForResolution is total: malformed metadata is "no experiment", n
   assert.equal(experimentForResolution({}), undefined)
 })
 
-test('segments: the five allow-listed fields as bounded scalars, nothing else', () => {
-  assert.equal(
-    validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'MX', plan: 1, channel: 'web' } }),
-    true
-  )
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: {} }), true)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { country: 'MX' } }), false)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: ['MX'] } }), false)
-  assert.equal(
-    validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }),
-    false
-  )
-  // exactly the predicate domain: the empty string is a legal predicate, so it is a legal segment
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '' } }), true)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'M\u0000X' } }), false)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '𝐌'.repeat(64) } }), true)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '𝐌'.repeat(65) } }), false)
+test('segments: an object is required; each entry outside the predicate domain is DROPPED, never fatal', () => {
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'MX', plan: 1 } }), true)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }), true)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: null }), false)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: ['MX'] }), false)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: 'MX' }), false)
+
+  // A caller passing the whole evaluation context: targetingKey is not a segment and is dropped.
+  assert.deepEqual(segmentTags({ targetingKey: 'merchant-1', region: 'MX', channel: 'web' }), {
+    region: 'MX',
+    channel: 'web',
+  })
+  // Exactly the predicate scalar domain: empty string yes, NUL no, 64 code points yes, 65 no.
+  assert.deepEqual(segmentTags({ region: '' }), { region: '' })
+  assert.deepEqual(segmentTags({ region: 'M\u0000X' }), {})
+  assert.deepEqual(segmentTags({ region: '𝐌'.repeat(64) }), { region: '𝐌'.repeat(64) })
+  assert.deepEqual(segmentTags({ region: '𝐌'.repeat(65), plan: 'pro' }), { plan: 'pro' })
+  assert.deepEqual(segmentTags({ region: ['MX'], plan: 1.5, source: 2 ** 60 }), {})
+  assert.deepEqual(segmentTags(undefined), {})
 })

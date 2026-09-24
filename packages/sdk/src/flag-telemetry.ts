@@ -157,7 +157,13 @@ export function validateFlagEvaluationTelemetry(input: unknown): input is FlagEv
   if (subject === null || typeof subject !== 'object' || Array.isArray(subject)) return false
   if (!onlyKeys(subject, ['type', 'id'])) return false
   if (!validText(subject.type, ENTITY_TYPE) || !validOpaqueId(subject.id)) return false
-  if (value.segments !== undefined && !validSegments(value.segments)) return false
+  // `segments` must be an object when present; its individual entries are filtered, not judged —
+  // see `segmentTags`.
+  if (
+    value.segments !== undefined &&
+    (value.segments === null || typeof value.segments !== 'object' || Array.isArray(value.segments))
+  )
+    return false
   if (value.experiment === undefined) return true
   return (
     value.experiment !== null &&
@@ -169,21 +175,38 @@ export function validateFlagEvaluationTelemetry(input: unknown): input is FlagEv
   )
 }
 
-function validSegments(value: unknown): value is FlagEvaluationSegments {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
-  return Object.entries(value).every(
-    ([field, segment]) =>
-      (FLAG_EVALUATION_SEGMENT_FIELDS as readonly string[]).includes(field) &&
-      (typeof segment === 'boolean' ||
-        (typeof segment === 'number' &&
-          Number.isSafeInteger(segment) &&
-          Math.abs(segment) <= 1_000_000_000_000_000) ||
-        // EXACTLY an experiment predicate's scalar domain (`validScalarPredicate` in
-        // apps/web/lib/experiment-definition.ts): no NUL, at most 64 code points — the empty string
-        // included. Anything narrower here makes a condition that can be SAVED but whose exposures
-        // can never be sent (Codex, PR #167: `{ region: "" }`).
-        (typeof segment === 'string' && !segment.includes('\0') && Array.from(segment).length <= 64))
+function isSegmentValue(segment: unknown): segment is string | number | boolean {
+  return (
+    typeof segment === 'boolean' ||
+    (typeof segment === 'number' &&
+      Number.isSafeInteger(segment) &&
+      Math.abs(segment) <= 1_000_000_000_000_000) ||
+    // EXACTLY an experiment predicate's scalar domain (`validScalarPredicate` in
+    // apps/web/lib/experiment-definition.ts): no NUL, at most 64 code points — the empty string
+    // included. Anything narrower here makes a condition that can be SAVED but whose exposures can
+    // never carry it (Codex, PR #167: `{ region: "" }`).
+    (typeof segment === 'string' && !segment.includes('\0') && Array.from(segment).length <= 64)
   )
+}
+
+/**
+ * The segment fields that may ride on the event — every OTHER entry is dropped, never fatal.
+ *
+ * ⚠️ Dropping the FIELD, not the event, is deliberate (fresh reviewer, PR #167). The evaluation
+ * context accepts values a segment cannot carry (a 65-character campaign, `targetingKey` when a
+ * caller passes the whole context as `segments`), and rejecting the whole payload would silently
+ * lose a person who WAS served the experiment — a return value nobody reads. Dropping only the tag
+ * keeps the exposure, and the loss surfaces where someone looks: as an `eligibility_mismatch` count
+ * in the governed analysis when the experiment declared that field.
+ */
+export function segmentTags(segments: unknown): FlagEvaluationSegments {
+  if (segments === null || typeof segments !== 'object' || Array.isArray(segments)) return {}
+  const kept: FlagEvaluationSegments = {}
+  for (const field of FLAG_EVALUATION_SEGMENT_FIELDS) {
+    const segment = (segments as Record<string, unknown>)[field]
+    if (isSegmentValue(segment)) kept[field] = segment
+  }
+  return kept
 }
 
 function onlyKeys(value: object, allowed: string[]): boolean {
