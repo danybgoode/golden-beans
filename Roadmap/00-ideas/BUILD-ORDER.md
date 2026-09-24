@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-23 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-24 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -14,9 +14,10 @@
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 
-## 📋 Ready to build (scaffolded, not started) (1)
+## 📋 Ready to build (scaffolded, not started) (2)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
+- [Experiments for humans](../../01-growth-engine/experiments-for-humans/README.md) — 01 Growth Engine · 0/11 stories · risk: High · audit-wave-A
 
 ## ✅ Shipped (27)
 
@@ -48,9 +49,8 @@
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
-## ⬜ Funnel — seeds not yet scaffolded (11)
+## ⬜ Funnel — seeds not yet scaffolded (10)
 
-- [Experiments for humans: a guided five-question flow replaces the JSON textarea](seeds/experiments-for-humans.md) — Raw · Feature · appetite M · audit-wave-A
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Verify spike: TLA+/Quint on the event outbox and Lean on the flag evaluator, dogfooded on Golden Frijoles](seeds/verify-spike.md) — Raw · Spike · appetite S · audit-wave-B
 - [Board sinks + scrumban on the Hub: one roadmap projection, many destinations](seeds/board-sinks-and-scrumban.md) — Raw · Feature · appetite M · audit-wave-C
@@ -74,4 +74,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 29 · seeds in funnel: 11 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 30 · seeds in funnel: 10 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._

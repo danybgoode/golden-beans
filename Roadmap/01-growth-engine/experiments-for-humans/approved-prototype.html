@@ -1,0 +1,2560 @@
+<title>Experiments for Humans</title>
+<meta name="description" content="Clickable prototype of the guided experiment builder">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* reference.css — the approved prototype’s stylesheet, VERBATIM
+ *
+ * ⚠️ GENERATED — DO NOT HAND-EDIT. Regenerate with:
+ *     node apps/web/design-system/extract-css.mjs
+ * CI runs `--check` and fails on any diff, so a hand-edit is reverted rather than argued about.
+ *
+ * Source: apps/web/design-system/console-prototype.html — the 32 states approved 2026-08-29 (APPROVED.md).
+ */
+
+/* Class names here are the PROTOTYPE's. Port from this file, never from a prose description of it;
+ * where this and the measured spec disagree, MEASURED-SPEC.md wins. */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Golden Beans · flags console — Flagsmith's structure, Golden's skin.
+   Palette lifted verbatim from references/design/assets/tokens.css.
+   Single-theme by commitment: the product sets color-scheme: dark.
+   ───────────────────────────────────────────────────────────────────────── */
+:root{
+  --roast:#16120d; --roast-2:#1c1710; --card:#241d14; --card-2:#2b2318; --card-3:#332a1d;
+  --line:#3a3023; --line-soft:#2e2619;
+  --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+  --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+  --green:#7fd069; --green-deep:#2c5e22; --red:#e86a5e; --red-deep:#6e2a22; --blue:#6db3e8;
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --r:8px; --r-lg:12px;
+  --shadow:0 18px 44px rgb(0 0 0 / 44%);
+  --shadow-hi:0 24px 64px rgb(0 0 0 / 62%);
+  --t:140ms cubic-bezier(.2,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark}
+body{
+  margin:0; background:var(--roast); color:var(--crema);
+  font-family:var(--sans); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+ul{list-style:none;padding:0}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-hot)}
+code,.mono{font-family:var(--mono);font-variant-ligatures:none}
+:focus-visible{outline:2px solid var(--gold-hot);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:14px;height:54px;padding:0 20px;
+  background:var(--roast-2);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:40;
+}
+.mark{
+  width:26px;height:26px;border-radius:7px;flex:none;
+  background:linear-gradient(140deg,var(--gold-hot),var(--gold-deep));
+  display:grid;place-items:center;color:#241d14;font-weight:700;font-size:12px;letter-spacing:-.02em;
+}
+.crumb{display:flex;align-items:center;gap:8px;font-size:13px}
+.crumb b{font-weight:600}
+.crumb .sep{color:var(--dim-2)}
+.crumb-btn{
+  display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;
+  border:1px solid transparent;color:var(--crema);transition:background var(--t),border-color var(--t);
+}
+.crumb-btn:hover{background:var(--card);border-color:var(--line)}
+.crumb-btn .chev{color:var(--dim-2);font-size:10px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.proto-pill{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--gold);border:1px solid var(--gold-deep);background:rgb(232 185 60 / 9%);
+  padding:3px 8px;border-radius:999px;
+}
+.cmdk{
+  display:flex;align-items:center;gap:10px;padding:5px 9px 5px 12px;border-radius:7px;
+  border:1px solid var(--line);background:var(--card);color:var(--dim-2);font-size:13px;
+  transition:border-color var(--t),color var(--t);
+}
+.cmdk:hover{border-color:var(--dim-2);color:var(--crema)}
+.cmdk kbd{
+  font-family:var(--mono);font-size:10.5px;padding:2px 5px;border-radius:4px;
+  border:1px solid var(--line);background:var(--roast-2);color:var(--dim-2);
+}
+.avatar{
+  width:27px;height:27px;border-radius:50%;flex:none;font-size:11.5px;font-weight:700;
+  background:var(--card-3);border:1px solid var(--line);color:var(--crema);
+  display:grid;place-items:center;transition:border-color var(--t);
+}
+.avatar:hover{border-color:var(--gold-deep)}
+.badge-dot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);
+  margin-left:6px;vertical-align:middle;
+}
+.palette{
+  width:100%;max-width:560px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-hi);overflow:hidden;
+  animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.palette input{
+  width:100%;padding:16px 20px;background:transparent;border:none;border-bottom:1px solid var(--line);
+  color:var(--crema);font:inherit;font-size:16px;
+}
+.palette input:focus{outline:none}
+.palette input::placeholder{color:var(--dim-2)}
+.palette .results{max-height:340px;overflow-y:auto;padding:6px}
+.palette .res{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:7px;width:100%;
+  text-align:left;transition:background var(--t);
+}
+.palette .res:hover,.palette .res.sel{background:var(--card-3)}
+.palette .res .kind{
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;flex:none;
+}
+.palette .res .nm{font-size:13.5px}
+.palette .res .nm.mono{font-family:var(--mono);font-size:13px}
+.palette .res .whr{margin-left:auto;font-size:12px;color:var(--dim-2)}
+.palette .none{padding:26px;text-align:center;color:var(--dim-2);font-size:13.5px}
+.palette .foot{
+  padding:9px 16px;border-top:1px solid var(--line);background:var(--roast-2);
+  font-size:11.5px;color:var(--dim-2);font-family:var(--mono);
+}
+.dormant{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;width:100%;text-align:left;
+  background:var(--roast-2);transition:background var(--t);border-top:1px solid var(--line);
+}
+.dormant:hover{background:var(--card-2)}
+.dormant .tw{
+  width:26px;height:26px;border-radius:7px;border:1px dashed var(--line);flex:none;
+  display:grid;place-items:center;color:var(--dim-2);font-size:11px;
+}
+.dormant .t{display:block;font-size:14px;font-weight:600}
+.dormant .d{display:block;font-size:12.5px;color:var(--dim-2);margin-top:3px;max-width:78ch}
+.dormant .go{margin-left:auto;font-size:12.5px;color:var(--gold);font-weight:600;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:22px}
+.tile{padding:16px 18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--line)}
+.tile .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);font-weight:600}
+.tile .n{font-family:var(--mono);font-size:28px;font-weight:600;margin-top:8px;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12.5px;color:var(--dim);margin-top:4px}
+.tile .n.up{color:var(--green)} .tile .n.warn{color:var(--gold-hot)}
+.copyrow{
+  display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--roast-2);overflow:hidden;
+}
+.copyrow code{
+  flex:1;padding:12px 14px;font-size:13px;color:var(--gold-hot);overflow-x:auto;white-space:nowrap;
+}
+.copyrow button{
+  padding:12px 16px;border-left:1px solid var(--line);background:var(--card-2);
+  font-size:13px;font-weight:600;color:var(--crema);white-space:nowrap;transition:background var(--t);
+}
+.copyrow button:hover{background:var(--card-3)}
+.steplist{counter-reset:s;display:flex;flex-direction:column;gap:14px;list-style:none;padding:0;margin:0}
+.steplist li{
+  counter-increment:s;position:relative;padding-left:38px;font-size:14px;color:var(--dim);line-height:1.6;
+}
+.steplist li::before{
+  content:counter(s);position:absolute;left:0;top:0;width:25px;height:25px;border-radius:50%;
+  border:1px solid var(--gold-deep);color:var(--gold);display:grid;place-items:center;
+  font-family:var(--mono);font-size:12px;
+}
+.steplist li b{color:var(--crema)}
+
+.tabs{
+  display:flex;gap:2px;padding:0 20px;background:var(--roast-2);
+  border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:11px 12px 10px;font-size:13px;color:var(--dim);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color var(--t),border-color var(--t);
+}
+.tab:hover{color:var(--crema)}
+.tab[aria-selected="true"]{color:var(--crema);border-bottom-color:var(--gold);font-weight:500}
+
+/* ── frame ──────────────────────────────────────────────────────────────── */
+.frame{display:grid;grid-template-columns:236px minmax(0,1fr);align-items:start;gap:0}
+.rail{
+  border-right:1px solid var(--line);padding:18px 14px 40px;
+  position:sticky;top:98px;height:calc(100vh - 98px);overflow-y:auto;
+}
+.rail-label{
+  font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;margin-bottom:7px;display:block;
+}
+.envpick{position:relative;margin-bottom:22px}
+.envpick>button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:9px 11px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  text-align:left;transition:border-color var(--t),background var(--t);
+}
+.envpick>button:hover{border-color:var(--gold-deep)}
+.envpick>button .nm{font-weight:600;font-size:13.5px}
+.envpick>button .chev{margin-left:auto;color:var(--dim-2);font-size:10px}
+.env-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.env-dot.production{background:var(--gold)}
+.env-dot.preview{background:var(--blue)}
+.env-dot.development{background:var(--dim-2)}
+.envmenu{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:30;
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:5px;
+}
+.envmenu button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;
+  text-align:left;font-size:13.5px;transition:background var(--t);
+}
+.envmenu button:hover{background:var(--card-3)}
+.envmenu .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim-2)}
+
+.railnav{display:flex;flex-direction:column;gap:1px}
+.railnav button{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;
+  font-size:13.5px;color:var(--dim);text-align:left;transition:background var(--t),color var(--t);
+}
+.railnav button:hover{background:var(--card);color:var(--crema)}
+.railnav button[aria-current="true"]{background:var(--card-2);color:var(--crema);font-weight:600}
+.railnav .ico{width:15px;flex:none;color:var(--dim-2);display:grid;place-items:center}
+.railnav button[aria-current="true"] .ico{color:var(--gold)}
+.railnav .pip{
+  margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim-2);
+}
+
+.content{padding:26px 30px 90px;max-width:1180px}
+.page-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.page-head h1{font-size:23px;font-weight:700;letter-spacing:-.01em}
+.page-head p{color:var(--dim);font-size:13.5px;margin-top:4px;max-width:62ch}
+.page-head .spacer{margin-left:auto}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r);
+  font-size:13.5px;font-weight:600;border:1px solid transparent;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t),transform 90ms;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--gold);color:#241d14;box-shadow:0 2px 0 var(--gold-deep)}
+.btn-primary:hover{background:var(--gold-hot)}
+.btn-ghost{border-color:var(--line);color:var(--crema);background:var(--card)}
+.btn-ghost:hover{border-color:var(--dim-2);background:var(--card-2)}
+.btn-quiet{color:var(--dim);padding:8px 10px}
+.btn-quiet:hover{color:var(--crema);background:var(--card)}
+.btn-danger{background:var(--red);color:#2a100c;box-shadow:0 2px 0 var(--red-deep)}
+.btn-danger:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+
+/* ── summary strip ──────────────────────────────────────────────────────── */
+.summary{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:18px;
+}
+.stat{
+  display:block;width:100%;text-align:left;padding:13px 15px;border-radius:var(--r-lg);
+  background:var(--card);border:1px solid var(--line);
+  transition:border-color var(--t),background var(--t);
+}
+.stat:hover{border-color:var(--dim-2)}
+.stat[aria-pressed="true"]{border-color:var(--gold);background:var(--card-2)}
+.stat .n{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12.5px;color:var(--dim);margin-top:3px;display:flex;align-items:center;gap:6px}
+.stat.on .n{color:var(--green)}
+.stat.off .n{color:var(--red)}
+.stat.never .n{color:var(--dim-2)}
+.stat.all .n{color:var(--crema)}
+.answer{
+  margin-bottom:18px;padding:12px 15px;border-radius:var(--r-lg);
+  background:linear-gradient(90deg,rgb(232 185 60 / 8%),transparent 70%);
+  border:1px solid var(--line);border-left:2px solid var(--gold);
+  font-size:13.5px;color:var(--crema);
+}
+.answer b{font-weight:600}
+.answer .mono{color:var(--gold-hot)}
+
+/* ── toolbar ────────────────────────────────────────────────────────────── */
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;
+}
+.search{
+  position:relative;flex:1 1 250px;min-width:190px;
+}
+.search input{
+  width:100%;padding:8px 11px 8px 32px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);color:var(--crema);
+  font:inherit;font-size:13.5px;transition:border-color var(--t);
+}
+.search input::placeholder{color:var(--dim-2)}
+.search input:focus{border-color:var(--gold-deep);outline:none}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim-2)}
+.sel{position:relative}
+.sel select{
+  appearance:none;padding:8px 28px 8px 11px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);color:var(--crema);
+  font:inherit;font-size:13.5px;cursor:pointer;transition:border-color var(--t);
+}
+.sel select:hover{border-color:var(--dim-2)}
+.sel::after{
+  content:"";position:absolute;right:11px;top:50%;width:5px;height:5px;pointer-events:none;
+  border-right:1.5px solid var(--dim-2);border-bottom:1.5px solid var(--dim-2);
+  transform:translateY(-70%) rotate(45deg);
+}
+.sel select option{background:var(--card-2)}
+
+/* ── feature list ───────────────────────────────────────────────────────── */
+.listcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.listhead{
+  display:flex;align-items:center;gap:12px;padding:9px 16px;
+  border-bottom:1px solid var(--line);background:var(--roast-2);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);font-weight:600;
+}
+.listhead .h-state{width:190px;flex:none}
+.listhead .h-meta{width:150px;flex:none}
+.listhead .h-act{width:96px;flex:none;text-align:right}
+
+.grp{
+  padding:8px 16px;background:var(--roast-2);border-bottom:1px solid var(--line-soft);
+  border-top:1px solid var(--line);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600;
+  display:flex;align-items:center;gap:8px;
+}
+.grp .cnt{font-family:var(--mono);color:var(--dim-2);letter-spacing:0;text-transform:none;font-size:11.5px}
+.grp .bar{width:3px;height:12px;border-radius:2px;background:var(--dim-2)}
+.grp.on .bar{background:var(--green)}
+.grp.off .bar{background:var(--red)}
+
+.row{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;width:100%;text-align:left;
+  border-bottom:1px solid var(--line-soft);transition:background var(--t);position:relative;
+}
+.row:last-child{border-bottom:none}
+.row:hover{background:var(--card-2)}
+.row-main{flex:1 1 auto;min-width:0;cursor:pointer}
+.row-key{
+  font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--crema);
+  display:flex;align-items:center;gap:8px;
+}
+.row:hover .row-key{color:var(--gold-hot)}
+.row-desc{
+  font-size:12.5px;color:var(--dim);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60ch;
+}
+.row-state{width:190px;flex:none}
+.row-meta{width:150px;flex:none;display:flex;gap:6px;flex-wrap:wrap}
+.row-act{width:96px;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:6px}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  font-size:12px;font-weight:600;border:1px solid;
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.pill.on{color:var(--green);border-color:var(--green-deep);background:rgb(127 208 105 / 10%)}
+.pill.on .dot{background:var(--green)}
+.pill.off{color:var(--red);border-color:var(--red-deep);background:rgb(232 106 94 / 10%)}
+.pill.off .dot{background:var(--red)}
+.pill.never{color:var(--dim);border-color:var(--line);border-style:dashed;background:transparent}
+.pill.never .dot{background:var(--dim-2)}
+.state-detail{font-size:11.5px;color:var(--dim-2);margin-top:3px;font-family:var(--mono)}
+
+.tag{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:5px;
+  font-size:11.5px;border:1px solid var(--line);color:var(--dim);background:var(--roast-2);
+  white-space:nowrap;
+}
+.tag.kill{color:var(--red);border-color:var(--red-deep)}
+.tag.risk-high{color:var(--gold-hot);border-color:var(--gold-deep)}
+.tag.unclassified{border-style:dashed;color:var(--dim-2)}
+
+/* the switch — three states, because Golden has three */
+.sw{
+  width:38px;height:21px;border-radius:999px;position:relative;flex:none;
+  border:1px solid var(--line);background:var(--roast-2);transition:background var(--t),border-color var(--t);
+}
+.sw::after{
+  content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:var(--dim-2);transition:transform var(--t),background var(--t);
+}
+.sw:hover{border-color:var(--dim-2)}
+.sw.on{background:var(--green-deep);border-color:var(--green)}
+.sw.on::after{transform:translateX(17px);background:var(--green)}
+.sw.off{background:rgb(232 106 94 / 14%);border-color:var(--red-deep)}
+.sw.off::after{background:var(--red)}
+.sw.never{border-style:dashed;background:transparent}
+.sw.never::after{background:transparent;border:1.5px dashed var(--dim-2);width:15px;height:15px}
+
+.kebab{
+  width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--dim-2);
+  transition:background var(--t),color var(--t);
+}
+.kebab:hover{background:var(--card-3);color:var(--crema)}
+
+.menu{
+  position:fixed;z-index:60;min-width:214px;padding:5px;
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-hi);
+}
+.menu button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;
+  font-size:13px;text-align:left;color:var(--crema);transition:background var(--t);
+}
+.menu button:hover{background:var(--card-3)}
+.menu button.danger{color:var(--red)}
+.menu hr{border:none;border-top:1px solid var(--line);margin:4px 0}
+
+.empty{padding:44px 20px;text-align:center;color:var(--dim)}
+.empty b{display:block;color:var(--crema);font-size:15px;margin-bottom:5px;font-weight:600}
+
+/* ── modal ──────────────────────────────────────────────────────────────── */
+.scrim{
+  position:fixed;inset:0;z-index:70;background:rgb(8 6 4 / 66%);
+  display:flex;align-items:flex-start;justify-content:center;padding:44px 20px;overflow-y:auto;
+  animation:fade 120ms ease-out;
+}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{
+  width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-hi);overflow:hidden;
+  animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.modal.wide{max-width:900px}
+.modal.narrow{max-width:460px}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px}
+.modal-head h2{font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.modal-head h2 .k{font-family:var(--mono);font-size:15px}
+.modal-head .sub{color:var(--dim);font-size:12.5px;margin-top:4px}
+.x{
+  margin-left:auto;width:28px;height:28px;border-radius:6px;display:grid;place-items:center;
+  color:var(--dim-2);flex:none;transition:background var(--t),color var(--t);
+}
+.x:hover{background:var(--card-3);color:var(--crema)}
+.modal-tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.modal-tabs::-webkit-scrollbar{display:none}
+.modal-tab{
+  padding:9px 11px;font-size:13px;color:var(--dim);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color var(--t),border-color var(--t);
+}
+.modal-tab:hover{color:var(--crema)}
+.modal-tab[aria-selected="true"]{color:var(--crema);border-bottom-color:var(--gold);font-weight:500}
+.modal-body{padding:20px}
+.modal-foot{
+  display:flex;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--line);
+  background:var(--roast-2);
+}
+.modal-foot .note{font-size:12px;color:var(--dim-2);margin-right:auto;max-width:40ch}
+
+.field{margin-bottom:20px}
+.field:last-child{margin-bottom:0}
+.field>.lab{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;display:block;margin-bottom:8px;
+}
+.field .hint{font-size:12.5px;color:var(--dim);margin-top:7px;max-width:64ch}
+
+.seg{display:inline-flex;padding:3px;background:var(--roast-2);border:1px solid var(--line);border-radius:9px;gap:3px}
+.seg button{
+  padding:7px 16px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--dim);
+  transition:background var(--t),color var(--t);
+}
+.seg button:hover{color:var(--crema)}
+.seg button[aria-pressed="true"]{background:var(--card-3);color:var(--crema)}
+.seg button.yes[aria-pressed="true"]{background:var(--green-deep);color:var(--green)}
+.seg button.no[aria-pressed="true"]{background:rgb(232 106 94 / 18%);color:var(--red)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--roast-2);
+  font-size:12.5px;color:var(--dim);transition:all var(--t);
+}
+.chip:hover{border-color:var(--dim-2);color:var(--crema)}
+.chip[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 12%);color:var(--gold-hot);font-weight:600}
+
+.picklist{display:flex;flex-direction:column;gap:6px}
+.pick{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--roast-2);text-align:left;width:100%;
+  transition:border-color var(--t),background var(--t);
+}
+.pick:hover{border-color:var(--dim-2)}
+.pick[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 8%)}
+.pick .radio{
+  width:15px;height:15px;border-radius:50%;border:1.5px solid var(--dim-2);flex:none;
+  display:grid;place-items:center;transition:border-color var(--t);
+}
+.pick[aria-pressed="true"] .radio{border-color:var(--gold)}
+.pick[aria-pressed="true"] .radio::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.pick .t{display:block;font-size:13.5px;font-weight:500}
+.pick .t .mono{font-size:13px}
+.pick .d{display:block;font-size:12px;color:var(--dim-2);margin-top:2px;line-height:1.45}
+.pick .badge{
+  margin-left:auto;font-size:11px;padding:2px 8px;border-radius:999px;
+  border:1px solid var(--gold-deep);color:var(--gold);white-space:nowrap;
+}
+
+.envtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.envtable th{
+  text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;padding:0 12px 8px 0;border-bottom:1px solid var(--line);
+}
+.envtable td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.envtable tr:last-child td{border-bottom:none}
+.envtable .who{font-size:12px;color:var(--dim-2);margin-top:3px}
+.envtable td:last-child{padding-right:0;text-align:right}
+.envname{display:flex;align-items:center;gap:8px;font-weight:600}
+.here{font-size:10.5px;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:1px 7px;font-weight:600}
+
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl{display:flex;gap:13px;padding:0 0 18px;position:relative}
+.tl:last-child{padding-bottom:0}
+.tl::before{
+  content:"";position:absolute;left:6px;top:16px;bottom:0;width:1px;background:var(--line);
+}
+.tl:last-child::before{display:none}
+.tl .dot{
+  width:13px;height:13px;border-radius:50%;flex:none;margin-top:3px;z-index:1;
+  border:2px solid var(--roast);background:var(--dim-2);
+}
+.tl.on .dot{background:var(--green)}
+.tl.off .dot{background:var(--red)}
+.tl.ver .dot{background:var(--blue)}
+.tl .t{font-size:13.5px}
+.tl .t b{font-weight:600}
+.tl .m{font-size:12px;color:var(--dim-2);margin-top:3px;font-family:var(--mono)}
+.tl .reason{
+  display:inline-block;margin-top:6px;font-size:12px;color:var(--dim);
+  border-left:2px solid var(--line);padding-left:9px;
+}
+
+.bars{display:flex;align-items:flex-end;gap:3px;height:88px;margin-top:6px}
+.bars i{flex:1;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:2px 2px 0 0;min-height:2px}
+.bars i.dim{background:var(--card-3)}
+.barscale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--dim-2);margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.kpi{padding:12px 14px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line)}
+.kpi .n{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .k{font-size:11.5px;color:var(--dim-2);margin-top:2px}
+
+.inline-edit{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r);
+  background:var(--roast-2);border:1px solid var(--line);
+}
+.inline-edit .val{flex:1;font-size:13.5px;line-height:1.55}
+.inline-edit input{
+  flex:1;background:var(--card);border:1px solid var(--gold-deep);border-radius:6px;
+  padding:7px 10px;color:var(--crema);font:inherit;font-size:13.5px;
+}
+.inline-edit input:focus{outline:none;border-color:var(--gold)}
+.note-box{
+  padding:11px 13px;border-radius:var(--r);background:var(--roast-2);border:1px dashed var(--line);
+  font-size:12.5px;color:var(--dim-2);line-height:1.55;
+}
+.note-box .lab2{
+  display:block;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim-2);font-weight:600;margin-bottom:6px;
+}
+
+.rule{
+  display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:11px;border-radius:var(--r);
+  background:var(--roast-2);border:1px solid var(--line);margin-bottom:8px;
+}
+.rule .as{font-size:12.5px;color:var(--dim-2);padding:0 2px}
+.rule .sel select{padding:6px 26px 6px 9px;font-size:13px}
+.rule .rm{margin-left:auto;color:var(--dim-2);padding:4px 6px;border-radius:5px}
+.rule .rm:hover{color:var(--red);background:var(--card-3)}
+.slider{display:flex;align-items:center;gap:13px}
+.slider input[type=range]{flex:1;accent-color:var(--gold);height:4px}
+.slider .v{font-family:var(--mono);font-size:15px;font-weight:600;width:52px;text-align:right;color:var(--gold-hot)}
+
+.callout{
+  display:flex;gap:11px;padding:13px 15px;border-radius:var(--r);font-size:13px;line-height:1.55;
+  background:rgb(232 106 94 / 8%);border:1px solid var(--red-deep);color:var(--crema);
+}
+.callout.info{background:rgb(109 179 232 / 7%);border-color:#2f4d63}
+.callout .ico{flex:none;color:var(--red);margin-top:1px}
+.callout.info .ico{color:var(--blue)}
+.callout b{font-weight:600}
+
+/* compare matrix */
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th{
+  position:sticky;top:0;background:var(--roast-2);z-index:2;
+  text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);
+}
+.matrix th.env{text-align:center;width:132px}
+.matrix td{padding:9px 12px;border-bottom:1px solid var(--line-soft)}
+.matrix td.c{text-align:center}
+.matrix tbody tr:hover{background:var(--card-2)}
+.matrix .key{font-family:var(--mono);font-size:13px}
+.cell{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px}
+.cell.on{background:rgb(127 208 105 / 16%);color:var(--green)}
+.cell.off{background:rgb(232 106 94 / 16%);color:var(--red)}
+.cell.never{color:var(--dim-2);border:1px dashed var(--line)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+
+/* wizard */
+.steps{display:flex;gap:0;margin-bottom:22px}
+.step{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim-2);flex:1}
+.step .n{
+  width:21px;height:21px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--mono);font-size:11px;flex:none;
+}
+.step[data-on="true"]{color:var(--crema)}
+.step[data-on="true"] .n{border-color:var(--gold);color:var(--gold);background:rgb(232 185 60 / 10%)}
+.step[data-done="true"] .n{background:var(--gold);border-color:var(--gold);color:#241d14}
+.step .line{flex:1;height:1px;background:var(--line);margin:0 4px}
+.step:last-child .line{display:none}
+.keyfield{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--roast-2);overflow:hidden}
+.keyfield .sel select{border:none;border-right:1px solid var(--line);border-radius:0;background:var(--card-2);font-family:var(--mono)}
+.keyfield input{
+  flex:1;background:transparent;border:none;padding:9px 11px;color:var(--crema);
+  font-family:var(--mono);font-size:13.5px;
+}
+.keyfield input:focus{outline:none}
+.keyfield .suffix{padding:0 12px;font-family:var(--mono);font-size:13.5px;color:var(--dim-2)}
+.cardpick{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cardpick .pick{flex-direction:column;align-items:flex-start;gap:5px;padding:13px}
+.cardpick .pick .radio{display:none}
+.review{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.review div{display:flex;gap:12px;padding:10px 13px;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+.review div:last-child{border-bottom:none}
+.review .k{width:112px;flex:none;color:var(--dim-2);font-size:12.5px}
+
+.placeholder{
+  padding:40px 30px;border-radius:var(--r-lg);border:1px dashed var(--line);background:var(--card);
+  text-align:center;
+}
+.placeholder h3{font-size:17px;font-weight:600;margin-bottom:7px}
+.placeholder p{color:var(--dim);font-size:13.5px;max-width:56ch;margin:0 auto}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;
+  display:flex;align-items:center;gap:10px;padding:11px 17px;border-radius:999px;
+  background:var(--card-2);border:1px solid var(--line);box-shadow:var(--shadow-hi);
+  font-size:13.5px;animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.toast .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
+.toast button{color:var(--gold);font-weight:600;font-size:13px}
+
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.diff>div{padding:16px 18px}
+.diff>div:first-child{border-right:1px solid var(--line);background:rgb(232 106 94 / 5%)}
+.diff h4{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:11px;
+}
+.diff>div:first-child h4{color:var(--red)}
+.diff>div:last-child h4{color:var(--green)}
+.diff li{font-size:13px;padding:5px 0;border-bottom:1px solid var(--line-soft);color:var(--dim)}
+.diff li:last-child{border-bottom:none}
+.diff li b{color:var(--crema);font-weight:500}
+.diff li .mono{font-size:12.5px}
+.wordlist{display:flex;flex-direction:column;gap:0;margin-top:16px}
+.wordlist div{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.wordlist div:last-child{border-bottom:none}
+.wordlist .was{flex:1;color:var(--dim-2);text-decoration:line-through;text-decoration-color:var(--red-deep)}
+.wordlist .arw{color:var(--dim-2)}
+.wordlist .now{flex:1;color:var(--crema);font-weight:500}
+
+@media (max-width:900px){
+  .frame{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+  .content{padding:20px 16px 70px}
+  .listhead{display:none}
+  .row{flex-wrap:wrap}
+  .row-main{flex:1 1 100%}
+  .row-state,.row-meta{width:auto}
+  .row-act{width:auto;margin-left:auto}
+  .diff{grid-template-columns:1fr}
+  .diff>div:first-child{border-right:none;border-bottom:1px solid var(--line)}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEASURE — the chart vocabulary. Hand-rolled SVG on the token set (epic D7):
+   no dependency, no bundle cost, no second theming system.
+
+   The colour rules below were COMPUTED, not chosen (dataviz validator, dark,
+   surface --roast-2):
+     · magnitude  → --gold alone, light→dark. Never a rainbow.
+     · 2-way identity → --gold + --blue. CVD ΔE 23.4 (protan) / 23.2 (tritan),
+       normal-vision 25.3. Safe.
+     · status → --green / --red, ALWAYS with a word and a shape. Never colour
+       alone. deutan ΔE 9.9 is above the floor but only just, and red/green is
+       the classic CVD pair — the same rule the state pill already follows.
+     · NEVER four categorical hues. The brand's four accents fail as a 4-way
+       set. Beyond two series → small multiples, or fold into "Other".
+     · NEVER a dual axis. The North Star and its inputs are different scales,
+       so they are small multiples, not two lines on one plot.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* the hero number — one metric, stated once, at the top of its own page */
+.hero{display:flex;align-items:flex-end;gap:18px;margin-bottom:4px}
+.hero .n{
+  font-family:var(--mono);font-size:44px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.hero .delta{display:flex;align-items:center;gap:6px;font-size:13.5px;padding-bottom:5px}
+.hero .delta.up{color:var(--green)}
+.hero .delta.down{color:var(--red)}
+.hero .delta .arw{font-family:var(--mono);font-size:12px}
+.hero-sub{font-size:12.5px;color:var(--dim-2);margin-bottom:18px}
+
+/* plot frame */
+.plot{position:relative;margin-top:4px}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.plot .grid{stroke:var(--line-soft);stroke-width:1}
+.plot .axis{font-family:var(--mono);font-size:10.5px;fill:var(--dim-2)}
+.plot .line{fill:none;stroke:var(--gold);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.plot .area{fill:url(#goldfade)}
+.plot .endpt{fill:var(--gold-hot);stroke:var(--roast);stroke-width:2}
+.plot .target{stroke:var(--dim-2);stroke-width:1;stroke-dasharray:3 3;fill:none}
+.plot .hit{fill:transparent;cursor:crosshair}
+.plot .cross{stroke:var(--dim-2);stroke-width:1;pointer-events:none}
+.tip{
+  position:absolute;pointer-events:none;background:var(--card-2);border:1px solid var(--line);
+  border-radius:var(--r);padding:7px 10px;font-size:12px;box-shadow:var(--shadow);
+  white-space:nowrap;transform:translate(-50%,-118%);z-index:5;
+}
+.tip b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px}
+.tip .w{display:block;color:var(--dim-2);font-size:11px;margin-top:1px}
+
+/* small multiples — the ONLY honest way to show inputs on different scales */
+.smalls{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.small{padding:13px 15px 11px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line)}
+.small .k{font-size:11.5px;color:var(--dim-2);margin-bottom:6px;line-height:1.35}
+.small .v{display:flex;align-items:baseline;gap:8px}
+.small .v b{font-family:var(--mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.small .v span{font-size:12px}
+.small .v span.up{color:var(--green)} .small .v span.down{color:var(--red)}
+.small .spark{margin-top:8px;height:30px}
+.small .spark svg{display:block;width:100%;height:30px}
+.small .spark path{fill:none;stroke:var(--gold);stroke-width:1.5;stroke-linejoin:round}
+.small .stale{margin-top:7px;font-size:11px;color:var(--dim-2);font-family:var(--mono)}
+
+/* the stage funnel — sequential, one hue, light→dark by position */
+.hbars{display:flex;flex-direction:column;gap:11px}
+.hbar .t{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px}
+.hbar .t .nm{font-size:13.5px}
+.hbar .t .nm .stagenum{
+  font-family:var(--mono);font-size:11px;color:var(--dim-2);margin-right:8px;
+}
+.hbar .t .num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--dim)}
+.hbar .track{height:26px;border-radius:5px;background:var(--roast-2);overflow:hidden;position:relative}
+.hbar .fill{height:100%;border-radius:5px 3px 3px 5px;transition:width var(--t)}
+.hbar .drop{
+  margin-top:5px;font-size:11.5px;color:var(--dim-2);display:flex;align-items:center;gap:6px;
+}
+.hbar .drop .arw{font-family:var(--mono);color:var(--red)}
+
+/* success / failure — status colours, never alone: each half carries its word */
+.splitbar{display:flex;height:22px;border-radius:5px;overflow:hidden;gap:2px;background:var(--roast-2)}
+.splitbar i{display:block;height:100%}
+.splitbar i.ok{background:var(--green-deep);border-bottom:2px solid var(--green)}
+.splitbar i.bad{background:var(--red-deep);border-bottom:2px solid var(--red)}
+.splitkey{display:flex;gap:16px;margin-top:7px;font-size:12px;color:var(--dim)}
+.splitkey span{display:flex;align-items:center;gap:6px}
+.splitkey i{width:9px;height:9px;border-radius:2px;flex:none}
+.splitkey i.ok{background:var(--green)} .splitkey i.bad{background:var(--red)}
+.splitkey b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+
+/* the two-way identity tag — gold / blue, the only validated pair */
+.kind{
+  display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+  padding:3px 9px;border-radius:999px;border:1px solid;line-height:1.5;
+}
+.kind::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.kind.resilience{color:var(--gold);border-color:var(--gold-deep);background:rgb(232 185 60 / 8%)}
+.kind.security{color:var(--blue);border-color:#2f5570;background:rgb(109 179 232 / 9%)}
+
+/* breadcrumb back to the thing a page is a view OF */
+.crumbrow{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--dim-2);margin-bottom:14px}
+.crumbrow button{color:var(--gold);font-size:12.5px}
+.crumbrow button:hover{color:var(--gold-hot)}
+.crumbrow .sep{color:var(--line)}
+
+/* version list — the same shape the flag versions already use */
+.vers{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border-radius:var(--r);overflow:hidden}
+.vers .v{display:flex;align-items:center;gap:12px;padding:12px 15px;background:var(--roast-2);font-size:13px}
+.vers .v .n{font-family:var(--mono);font-weight:500;width:34px;flex:none;color:var(--dim)}
+.vers .v .who{color:var(--dim-2);font-size:12px;margin-left:auto;font-family:var(--mono)}
+
+@media (max-width:900px){
+  .smalls{grid-template-columns:1fr}
+  .hero .n{font-size:34px}
+}
+
+/* `.hint` was only styled inside `.field`. These screens use it as a page-level
+   footnote too, so it gets a scope-free rule rather than a wrapper div. */
+.hint{font-size:12.5px;color:var(--dim);margin-top:7px;max-width:64ch}
+
+/* A row-level "nothing yet" line. `.empty` is the centred full-card state and
+   reads as a broken column when it sits inside a row. */
+.neverrun{font-size:12.5px;color:var(--dim-2);padding:4px 0 2px}
+.neverrun b{color:var(--dim);font-weight:600}
+
+/* A stale input is marked with a dot, not a warning glyph — the drift guard bans
+   pictographs inside /app, and "colour plus a shape" is the rule this design
+   already follows on every state pill. */
+.small .stale{display:flex;align-items:center;gap:6px}
+.warnpip{width:6px;height:6px;border-radius:50%;background:var(--gold-hot);flex:none}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BATCH 2 — Ship & Setup completion, and Tasks folded into Today.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── the band: Today's organising device ──────────────────────────────────
+   Today is one question — "who is this waiting on?" — asked three times.
+   The band is what makes that readable, and it is the SAME summary-and-expand
+   interaction already approved on the dormant feature group. Not a new
+   pattern; the approved one, used a second time. */
+.band{margin-bottom:26px}
+.band > h3{
+  display:flex;align-items:baseline;gap:10px;font-size:15px;font-weight:600;
+  margin-bottom:4px;
+}
+.band > h3 .who{
+  font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 8px;border-radius:999px;border:1px solid;
+}
+.band > h3 .who.you{color:var(--gold);border-color:var(--gold-deep);background:rgb(232 185 60 / 8%)}
+.band > h3 .who.agent{color:var(--blue);border-color:#2f5570;background:rgb(109 179 232 / 9%)}
+.band > h3 .who.done{color:var(--dim-2);border-color:var(--line);background:var(--card)}
+.band > .sub{font-size:13px;color:var(--dim-2);margin-bottom:12px;max-width:70ch}
+
+/* a task row — the same row grammar as a feature row, one line of meaning each */
+.task{
+  display:flex;align-items:flex-start;gap:14px;padding:14px 16px;
+  border-bottom:1px solid var(--line-soft);
+}
+.task:last-child{border-bottom:none}
+.task .sig{
+  width:7px;height:7px;border-radius:50%;flex:none;margin-top:7px;
+}
+.task .sig.error{background:var(--red)}
+.task .sig.friction{background:var(--gold)}
+.task .b{flex:1;min-width:0}
+.task .t{font-size:13.5px;font-weight:500;line-height:1.4}
+.task .m{font-size:12px;color:var(--dim-2);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.task .m .sep{color:var(--line)}
+.task .m .mono{font-size:11.5px}
+.task .act{flex:none;display:flex;gap:7px;align-items:center}
+.task .by{
+  flex:none;font-size:11.5px;color:var(--dim-2);font-family:var(--mono);
+  width:150px;text-align:right;
+}
+.task .by b{display:block;color:var(--blue);font-weight:500}
+.task .by b.human{color:var(--gold)}
+
+/* the agent's own line — the product's whole pitch, stated where it is true */
+.agentline{
+  display:flex;align-items:center;gap:11px;padding:11px 15px;
+  border-radius:var(--r);background:rgb(109 179 232 / 6%);border:1px solid #2f5570;
+  font-size:13px;margin-bottom:12px;
+}
+.agentline .pulse{
+  width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none;
+  box-shadow:0 0 0 0 rgb(109 179 232 / 55%);animation:pulse 2.4s infinite;
+}
+@keyframes pulse{
+  70%{box-shadow:0 0 0 7px rgb(109 179 232 / 0%)}
+  100%{box-shadow:0 0 0 0 rgb(109 179 232 / 0%)}
+}
+.agentline b{font-weight:600}
+.agentline .when{margin-left:auto;color:var(--dim-2);font-size:11.5px;font-family:var(--mono)}
+
+/* variant comparison — control vs treatment. gold + blue is the ONLY validated
+   two-way pair in this palette (CVD ΔE 23.4); a third variant is a third row,
+   never a third hue. */
+.vbars{display:flex;flex-direction:column;gap:16px}
+.vbar .t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:12px}
+.vbar .t .nm{font-size:13.5px;display:flex;align-items:center;gap:8px}
+.vbar .t .nm i{width:9px;height:9px;border-radius:2px;flex:none}
+.vbar .t .nm i.control{background:var(--dim-2)}
+.vbar .t .nm i.treatment{background:var(--blue)}
+.vbar .t .num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.vbar .track{height:24px;border-radius:5px;background:var(--roast-2);overflow:hidden}
+.vbar .fill{height:100%;border-radius:5px}
+.vbar .fill.control{background:linear-gradient(90deg,#6b6151,#4a4335)}
+.vbar .fill.treatment{background:linear-gradient(90deg,var(--blue),#3d6f96)}
+.vbar .foot{margin-top:5px;font-size:11.5px;color:var(--dim-2)}
+
+/* a confidence interval, drawn — a number ± a number is not a range you can see */
+.ci{margin-top:4px;height:26px;position:relative}
+.ci .axis0{position:absolute;top:0;bottom:0;width:1px;background:var(--dim-2)}
+.ci .rng{position:absolute;top:9px;height:8px;border-radius:4px;background:rgb(109 179 232 / 35%);border:1px solid var(--blue)}
+.ci .pt{position:absolute;top:8px;width:10px;height:10px;border-radius:50%;background:var(--blue);border:2px solid var(--roast-2);margin-left:-5px}
+.cikey{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--dim-2);margin-top:3px}
+
+/* blockers — why you cannot decide yet, named one per line */
+.blockers{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.blocker{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--dim)}
+/* WARNING — NOT `.x` — the prototype already owns `.x` as the modal's absolutely-positioned
+   close button, and a bare `.blocker .x` inherits its `position:absolute` and flies
+   to the corner. Same class-collision family as the landing rules leaking into the
+   console through `.tag` and `.note`; the fix is a name of its own, not a patch. */
+.blocker .no{
+  position:static;color:var(--red);font-family:var(--mono);flex:none;line-height:1.5;
+  width:auto;height:auto;background:none;border:none;
+}
+.blocker b{color:var(--crema);font-weight:600}
+
+/* the decision — five named outcomes, from the contract, not invented */
+.outcomes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.outcome{
+  padding:9px 14px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--card);font-size:13px;transition:all var(--t);
+}
+.outcome:hover:not([disabled]){border-color:var(--gold-deep);color:var(--crema);background:var(--card-2)}
+.outcome[disabled]{opacity:.4;cursor:not-allowed}
+.outcome.primary{border-color:var(--gold-deep);color:var(--gold)}
+
+/* delivery health — reuses the drill split bar exactly */
+.health{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim-2)}
+.health .splitbar{width:120px;flex:none}
+
+@media (max-width:900px){
+  .task{flex-wrap:wrap}
+  .task .by{width:auto;text-align:left;margin-left:21px}
+}
+
+.seeall{font-size:13px;color:var(--gold);padding:0;border-bottom:1px solid rgb(232 185 60 / 30%)}
+.seeall:hover{color:var(--gold-hot);border-bottom-color:var(--gold-hot)}
+
+/* A nonzero failure that rounds to zero pixels reads as "nothing failed" — which
+   is the opposite of true. 3 of 1,843 is 0.16% and would draw at under a pixel.
+   The count beside it is the precise number; the bar's job is only to say that a
+   failure exists at all. (dataviz: bars carry a minimum mark size.) */
+.splitbar i.bad{min-width:4px}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BATCH 3 — the Roadmap hub.
+
+   ── Where the hub sits, and why it is not a fifth section ─────────────────
+   The console answers "how is the PRODUCT doing?" — Today, Measure, Ship,
+   Setup are one loop about one object, a feature. The hub answers "how is the
+   WORK doing?" — idea → seed → epic → sprint → shipped. Two loops, two
+   audiences, the same project.
+
+   So the hub is a PEER VIEW of the project, not a fifth destination:
+     · Four destinations survives (the thing the last epic is named for).
+     · The switch lives in the PROJECT SWITCHER menu — the project-scope
+       control — so tier 1 stays "switcher · ⌘K · account, nothing else"
+       (CONSOLE-CONTRACT tier-1 rule, unbroken).
+     · ⌘K reaches every hub surface, because the epic's own outcome test is
+       "every surface in three clicks or one ⌘K" and the hub is a surface.
+     · Going back is the SAME menu. Symmetry, not a special back button.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.menu-div{height:1px;background:var(--line);margin:6px 0}
+.menu-lab{
+  display:block;padding:6px 12px 4px;font:600 10px/1 var(--mono);
+  letter-spacing:.13em;text-transform:uppercase;color:var(--dim-2);
+}
+
+/* ── the build-order track ────────────────────────────────────────────────
+   27 epics in one sequence. Twenty-seven nodes side by side is a barcode, so
+   the SHAPE is a progress track (where are we in the sequence) and the NAMES
+   live in the list beneath it. One hue, light→dark by state — a sequence is
+   magnitude, not identity. */
+.track{display:flex;gap:2px;height:34px;margin:4px 0 10px}
+.track i{flex:1;border-radius:2px;position:relative;min-width:3px}
+.track i.shipped{background:var(--gold-deep)}
+.track i.shipped.recent{background:var(--gold)}
+.track i.building{background:var(--gold-hot);box-shadow:0 0 0 0 rgb(255 212 94 / 55%);animation:pulse 2.4s infinite}
+.track i.queued{background:var(--card-3);border:1px dashed var(--line)}
+.trackkey{display:flex;gap:18px;font-size:12px;color:var(--dim-2);margin-bottom:2px;flex-wrap:wrap}
+.trackkey span{display:flex;align-items:center;gap:7px}
+.trackkey i{width:10px;height:10px;border-radius:2px;flex:none}
+.trackkey i.shipped{background:var(--gold-deep)}
+.trackkey i.building{background:var(--gold-hot)}
+.trackkey i.queued{background:var(--card-3);border:1px dashed var(--line)}
+.trackkey b{color:var(--dim);font-family:var(--mono);font-weight:500}
+
+/* an epic row — the same row grammar as a feature row */
+.epic{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.epic:last-child{border-bottom:none}
+.epic:hover{background:var(--card)}
+.epic .ord{
+  font-family:var(--mono);font-size:12px;color:var(--dim-2);width:30px;flex:none;
+  font-variant-numeric:tabular-nums;text-align:right;
+}
+.epic .nm{flex:1;min-width:0}
+.epic .nm b{display:block;font-size:13.5px;font-weight:500;line-height:1.4}
+.epic .nm span{display:block;font-size:12px;color:var(--dim-2);margin-top:2px}
+.epic .prog{width:120px;flex:none;font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+.epic .st{width:132px;flex:none;display:flex;justify-content:flex-end}
+
+/* sprint rows inside an epic */
+.sprints{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);border-radius:var(--r);overflow:hidden}
+.sprintrow{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--roast-2);font-size:13.5px}
+.sprintrow .n{font-family:var(--mono);color:var(--dim-2);width:26px;flex:none}
+.sprintrow .nm{flex:1;min-width:0}
+.sprintrow .bar{width:104px;flex:none;height:6px;border-radius:3px;background:var(--roast);overflow:hidden}
+.sprintrow .bar i{display:block;height:100%;background:var(--gold);border-radius:3px}
+.sprintrow .cnt{width:74px;flex:none;font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+
+/* ── horizon: destinations you light up ───────────────────────────────────
+   lit / partly lit / on the way is a SEQUENCE (how lit), not three identities
+   — so it is one hue at three strengths, never three hues. */
+.dests{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.dest{
+  padding:18px 20px 20px;border-radius:var(--r-lg);background:var(--roast-2);
+  border:1px solid var(--line);display:flex;flex-direction:column;gap:9px;
+}
+.dest[data-status="lit"]{border-color:var(--gold);background:linear-gradient(180deg,rgb(232 185 60 / 7%),transparent 55%),var(--roast-2)}
+.dest[data-status="partial"]{border-color:var(--gold-deep)}
+.dest[data-status="coming"]{border-style:dashed}
+.dest .h{display:flex;align-items:flex-start;gap:10px}
+.dest .h h4{flex:1;font-size:15px;font-weight:600;margin:0;line-height:1.3}
+.dest .lamp{
+  width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-family:var(--mono);font-size:11px;border:1px solid;
+}
+.dest[data-status="lit"] .lamp{color:var(--roast);background:var(--gold-hot);border-color:var(--gold-hot)}
+.dest[data-status="partial"] .lamp{color:var(--gold);background:rgb(232 185 60 / 15%);border-color:var(--gold-deep)}
+.dest[data-status="coming"] .lamp{color:var(--dim-2);background:none;border-color:var(--line);border-style:dashed}
+.dest .why{font-size:13px;color:var(--dim);line-height:1.5}
+.dest .lights{display:flex;flex-direction:column;gap:5px;margin-top:2px}
+.dest .lights li{font-size:12.5px;color:var(--dim-2);display:flex;gap:8px;align-items:baseline}
+.dest .lights li .tick{flex:none;display:inline-flex;align-items:center}
+.dest .lights li.on{color:var(--dim)}
+.dest .lights li.on .tick{color:var(--green)}
+.dest .lights li.off .tick{color:var(--dim-2)}
+.dest .none{font-size:12.5px;color:var(--dim-2);font-style:italic}
+
+/* the haze — ideas not yet on the road. Literally hazier. */
+.haze{margin-top:30px;padding-top:22px;border-top:1px dashed var(--line);opacity:.82}
+.haze h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.haze > p{font-size:13px;color:var(--dim-2);margin-bottom:14px;max-width:66ch}
+.hazelist{display:flex;flex-wrap:wrap;gap:8px}
+.hazeitem{
+  padding:8px 13px;border-radius:999px;border:1px dashed var(--line);
+  background:var(--roast-2);font-size:12.5px;color:var(--dim-2);
+}
+
+/* ── the report: a generated document, with its provenance on it ─────────── */
+.doc{max-width:70ch}
+.doc h2{font-size:17px;font-weight:600;margin:26px 0 8px;letter-spacing:-.01em}
+.doc h2:first-child{margin-top:0}
+.doc p{font-size:14px;color:var(--dim);line-height:1.68;margin-bottom:11px}
+.doc p strong{color:var(--crema);font-weight:600}
+.doc ul{display:flex;flex-direction:column;gap:7px;margin:10px 0 14px}
+.doc ul li{font-size:13.5px;color:var(--dim);padding-left:17px;position:relative;line-height:1.55}
+.doc ul li::before{content:"—";position:absolute;left:0;color:var(--gold-deep);font-family:var(--mono);font-size:12px}
+.prov{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;border-radius:var(--r);
+  background:var(--roast-2);border:1px solid var(--line);font-size:12.5px;color:var(--dim-2);margin-bottom:22px;
+}
+.prov b{color:var(--dim);font-weight:500;font-family:var(--mono)}
+.prov .sep{color:var(--line)}
+
+@media (max-width:900px){
+  .epic .prog,.epic .st{display:none}
+  .dests{grid-template-columns:1fr}
+}
+
+/* the switcher's view rows carry the same aria-current cue as everything else */
+.envmenu button[aria-current="true"]{background:var(--card-2);color:var(--crema)}
+/* No glyph here either — a CSS `content` string is still a character in a file
+   the guard reads. The cue is a dot, which is what every other aria-current in
+   this design already uses. */
+.envmenu button[aria-current="true"]::after{
+  content:"";width:6px;height:6px;border-radius:50%;background:var(--gold);
+  margin-left:8px;flex:none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BATCH 4 — the doors. The first screens anybody ever sees.
+
+   ── The rule this batch establishes ──────────────────────────────────────
+   CHROME APPEARS WHEN THERE IS SOMETHING TO NAVIGATE. Signed out there is no
+   project, no environment and no sections, so the three-tier console chrome
+   would be four rows of controls that do nothing. Three frames, one language:
+
+     · DOOR frame     — one centred column, no nav at all (login, signup)
+     · PUBLIC frame   — a slim bar: the mark, and at most one action
+                        (install, a shared report, the 404, talk)
+     · CONSOLE frame  — the three tiers, once you are inside
+
+   Same tokens, same type, same buttons, same honest empty and error states in
+   all three. Only the frame changes, and it changes for a reason you can say
+   in one sentence.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.doorlayer{position:fixed;inset:0;overflow-y:auto;background:var(--roast);z-index:40}
+
+/* ── the door frame ──────────────────────────────────────────────────────── */
+.door{min-height:100%;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:56px 24px 80px}
+.doorcard{width:100%;max-width:396px}
+.doorbrand{display:flex;align-items:center;gap:11px;margin-bottom:30px}
+.doorbrand .mark{width:32px;height:32px;border-radius:9px;font-size:12px}
+.doorbrand b{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.doorcard h1{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:7px}
+.doorcard > p{font-size:13.5px;color:var(--dim);margin-bottom:24px;line-height:1.55}
+.doorform{display:flex;flex-direction:column;gap:15px}
+.doorform label{display:block;font-size:12.5px;color:var(--dim);margin-bottom:6px;font-weight:500}
+.doorform input{
+  width:100%;padding:11px 13px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--roast-2);color:var(--crema);font:inherit;font-size:14px;
+  transition:border-color var(--t),background var(--t);
+}
+.doorform input:focus{outline:none;border-color:var(--gold-deep);background:var(--card)}
+.doorform input[aria-invalid="true"]{border-color:var(--red)}
+.doorform .btn{width:100%;justify-content:center;height:42px}
+.fielderr{display:flex;align-items:flex-start;gap:8px;margin-top:7px;font-size:12.5px;color:var(--red)}
+.fielderr .pip{width:6px;height:6px;border-radius:50%;background:var(--red);flex:none;margin-top:5px}
+.doorfoot{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--dim-2);text-align:center}
+.doorfoot a,.doorfoot button{color:var(--gold);font-size:13px}
+.doornote{
+  margin-top:16px;padding:12px 14px;border-radius:var(--r);background:var(--roast-2);
+  border:1px solid var(--line);border-left:2px solid var(--gold);font-size:12.5px;color:var(--dim);
+  line-height:1.55;
+}
+.doornote b{color:var(--crema);font-weight:600}
+
+/* ── the public frame ────────────────────────────────────────────────────── */
+.pubbar{
+  display:flex;align-items:center;gap:12px;height:54px;padding:0 22px;
+  border-bottom:1px solid var(--line);background:var(--roast-2);position:sticky;top:0;z-index:2;
+}
+.pubbar b{font-size:14px;font-weight:600}
+.pubbar .sp{flex:1}
+.pubwrap{max-width:820px;margin:0 auto;padding:42px 24px 90px}
+.pubwrap.wide{max-width:1080px}
+.pubwrap h1{font-size:30px;font-weight:700;letter-spacing:-.022em;line-height:1.14;margin-bottom:10px;text-wrap:balance}
+.pubwrap > p.lede{font-size:15px;color:var(--dim);max-width:62ch;line-height:1.6;margin-bottom:26px}
+
+/* the demo banner — /install serves the DEMO project's token, by design
+   (AGENTS rule #2). The whole defect it caused was a signed-in operator
+   following a link here and getting somebody else's data, so this page's job
+   is to be UNMISTAKABLY the demo. */
+.demobar{
+  display:flex;align-items:flex-start;gap:11px;padding:13px 16px;border-radius:var(--r-lg);
+  background:rgb(109 179 232 / 7%);border:1px solid #2f5570;font-size:13.5px;color:var(--dim);
+  line-height:1.55;margin-bottom:24px;
+}
+.demobar .pip{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:none;margin-top:6px}
+.demobar b{color:var(--crema);font-weight:600}
+.demobar .go{margin-left:auto;flex:none}
+
+/* the 404 — one page for unknown, malformed, expired and revoked alike */
+.gone{max-width:520px;margin:96px auto 0;text-align:center}
+.gone .glyph{
+  width:56px;height:56px;margin:0 auto 22px;border-radius:16px;border:1px dashed var(--line);
+  display:grid;place-items:center;background:var(--roast-2);
+}
+.gone h1{font-size:23px;font-weight:700;margin-bottom:10px;letter-spacing:-.015em}
+.gone p{font-size:14px;color:var(--dim);line-height:1.62;margin-bottom:14px}
+.gone .acts{display:flex;gap:10px;justify-content:center;margin-top:24px}
+
+/* a shared report, read by somebody with no account */
+.sharehead{
+  display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:var(--r-lg);
+  background:var(--roast-2);border:1px solid var(--line);margin-bottom:26px;
+}
+.sharehead .b{flex:1;min-width:0}
+.sharehead .t{font-size:13.5px;font-weight:600;margin-bottom:3px}
+.sharehead .m{font-size:12.5px;color:var(--dim-2);line-height:1.5}
+.sharehead .ro{
+  flex:none;font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim-2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;
+}
+
+/* talk — one job, one control */
+.talkgrid{display:grid;grid-template-columns:1fr;gap:22px;margin-top:8px}
+@media (min-width:820px){.talkgrid{grid-template-columns:1fr 340px}}
+.talkslot{
+  border:1px dashed var(--line);border-radius:var(--r-lg);background:var(--roast-2);
+  min-height:340px;display:grid;place-items:center;text-align:center;padding:28px;
+}
+.talkslot span{font-size:13px;color:var(--dim-2);max-width:36ch;line-height:1.55}
+.talkaside{display:flex;flex-direction:column;gap:14px}
+.talkaside .item{padding:15px 17px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line)}
+.talkaside .item b{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px}
+.talkaside .item span{font-size:12.5px;color:var(--dim);line-height:1.55}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   experiments-for-humans · prototype additions
+   Everything below EXTENDS reference.css (inlined above, verbatim). Same tokens,
+   no new hues. Class prefix `x-` so a builder can tell new from approved.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root{color-scheme:dark}
+body{background:var(--roast);color:var(--crema)}
+.topbar{top:env(safe-area-inset-top,0px)}
+.rail{top:calc(98px + env(safe-area-inset-top,0px))}
+
+/* build-notes toggle in the top bar */
+.x-notes-btn{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:var(--card)}
+.x-notes-btn:hover{color:var(--crema);border-color:var(--dim-2)}
+.x-notes-btn .sw{width:26px;height:15px;border-radius:999px;background:var(--roast-2);border:1px solid var(--line);position:relative;transition:background var(--t)}
+.x-notes-btn .sw::after{content:"";position:absolute;top:1px;left:1px;width:11px;height:11px;border-radius:50%;background:var(--dim-2);transition:transform var(--t),background var(--t)}
+.x-notes-btn[aria-pressed="true"]{color:var(--gold-hot);border-color:var(--gold-deep)}
+.x-notes-btn[aria-pressed="true"] .sw{background:rgb(232 185 60 / 18%)}
+.x-notes-btn[aria-pressed="true"] .sw::after{transform:translateX(11px);background:var(--gold)}
+
+/* build note tag — the contract field a control fills */
+.bn{display:none;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:0;text-transform:none;
+  color:var(--gold-hot);background:rgb(232 185 60 / 9%);border:1px dashed var(--gold-deep);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:1px;white-space:nowrap}
+body.notes .bn{display:inline-block}
+.bn-block{display:none}
+body.notes .bn-block{display:block}
+
+/* ── the builder: a wide modal, two panes ─────────────────────────────── */
+.modal.x-builder{max-width:1140px}
+.x-head-key{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;color:var(--dim-2)}
+.x-head-key .mono{color:var(--dim);font-size:12px}
+.x-steps{display:flex;gap:4px;padding:0 20px 14px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.x-steps::-webkit-scrollbar{display:none}
+.x-step{display:flex;align-items:center;gap:8px;padding:7px 11px 7px 8px;border-radius:999px;font-size:12.5px;color:var(--dim);white-space:nowrap;border:1px solid transparent;transition:background var(--t),color var(--t),border-color var(--t)}
+.x-step:hover{color:var(--crema);background:var(--card-2)}
+.x-step .n{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;border:1px solid var(--line);color:var(--dim-2);flex:none}
+.x-step[data-ready="true"] .n{border-color:var(--gold-deep);color:var(--gold)}
+.x-step[aria-current="step"]{color:var(--crema);background:var(--card-3);border-color:var(--line);font-weight:600}
+.x-step[aria-current="step"] .n{background:var(--gold);border-color:var(--gold);color:#241d14}
+.x-step .warn{width:6px;height:6px;border-radius:50%;background:var(--red)}
+
+.x-panes{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+@media (min-width:980px){.x-panes.split{grid-template-columns:minmax(0,1fr) 360px}}
+.x-main{padding:22px 22px 26px;min-width:0}
+.x-main h3{font-size:19px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.x-main .x-lede{color:var(--dim);font-size:13.5px;margin:5px 0 22px;max-width:62ch}
+.x-side{border-top:1px solid var(--line);background:var(--roast-2);padding:20px}
+@media (min-width:980px){.x-side{border-top:none;border-left:1px solid var(--line)}}
+.x-side .rail-label{margin-bottom:10px}
+
+/* the filled-by-template notice */
+.x-filled{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);background:rgb(232 185 60 / 7%);border:1px solid var(--gold-deep);font-size:12.5px;color:var(--crema);margin-bottom:20px}
+.x-filled svg{color:var(--gold);flex:none}
+
+/* template cards */
+.x-tpls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media (min-width:760px){.x-tpls{grid-template-columns:repeat(4,1fr)}}
+.x-tpl{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:13px;border-radius:var(--r);border:1px solid var(--line);background:var(--roast-2);text-align:left;transition:border-color var(--t),background var(--t)}
+.x-tpl:hover{border-color:var(--dim-2)}
+.x-tpl[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 8%)}
+.x-tpl .ic{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:var(--card-2);color:var(--dim);border:1px solid var(--line)}
+.x-tpl[aria-pressed="true"] .ic{color:var(--gold);border-color:var(--gold-deep)}
+.x-tpl .t{font-size:13.5px;font-weight:600}
+.x-tpl .d{font-size:12px;color:var(--dim-2);line-height:1.45}
+
+/* full-width native select */
+.x-sel{display:block}
+.x-sel select{width:100%;padding:10px 30px 10px 12px;background:var(--roast-2)}
+.x-sel select:focus-visible{outline:2px solid var(--gold-hot);outline-offset:2px}
+
+/* the hypothesis sentence, built from choices */
+.x-sentence{padding:16px 16px 14px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line);font-size:15px;line-height:2.25;color:var(--dim)}
+.x-sentence b{color:var(--crema);font-weight:600}
+.x-inl{display:inline-block;position:relative;vertical-align:baseline}
+.x-inl select{appearance:none;font:inherit;font-size:14.5px;font-weight:600;color:var(--gold-hot);background:rgb(232 185 60 / 8%);border:none;border-bottom:1.5px dashed var(--gold-deep);border-radius:4px 4px 0 0;padding:1px 22px 1px 6px;cursor:pointer;max-width:100%}
+.x-inl select:hover{background:rgb(232 185 60 / 14%)}
+.x-inl select option{background:var(--card-2);color:var(--crema)}
+.x-inl::after{content:"";position:absolute;right:8px;top:50%;width:5px;height:5px;pointer-events:none;border-right:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);transform:translateY(-75%) rotate(45deg)}
+.x-link-tok{display:inline;font:inherit;font-size:14.5px;font-weight:600;color:var(--crema);border-bottom:1.5px solid var(--line);padding:1px 2px;cursor:pointer}
+.x-link-tok:hover{border-bottom-color:var(--gold);color:var(--gold-hot)}
+.x-link-tok small{font-size:10.5px;font-weight:500;color:var(--dim-2);margin-left:4px;letter-spacing:.02em}
+
+/* who: rule rows with value chips */
+.x-rule{padding:12px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line);margin-bottom:8px}
+.x-rule-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.x-rule-top .as{font-size:12.5px;color:var(--dim-2)}
+.x-rule-top .sel select{padding:6px 26px 6px 9px;font-size:13px}
+.x-rule-top .rm{margin-left:auto;color:var(--dim-2);padding:4px 8px;border-radius:5px;font-size:12.5px}
+.x-rule-top .rm:hover{color:var(--red);background:var(--card-3)}
+.x-vals{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.x-vals .chip .pc{font-family:var(--mono);font-size:11px;color:var(--dim-2);margin-left:5px;font-weight:400}
+.x-vals .chip[aria-pressed="true"] .pc{color:var(--gold)}
+.x-cov{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12px;color:var(--dim)}
+.x-cov .mk{flex:none;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;margin-top:1px}
+.mk.ok{background:rgb(127 208 105 / 14%);color:var(--green)}
+.mk.warn{background:rgb(232 185 60 / 16%);color:var(--gold-hot)}
+.mk.fail{background:rgb(232 106 94 / 16%);color:var(--red)}
+.x-add{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--gold);padding:7px 4px;font-weight:600}
+.x-add:hover{color:var(--gold-hot)}
+.x-add[disabled]{color:var(--dim-2);cursor:not-allowed}
+.x-match{display:flex;align-items:baseline;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13px;color:var(--dim)}
+.x-match .mono{font-size:15px;color:var(--crema);font-weight:600}
+
+/* range sliders — the brass instrument, one per screen at most */
+.x-range{width:100%;appearance:none;-webkit-appearance:none;height:26px;background:transparent;cursor:pointer}
+.x-range:focus-visible{outline:2px solid var(--gold-hot);outline-offset:4px}
+.x-range::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:linear-gradient(90deg,var(--gold-deep) 0 var(--fill,50%),var(--card-3) var(--fill,50%) 100%)}
+.x-range::-moz-range-track{height:6px;border-radius:999px;background:var(--card-3)}
+.x-range::-moz-range-progress{height:6px;border-radius:999px;background:var(--gold-deep)}
+.x-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold-hot),var(--gold) 45%,var(--gold-deep));border:2px solid var(--roast);box-shadow:0 2px 0 var(--gold-deep),0 0 0 1px var(--gold-deep)}
+.x-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--gold);border:2px solid var(--roast);box-shadow:0 2px 0 var(--gold-deep)}
+.x-range:active::-webkit-slider-thumb{box-shadow:0 0 0 var(--gold-deep),0 0 0 1px var(--gold-deep);transform:translateY(1px)}
+.x-ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--dim-2);margin-top:2px}
+
+/* versions */
+.x-vers{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:640px){.x-vers{grid-template-columns:1fr 1fr}}
+.x-ver{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--roast-2);overflow:hidden;display:flex;flex-direction:column}
+.x-ver-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+.x-tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+.x-tag.control{background:rgb(141 128 105 / 18%);color:var(--dim);border:1px solid #4a4335}
+.x-tag.treat{background:rgb(109 179 232 / 13%);color:var(--blue);border:1px solid #2f4d63}
+.x-ver-head .sel{margin-left:auto}
+.x-ver-head .sel select{padding:5px 26px 5px 9px;font-size:12.5px}
+.x-ver-body{padding:12px;display:flex;flex-direction:column;gap:10px;flex:1}
+.x-ver-foot{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--dim-2)}
+.x-ver-foot .pct{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--crema);font-variant-numeric:tabular-nums}
+.x-ver.add{border-style:dashed;align-items:center;justify-content:center;min-height:180px;color:var(--dim);gap:6px;background:transparent;transition:border-color var(--t),color var(--t)}
+.x-ver.add:hover{border-color:var(--gold-deep);color:var(--gold)}
+.x-ver.add .plus{font-size:22px;line-height:1}
+.x-ver.add small{font-size:12px;color:var(--dim-2)}
+.x-upl{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--gold);font-weight:600;cursor:pointer;padding:3px 0}
+.x-upl:hover{color:var(--gold-hot)}
+.x-upl input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.x-upl:focus-within{outline:2px solid var(--gold-hot);outline-offset:2px;border-radius:4px}
+.x-shot{border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/10;max-width:100%;background:var(--card)}
+.x-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.x-shot.empty{display:grid;place-items:center;color:var(--dim-2);font-size:12px;border-style:dashed;text-align:center;padding:10px}
+
+/* the example screen inside a version card — reads as a screenshot of the customer's product */
+.mock{aspect-ratio:16/10;max-width:100%;border-radius:8px;overflow:hidden;background:#efe5d2;color:#2a2117;display:flex;flex-direction:column;position:relative;border:1px solid #4a3f2e}
+.mock .bar{height:14px;background:#e2d6bf;display:flex;align-items:center;gap:3px;padding:0 6px;flex:none}
+.mock .bar i{width:5px;height:5px;border-radius:50%;background:#c5b596}
+.mock .pg{flex:1;padding:9% 9% 7%;display:flex;flex-direction:column;gap:5px;justify-content:center}
+.mock .eb{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a6a1e;font-weight:700}
+.mock .h{font-size:13px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+.mock .p{font-size:9.5px;color:#6b5c45;line-height:1.35}
+.mock .cta{align-self:flex-start;margin-top:5px;font-size:9.5px;font-weight:700;padding:5px 10px;border-radius:5px;border:1.5px solid #2a2117;background:transparent;color:#2a2117}
+.mock .cta.solid{background:#2a2117;color:#f5ead6}
+.mock .price{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:-.02em}
+.mock .price s{font-size:10px;color:#9a8b72;margin-right:5px}
+.mock .li{display:flex;align-items:center;gap:5px;font-size:9px;color:#4f4332}
+.mock .li i{width:8px;height:8px;border-radius:2px;border:1.2px solid #8a7a5e;flex:none}
+.mock .li.new{color:#2a2117;font-weight:700}
+.mock .li.new i{background:#e8b93c;border-color:#8a6a1e}
+.mock .ex{position:absolute;right:6px;bottom:5px;font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:#9a8b72}
+.mock.sm .pg{padding:7% 8% 6%;gap:3px}
+.mock.sm .h{font-size:10px}
+.mock.sm .p{font-size:7.5px}
+.mock.sm .cta{font-size:7.5px;padding:3px 7px}
+.mock.sm .price{font-size:12px}
+.mock.sm .li{font-size:7px}
+.mock.sm .eb{font-size:6.5px}
+.mock.sm .p{display:none}
+.mock.sm .li:nth-child(n+4){display:none}
+.mock.sm .bar{height:9px}
+
+/* split bar */
+.x-splitbar{display:flex;height:30px;border-radius:7px;overflow:hidden;border:1px solid var(--line);font-family:var(--mono);font-size:11.5px;font-weight:600}
+.x-splitbar span{display:flex;align-items:center;justify-content:center;min-width:0;white-space:nowrap;overflow:hidden;transition:flex-basis var(--t)}
+.x-splitbar .c{background:linear-gradient(90deg,#6b6151,#4a4335);color:var(--crema)}
+.x-splitbar .t{background:linear-gradient(90deg,var(--blue),#3d6f96);color:#0e1a24}
+.x-splitbar .t + .t{border-left:1px solid var(--roast)}
+
+/* metric pick rows */
+.x-metrics{display:flex;flex-direction:column;gap:6px}
+.x-metric{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--roast-2);text-align:left;width:100%;transition:border-color var(--t),background var(--t)}
+.x-metric:hover{border-color:var(--dim-2)}
+.x-metric[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 8%)}
+.x-metric .radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--dim-2);display:grid;place-items:center}
+.x-metric[aria-pressed="true"] .radio{border-color:var(--gold)}
+.x-metric[aria-pressed="true"] .radio::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.x-metric.cb .radio{border-radius:4px}
+.x-metric.cb[aria-pressed="true"] .radio{background:var(--gold)}
+.x-metric.cb[aria-pressed="true"] .radio::after{content:"✓";width:auto;height:auto;background:none;color:#241d14;font-size:10px;font-weight:800;line-height:1}
+.x-metric .nm{font-size:13.5px;font-weight:500;display:block}
+.x-metric .ev{font-family:var(--mono);font-size:11.5px;color:var(--dim-2);display:block;margin-top:1px}
+.x-metric .num{display:flex;align-items:center;gap:12px;text-align:right}
+.x-metric .num .c{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--crema)}
+.x-metric .num .b{font-size:11px;color:var(--dim-2);display:block}
+.x-metric .spark{width:64px;height:22px;flex:none}
+.x-metric .sug{font-size:10.5px;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:0 7px;margin-left:6px;font-weight:600;vertical-align:1px}
+.x-metric .stale{font-size:10.5px;color:var(--red);border:1px solid var(--red-deep);border-radius:999px;padding:0 7px;margin-left:6px;font-weight:600;vertical-align:1px}
+@media (max-width:560px){.x-metric .spark{display:none}.x-metric{grid-template-columns:auto minmax(0,1fr)}.x-metric .num{grid-column:2;justify-content:flex-start;text-align:left}}
+.x-more{font-size:12.5px;color:var(--gold);font-weight:600;padding:8px 2px}
+.x-more:hover{color:var(--gold-hot)}
+.sug-tag{font-size:10.5px;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:1px 7px;font-weight:600;margin-left:8px;letter-spacing:0;text-transform:none}
+
+/* how long */
+.x-mde{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.x-mde .n{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.02em;color:var(--crema);font-variant-numeric:tabular-nums;line-height:1}
+.x-mde .s{font-size:13px;color:var(--dim)}
+.x-mde .s .mono{color:var(--crema)}
+.x-trade{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.x-trade button{padding:10px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--roast-2);text-align:left;transition:border-color var(--t)}
+.x-trade button:hover{border-color:var(--dim-2)}
+.x-trade button[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 8%)}
+.x-trade .a{font-family:var(--mono);font-size:14px;font-weight:600;display:block}
+.x-trade .b{font-size:11.5px;color:var(--dim-2);display:block;margin-top:2px}
+.x-est{display:flex;align-items:center;gap:16px;padding:16px;border-radius:var(--r-lg);border:1px solid var(--line);background:linear-gradient(90deg,rgb(232 185 60 / 8%),transparent 75%)}
+.x-est .big{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--gold-hot);line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.x-est .txt{font-size:13px;color:var(--dim);line-height:1.5}
+.x-est .txt b{color:var(--crema);font-weight:600}
+.x-tl{position:relative;margin-top:16px;height:44px}
+.x-tl .track{position:absolute;left:0;right:0;top:12px;height:8px;border-radius:999px;background:var(--card-3)}
+.x-tl .need{position:absolute;left:0;top:12px;height:8px;border-radius:999px;background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
+.x-tl .mark{position:absolute;top:6px;width:2px;height:20px;background:var(--crema);border-radius:2px}
+.x-tl .lab{position:absolute;top:28px;font-size:11px;color:var(--dim-2);white-space:nowrap;font-family:var(--mono)}
+
+/* the side panel: the plan so far */
+.x-plan-sentence{font-size:14px;line-height:1.55;color:var(--crema);text-wrap:pretty}
+.x-plan-sentence em{font-style:normal;color:var(--gold-hot)}
+.x-plan-block{padding-top:16px;margin-top:16px;border-top:1px solid var(--line-soft)}
+.x-mini-vers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.x-mini-vers .cap{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;font-size:11.5px;color:var(--dim)}
+.x-mini-vers .cap .mono{color:var(--crema)}
+.x-kv{display:flex;flex-direction:column;gap:7px;font-size:12.5px}
+.x-kv div{display:flex;gap:10px;justify-content:space-between}
+.x-kv .k{color:var(--dim-2)}
+.x-kv .v{color:var(--crema);text-align:right}
+.x-kv .v.mono{font-size:12px}
+.x-days{display:flex;align-items:baseline;gap:10px}
+.x-days .n{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--gold-hot);font-variant-numeric:tabular-nums}
+.x-days .t{font-size:12.5px;color:var(--dim)}
+.x-checksum{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--dim)}
+.x-checksum b{color:var(--crema)}
+
+/* review */
+.x-big-sentence{font-size:19px;line-height:1.5;font-weight:500;color:var(--crema);letter-spacing:-.005em;max-width:60ch;text-wrap:pretty}
+.x-big-sentence em{font-style:normal;color:var(--gold-hot);font-weight:600}
+.x-rev-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:22px}
+@media (min-width:860px){.x-rev-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+.review .edit{margin-left:auto;color:var(--gold);font-size:12px;font-weight:600;flex:none}
+.review .edit:hover{color:var(--gold-hot)}
+.review div > span:nth-child(2){min-width:0}
+.x-checks{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.x-check{display:flex;gap:11px;padding:11px 13px;border-bottom:1px solid var(--line-soft);font-size:13px;align-items:flex-start}
+.x-check:last-child{border-bottom:none}
+.x-check .mk{margin-top:2px}
+.x-check .t{font-weight:600;color:var(--crema)}
+.x-check .d{color:var(--dim);font-size:12.5px;margin-top:2px;line-height:1.5}
+.x-check .d .mono{font-size:12px;color:var(--crema)}
+.x-check .fix{color:var(--gold);font-weight:600;font-size:12.5px;margin-top:5px;display:inline-block}
+.x-check .fix:hover{color:var(--gold-hot)}
+.x-check.fail{background:rgb(232 106 94 / 5%)}
+.x-contract{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--dim);background:var(--roast);border:1px dashed var(--gold-deep);border-radius:var(--r);padding:12px 14px;overflow-x:auto;white-space:pre;margin-top:18px}
+.x-contract .k{color:var(--gold-hot)}
+
+/* ── experiment page after Start ───────────────────────────────────────── */
+.x-proto{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border-radius:var(--r);border:1px dashed var(--gold-deep);background:rgb(232 185 60 / 5%);font-size:12.5px;color:var(--dim);margin-bottom:16px}
+.x-proto .proto-pill{flex:none}
+.x-proto .chips{gap:5px}
+.x-proto .chip{padding:4px 10px;font-size:12px}
+.x-ptabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto;scrollbar-width:none}
+.x-ptabs .tab{padding:9px 12px}
+.x-res-top{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:14px}
+@media (min-width:980px){.x-res-top{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}}
+.x-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.x-lift{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.x-lift .n{font-family:var(--mono);font-size:44px;font-weight:600;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.x-lift .n .arw{font-size:26px;margin-left:4px}
+.x-lift .k{font-size:12.5px;color:var(--dim);margin-top:6px}
+.x-legend{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.x-legend span{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--roast-2)}
+.x-legend i{width:12px;height:3px;border-radius:2px}
+.x-chart{margin-top:14px;width:100%;overflow:hidden}
+.x-chart svg{width:100%;height:auto;display:block}
+.x-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.x-kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 15px}
+.x-kpi .k{font-size:12px;color:var(--dim)}
+.x-kpi .n{font-family:var(--mono);font-size:23px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:6px}
+.x-kpi .n small{font-size:12px;font-weight:500}
+.x-kpi .d{font-size:11.5px;color:var(--dim-2);margin-top:3px}
+.up-c{color:var(--green)} .down-c{color:var(--red)} .flat-c{color:var(--dim)}
+.x-verdict{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;gap:12px}
+.x-verdict.ready{border-color:var(--green-deep);background:linear-gradient(160deg,rgb(127 208 105 / 9%),var(--card) 60%)}
+.x-verdict h3{font-size:20px;font-weight:700;line-height:1.25;letter-spacing:-.01em;text-wrap:balance}
+.x-verdict p{font-size:13px;color:var(--dim);line-height:1.55}
+.x-verdict .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.x-progress{height:8px;border-radius:999px;background:var(--roast-2);overflow:hidden;border:1px solid var(--line-soft)}
+.x-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold));border-radius:999px}
+.x-progress-cap{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim-2);font-family:var(--mono);margin-top:5px}
+.x-two{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+@media (min-width:900px){.x-two{grid-template-columns:1fr 1fr}}
+.x-empty-chart{height:180px;display:grid;place-items:center;text-align:center;color:var(--dim);font-size:13px;border:1px dashed var(--line);border-radius:var(--r);margin-top:14px;padding:16px}
+.x-empty-chart b{display:block;color:var(--crema);font-size:14px;margin-bottom:4px}
+
+.row .pill.draft{color:var(--blue);border-color:#2f4d63;background:rgb(109 179 232 / 8%)}
+.row .pill.draft .dot{background:var(--blue)}
+.row.x-new{background:linear-gradient(90deg,rgb(232 185 60 / 6%),transparent 60%)}
+
+@media (max-width:640px){
+  .topbar{padding:0 12px;gap:8px}
+  .topbar .cmdk span,.topbar .x-notes-btn .lbl{display:none}
+  .scrim{padding:0}
+  .modal.x-builder{border-radius:0;min-height:100%}
+  .x-main{padding:18px 16px 22px}
+  .x-side{padding:18px 16px}
+  .x-trade{grid-template-columns:1fr}
+  .x-est{flex-direction:column;align-items:flex-start}
+  .modal-foot{flex-wrap:wrap}
+  .modal-foot .note{flex:1 1 100%}
+  .x-lift .n{font-size:36px}
+}
+
+</style>
+<div class="topbar">
+  <button class="mark" onclick="toast('Goes to Today — outside this prototype')" title="Golden Beans">GB</button>
+  <div class="crumb"><span class="crumb-btn"><b>miyagisanchez</b></span></div>
+  <div class="topbar-right">
+    <button class="cmdk" onclick="toast('Search is outside this prototype')"><span>Search</span><kbd>⌘K</kbd></button>
+    <button class="x-notes-btn" id="notesbtn" aria-pressed="false" onclick="toggleNotes()" title="Tag every control with the contract field it fills">
+      <span class="sw" aria-hidden="true"></span><span class="lbl">Build notes</span></button>
+    <button class="avatar" title="Daniel" onclick="toast('Account')">D</button>
+    <span class="proto-pill">Prototype</span>
+  </div>
+</div>
+
+<div class="tabs" role="tablist" id="sectionnav">
+  <button class="tab" role="tab" aria-selected="false" onclick="toast('Today is outside this prototype')">Today</button>
+  <button class="tab" role="tab" aria-selected="false" onclick="toast('Measure is outside this prototype')">Measure</button>
+  <button class="tab" role="tab" aria-selected="true">Ship</button>
+  <button class="tab" role="tab" aria-selected="false" onclick="toast('Setup is outside this prototype')">Setup</button>
+</div>
+
+<div class="frame">
+  <aside class="rail">
+    <nav class="railnav" id="railnav">
+      <button onclick="toast('Features is unchanged by this seed')"><span class="ico">◧</span>Features<span class="pip">42</span></button>
+      <button aria-current="true" onclick="goList()"><span class="ico">◑</span>Experiments<span class="pip" id="exp-count">3</span></button>
+      <button onclick="toast('Scheduled changes is unchanged by this seed')"><span class="ico">◔</span>Scheduled changes</button>
+      <button onclick="toast('Activity is unchanged by this seed')"><span class="ico">≡</span>Activity</button>
+    </nav>
+  </aside>
+  <main class="content" id="content"></main>
+</div>
+
+<div id="overlays"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   experiments-for-humans — clickable prototype
+   Seed: Roadmap/00-ideas/seeds/experiments-for-humans.md (audit §9)
+   Mounted in the approved console shell (design-system/console-prototype.html).
+
+   RULES THIS PROTOTYPE HOLDS ITSELF TO
+   · No open questions. Nothing on any step is typed. Every choice is a select,
+     a chip, a card or a slider, and every one arrives pre-selected.
+   · A template fills all five steps. The person changes what is different.
+   · Everything the flow writes lands in ExperimentDefinition (lib/experiment-
+     definition.ts). Turn on "Build notes" to see which field each control fills.
+   · Numbers here are EXAMPLE data for project miyagisanchez, shaped like the
+     event-catalog read the seed asks for (names, 14-day counts, baselines,
+     tag keys and entity types seen).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* ── the features this project already has (a slice of the 42) ─────────────
+   evals = times the code checked this feature in Production today. 0 means no
+   live code reads it, which the pre-launch checklist turns into a blocker. */
+const FEATURES = [
+  ["catalog.bulk_enabled","Editing many products at once",1204],
+  ["catalog.variants_v2_enabled","The rebuilt size and colour editor",860],
+  ["checkout.guest_enabled","Buying without creating an account",9412],
+  ["checkout.rental_pricing_enabled","Daily and weekly rental prices at checkout",2210],
+  ["content.blocks_enabled","The drag-and-drop block editor",530],
+  ["domain.paywall_enabled","A paid plan before a custom domain",1480],
+  ["events.waitlist_enabled","A waitlist once an event sells out",0],
+  ["growth.founding_merchants_enabled","Founding-merchant offer at signup",3180],
+  ["growth.referrals_enabled","Rewards for sellers who refer sellers",640],
+  ["onboarding.checklist_enabled","The setup checklist on first sign-in",2760],
+  ["onboarding.three_doors_enabled","The three-path signup",3340],
+  ["seller.reviews_enabled","Buyer reviews on a seller's shop",4120],
+  ["shipping.labels_enabled","Printing a shipping label from an order",1890],
+].map(([key,desc,evals]) => ({key,desc,evals}));
+
+/* ── event catalog: the one new backend read ─────────────────────────────── */
+const EVENTS = [
+  {ev:"application.completed", label:"Completed a founding-store application", noun:"completed applications", n14:1318, base:26.8, last24:96,  dir:"increase"},
+  {ev:"application.started",   label:"Started a founding-store application",   noun:"started applications",   n14:4912, base:62.8, last24:341, dir:"increase"},
+  {ev:"application.abandoned", label:"Left an application unfinished",         noun:"unfinished applications",n14:2106, base:42.9, last24:151, dir:"decrease"},
+  {ev:"listing.published",     label:"Published a first listing",              noun:"first listings",         n14:5622, base:31.4, last24:402, dir:"increase"},
+  {ev:"onboarding.abandoned",  label:"Left setup unfinished",                  noun:"unfinished setups",      n14:1240, base:24.6, last24:88,  dir:"decrease"},
+  {ev:"subscription.started",  label:"Started a paid plan",                    noun:"paid plans started",     n14:412,  base:4.1,  last24:29,  dir:"increase"},
+  {ev:"checkout.completed",    label:"Completed a checkout",                   noun:"completed checkouts",    n14:9840, base:9.4,  last24:702, dir:"increase"},
+  {ev:"signup.completed",      label:"Created an account",                     noun:"new accounts",           n14:3480, base:12.2, last24:251, dir:"increase"},
+  {ev:"refund.requested",      label:"Asked for a refund",                     noun:"refund requests",        n14:188,  base:1.9,  last24:13,  dir:"decrease"},
+  {ev:"support.ticket_opened", label:"Opened a support ticket",                noun:"support tickets",        n14:640,  base:6.3,  last24:47,  dir:"decrease"},
+  {ev:"error.shown",           label:"Saw an error",                           noun:"errors",                 n14:402,  base:2.4,  last24:31,  dir:"decrease"},
+  {ev:"page.slow",             label:"Waited more than 3 seconds for a page",  noun:"slow pages",             n14:1020, base:3.2,  last24:74,  dir:"decrease"},
+  {ev:"referral.sent",         label:"Sent a referral",                        noun:"referrals",              n14:96,   base:0.8,  last24:0,   dir:"increase"},
+];
+const EV = Object.fromEntries(EVENTS.map(e => [e.ev, e]));
+
+/* ── who: the five allow-listed tag fields, with what the events actually carry.
+   cov = share of recent events that carry the tag at all. */
+const FIELDS = {
+  region:  {label:"Country",  cov:0.98, vals:[["MX","Mexico",0.91],["US","United States",0.05],["CO","Colombia",0.03],["AR","Argentina",0.01]]},
+  channel: {label:"Channel",  cov:1.00, vals:[["web","the web",0.72],["app","the app",0.21],["whatsapp","WhatsApp",0.07]]},
+  plan:    {label:"Plan",     cov:0.64, vals:[["free","Free",0.81],["founding","Founding",0.12],["pro","Pro",0.07]]},
+  source:  {label:"Came from",cov:0.88, vals:[["organic","search",0.54],["ads","ads",0.29],["referral","a referral",0.12],["partner","a partner",0.05]]},
+  campaign:{label:"Campaign", cov:0.03, vals:[["founding_launch","founding_launch",0.70],["hot_sale_2026","hot_sale_2026",0.30]]},
+};
+const FIELD_ORDER = ["region","channel","plan","source","campaign"];
+const valLabel = (f,v) => (FIELDS[f].vals.find(x => x[0]===v) || [v,v])[1];
+
+/* entity types seen in this project's events, and how many reach a typical surface a day */
+const ENTITIES = {
+  merchant:{label:"Merchant", plural:"merchants", seen:3912,  daily:780,  d:"Best when the change is about a store's decisions."},
+  user:    {label:"Person",   plural:"people",    seen:18440, daily:4100, d:"Best for anything a signed-in person sees."},
+  device:  {label:"Device",   plural:"devices",   seen:26105, daily:5900, d:"Only when people are not signed in. The same person on two phones counts twice."},
+};
+
+const REASONS = {
+  funnel:"the funnel drops most at this step",
+  recordings:"session recordings show people hesitating here",
+  support:"support keeps hearing the same confusion",
+  interviews:"people told us so in interviews",
+  benchmark:"it works for products like ours",
+  risk:"it touches money, so it ships to a slice first",
+  hunch:"we think so, and this test is how we find out",
+};
+
+/* ── templates — the "protocols". Each fills every step. ─────────────────── */
+const TEMPLATES = {
+  copy:{name:"Copy or button", d:"Change words, a label or a call to action.",
+    feature:"growth.founding_merchants_enabled", names:["Current","New copy"], metric:"application.completed",
+    dir:"increase", guards:["application.abandoned"], mde:10, why:"funnel", split:50, entity:"merchant",
+    rules:[{field:"region", vals:["MX"]}], segs:["channel"], lift:11.2, suffix:"copy_test",
+    icon:`<path d="M4 7h16M4 12h10M4 17h7" /><rect x="14" y="14" width="7" height="5" rx="1.5"/>`},
+  pricing:{name:"Pricing page", d:"Try a different price, plan or offer.",
+    feature:"domain.paywall_enabled", names:["Current price","New price"], metric:"subscription.started",
+    dir:"increase", guards:["refund.requested","support.ticket_opened"], mde:20, why:"benchmark", split:50, entity:"merchant",
+    rules:[{field:"region", vals:["MX"]}], segs:["plan"], lift:16.5, suffix:"price_test",
+    icon:`<path d="M12 3v18M16 7.5c0-1.7-1.8-3-4-3s-4 1.3-4 3 1.8 2.6 4 3 4 1.5 4 3.3-1.8 3.2-4 3.2-4-1.4-4-3"/>`},
+  onboarding:{name:"Onboarding step", d:"Add, remove or reorder a step in setup.",
+    feature:"onboarding.checklist_enabled", names:["Current flow","New step"], metric:"listing.published",
+    dir:"increase", guards:["onboarding.abandoned"], mde:10, why:"recordings", split:50, entity:"merchant",
+    rules:[], segs:["source"], lift:8.6, suffix:"setup_test",
+    icon:`<rect x="4" y="4" width="5" height="5" rx="1"/><path d="M12 6.5h8M12 17.5h8"/><rect x="4" y="15" width="5" height="5" rx="1"/>`},
+  rollout:{name:"Guarded rollout", d:"Ship to a slice first. No winner, just a safety check.",
+    feature:"checkout.guest_enabled", names:["Off","On"], metric:"checkout.completed",
+    dir:"increase", guards:["error.shown","page.slow","refund.requested"], mde:20, why:"risk", split:10, entity:"user",
+    rules:[{field:"channel", vals:["web"]}], segs:["channel"], lift:-0.4, suffix:"rollout", guarded:true,
+    icon:`<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>`},
+};
+const CONTROL_NAMES = ["Current","Current copy","Current price","Current flow","Off"];
+const TREAT_NAMES   = ["New copy","New price","New step","New layout","On","Version B","Version C","Version D"];
+const OUTCOME_WORDS = {ship_treatment:"Ship the new version", keep_control:"Keep the current version",
+  iterate:"Change it and run again", inconclusive:"Call it inconclusive", invalid:"Mark it invalid"};
+const DECISION_REASONS = ["The main number improved and guardrails held","It's no worse and simpler to keep",
+  "A guardrail cost more than the win","Something outside the test decided it"];
+
+/* the three experiments already on the approved list */
+const EXISTING = [
+  {key:"checkout_one_page", hyp:"One-page checkout converts better than three steps.", pill:"ready", day:13, lift:18.1, liftGood:true, metric:"Completed checkouts"},
+  {key:"listing_photo_hints", hyp:"Showing photo examples raises completed listings.", pill:"gathering", day:3, lift:8.4, liftGood:false, metric:"Completed listings"},
+  {key:"seller_welcome_email", hyp:"A welcome email brings sellers back to list again.", pill:"decided", day:28, lift:32.4, liftGood:true, metric:"Second listing in 14 days"},
+];
+
+/* ═══ state ═══ */
+const APP = {view:"list", exp:null, tab:"results", day:9, overlay:null, notes:false, showAllMetrics:false, showAllGuards:false, decide:null};
+let W = null;              // the builder's draft (kept while the page is open)
+const CREATED = [];        // experiments made in this session
+
+function newDraft(tpl="copy"){ const w = {step:1, tpl, weeksTouched:false, start:"now"}; applyTemplate(w, tpl); return w; }
+function applyTemplate(w, tpl){
+  const t = TEMPLATES[tpl];
+  Object.assign(w, {
+    tpl, feature:t.feature, why:t.why, dir:t.dir, metric:t.metric, guards:[...t.guards], segs:[...t.segs], mde:t.mde,
+    split:t.split, entity:t.entity,
+    who:{mode:t.rules.length?"some":"everyone", rules:clone(t.rules), pct:100},
+    variants:t.names.map(name => ({name, shot:null})),
+    weeksTouched:false,
+  });
+  w.weeks = recommendedWeeks(w);
+}
+
+/* ═══ the maths (show it as days, never as a formula) ═══════════════════════
+   n ≈ 16·p(1−p)/δ² per version, 80% power, α = 0.05, δ = p × MDE. */
+function sampleSize(p, mdePct){ const d = p * mdePct/100; return Math.ceil(16 * p * (1-p) / (d*d)); }
+function weights(w){
+  const k = w.variants.length;
+  if(k === 2) return [100 - w.split, w.split];
+  const even = Math.floor(100 / k); const ws = w.variants.map(() => even); ws[0] += 100 - even*k; return ws;
+}
+function ruleFraction(r){
+  const F = FIELDS[r.field]; const share = F.vals.filter(v => r.vals.includes(v[0])).reduce((a,v) => a + v[2], 0);
+  return F.cov * share;
+}
+function dailyEligible(w){
+  let f = 1;
+  if(w.who.mode === "some") w.who.rules.forEach(r => f *= ruleFraction(r));
+  return ENTITIES[w.entity].daily * f * (w.who.pct/100);
+}
+function needPerVersion(w){ return sampleSize(EV[w.metric].base/100, w.mde); }
+function estDays(w, mde = w.mde){
+  const n = sampleSize(EV[w.metric].base/100, mde);
+  const minW = Math.min(...weights(w)) / 100;
+  const daily = dailyEligible(w) * minW;
+  return daily > 0 ? Math.ceil(n / daily) : Infinity;
+}
+function recommendedWeeks(w){ const d = estDays(w); return isFinite(d) ? Math.max(2, Math.ceil(d/7)) : 4; }
+const WEEK_OPTS = [1,2,3,4,6,8];
+function syncWeeks(){ if(W && !W.weeksTouched) W.weeks = Math.min(8, WEEK_OPTS.find(x => x >= recommendedWeeks(W)) || 8); }
+
+/* dates — today is Thursday 24 September 2026 */
+const TODAY = new Date(2026, 8, 24);
+function startDate(w){ return w.start === "now" ? TODAY : new Date(2026, 8, 28); }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+const dstr = d => `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]} ${d.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]}`;
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}T09:00:00-06:00`;
+
+/* ═══ words ═══ */
+function joinOr(a){ return a.length <= 1 ? (a[0]||"") : a.slice(0,-1).join(", ") + " or " + a[a.length-1]; }
+function joinAnd(a){ return a.length <= 1 ? (a[0]||"") : a.slice(0,-1).join(", ") + " and " + a[a.length-1]; }
+function ruleWords(r){
+  const L = r.vals.map(v => valLabel(r.field, v));
+  if(!L.length) return "";
+  return {region:`in ${joinOr(L)}`, channel:`on ${joinOr(L)}`, plan:`on the ${joinOr(L)} plan`,
+    source:`who came from ${joinOr(L)}`, campaign:`from the ${joinOr(L)} campaign`}[r.field];
+}
+function whoWords(w){
+  const base = ENTITIES[w.entity].plural;
+  if(w.who.mode === "everyone") return `${base} who reach it`;
+  const parts = w.who.rules.map(ruleWords).filter(Boolean);
+  return parts.length ? `${base} ${joinAnd(parts)}` : base;
+}
+function shareWords(p){ return p === 50 ? "half" : p === 100 ? "all" : p === 25 ? "a quarter" : `${Math.round(p*10)/10}%`; }
+function treatNames(w){ return joinAnd(w.variants.slice(1).map(v => v.name)); }
+function guardWords(w){
+  const up = w.guards.filter(g => EV[g].dir === "decrease").map(g => EV[g].noun);
+  const down = w.guards.filter(g => EV[g].dir !== "decrease").map(g => EV[g].noun);
+  const out = [];
+  if(up.length) out.push(`${joinAnd(up)} don't rise`);
+  if(down.length) out.push(`${joinAnd(down)} don't drop`);
+  return out;
+}
+/* the one plain sentence the review leads with */
+function planSentence(w, hl = true){
+  const em = s => hl ? `<em>${esc(s)}</em>` : esc(s);
+  const ws = weights(w), tShare = w.variants.length === 2 ? ws[1] * w.who.pct / 100 : ws[1] * w.who.pct / 100;
+  const each = w.variants.length > 2 ? " each" : "";
+  const who = whoWords(w), m = EV[w.metric], g = guardWords(w);
+  if(TEMPLATES[w.tpl].guarded){
+    return `${em(treatNames(w))} goes to ${em(shareWords(tShare))} of ${em(who)} first. It's safe to go further if ${em(m.noun)} don't drop${g.length?` and ${g.map(x=>em(x)).join(" and ")}`:""}.`;
+  }
+  const move = w.dir === "increase" ? "rise" : "fall";
+  return `${em(treatNames(w))}${each} go${each?"":"es"} to ${em(shareWords(tShare))} of ${em(who)}. It wins if ${em(m.noun)} ${move} by at least ${em(w.mde+"%")}${g.length?`, as long as ${g.map(x=>em(x)).join(" and ")}`:""}.`;
+}
+function hypothesisText(w){
+  const t = TEMPLATES[w.tpl];
+  const verb = t.guarded ? "won't lower" : (w.dir === "increase" ? "will raise" : "will lower");
+  return `We believe showing ${w.variants[1].name} to ${whoWords(w)} ${verb} ${EV[w.metric].noun} because ${REASONS[w.why]}.`;
+}
+function featureShort(k){ return k === "__new" ? newFeatureKey().split(".")[1].replace(/_enabled$/,"") : k.split(".")[1].replace(/_enabled$/,""); }
+function newFeatureKey(){ const area = TEMPLATES[W.tpl].feature.split(".")[0]; return `${area}.${TEMPLATES[W.tpl].suffix}_enabled`; }
+function expKey(w){ return `${featureShort(w.feature)}_${TEMPLATES[w.tpl].suffix}`.slice(0,64); }
+function featureKey(w){ return w.feature === "__new" ? newFeatureKey() : w.feature; }
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+
+/* ═══ the pre-launch checklist — computed, never ticked by hand ═══════════ */
+function checks(w){
+  const out = [];
+  const fk = featureKey(w), f = FEATURES.find(x => x.key === fk);
+  if(w.feature === "__new") out.push({s:"fail", step:1, t:"The feature has no code behind it yet",
+    d:`<span class="mono">${fk}</span> is created with this test, but nothing in Production checks it. Save a draft now and start once the code ships.`,
+    fix:"Pick an existing feature", act:"setStep(1)"});
+  else if(!f.evals) out.push({s:"fail", step:1, t:"No live code checks this feature",
+    d:`<span class="mono">${fk}</span> wasn't checked once in Production in the last 7 days, so nobody would ever see a version.`,
+    fix:"Pick another feature", act:"setStep(1)"});
+  else out.push({s:"ok", step:1, t:"The feature is live in Production",
+    d:`<span class="mono">${fk}</span> was checked ${fmt(f.evals)} times today, most recently 4 minutes ago.`});
+
+  const evs = [w.metric, ...w.guards], dead = evs.filter(e => !EV[e].last24);
+  if(dead.length) out.push({s:"fail", step:4, t:"A metric has gone quiet",
+    d:`${dead.map(e=>`<span class="mono">${e}</span>`).join(", ")} arrived 0 times in the last 24 hours. Is its tracking still running?`,
+    fix:"Choose a different metric", act:"setStep(4)"});
+  else out.push({s:"ok", step:4, t:"Every metric arrived in the last 24 hours",
+    d:`<span class="mono">${w.metric}</span> ${fmt(EV[w.metric].last24)} times${w.guards.length?`, and all ${w.guards.length} guardrail${w.guards.length>1?"s":""} too`:""}.`});
+
+  if(w.who.mode === "everyone" || !w.who.rules.length) out.push({s:"ok", step:2, t:"Everyone who reaches it can be in the test", d:"No tags to check."});
+  else {
+    const worst = w.who.rules.map(r => ({r, cov:FIELDS[r.field].cov})).sort((a,b) => a.cov - b.cov)[0];
+    const empty = w.who.rules.find(r => !r.vals.length);
+    if(empty) out.push({s:"fail", step:2, t:"A condition has no value picked", d:`Pick at least one ${FIELDS[empty.field].label.toLowerCase()}, or remove the condition.`, fix:"Fix who's in it", act:"setStep(2)"});
+    else if(worst.cov < 0.1) out.push({s:"fail", step:2, t:"Your events don't carry one of the tags",
+      d:`Only ${Math.round(worst.cov*100)}% of recent events carry <span class="mono">${worst.r.field}</span>, so almost nobody can match it and the test would never fill.`,
+      fix:`Remove the ${FIELDS[worst.r.field].label.toLowerCase()} condition`, act:`removeRuleByField('${worst.r.field}')`});
+    else if(worst.cov < 0.9) out.push({s:"warn", step:2, t:"One tag is missing from some events",
+      d:`${Math.round(worst.cov*100)}% of recent events carry <span class="mono">${worst.r.field}</span>. People whose events lack it are left out, which the estimate already counts.`});
+    else out.push({s:"ok", step:2, t:"Your eligibility tags appear on recent events",
+      d:w.who.rules.map(r => `<span class="mono">${r.field}</span> on ${Math.round(FIELDS[r.field].cov*100)}%`).join(" · ")});
+  }
+
+  const ws = weights(w);
+  out.push({s:"ok", step:3, t:"The split adds up", d:`${ws.join(" / ")}, which is 100%.`});
+
+  const days = estDays(w), planned = w.weeks * 7;
+  if(!isFinite(days)) out.push({s:"fail", step:2, t:"Nobody matches who's in it", d:"With these conditions no one would enter the test.", fix:"Loosen who's in it", act:"setStep(2)"});
+  else if(planned < days) out.push({s:"fail", step:5, t:"The test ends before it has enough people",
+    d:`${w.weeks} week${w.weeks>1?"s":""} planned, but it needs about ${days} days at your current traffic.`,
+    fix:`Run it for ${WEEK_OPTS.find(x => x*7 >= days) || 8} weeks`, act:`setWeeks(${WEEK_OPTS.find(x => x*7 >= days) || 8})`});
+  else out.push({s:"ok", step:5, t:"It runs long enough", d:`${w.weeks} weeks planned, about ${days} days needed.`});
+
+  out.push({s:"ok", step:null, t:"Split checking is on", d:`Every day we check that people are divided ${ws.join(" / ")} and alert you if they drift (p < 0.01).`});
+  return out;
+}
+const failing = w => checks(w).filter(c => c.s === "fail");
+
+/* ═══ example screens inside the version cards ═════════════════════════════ */
+function mock(tpl, idx, small){
+  const cls = `mock${small?" sm":""}`, ex = `<span class="ex">Example</span>`, bar = `<div class="bar"><i></i><i></i><i></i></div>`;
+  if(tpl === "copy"){
+    const cta = ["Apply","Claim your founding spot","Start selling as a founder","Get my founding store"][Math.min(idx,3)];
+    return `<div class="${cls}">${bar}<div class="pg"><span class="eb">Founding stores</span><span class="h">Open your store on Miyagi</span>
+      <span class="p">0% commission for your first three months.</span><span class="cta${idx?" solid":""}">${cta}</span></div>${ex}</div>`;
+  }
+  if(tpl === "pricing"){
+    const price = idx === 0 ? "$299" : idx === 1 ? "<s>$299</s>$249" : "<s>$299</s>$199";
+    return `<div class="${cls}">${bar}<div class="pg"><span class="eb">Custom domain</span><span class="price">${price}<span style="font-size:.55em;color:#6b5c45"> MXN/mo</span></span>
+      <span class="p">Use your own web address, like tienda.mx.</span><span class="cta solid">Upgrade</span></div>${ex}</div>`;
+  }
+  if(tpl === "onboarding"){
+    const items = ["Add your logo","Add your first product","Choose shipping"];
+    const lis = (idx ? [`<span class="li new"><i></i>Import from your old store</span>`] : []).concat(items.map(t => `<span class="li"><i></i>${t}</span>`));
+    return `<div class="${cls}">${bar}<div class="pg"><span class="h">Set up your store</span>${lis.join("")}</div>${ex}</div>`;
+  }
+  const ctas = idx ? `<span class="cta solid">Continue as guest</span>` : `<span class="cta solid">Sign in to pay</span>`;
+  return `<div class="${cls}">${bar}<div class="pg"><span class="eb">Checkout</span><span class="h">Order total $1,240 MXN</span>
+    <span class="p">${idx?"No account needed.":"You need an account to pay."}</span>${ctas}</div>${ex}</div>`;
+}
+function shot(v, idx, small){
+  if(v.shot) return `<div class="x-shot"><img src="${v.shot}" alt="Screenshot of ${esc(v.name)}"></div>`;
+  if(idx < 2 || W.tpl === "copy" || W.tpl === "pricing") return mock(W.tpl, idx, small);
+  return `<div class="x-shot empty">No screenshot yet</div>`;
+}
+
+/* ═══ small pieces ═══ */
+const bn = f => `<span class="bn">${f}</span>`;
+const mk = s => `<span class="mk ${s}" aria-hidden="true">${s==="ok"?"✓":s==="warn"?"!":"✕"}</span>`;
+function spark(ev){
+  let seed = ev.ev.length * 7 + ev.n14; const pts = [];
+  for(let i=0;i<14;i++){ seed = (seed * 9301 + 49297) % 233280; pts.push(0.55 + 0.45 * (seed/233280) * (i%7===5||i%7===6?0.6:1)); }
+  if(!ev.last24) pts[13] = 0.02;
+  const max = Math.max(...pts), step = 64/13;
+  const d = pts.map((p,i) => `${i?"L":"M"}${(i*step).toFixed(1)} ${(20 - p/max*17).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"><path d="${d} L64 22 L0 22Z" style="fill:rgb(232 185 60 / 12%)"/><path d="${d}" style="fill:none;stroke:var(--gold);stroke-width:1.3"/><circle cx="64" cy="${(20 - pts[13]/max*17).toFixed(1)}" r="2" style="fill:${ev.last24?"var(--gold-hot)":"var(--red)"}"/></svg>`;
+}
+function splitBar(w){
+  const ws = weights(w);
+  return `<div class="x-splitbar" role="img" aria-label="Split ${ws.join(" / ")}">${w.variants.map((v,i) =>
+    `<span class="${i?"t":"c"}" style="flex-basis:${ws[i]}%">${ws[i] >= 12 ? `${esc(v.name)} · ${ws[i]}%` : `${ws[i]}%`}</span>`).join("")}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE LIST — the approved Experiments page, with its door finally open
+   ═══════════════════════════════════════════════════════════════════════════ */
+function listScreen(){
+  const pill = x => x.pill === "ready" ? `<span class="pill on"><span class="dot"></span>Ready to decide</span>`
+    : x.pill === "decided" ? `<span class="pill on"><span class="dot"></span>Decided</span>`
+    : x.pill === "draft" ? `<span class="pill draft"><span class="dot"></span>Draft</span>`
+    : `<span class="pill never"><span class="dot"></span>Still gathering</span>`;
+  const created = CREATED.map(x => {
+    const s = x.status === "draft" ? {pill:"draft"} : x.status === "decided" ? {pill:"decided"} : (simulate(x, APP.day).state === "ready" ? {pill:"ready"} : {pill:"gathering"});
+    const sim = x.status === "draft" ? null : simulate(x, APP.day);
+    return `<div class="row x-new">
+      <div class="row-main" onclick="openExp('${x.key}')"><div class="row-key">${x.key}</div><div class="row-desc">${esc(hypothesisText(x.w))}</div></div>
+      <div class="row-state">${pill(s)}<div style="margin-top:5px;font-size:11.5px;color:var(--dim-2)">${x.status==="draft"?"not started":`day ${APP.day} of ${x.w.weeks*7}`}</div></div>
+      <div class="row-meta"><span class="mono" style="color:${sim&&sim.good?"var(--green)":"var(--dim)"}">${sim&&APP.day?(sim.lift>0?"+":"")+sim.lift.toFixed(1)+"%":"—"}</span>
+        <div style="font-size:11.5px;color:var(--dim-2);margin-top:3px;flex-basis:100%">${esc(EV[x.w.metric].label)}</div></div>
+      <div class="row-act"><button class="btn btn-ghost btn-sm" onclick="${x.status==="draft"?`resumeDraft('${x.key}')`:`openExp('${x.key}')`}">${x.status==="draft"?"Continue":"Open"}</button></div>
+    </div>`;
+  }).join("");
+  const ready = EXISTING.filter(x => x.pill === "ready").length + CREATED.filter(x => x.status === "running" && simulate(x, APP.day).state === "ready").length;
+  return `
+  <div class="page-head">
+    <div><h1>Experiments</h1>
+      <p>A change shown to some people and not others, so the difference is the change and not the week.</p></div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openBuilder()">${W && !W.saved ? "Continue new experiment" : "+ New experiment"}</button>
+  </div>
+  <div class="answer"><b>${ready} experiment${ready===1?" is":"s are"} ready for you to decide.</b>
+    The others are still gathering, and each one says what it is still waiting for.</div>
+  <div class="listcard" style="margin-top:18px">
+    <div class="listhead"><span style="flex:1">Experiment</span><span class="h-state">State</span>
+      <span class="h-meta">Primary metric</span><span class="h-act"></span></div>
+    ${created}
+    ${EXISTING.map(x => `
+      <div class="row">
+        <div class="row-main" onclick="toast('The approved experiment page, unchanged by this seed')"><div class="row-key">${x.key}</div><div class="row-desc">${x.hyp}</div></div>
+        <div class="row-state">${pill(x)}<div style="margin-top:5px;font-size:11.5px;color:var(--dim-2)">day ${x.day}${x.pill==="decided"?" · closed":""}</div></div>
+        <div class="row-meta"><span class="mono" style="color:${x.liftGood?"var(--green)":"var(--dim)"}">+${x.lift}%</span>
+          <div style="font-size:11.5px;color:var(--dim-2);margin-top:3px;flex-basis:100%">${x.metric}</div></div>
+        <div class="row-act"><button class="btn btn-ghost btn-sm" onclick="toast('The approved experiment page, unchanged by this seed')">Open</button></div>
+      </div>`).join("")}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE BUILDER — five questions, one sentence, no JSON on screen
+   ═══════════════════════════════════════════════════════════════════════════ */
+const STEPS = [
+  [1,"What & why"],[2,"Who's in it"],[3,"What they see"],[4,"How you'll know"],[5,"How long"],[6,"Review"],
+];
+function builderModal(){
+  const fails = failing(W), failSteps = new Set(fails.map(f => f.step));
+  const onReview = W.step === 6;
+  return `<div class="modal x-builder" role="dialog" aria-modal="true" aria-labelledby="bh" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <h2 id="bh">New experiment</h2>
+        <div class="sub">Five questions, already answered from the template. Change whatever is different.</div>
+        <div class="x-head-key">Named for you <span class="mono">${expKey(W)}</span>${bn("experiment key")}</div>
+      </div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close. Your choices are kept.">✕</button>
+    </div>
+    <nav class="x-steps" aria-label="Steps">
+      ${STEPS.map(([n,l]) => `<button class="x-step" data-ready="true" ${W.step===n?`aria-current="step"`:""} onclick="setStep(${n})">
+        <span class="n">${n===6?"✓":n}</span>${l}${failSteps.has(n)?`<span class="warn" title="Needs a fix"></span>`:""}</button>`).join("")}
+    </nav>
+    <div class="x-panes ${onReview?"":"split"}">
+      <div class="x-main" id="wmain">${stepBody()}</div>
+      ${onReview ? "" : `<aside class="x-side" id="wside" aria-label="The plan so far">${sidePanel()}</aside>`}
+    </div>
+    <div class="modal-foot">
+      <span class="note">${onReview
+        ? (fails.length ? `Fix ${fails.length} thing${fails.length>1?"s":""} to start. You can save a draft now.` : "Nothing runs until you press Start.")
+        : "Nothing runs until you press Start. Save a draft any time."}</span>
+      <button class="btn btn-ghost" onclick="saveDraft()">Save draft</button>
+      ${W.step > 1 ? `<button class="btn btn-ghost" onclick="setStep(${W.step-1})">Back</button>` : ""}
+      ${W.step < 5 ? `<button class="btn btn-primary" onclick="setStep(${W.step+1})">Continue</button>`
+        : W.step === 5 ? `<button class="btn btn-primary" onclick="setStep(6)">Review</button>`
+        : `<button class="btn btn-primary" ${fails.length?"disabled":""} onclick="startExperiment()">Start experiment</button>`}
+    </div>
+  </div>`;
+}
+
+function stepBody(){
+  return ({1:stepWhat, 2:stepWho, 3:stepSee, 4:stepKnow, 5:stepLong, 6:stepReview})[W.step]();
+}
+function filledNote(){
+  return `<div class="x-filled"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>
+    <span>Pre-filled by the <b>${TEMPLATES[W.tpl].name}</b> template. Change anything that doesn't fit.</span></div>`;
+}
+
+/* ── 1 · What are you changing, and why? ── */
+function stepWhat(){
+  const areas = {};
+  FEATURES.forEach(f => (areas[f.key.split(".")[0]] ||= []).push(f));
+  const metricOpts = EVENTS.map(e => `<option value="${e.ev}"${e.ev===W.metric?" selected":""}>${e.noun}</option>`).join("");
+  const guarded = TEMPLATES[W.tpl].guarded;
+  return `
+  <h3>What are you changing, and why?</h3>
+  <p class="x-lede">Pick the kind of test and the feature it changes. The template answers the other four questions for you.</p>
+  <div class="field"><span class="lab">Kind of test${bn("template → pre-fills every field")}</span>
+    <div class="x-tpls">
+      ${Object.entries(TEMPLATES).map(([k,t]) => `<button class="x-tpl" aria-pressed="${W.tpl===k}" onclick="pickTemplate('${k}')">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${t.icon}</svg></span>
+        <span class="t">${t.name}</span><span class="d">${t.d}</span></button>`).join("")}
+    </div>
+  </div>
+  <div class="field"><label class="lab" for="wfeat">The feature it changes${bn("flag binding (automatic)")}</label>
+    <span class="sel x-sel"><select id="wfeat" onchange="W.feature=this.value;renderBuilder()">
+      ${Object.entries(areas).map(([a,fs]) => `<optgroup label="${a}">${fs.map(f => `<option value="${f.key}"${f.key===W.feature?" selected":""}>${esc(f.desc)} · ${f.key}</option>`).join("")}</optgroup>`).join("")}
+      <optgroup label="Not built yet"><option value="__new"${W.feature==="__new"?" selected":""}>A new feature just for this test · ${newFeatureKey()}</option></optgroup>
+    </select></span>
+    <p class="hint">${W.feature === "__new"
+      ? "It's created with this test. You can save a draft, but it can't start until code checks it."
+      : `Its values become the versions in step 3. You never bind anything by hand.`}</p>
+  </div>
+  <div class="field"><span class="lab">Your hypothesis${bn("hypothesis")}</span>
+    <div class="x-sentence">
+      We believe showing
+      <span class="x-inl"><select aria-label="The new version" onchange="renameVariant(1,this.value)">${TREAT_NAMES.map(n => `<option${n===W.variants[1].name?" selected":""}>${n}</option>`).join("")}</select></span>
+      to <button class="x-link-tok" onclick="setStep(2)">${esc(whoWords(W))}<small>step 2</small></button>
+      ${guarded ? `<b>won't lower</b>`
+        : `<span class="x-inl"><select aria-label="Direction" onchange="W.dir=this.value;renderBuilder()"><option value="increase"${W.dir==="increase"?" selected":""}>will raise</option><option value="decrease"${W.dir==="decrease"?" selected":""}>will lower</option></select></span>`}
+      <span class="x-inl"><select aria-label="Metric" onchange="pickMetric(this.value)">${metricOpts}</select></span>
+      because
+      <span class="x-inl"><select aria-label="Why" onchange="W.why=this.value;renderBuilder()">${Object.entries(REASONS).map(([k,r]) => `<option value="${k}"${k===W.why?" selected":""}>${r}</option>`).join("")}</select></span>.
+    </div>
+    <p class="hint">Every underlined part is a choice. The metric and the audience stay in sync with steps 2 and 4.</p>
+  </div>`;
+}
+
+/* ── 2 · Who's in it? ── */
+function stepWho(){
+  const w = W.who, used = w.rules.map(r => r.field), free = FIELD_ORDER.filter(f => !used.includes(f));
+  const rules = w.rules.map((r,i) => {
+    const F = FIELDS[r.field], cov = F.cov, s = cov >= 0.9 ? "ok" : cov >= 0.1 ? "warn" : "fail";
+    const covText = s === "ok" ? `${Math.round(cov*100)}% of recent events carry this tag.`
+      : s === "warn" ? `Only ${Math.round(cov*100)}% of recent events carry this tag. People whose events lack it are left out.`
+      : `Only ${Math.round(cov*100)}% of recent events carry this tag, so almost nobody can match. The test would never fill.`;
+    return `<div class="x-rule">
+      <div class="x-rule-top">
+        <span class="as">${i ? "and" : "Only"}</span>
+        <span class="sel"><select aria-label="Condition ${i+1} field" onchange="changeRuleField(${i},this.value)">
+          ${[r.field, ...free].map(f => `<option value="${f}"${f===r.field?" selected":""}>${FIELDS[f].label}</option>`).join("")}</select></span>
+        <span class="as">is</span>
+        <button class="rm" onclick="removeRule(${i})" aria-label="Remove condition ${i+1}">Remove</button>
+      </div>
+      <div class="x-vals" role="group" aria-label="Values seen in your events">
+        ${F.vals.map(([v,l,p]) => `<button class="chip" aria-pressed="${r.vals.includes(v)}" onclick="toggleVal(${i},'${v}')">${esc(l)}<span class="pc">${Math.round(p*100)}%</span></button>`).join("")}
+      </div>
+      <div class="x-cov">${mk(s)}<span>${covText}</span></div>
+    </div>`;
+  }).join("");
+  return `
+  <h3>Who's in it?</h3>
+  <p class="x-lede">The same conditions features use. Every value below is one your events already carry, with how common it is.</p>
+  ${filledNote()}
+  <div class="field"><span class="lab">Who can be in the test${bn("eligibility.tags · eligibility.description")}</span>
+    <div class="seg" role="group"><button aria-pressed="${w.mode==="everyone"}" onclick="W.who.mode='everyone';afterChange()">Everyone who reaches it</button>
+      <button aria-pressed="${w.mode==="some"}" onclick="whoSome()">Only some people</button></div>
+    ${w.mode === "some" ? `<div style="margin-top:12px">${rules}
+      <button class="x-add" ${free.length?"":"disabled"} onclick="addRule()">+ Add a condition</button></div>` : ""}
+  </div>
+  <div class="field"><label class="lab" for="wpct">How many of them${bn("rollout % of the bound flag")}</label>
+    <div class="chips" style="margin-bottom:8px">${[10,25,50,100].map(p => `<button class="chip" aria-pressed="${w.pct===p}" onclick="W.who.pct=${p};afterChange()">${p}%</button>`).join("")}</div>
+    <input type="range" class="x-range" id="wpct" min="5" max="100" step="5" value="${w.pct}" style="--fill:${(w.pct-5)/95*100}%"
+      oninput="W.who.pct=+this.value;this.style.setProperty('--fill',((this.value-5)/95*100)+'%');liveWho()" onchange="afterChange()">
+    <div class="x-ticks"><span>5%</span><span>50%</span><span>100%</span></div>
+    <div id="wholive">${whoLive()}</div>
+  </div>
+  <div class="field"><span class="lab">Count each${bn("assignmentEntityType")}</span>
+    <div class="picklist">
+      ${Object.entries(ENTITIES).map(([k,e]) => `<button class="pick" aria-pressed="${W.entity===k}" onclick="W.entity='${k}';afterChange()">
+        <span class="radio"></span><span><span class="t">${e.label}</span><span class="d">${e.d}</span></span>
+        <span class="badge" style="border-color:var(--line);color:var(--dim-2)">${fmt(e.seen)} seen · 14 days</span></button>`).join("")}
+    </div>
+    <p class="hint">The same ${ENTITIES[W.entity].label.toLowerCase()} always sees the same version, every visit.</p>
+  </div>`;
+}
+function whoLive(){
+  const d = dailyEligible(W);
+  return `<div class="x-match">About <span class="mono">${fmt(d)}</span> ${ENTITIES[W.entity].plural} a day will be in the test.</div>`;
+}
+function liveWho(){ const el = $("#wholive"); if(el) el.innerHTML = whoLive(); syncWeeks(); renderSide(); }
+
+/* ── 3 · What do they see? ── */
+function stepSee(){
+  const k = W.variants.length, fk = featureKey(W);
+  const values = k === 2 ? ["off","on"] : W.variants.map(v => slug(v.name));
+  return `
+  <h3>What do they see?</h3>
+  <p class="x-lede">The current version and the new one, side by side. Add screenshots so anyone reviewing can see the difference.</p>
+  ${filledNote()}
+  <div class="field"><span class="lab">Versions${bn("variants[].key · controlVariantKey")}</span>
+    <div class="x-vers" id="wvers">${versCards(values)}</div>
+  </div>
+  <div class="field"><label class="lab" for="wsplit">How to split them${bn("variants[].weight")}</label>
+    ${k === 2 ? `
+      <div class="chips" style="margin-bottom:10px">
+        ${[[50,"Even · 50 / 50"],[20,"Mostly current · 80 / 20"],[10,"Cautious · 90 / 10"]].map(([s,l]) => `<button class="chip" aria-pressed="${W.split===s}" onclick="W.split=${s};afterChange()">${l}</button>`).join("")}
+      </div>
+      <input type="range" class="x-range" id="wsplit" min="5" max="95" step="5" value="${W.split}" aria-label="Share that sees ${esc(W.variants[1].name)}" style="--fill:${(W.split-5)/90*100}%"
+        oninput="W.split=+this.value;this.style.setProperty('--fill',((this.value-5)/90*100)+'%');liveSplit()" onchange="afterChange()">
+      <div class="x-ticks"><span>More ${esc(W.variants[0].name)}</span><span>More ${esc(W.variants[1].name)}</span></div>`
+    : `<div class="chips"><button class="chip" aria-pressed="true">Even split</button></div>`}
+    <div id="wsplitlive" style="margin-top:12px">${splitBar(W)}</div>
+    <p class="hint">An uneven split is safer but slower. The smaller group sets the pace.</p>
+  </div>
+  <div class="callout info"><span class="ico">◆</span><span><span class="mono">${fk}</span> gets ${k} values to match:
+    ${W.variants.map((v,i) => `<span class="mono">${values[i]}</span> → ${esc(v.name)}`).join(", ")}. Created and bound when you save.${bn("flag variants auto-created")}</span></div>`;
+}
+function versCards(values){
+  const ws = weights(W), k = W.variants.length;
+  return W.variants.map((v,i) => {
+    const opts = (i ? TREAT_NAMES : CONTROL_NAMES).filter(n => n === v.name || !W.variants.some(o => o.name === n));
+    return `<div class="x-ver">
+      <div class="x-ver-head">
+        <span class="x-tag ${i?"treat":"control"}">${i ? `Version ${String.fromCharCode(65+i)}` : "Control"}</span>
+        <span class="sel"><select aria-label="Name for ${i?"version "+String.fromCharCode(65+i):"control"}" onchange="renameVariant(${i},this.value)">
+          ${opts.map(n => `<option${n===v.name?" selected":""}>${n}</option>`).join("")}</select></span>
+      </div>
+      <div class="x-ver-body">${shot(v, i)}
+        <label class="x-upl"><input type="file" accept="image/*" onchange="addShot(${i},this)">${v.shot?"Replace screenshot":"Add a screenshot"}</label>
+      </div>
+      <div class="x-ver-foot"><span>${i ? "What the change looks like" : "What they see today"}</span>
+        ${i >= 2 ? `<button class="rm" style="color:var(--dim-2);font-size:12px" onclick="removeVariant(${i})">Remove</button>` : ""}
+        <span class="pct">${ws[i]}%</span><span class="bn">${values ? values[i] : ""}</span></div>
+    </div>`;
+  }).join("") + (k < 4 ? `<button class="x-ver add" onclick="addVariant()"><span class="plus">+</span>Add a version<small>Up to four. Each one needs more people.</small></button>` : "");
+}
+function liveSplit(){
+  const el = $("#wsplitlive"); if(el) el.innerHTML = splitBar(W);
+  document.querySelectorAll(".x-ver-foot .pct").forEach((p,i) => p.textContent = weights(W)[i] + "%");
+  syncWeeks(); renderSide();
+}
+
+/* ── 4 · How will you know? ── */
+function stepKnow(){
+  const sugg = {copy:["application.completed","application.started","signup.completed"],
+    pricing:["subscription.started","checkout.completed","application.completed"],
+    onboarding:["listing.published","signup.completed","application.completed"],
+    rollout:["checkout.completed","signup.completed","listing.published"]}[W.tpl];
+  const list = APP.showAllMetrics ? EVENTS.filter(e => e.dir === "increase" || e.ev === W.metric) : EVENTS.filter(e => sugg.includes(e.ev) || e.ev === W.metric);
+  const gPool = EVENTS.filter(e => e.ev !== W.metric);
+  const guardCands = APP.showAllGuards ? gPool
+    : [...gPool.filter(e => W.guards.includes(e.ev)), ...gPool.filter(e => !W.guards.includes(e.ev) && e.dir === "decrease")].slice(0, Math.max(5, W.guards.length));
+  const noun = ENTITIES[W.entity].plural;
+  const row = (e, on, cb, fn) => `<button class="x-metric${cb?" cb":""}" aria-pressed="${on}" onclick="${fn}">
+      <span class="radio"></span>
+      <span><span class="nm">${esc(e.label)}${!cb && sugg.includes(e.ev) && sugg[0]===e.ev ? `<span class="sug">suggested</span>` : ""}${!e.last24?`<span class="stale">quiet for 24h</span>`:""}</span><span class="ev">${e.ev}</span></span>
+      <span class="num">${spark(e)}<span><span class="c">${fmt(e.n14)}</span><span class="b">${e.base}% of ${noun}</span></span></span>
+    </button>`;
+  const guarded = TEMPLATES[W.tpl].guarded;
+  return `
+  <h3>How will you know?</h3>
+  <p class="x-lede">Pick from events your product already sends. Each shows its last 14 days and how often ${noun} do it today.</p>
+  ${filledNote()}
+  <div class="field"><span class="lab">${guarded ? "The number that must hold" : "The one number that decides it"}${bn("primaryMetric.event")}</span>
+    <div class="x-metrics">${list.map(e => row(e, e.ev===W.metric, false, `pickMetric('${e.ev}')`)).join("")}</div>
+    <button class="x-more" onclick="APP.showAllMetrics=!APP.showAllMetrics;renderBuilder()">${APP.showAllMetrics ? "Show suggestions only" : `Show all ${EVENTS.length} events`}</button>
+  </div>
+  ${guarded ? "" : `<div class="field"><span class="lab">It should${bn("primaryMetric.direction")}<span class="sug-tag">suggested from the event</span></span>
+    <div class="seg" role="group"><button class="yes" aria-pressed="${W.dir==="increase"}" onclick="W.dir='increase';afterChange()">Go up</button>
+      <button aria-pressed="${W.dir==="decrease"}" onclick="W.dir='decrease';afterChange()">Go down</button></div></div>`}
+  <div class="field"><span class="lab">Must not get worse${bn("guardrailMetrics[]")}</span>
+    <div class="x-metrics">${guardCands.map(e => row(e, W.guards.includes(e.ev), true, `toggleGuard('${e.ev}')`)).join("")}</div>
+    <button class="x-more" onclick="APP.showAllGuards=!APP.showAllGuards;renderBuilder()">${APP.showAllGuards ? "Show fewer" : "Show all events"}</button>
+    <p class="hint">A guardrail never picks the winner. It stops you shipping a win that cost something else.</p>
+  </div>
+  <div class="field"><span class="lab">Break results down by${bn("segmentFields[]")}</span>
+    <div class="chips">${FIELD_ORDER.map(f => `<button class="chip" aria-pressed="${W.segs.includes(f)}" onclick="toggleSeg('${f}')">${FIELDS[f].label}</button>`).join("")}</div>
+  </div>`;
+}
+
+/* ── 5 · How long? ── */
+function stepLong(){
+  const m = EV[W.metric];
+  return `
+  <h3>How long?</h3>
+  <p class="x-lede">Pick the smallest change you'd act on. We turn it into days using your real traffic.</p>
+  ${filledNote()}
+  <div class="field"><label class="lab" for="wmde">Smallest change worth knowing about${bn("minimumSamplePerVariant")}</label>
+    <div id="mdelive">${mdeLive()}</div>
+    <input type="range" class="x-range" id="wmde" min="5" max="30" step="1" value="${W.mde}" style="--fill:${(W.mde-5)/25*100}%"
+      oninput="W.mde=+this.value;this.style.setProperty('--fill',((this.value-5)/25*100)+'%');liveMde()" onchange="afterChange()">
+    <div class="x-ticks"><span>5% · slow, sees small changes</span><span>30% · fast, only big ones</span></div>
+    <div id="tradelive">${tradeLive()}</div>
+  </div>
+  <div class="field"><span class="lab">Run it for${bn("plannedWindow.endAt")}</span>
+    <div class="chips" id="weekslive">${weeksChips()}</div>
+    <p class="hint">Full weeks, so weekdays and weekends both count.</p>
+  </div>
+  <div class="field"><span class="lab">Start${bn("plannedWindow.startAt")}</span>
+    <div class="chips">
+      <button class="chip" aria-pressed="${W.start==="now"}" onclick="W.start='now';afterChange()">When I press Start</button>
+      <button class="chip" aria-pressed="${W.start==="mon"}" onclick="W.start='mon';afterChange()">Monday 28 Sep, 9:00</button>
+    </div>
+  </div>`;
+}
+function mdeLive(){
+  const m = EV[W.metric], p = m.base, to = W.dir === "decrease" ? p*(1-W.mde/100) : p*(1+W.mde/100), days = estDays(W);
+  return `<div class="x-mde"><span class="n">${W.mde}%</span>
+      <span class="s">${esc(m.noun)} from <span class="mono">${p}%</span> to <span class="mono">${to.toFixed(1)}%</span></span></div>
+    <div class="x-est" style="margin:10px 0 12px"><span class="big">${isFinite(days) ? `≈ ${days} days` : "Never"}</span>
+      <span class="txt">${isFinite(days)
+        ? `at your current traffic. <b>${fmt(needPerVersion(W))} ${ENTITIES[W.entity].plural} per version</b>, and about ${fmt(dailyEligible(W))} a day reach it.`
+        : "Nobody matches who's in it, so it would never finish."}</span></div>`;
+}
+function tradeLive(){
+  return `<div class="x-trade">${[5,10,20].map(v => { const d = estDays(W, v);
+    return `<button aria-pressed="${W.mde===v}" onclick="W.mde=${v};afterChange()"><span class="a">${v}% · ${isFinite(d)?`≈ ${d} days`:"never"}</span><span class="b">${v===5?"Only small wins matter":v===10?"A clear improvement":"Only a big swing"}</span></button>`; }).join("")}</div>`;
+}
+function weeksChips(){
+  const days = estDays(W), rec = WEEK_OPTS.find(x => x >= recommendedWeeks(W)) || 8;
+  return WEEK_OPTS.map(x => `<button class="chip" aria-pressed="${W.weeks===x}" onclick="setWeeks(${x})">${x} week${x>1?"s":""}${x===rec?" · recommended":""}${x*7<days?" · too short":""}</button>`).join("");
+}
+function liveMde(){
+  $("#mdelive").innerHTML = mdeLive(); $("#tradelive").innerHTML = tradeLive();
+  syncWeeks(); $("#weekslive").innerHTML = weeksChips(); renderSide();
+}
+
+/* ── Review ── */
+function stepReview(){
+  const cs = checks(W), fails = cs.filter(c => c.s === "fail"), fk = featureKey(W), s = startDate(W), e = addDays(s, W.weeks*7);
+  const ws = weights(W);
+  return `
+  <h3>Check it over</h3>
+  <p class="x-lede">One sentence for the whole plan, then the checks we ran on your real data.</p>
+  <p class="x-big-sentence">${planSentence(W)}</p>
+  <div class="x-rev-grid">
+    <div>
+      <div class="x-mini-vers" style="grid-template-columns:repeat(${Math.min(W.variants.length,2)},1fr);margin-bottom:10px">
+        ${W.variants.map((v,i) => `<div>${shot(v,i,true)}<div class="cap"><span class="x-tag ${i?"treat":"control"}">${i?`Version ${String.fromCharCode(65+i)}`:"Control"}</span><span>${esc(v.name)}</span><span class="mono">${ws[i]}%</span></div></div>`).join("")}
+      </div>
+      <div class="review" style="margin-top:16px">
+        <div><span class="k">Feature</span><span class="mono" style="font-size:12.5px">${fk}</span><button class="edit" onclick="setStep(1)">Edit</button></div>
+        <div><span class="k">Why</span><span>${esc(REASONS[W.why].replace(/^./, c => c.toUpperCase()))}</span><button class="edit" onclick="setStep(1)">Edit</button></div>
+        <div><span class="k">Who</span><span>${W.who.pct}% of ${esc(whoWords(W))}, counted per ${ENTITIES[W.entity].label.toLowerCase()}</span><button class="edit" onclick="setStep(2)">Edit</button></div>
+        <div><span class="k">Split</span><span>${W.variants.map((v,i) => `${esc(v.name)} ${ws[i]}%`).join(" · ")}</span><button class="edit" onclick="setStep(3)">Edit</button></div>
+        <div><span class="k">Decides it</span><span>${esc(EV[W.metric].label)}, ${TEMPLATES[W.tpl].guarded?"must hold":W.dir==="increase"?"should go up":"should go down"}</span><button class="edit" onclick="setStep(4)">Edit</button></div>
+        <div><span class="k">Guardrails</span><span>${W.guards.length ? W.guards.map(g => esc(EV[g].label)).join(" · ") : "None"}</span><button class="edit" onclick="setStep(4)">Edit</button></div>
+        <div><span class="k">Runs</span><span>${dstr(s)} → ${dstr(e)} · ${W.weeks} weeks, about ${estDays(W)} days needed</span><button class="edit" onclick="setStep(5)">Edit</button></div>
+      </div>
+    </div>
+    <div>
+      <span class="rail-label" style="margin-bottom:10px">Before it starts · ${cs.filter(c=>c.s!=="fail").length} of ${cs.length} pass</span>
+      <div class="x-checks" aria-live="polite">
+        ${cs.map(c => `<div class="x-check ${c.s}">${mk(c.s)}<div><div class="t">${c.t}</div><div class="d">${c.d}</div>
+          ${c.fix ? `<button class="fix" onclick="${c.act}">${c.fix} →</button>` : ""}</div></div>`).join("")}
+      </div>
+      <p class="hint" style="margin-top:10px;font-size:12px;color:var(--dim-2)">Nothing here is ticked by hand. Each check runs against what your events and features did in the last day.</p>
+    </div>
+  </div>
+  <div class="bn-block"><div class="x-contract">${contractPreview()}</div></div>`;
+}
+function definitionOf(w){
+  const ws = weights(w), s = startDate(w), keys = w.variants.map(v => slug(v.name));
+  const tags = {}; if(w.who.mode === "some") w.who.rules.forEach(r => { if(r.vals.length) tags[r.field] = r.vals.length === 1 ? r.vals[0] : r.vals.join("|"); });
+  return {
+    hypothesis: hypothesisText(w),
+    assignmentEntityType: w.entity,
+    eligibility: {description: `${w.who.pct}% of ${whoWords(w)}`, ...(Object.keys(tags).length ? {tags} : {})},
+    variants: keys.map((k,i) => ({key:k, weight:ws[i]})),
+    controlVariantKey: keys[0],
+    primaryMetric: {event:w.metric, direction:w.dir},
+    guardrailMetrics: w.guards.map(g => ({event:g, direction: EV[g].dir === "decrease" ? "decrease" : "increase"})),
+    segmentFields: w.segs,
+    plannedWindow: {startAt: iso(s), endAt: iso(addDays(s, w.weeks*7))},
+    minimumSamplePerVariant: needPerVersion(w),
+  };
+}
+function contractPreview(){
+  const json = esc(JSON.stringify(definitionOf(W), null, 2)).replace(/&quot;([a-zA-Z]+)&quot;:/g, `<span class="k">"$1"</span>:`);
+  return `// What Save/Start writes — ExperimentDefinition (lib/experiment-definition.ts). Build-notes view only.\n// Key: ${expKey(W)} · binds ${featureKey(W)} (values created to match)\n// Eligibility tags with several values are a one-of predicate in the flag rule; the definition's scalar tag\n// shape (string | number | boolean) can hold one. A grooming question, not a UI one.\n${json}`;
+}
+
+/* ── the side panel: the plan so far, always visible ── */
+function sidePanel(){
+  const days = estDays(W), cs = checks(W), fails = cs.filter(c => c.s === "fail").length, warns = cs.filter(c => c.s === "warn").length, ws = weights(W);
+  return `
+    <span class="rail-label">The plan so far</span>
+    <p class="x-plan-sentence">${planSentence(W)}</p>
+    <div class="x-plan-block">
+      <div class="x-mini-vers">${W.variants.slice(0,2).map((v,i) => `<div>${shot(v,i,true)}<div class="cap"><span>${esc(v.name)}</span><span class="mono">${ws[i]}%</span></div></div>`).join("")}</div>
+      ${W.variants.length > 2 ? `<p class="hint" style="margin-top:8px;font-size:12px;color:var(--dim-2)">+ ${W.variants.length-2} more version${W.variants.length>3?"s":""}</p>` : ""}
+    </div>
+    <div class="x-plan-block">
+      <div class="x-days"><span class="n">${isFinite(days) ? `≈ ${days}` : "—"}</span><span class="t">${isFinite(days) ? "days at your traffic" : "nobody matches yet"}</span></div>
+      <div class="x-kv" style="margin-top:10px">
+        <div><span class="k">In the test</span><span class="v">${fmt(dailyEligible(W))} ${ENTITIES[W.entity].plural}/day</span></div>
+        <div><span class="k">Needs</span><span class="v">${fmt(needPerVersion(W))} per version</span></div>
+        <div><span class="k">Planned</span><span class="v">${W.weeks} weeks</span></div>
+      </div>
+    </div>
+    <div class="x-plan-block">
+      <button class="x-checksum" onclick="setStep(6)" style="text-align:left">${mk(fails ? "fail" : warns ? "warn" : "ok")}
+        <span><b>${cs.length - fails} of ${cs.length} checks pass</b>${fails ? ` · ${fails} to fix` : warns ? ` · ${warns} to look at` : ""}</span></button>
+    </div>`;
+}
+function renderSide(){ const el = $("#wside"); if(el) el.innerHTML = sidePanel(); }
+
+/* ═══ builder actions ═══ */
+function openBuilder(){ if(!W || W.saved) W = newDraft(); APP.overlay = "builder"; renderOverlay(); }
+function resumeDraft(key){ const x = CREATED.find(c => c.key === key); W = clone(x.w); W.saved = false; W.fromDraft = key; W.step = 6; APP.overlay = "builder"; renderOverlay(); }
+function setStep(n){ W.step = n; renderBuilder(); const m = document.querySelector(".scrim"); if(m) m.scrollTop = 0; }
+function renderBuilder(){ renderOverlay(); }
+function afterChange(){ syncWeeks(); renderBuilder(); }
+function pickTemplate(k){ const step = W.step; applyTemplate(W, k); W.step = step; APP.showAllMetrics = false; renderBuilder(); toast(`${TEMPLATES[k].name} template applied to all five steps`); }
+function pickMetric(ev){ W.metric = ev; if(!TEMPLATES[W.tpl].guarded) W.dir = EV[ev].dir; W.guards = W.guards.filter(g => g !== ev); afterChange(); }
+function toggleGuard(ev){ const i = W.guards.indexOf(ev); i < 0 ? W.guards.push(ev) : W.guards.splice(i,1); afterChange(); }
+function toggleSeg(f){ const i = W.segs.indexOf(f); i < 0 ? W.segs.push(f) : W.segs.splice(i,1); afterChange(); }
+function whoSome(){ W.who.mode = "some"; if(!W.who.rules.length) W.who.rules.push({field:"region", vals:["MX"]}); afterChange(); }
+function addRule(){ const used = W.who.rules.map(r => r.field); const f = FIELD_ORDER.find(x => !used.includes(x)); W.who.rules.push({field:f, vals:[FIELDS[f].vals[0][0]]}); afterChange(); }
+function removeRule(i){ W.who.rules.splice(i,1); if(!W.who.rules.length) W.who.mode = "everyone"; afterChange(); }
+function removeRuleByField(f){ W.who.rules = W.who.rules.filter(r => r.field !== f); if(!W.who.rules.length) W.who.mode = "everyone"; afterChange(); toast("Condition removed"); }
+function changeRuleField(i, f){ W.who.rules[i] = {field:f, vals:[FIELDS[f].vals[0][0]]}; afterChange(); }
+function toggleVal(i, v){ const r = W.who.rules[i], j = r.vals.indexOf(v); j < 0 ? r.vals.push(v) : r.vals.splice(j,1); afterChange(); }
+function renameVariant(i, name){
+  const clash = W.variants.findIndex((v,j) => j !== i && v.name === name);
+  if(clash >= 0) W.variants[clash].name = W.variants[i].name;
+  W.variants[i].name = name; afterChange();
+}
+function addVariant(){
+  const name = TREAT_NAMES.find(n => n.startsWith("Version") && !W.variants.some(v => v.name === n)) || TREAT_NAMES.find(n => !W.variants.some(v => v.name === n));
+  W.variants.push({name, shot:null}); afterChange();
+}
+function removeVariant(i){ W.variants.splice(i,1); afterChange(); }
+function addShot(i, input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const r = new FileReader(); r.onload = () => { W.variants[i].shot = r.result; renderBuilder(); toast("Screenshot added"); }; r.readAsDataURL(f);
+}
+function setWeeks(x){ W.weeks = x; W.weeksTouched = true; renderBuilder(); }
+
+function saveDraft(){
+  const key = expKey(W);
+  const existing = CREATED.findIndex(c => c.key === key);
+  const rec = {key, w:clone({...W, saved:true}), status:"draft"};
+  if(existing >= 0) CREATED[existing] = rec; else CREATED.unshift(rec);
+  W.saved = true; closeOverlay(); APP.view = "list"; render(); toast(`${key} saved as a draft`);
+}
+function startExperiment(){
+  if(failing(W).length) return;
+  const key = expKey(W);
+  const rec = {key, w:clone({...W, saved:true}), status:"running"};
+  const existing = CREATED.findIndex(c => c.key === key);
+  if(existing >= 0) CREATED[existing] = rec; else CREATED.unshift(rec);
+  W.saved = true; APP.day = 0; APP.tab = "results"; closeOverlay(); openExp(key);
+  toast(`${key} started · ${featureKey(rec.w)} is splitting ${weights(rec.w).join(" / ")}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AFTER START — the readout leads with the decision
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* Deterministic example results, so every reviewer sees the same thing. */
+function simulate(x, day){
+  const w = x.w, t = TEMPLATES[w.tpl], p = EV[w.metric].base / 100, ws = weights(w), daily = dailyEligible(w);
+  const need = needPerVersion(w), planned = w.weeks * 7;
+  const d = Math.min(day, planned);
+  const nC = Math.round(daily * ws[0]/100 * d), nT = Math.round(daily * ws[1]/100 * d);
+  const noise = i => i > 0 ? 5.2 * Math.sin(i*1.7 + 1) / Math.sqrt(i) : 0;
+  const lift = d ? t.lift + noise(d) : 0;
+  const se = d ? Math.sqrt((1-p)/(p*Math.max(nC,1)) + (1-p)/(p*Math.max(nT,1))) * 100 : 0;
+  const lo = lift - 1.96*se, hi = lift + 1.96*se;
+  const cRate = p*100, tRate = cRate * (1 + lift/100);
+  const enough = Math.min(nC, nT) >= need;
+  const good = t.guarded ? lo > -w.mde : (w.dir === "increase" ? lo > 0 : hi < 0);
+  const bad = !t.guarded && (w.dir === "increase" ? hi < 0 : lo > 0);
+  const state = x.status === "decided" ? "decided" : d === 0 ? "waiting" : !enough ? "gathering" : "ready";
+  const remain = enough ? 0 : Math.ceil((need - Math.min(nC,nT)) / (daily * Math.min(...ws)/100));
+  const guards = w.guards.map((g,i) => ({g, delta: d ? [-2.1, 0.4, -0.8][i % 3] * Math.min(1, d/5) : 0, ok:true}));
+  return {d, planned, nC, nT, need, lift, lo, hi, cRate, tRate, enough, good:d>0 && good, bad, state, remain, guards,
+    frac: Math.min(1, Math.min(nC,nT)/need), srm: d >= 2 ? "clear" : "not_evaluable", t};
+}
+
+function openExp(key){ APP.exp = key; APP.view = "detail"; render(); window.scrollTo(0,0); }
+function goList(){ APP.view = "list"; APP.exp = null; render(); }
+
+function detailScreen(){
+  const x = CREATED.find(c => c.key === APP.exp), w = x.w, s = simulate(x, APP.day), A = w.variants[0].name, B = w.variants[1].name;
+  const pill = x.status === "decided" ? `<span class="pill on"><span class="dot"></span>Decided</span>`
+    : s.state === "ready" ? `<span class="pill on"><span class="dot"></span>Ready to decide</span>`
+    : `<span class="pill never"><span class="dot"></span>${s.state === "waiting" ? "Just started" : "Still gathering"}</span>`;
+  const days = [0, Math.max(3, Math.round(s.planned*0.25)), Math.round(s.planned*0.64), s.planned];
+  return `
+  <div class="crumbrow"><button onclick="goList()">← Experiments</button><span class="sep">/</span><span class="mono">${x.key}</span></div>
+  <div class="page-head">
+    <div><h1 class="mono" style="font-size:23px">${x.key}</h1><p>${esc(hypothesisText(w))}</p></div>
+    <div class="spacer"></div>${pill}
+  </div>
+  ${x.status === "decided" ? "" : `<div class="x-proto"><span class="proto-pill">Prototype</span><span>See this page on</span>
+    <div class="chips">${days.map(d => `<button class="chip" aria-pressed="${APP.day===d}" onclick="APP.day=${d};render()">day ${d}${d===s.planned?" · planned end":""}</button>`).join("")}</div></div>`}
+  <div class="answer">${answerLine(x, s)}</div>
+  <div class="x-ptabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="${APP.tab==="results"}" onclick="APP.tab='results';render()">Results</button>
+    <button class="tab" role="tab" aria-selected="${APP.tab==="plan"}" onclick="APP.tab='plan';render()">Plan</button>
+  </div>
+  ${APP.tab === "results" ? resultsTab(x, s) : planTab(x)}`;
+}
+function answerLine(x, s){
+  const w = x.w, A = w.variants[0].name, B = w.variants[1].name, m = EV[w.metric];
+  const sign = v => (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+  if(x.status === "decided") return `<b>Decided: ${OUTCOME_WORDS[x.outcome].toLowerCase()}.</b> ${esc(x.outcome==="ship_treatment"?B:A)} is on for everyone in Production. The decision and its reason are recorded.`;
+  if(s.state === "waiting") return `<b>It's live. Results start tomorrow.</b> ${esc(ENTITIES[w.entity].plural.replace(/^./,c=>c.toUpperCase()))} are being split ${weights(w).join(" / ")} from now. It needs ${fmt(s.need)} per version, about ${estDays(w)} days.`;
+  const lead = s.t.guarded
+    ? (s.lo > -w.mde ? `<b>${esc(B)} is holding: ${esc(m.noun)} ${sign(s.lift)}</b>` : `<b>${esc(B)} may be hurting ${esc(m.noun)}: ${sign(s.lift)}</b>`)
+    : s.lift >= 0.5 ? `<b>${esc(B)} is ahead, ${sign(s.lift)}</b>` : s.lift <= -0.5 ? `<b>${esc(B)} is behind, ${sign(s.lift)}</b>` : `<b>No difference yet</b>`;
+  const tail = s.state === "ready"
+    ? (s.good ? " The whole range is on the right side of zero, so you can call it." : " The range still includes no difference, so the honest call is that it didn't move.")
+    : ` ${Math.round(s.frac*100)}% of the planned sample, so don't call it yet. About ${s.remain} more day${s.remain===1?"":"s"}.`;
+  return `${lead} (range ${sign(s.lo)} to ${sign(s.hi)}). Guardrails fine, ${s.srm === "clear" ? "split checks out" : "split can't be checked until day 2"}.${tail}`;
+}
+
+function resultsTab(x, s){
+  const w = x.w, A = w.variants[0].name, B = w.variants[1].name, m = EV[w.metric];
+  const sign = v => (v > 0 ? "+" : "") + v.toFixed(1);
+  const liftCls = !s.d ? "flat-c" : s.good ? "up-c" : s.bad ? "down-c" : "flat-c";
+  return `
+  <div class="x-res-top">
+    <div class="x-card">
+      <div class="x-lift">
+        <div><div class="n ${liftCls}">${s.d ? `${sign(s.lift)}%` : "—"}${s.d && Math.abs(s.lift) >= 0.5 ? `<span class="arw">${s.lift>0?"↑":"↓"}</span>` : ""}</div>
+          <div class="k">${esc(m.label)} · ${esc(B)} vs ${esc(A)}</div></div>
+        <div class="x-legend"><span><i style="background:#8d8069"></i>${esc(A)}</span><span><i style="background:var(--blue)"></i>${esc(B)}</span></div>
+      </div>
+      ${s.d ? liftChart(x, s) : `<div class="x-empty-chart"><div><b>The chart fills in from tomorrow</b>One point a day, per version, so a single odd day can't fool you.</div></div>`}
+    </div>
+    ${verdictCard(x, s)}
+  </div>
+  <div class="x-kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+    <div class="x-kpi"><div class="k">${esc(A)}</div><div class="n">${s.d ? s.cRate.toFixed(1)+"%" : "—"}</div><div class="d">${fmt(s.nC)} ${ENTITIES[w.entity].plural}</div></div>
+    <div class="x-kpi"><div class="k">${esc(B)}</div><div class="n ${liftCls}">${s.d ? s.tRate.toFixed(1)+"%" : "—"}${s.d?`<small>${sign(s.lift)}%</small>`:""}</div><div class="d">${fmt(s.nT)} ${ENTITIES[w.entity].plural}</div></div>
+    ${s.guards.slice(0,2).map(g => `<div class="x-kpi"><div class="k">${esc(EV[g.g].label)} <span style="color:var(--dim-2)">· guardrail</span></div>
+      <div class="n ${s.d ? "flat-c" : ""}">${s.d ? `${g.delta>0?"+":""}${g.delta.toFixed(1)}%` : "—"}</div><div class="d">${s.d ? `${mk("ok")} within limits` : "nothing yet"}</div></div>`).join("")}
+  </div>
+  ${s.d ? `<div class="x-two">
+    <div class="listcard" style="padding:20px">
+      <span class="rail-label" style="margin-bottom:6px">How sure we are</span>
+      ${ciBlock(s)}
+    </div>
+    <div class="listcard" style="padding:20px">
+      <span class="rail-label" style="margin-bottom:12px">Who saw what</span>
+      <div class="vbars">${[[A,"control",s.nC],[B,"treatment",s.nT]].map(([nm,k,n]) => `<div class="vbar">
+        <div class="t"><span class="nm"><i class="${k}"></i>${esc(nm)}</span><span class="num">${fmt(n)} of ${fmt(s.need)} needed</span></div>
+        <div class="track"><div class="fill ${k}" style="width:${Math.min(100, n/s.need*100).toFixed(1)}%"></div></div></div>`).join("")}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px;color:var(--dim)">
+        ${s.srm === "clear" ? `<span class="pill on"><span class="dot"></span>Split checks out</span>People were divided as designed.`
+          : `<span class="pill never"><span class="dot"></span>Can't tell yet</span>Too few people to check the split.`}</div>
+    </div>
+  </div>` : ""}`;
+}
+function verdictCard(x, s){
+  const w = x.w, A = w.variants[0].name, B = w.variants[1].name, fk = featureKey(w);
+  const prog = `<div><div class="x-progress"><i style="width:${(s.frac*100).toFixed(1)}%"></i></div>
+    <div class="x-progress-cap"><span>${Math.round(s.frac*100)}% of the sample</span><span>day ${s.d} of ${s.planned}</span></div></div>`;
+  if(x.status === "decided") return `<div class="x-verdict ready"><span class="rail-label">Decision</span>
+    <h3>${esc(x.outcome==="ship_treatment"?B:A)} is on for everyone.</h3>
+    <p>${esc(x.reason)}. Recorded by Daniel, ${dstr(addDays(startDate(w), s.planned))}.</p>
+    <p class="mono" style="font-size:12px;color:var(--dim-2)">${fk} → ${x.outcome==="ship_treatment"?"on":"off"} · Production</p></div>`;
+  if(s.state === "waiting") return `<div class="x-verdict"><span class="rail-label">What happens next</span>
+    <h3>Let it run. Nothing to decide yet.</h3>
+    <p>We'll tell you on Today when it's ready to call, in about ${estDays(w)} days. Until then, peeking at a number can only mislead you.</p>${prog}
+    <div class="acts"><button class="btn btn-ghost btn-sm" onclick="toast('Stopping asks for a reason, then the version never runs again')">Stop experiment</button></div></div>`;
+  if(s.state === "gathering") return `<div class="x-verdict"><span class="rail-label">What happens next</span>
+    <h3>Keep it running. About ${s.remain} more day${s.remain===1?"":"s"}.</h3>
+    <p>${Math.abs(s.lift) >= 0.5 ? `${esc(B)} is ${s.lift>0?"ahead":"behind"} today, but with this few people that can still flip.` : "No real gap yet."} The button to roll out appears once there are enough people to trust the result.</p>${prog}
+    <div class="acts"><button class="btn btn-ghost btn-sm" onclick="toast('Stopping asks for a reason, then the version never runs again')">Stop experiment</button></div></div>`;
+  if(s.t.guarded) return `<div class="x-verdict ready"><span class="rail-label">Ready</span>
+    <h3>${esc(B)} is safe. Roll it further?</h3>
+    <p>${esc(EV[w.metric].noun.replace(/^./,c=>c.toUpperCase()))} held and no guardrail moved.</p>
+    <div class="acts"><button class="btn btn-primary" onclick="openDecide('ship_treatment')">Roll out ${esc(B)} to everyone</button>
+      <button class="btn btn-ghost" onclick="openDecide('keep_control')">Turn it off</button></div></div>`;
+  if(s.good) return `<div class="x-verdict ready"><span class="rail-label">Ready</span>
+    <h3>${esc(B)} is winning. Roll it out?</h3>
+    <p>${esc(EV[w.metric].noun.replace(/^./,c=>c.toUpperCase()))} are up ${s.lift.toFixed(1)}%, the guardrails held and the split checks out.</p>
+    <div class="acts"><button class="btn btn-primary" onclick="openDecide('ship_treatment')">Roll out ${esc(B)} to everyone</button>
+      <button class="btn btn-ghost" onclick="openDecide('keep_control')">Keep ${esc(A)}</button></div></div>`;
+  return `<div class="x-verdict"><span class="rail-label">Ready</span>
+    <h3>${s.bad ? `${esc(B)} is worse. Keep ${esc(A)}.` : `No real difference. Keep ${esc(A)}?`}</h3>
+    <p>There were enough people to see a ${w.mde}% change, and it didn't show up.</p>
+    <div class="acts"><button class="btn btn-primary" onclick="openDecide('keep_control')">Keep ${esc(A)}</button>
+      <button class="btn btn-ghost" onclick="openDecide('iterate')">Change it and run again</button></div></div>`;
+}
+function ciBlock(s){
+  const bound = Math.max(Math.abs(s.lo), Math.abs(s.hi), 5) * 1.15, pos = v => ((v + bound)/(bound*2))*100;
+  const sign = v => (v > 0 ? "+" : "") + v.toFixed(1) + "%";
+  const crosses = s.lo <= 0 && s.hi >= 0;
+  return `<div class="hero-sub" style="margin-bottom:8px">${crosses ? "The range still includes “no difference”" : "The whole range sits on one side of zero"}</div>
+    <div class="ci"><div class="axis0" style="left:${pos(0).toFixed(1)}%"></div>
+      <div class="rng" style="left:${pos(s.lo).toFixed(1)}%;width:${(pos(s.hi)-pos(s.lo)).toFixed(1)}%"></div>
+      <div class="pt" style="left:${pos(s.lift).toFixed(1)}%"></div></div>
+    <div class="cikey"><span>${sign(s.lo)}</span><span style="color:var(--dim)">no difference</span><span>${sign(s.hi)}</span></div>
+    <p class="hint" style="margin-top:12px">${crosses ? "Until the bar clears the line, “no difference” is still one of the answers the data allows." : "The data rules out “no difference”. The only question left is by how much."}</p>`;
+}
+function liftChart(x, s){
+  /* cumulative rate per version, day by day. Control grey, treatment blue (DD4). */
+  const W_ = 640, H = 210, ml = 44, mr = 14, mt = 10, mb = 28, iw = W_-ml-mr, ih = H-mt-mb;
+  const base = s.cRate, pts = [];
+  for(let i=1;i<=s.d;i++){
+    const c = base * (1 + 0.07*Math.sin(i*1.3)/Math.sqrt(i));
+    const l = s.t.lift + 5.2*Math.sin(i*1.7+1)/Math.sqrt(i);
+    pts.push([i, c, c*(1+l/100)]);
+  }
+  const all = pts.flatMap(p => [p[1], p[2]]);
+  let lo = Math.floor(Math.min(...all) - 1), hi = Math.ceil(Math.max(...all) + 1);
+  const stepY = (hi-lo) > 12 ? 5 : (hi-lo) > 6 ? 2 : 1; lo = Math.floor(lo/stepY)*stepY; hi = Math.ceil(hi/stepY)*stepY;
+  const X = d => ml + (d / s.planned) * iw, Y = v => mt + ih - (v-lo)/(hi-lo)*ih;
+  const line = k => pts.map((p,i) => `${i?"L":"M"}${X(p[0]).toFixed(1)} ${Y(p[k]).toFixed(1)}`).join(" ");
+  const yt = []; for(let v=lo; v<=hi+1e-9; v+=stepY) yt.push(v);
+  const xt = [0, Math.round(s.planned/2), s.planned];
+  const last = pts[pts.length-1];
+  return `<div class="x-chart"><svg viewBox="0 0 ${W_} ${H}" role="img" aria-label="${esc(EV[x.w.metric].label)} per version by day">
+    ${yt.map(v => `<line x1="${ml}" x2="${W_-mr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" style="stroke:var(--line-soft);stroke-width:1"/>
+      <text x="${ml-8}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" style="fill:var(--dim-2);font:11px var(--mono)">${v}%</text>`).join("")}
+    ${xt.map(d => `<text x="${X(d).toFixed(1)}" y="${H-8}" text-anchor="${d===0?"start":d===s.planned?"end":"middle"}" style="fill:var(--dim-2);font:11px var(--mono)">day ${d}</text>`).join("")}
+    ${s.d < s.planned ? `<line x1="${X(s.d).toFixed(1)}" x2="${X(s.d).toFixed(1)}" y1="${mt}" y2="${mt+ih}" style="stroke:var(--dim-2);stroke-width:1;stroke-dasharray:3 4"/>
+      <rect x="${X(s.d).toFixed(1)}" y="${mt}" width="${(X(s.planned)-X(s.d)).toFixed(1)}" height="${ih}" style="fill:rgb(255 255 255 / 2%)"/>
+      <text x="${(X(s.d)+6).toFixed(1)}" y="${mt+12}" style="fill:var(--dim-2);font:11px var(--sans)">today</text>` : ""}
+    <path d="${line(1)}" style="fill:none;stroke:#8d8069;stroke-width:2;stroke-linejoin:round"/>
+    <path d="${line(2)}" style="fill:none;stroke:var(--blue);stroke-width:2.4;stroke-linejoin:round"/>
+    <circle cx="${X(last[0]).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="3.5" style="fill:#8d8069;stroke:var(--card);stroke-width:2"/>
+    <circle cx="${X(last[0]).toFixed(1)}" cy="${Y(last[2]).toFixed(1)}" r="4" style="fill:var(--blue);stroke:var(--card);stroke-width:2"/>
+  </svg></div>`;
+}
+function planTab(x){
+  const w = x.w, s = startDate(w), ws = weights(w);
+  return `<p class="x-big-sentence" style="margin-bottom:18px">${planSentence(w)}</p>
+    <div class="x-rev-grid" style="margin-top:0">
+      <div class="review">
+        <div><span class="k">Feature</span><span class="mono" style="font-size:12.5px">${featureKey(w)}</span></div>
+        <div><span class="k">Who</span><span>${w.who.pct}% of ${esc(whoWords(w))}, per ${ENTITIES[w.entity].label.toLowerCase()}</span></div>
+        <div><span class="k">Split</span><span>${w.variants.map((v,i) => `${esc(v.name)} ${ws[i]}%`).join(" · ")}</span></div>
+        <div><span class="k">Decides it</span><span>${esc(EV[w.metric].label)}</span></div>
+        <div><span class="k">Guardrails</span><span>${w.guards.map(g => esc(EV[g].label)).join(" · ") || "None"}</span></div>
+        <div><span class="k">Runs</span><span>${dstr(s)} → ${dstr(addDays(s, w.weeks*7))}</span></div>
+      </div>
+      <div class="callout info"><span class="ico">◆</span><span>A running plan can't be edited, so the result always matches what people saw.
+        <b>Change the plan</b> makes version 2 as a draft, pre-filled from this one.
+        <button class="fix" style="color:var(--gold);font-weight:600;display:block;margin-top:8px" onclick="toast('Opens the builder at Review, pre-filled, as v2')">Change the plan →</button></span></div>
+    </div>`;
+}
+
+/* ── the decision, handed to the recorder that already exists ── */
+function openDecide(outcome){ const x = CREATED.find(c => c.key === APP.exp); APP.decide = {outcome, reason:DECISION_REASONS[outcome==="ship_treatment"?0:outcome==="keep_control"?1:3], flip:true}; APP.overlay = "decide"; renderOverlay(); }
+function decideModal(){
+  const x = CREATED.find(c => c.key === APP.exp), w = x.w, d = APP.decide, A = w.variants[0].name, B = w.variants[1].name, fk = featureKey(w);
+  const target = d.outcome === "ship_treatment" ? B : A;
+  return `<div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="dh" onclick="event.stopPropagation()" style="max-width:560px">
+    <div class="modal-head"><div><h2 id="dh">Record the decision</h2><div class="sub">${x.key} · day ${APP.day}</div></div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><span class="lab">Outcome</span>
+        <div class="picklist">${Object.entries(OUTCOME_WORDS).map(([k,l]) => `<button class="pick" aria-pressed="${d.outcome===k}" onclick="APP.decide.outcome='${k}';renderOverlay()"><span class="radio"></span><span class="t">${k==="ship_treatment"?`Ship ${esc(B)}`:k==="keep_control"?`Keep ${esc(A)}`:l}</span></button>`).join("")}</div></div>
+      <div class="field"><span class="lab">Why</span>
+        <div class="chips">${DECISION_REASONS.map(r => `<button class="chip" aria-pressed="${d.reason===r}" onclick="APP.decide.reason='${r.replace(/'/g,"\\'")}';renderOverlay()">${r}</button>`).join("")}</div></div>
+      ${d.outcome === "ship_treatment" || d.outcome === "keep_control" ? `<div class="field"><span class="lab">And then</span>
+        <button class="x-metric cb" aria-pressed="${d.flip}" onclick="APP.decide.flip=!APP.decide.flip;renderOverlay()"><span class="radio"></span>
+          <span><span class="nm">Set ${esc(target)} for everyone in Production</span><span class="ev">${fk} → ${d.outcome==="ship_treatment"?"on":"off"} · 100%</span></span></button></div>` : ""}
+    </div>
+    <div class="modal-foot"><span class="note">The experiment stops and this version never runs again.</span>
+      <button class="btn btn-ghost" onclick="closeOverlay()">Cancel</button>
+      <button class="btn btn-primary" onclick="recordDecision()">${d.flip && (d.outcome==="ship_treatment"||d.outcome==="keep_control") ? `Record and roll out` : "Record decision"}</button></div>
+  </div>`;
+}
+function recordDecision(){
+  const x = CREATED.find(c => c.key === APP.exp); x.status = "decided"; x.outcome = APP.decide.outcome; x.reason = APP.decide.reason;
+  const B = x.w.variants[1].name, A = x.w.variants[0].name;
+  closeOverlay(); render();
+  toast(APP.decide.flip && x.outcome === "ship_treatment" ? `Decision recorded. ${B} is on for everyone in Production.` : "Decision recorded", true);
+}
+
+/* ═══ chrome ═══ */
+function render(){
+  $("#content").innerHTML = APP.view === "detail" ? detailScreen() : listScreen();
+  $("#exp-count").textContent = EXISTING.length + CREATED.length;
+}
+function renderOverlay(){
+  const host = $("#overlays");
+  if(!APP.overlay){ host.innerHTML = ""; document.body.style.overflow = ""; return; }
+  const scroll = host.querySelector(".scrim")?.scrollTop || 0;
+  const focusId = document.activeElement && document.activeElement.id;
+  host.innerHTML = `<div class="scrim" onclick="closeOverlay()">${APP.overlay === "builder" ? builderModal() : decideModal()}</div>`;
+  document.body.style.overflow = "hidden";
+  const sc = host.querySelector(".scrim"); if(sc) sc.scrollTop = scroll;
+  if(focusId){ const el = document.getElementById(focusId); if(el) el.focus({preventScroll:true}); }
+}
+function closeOverlay(){ APP.overlay = null; renderOverlay(); render(); }
+function toggleNotes(){ APP.notes = !APP.notes; document.body.classList.toggle("notes", APP.notes); $("#notesbtn").setAttribute("aria-pressed", APP.notes); }
+let toastTimer;
+function toast(msg, undo){
+  const host = $("#toasts");
+  host.innerHTML = `<div class="toast"><span class="dot"></span><span>${esc(msg)}</span>${undo ? `<button onclick="undoDecision()">Undo</button>` : ""}</div>`;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => host.innerHTML = "", undo ? 10000 : 3200);
+}
+function undoDecision(){ const x = CREATED.find(c => c.key === APP.exp); if(x){ x.status = "running"; delete x.outcome; } $("#toasts").innerHTML = ""; render(); }
+document.addEventListener("keydown", e => { if(e.key === "Escape" && APP.overlay) closeOverlay(); });
+
+/* ═══ boot — opens on the builder, the thing this seed is about ═══
+   #review · #results · #list deep-link to the other states. */
+(function boot(){
+  const h = (location.hash || "").slice(1);
+  W = newDraft("copy");
+  if(h === "results" || h === "decided"){
+    const key = expKey(W); CREATED.unshift({key, w:clone({...W, saved:true}), status:"running"}); W.saved = true;
+    APP.day = h === "decided" ? W.weeks*7 : 9; APP.view = "detail"; APP.exp = key;
+  } else if(h !== "list"){
+    W.step = h === "review" ? 6 : 1; APP.overlay = "builder";
+  }
+  render(); renderOverlay();
+})();
+
+</script>
