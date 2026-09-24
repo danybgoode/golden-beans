@@ -16,6 +16,65 @@ export type FlagEvaluationTelemetryInput = {
   subject: { type: string; id: string }
   /** When set, this evaluation is emitted through the existing experiment_exposed denominator. */
   experiment?: { key: string; definitionVersion: number }
+  /**
+   * experiments-for-humans D2.4 — the evaluation context's segment fields, copied into the event's
+   * tags. Pass the SAME values you passed to the flag evaluation.
+   *
+   * ⚠️ An experiment's eligibility and its breakdowns are joined on the EXPOSURE's tags, so an
+   * exposure without them is rejected as `eligibility_mismatch` by any experiment that declares a
+   * condition — it looks like a quiet test, not an error. Only the five allow-listed fields, only
+   * scalars, and strings at most 64 characters: the same bounds an experiment predicate has.
+   */
+  segments?: FlagEvaluationSegments
+}
+
+export const FLAG_EVALUATION_SEGMENT_FIELDS = ['source', 'channel', 'campaign', 'plan', 'region'] as const
+export type FlagEvaluationSegmentField = (typeof FLAG_EVALUATION_SEGMENT_FIELDS)[number]
+export type FlagEvaluationSegments = Partial<Record<FlagEvaluationSegmentField, string | number | boolean>>
+
+/**
+ * The three `definition.metadata` keys that name the experiment a flag version belongs to
+ * (experiments-for-humans D2.1). Written by the Golden Frijoles experiment builder when it saves a
+ * draft; removed again when the experiment is rolled out. Named once, here, because the writer (the
+ * app's planner) and the reader (`experimentForResolution`) must never disagree about a spelling.
+ */
+export const EXPERIMENT_METADATA_KEYS = {
+  key: 'experiment_key',
+  version: 'experiment_version',
+  rules: 'experiment_rules',
+} as const
+
+type ResolutionLike = {
+  reason?: string
+  rulePriority?: number
+  flagMetadata?: Record<string, string | number | boolean>
+}
+
+/**
+ * experiments-for-humans D2.3 — which experiment, if any, this resolution is an exposure for.
+ *
+ * Returns `{ key, definitionVersion }` only when the served flag version names an experiment AND the
+ * rule that resolved this person is one of that experiment's rules. Everyone else — held-out people,
+ * who fall through to the default, and people served by the feature's own rules — gets `undefined`,
+ * and `trackFlagEvaluation` then emits an ordinary `flag_evaluated`. That branch IS the holdout: a
+ * held-out person must never enter the experiment's denominator.
+ *
+ * Pure and total: malformed metadata returns `undefined` rather than throwing, because this runs on a
+ * request path, and a bad flag definition must not become an outage.
+ */
+export function experimentForResolution(
+  details: ResolutionLike
+): { key: string; definitionVersion: number } | undefined {
+  if (details.reason !== 'TARGETING_MATCH' || typeof details.rulePriority !== 'number') return undefined
+  const metadata = details.flagMetadata ?? {}
+  const key = metadata[EXPERIMENT_METADATA_KEYS.key]
+  const version = metadata[EXPERIMENT_METADATA_KEYS.version]
+  const rules = metadata[EXPERIMENT_METADATA_KEYS.rules]
+  if (typeof key !== 'string' || !FLAG_KEY.test(key)) return undefined
+  if (!validVersion(version) || version < 1) return undefined
+  if (typeof rules !== 'string' || !/^\d{1,7}(,\d{1,7})*$/.test(rules)) return undefined
+  const priorities = rules.split(',').map(Number)
+  return priorities.includes(details.rulePriority) ? { key, definitionVersion: version } : undefined
 }
 
 const FLAG_KEY = /^[a-z][a-z0-9_.-]{0,127}$/
@@ -77,6 +136,7 @@ export function validateFlagEvaluationTelemetry(input: unknown): input is FlagEv
         'environment',
         'subject',
         'experiment',
+        'segments',
       ].includes(key)
     )
       return false
@@ -93,6 +153,7 @@ export function validateFlagEvaluationTelemetry(input: unknown): input is FlagEv
   if (subject === null || typeof subject !== 'object' || Array.isArray(subject)) return false
   if (!onlyKeys(subject, ['type', 'id'])) return false
   if (!validText(subject.type, ENTITY_TYPE) || !validOpaqueId(subject.id)) return false
+  if (value.segments !== undefined && !validSegments(value.segments)) return false
   if (value.experiment === undefined) return true
   return (
     value.experiment !== null &&
@@ -101,6 +162,20 @@ export function validateFlagEvaluationTelemetry(input: unknown): input is FlagEv
     onlyKeys(value.experiment, ['key', 'definitionVersion']) &&
     validText(value.experiment.key, FLAG_KEY) &&
     validVersion(value.experiment.definitionVersion)
+  )
+}
+
+function validSegments(value: unknown): value is FlagEvaluationSegments {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.entries(value).every(
+    ([field, segment]) =>
+      (FLAG_EVALUATION_SEGMENT_FIELDS as readonly string[]).includes(field) &&
+      (typeof segment === 'boolean' ||
+        (typeof segment === 'number' && Number.isSafeInteger(segment) && Math.abs(segment) <= 1_000_000_000_000_000) ||
+        (typeof segment === 'string' &&
+          segment.length > 0 &&
+          Array.from(segment).length <= 64 &&
+          !CONTROL_CHARS.test(segment)))
   )
 }
 

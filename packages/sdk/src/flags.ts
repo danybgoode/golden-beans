@@ -91,6 +91,15 @@ export type FlagResolutionDetails<T> = {
   reason: FlagResolutionReason
   flagMetadata: Record<string, FlagMetadataValue>
   flagVersion?: number
+  /**
+   * The priority of the rule that resolved this value — present if and only if `reason` is
+   * `TARGETING_MATCH` (experiments-for-humans D2). Additive: evaluation itself is unchanged.
+   *
+   * It exists so a caller can tell WHICH rule served a person, which is how an experiment tells an
+   * in-test person (resolved by one of its own rules) from a held-out one (fell through to the
+   * default). See `experimentForResolution` in ./flag-telemetry.
+   */
+  rulePriority?: number
   errorCode?: 'FLAG_NOT_FOUND' | 'TYPE_MISMATCH' | 'INVALID_CONTEXT' | 'INVALID_DEFINITION'
 }
 export type FlagDefinitionResult = { ok: true; definition: FlagDefinition } | { ok: false; errors: string[] }
@@ -570,6 +579,7 @@ export function evaluateFlag<T>(input: {
     reason: chosen ? 'TARGETING_MATCH' : 'STATIC',
     flagMetadata: checked.definition.metadata ?? {},
     flagVersion: input.flag.definitionVersion,
+    ...(chosen ? { rulePriority: chosen.priority } : {}),
   }
 }
 

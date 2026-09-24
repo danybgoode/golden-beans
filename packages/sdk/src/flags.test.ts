@@ -343,3 +343,18 @@ test('a refused flag or definition explains nothing rather than guessing', () =>
   // is entitled to know what the flag would have served.
   assert.equal(badContext.defaultVariantKey, 'off')
 })
+
+// experiments-for-humans D2.2 — the evaluator names the rule that resolved, and ONLY on a match.
+test('rulePriority names the resolving rule on TARGETING_MATCH and is absent on STATIC and DEFAULT', () => {
+  const flag = { key: 'migration.fixture', definitionVersion: 3, definition }
+  const byPlan = evaluateFlag({ flag, context: { plan: 'pro', region: 'mx' }, defaultValue: false, expectedType: 'boolean' })
+  assert.equal(byPlan.reason, 'TARGETING_MATCH')
+  assert.equal(byPlan.rulePriority, 10) // priority 10 is consulted before 20
+  const byRegion = evaluateFlag({ flag, context: { plan: 'free', region: 'mx' }, defaultValue: false, expectedType: 'boolean' })
+  assert.equal(byRegion.rulePriority, 20)
+  const fallthrough = evaluateFlag({ flag, context: { plan: 'free', region: 'us' }, defaultValue: false, expectedType: 'boolean' })
+  assert.equal(fallthrough.reason, 'STATIC')
+  assert.equal('rulePriority' in fallthrough, false)
+  const missing = evaluateFlag({ flag: undefined, context: {}, defaultValue: false, expectedType: 'boolean' })
+  assert.equal('rulePriority' in missing, false)
+})

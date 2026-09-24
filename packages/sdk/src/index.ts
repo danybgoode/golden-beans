@@ -32,8 +32,17 @@ import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub'
 
 export type { BucketVariant } from './bucketing'
 export { ERROR_EVENT } from './capture'
-export { FLAG_EVALUATED_EVENT } from './flag-telemetry'
-export type { FlagEvaluationTelemetryInput } from './flag-telemetry'
+export {
+  EXPERIMENT_METADATA_KEYS,
+  FLAG_EVALUATED_EVENT,
+  FLAG_EVALUATION_SEGMENT_FIELDS,
+  experimentForResolution,
+} from './flag-telemetry'
+export type {
+  FlagEvaluationSegmentField,
+  FlagEvaluationSegments,
+  FlagEvaluationTelemetryInput,
+} from './flag-telemetry'
 export { SCENARIO_EXECUTED_EVENT } from './scenario-telemetry'
 export type { ScenarioExecutionTelemetryInput } from './scenario-telemetry'
 export {
@@ -529,6 +538,9 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
       const idempotencyKey = `flag_eval:${flagEvaluationFingerprint(input)}`
       const props: Omit<TrackEventProps, 'featureId'> = {
         tags: {
+          // D2.4 — segments first, so none of the fixed keys below can ever be overwritten by one.
+          // (They cannot collide today: the segment fields and these keys are disjoint by name.)
+          ...input.segments,
           flag_key: input.flagKey,
           flag_definition_version: input.flagVersion,
           variant: input.variant,

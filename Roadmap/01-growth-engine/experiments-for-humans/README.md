@@ -169,7 +169,7 @@ nothing — the LEARNINGS "silent zero" class, the fifth time.
 **The design (A).** Everything below lives in the SDK; old SDKs keep emitting exactly what they do today.
 1. **The flag version names its experiment** in `definition.metadata` (scalar keys the parser already
    allows): `experiment_key`, `experiment_version`, `experiment_rules` (the experiment's rule
-   priorities, comma-separated ascending, e.g. `"0,1"`). Written by Save draft (D7); removed by the
+   priorities, comma-separated ascending, e.g. `"0,10"`). Written by Save draft (D7); removed by the
    rollout (D8). Production's largest metadata today is 4 entries of 16.
 2. **The evaluator reports the rule that resolved**: `FlagResolutionDetails.rulePriority?: number`,
    present if and only if `reason === 'TARGETING_MATCH'`. Additive; evaluation itself is unchanged
@@ -202,9 +202,17 @@ The four templates are data in `lib/experiment-templates.ts`. Unit specs run und
 
 ### D4 — The experiment's flag version *(corrected; Story 2.2)*
 The served definition, plus the experiment's rules **at the top**: experiment rules take priorities
-`0…k−1` and every served rule is shifted by `+k`, order preserved (the priority floor is 0, so
-"lower than the lowest" is not always available; a new definition version re-buckets every rollout
-anyway, because the version is in the hash tuple). One rule per arm, **including control** (D2).
+**`0, 10, 100, 1000`** (one per arm, at most four) and every served rule is shifted by `+10000`, order
+preserved (refused if that would pass the 1,000,000 ceiling; production has no rules at all today). A
+new definition version re-buckets every rollout anyway, because the version is in the hash tuple.
+⚠️ **Corrected during Story 1.3 (2026-09-24), by the spec, not by review.** The lock first said
+`0…k−1`. The holdout spec came back at 45 % in-test instead of 50 %: FNV-1a's high bits barely move
+when only the LAST digit of the hashed tuple changes, so rules at priorities 0 and 1 admit strongly
+correlated people (measured joint admission 0.35 vs 0.25 independent, on random UUIDs), and the
+stacked formula below assumes independence. Priorities whose decimal strings differ in LENGTH are
+independent (0/10: 0.2496 vs 0.2489). Measured over 400k keys, 3 id shapes, 3 flag keys, 3 versions,
+2–4 arms and allocations 1 / 0.5 / 0.1: worst deviation 0.23 pp. The SDK's hash is the public
+rollout-compatibility contract and does not change; the planner picks priorities that make it safe. One rule per arm, **including control** (D2).
 Each rule carries the eligibility clauses (`equals` for one value, `one_of` for several) and a
 **stacked** rollout: with allocation *a* and normalised weights *wᵢ*, arm *i* gets
 `bpᵢ = round(10000 · a·wᵢ / (1 − Σⱼ<ᵢ a·wⱼ))`; the last arm is `10000` when *a* = 1 (no rollout key).
