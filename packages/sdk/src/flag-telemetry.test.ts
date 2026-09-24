@@ -102,6 +102,8 @@ test('experimentForResolution is total: malformed metadata is "no experiment", n
   const base = { reason: 'TARGETING_MATCH', rulePriority: 0 }
   for (const flagMetadata of [
     { ...experimentMetadata, experiment_key: 'Not A Key' },
+    // a valid FLAG key that no experiment can have (Codex, PR #167)
+    { ...experimentMetadata, experiment_key: 'founding.copy_test' },
     { ...experimentMetadata, experiment_version: 0 },
     { ...experimentMetadata, experiment_version: '3' },
     { ...experimentMetadata, experiment_rules: '' },
@@ -125,7 +127,10 @@ test('segments: the five allow-listed fields as bounded scalars, nothing else', 
     validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }),
     false
   )
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '' } }), false)
-  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'M\u0085X' } }), false)
+  // exactly the predicate domain: the empty string is a legal predicate, so it is a legal segment
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '' } }), true)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'M\u0000X' } }), false)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '𝐌'.repeat(64) } }), true)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: '𝐌'.repeat(65) } }), false)
   assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: null }), false)
 })

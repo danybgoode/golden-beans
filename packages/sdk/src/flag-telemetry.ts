@@ -23,7 +23,7 @@ export type FlagEvaluationTelemetryInput = {
    * ⚠️ An experiment's eligibility and its breakdowns are joined on the EXPOSURE's tags, so an
    * exposure without them is rejected as `eligibility_mismatch` by any experiment that declares a
    * condition — it looks like a quiet test, not an error. Only the five allow-listed fields, only
-   * scalars, and strings at most 64 characters: the same bounds an experiment predicate has.
+   * scalars, strings of at most 64 code points and no NUL: exactly an experiment predicate's bounds.
    */
   segments?: FlagEvaluationSegments
 }
@@ -70,7 +70,7 @@ export function experimentForResolution(
   const key = metadata[EXPERIMENT_METADATA_KEYS.key]
   const version = metadata[EXPERIMENT_METADATA_KEYS.version]
   const rules = metadata[EXPERIMENT_METADATA_KEYS.rules]
-  if (typeof key !== 'string' || !FLAG_KEY.test(key)) return undefined
+  if (typeof key !== 'string' || !EXPERIMENT_KEY.test(key)) return undefined
   if (!validVersion(version) || version < 1) return undefined
   if (typeof rules !== 'string' || !/^\d{1,7}(,\d{1,7})*$/.test(rules)) return undefined
   const priorities = rules.split(',').map(Number)
@@ -83,6 +83,10 @@ const ENTITY_TYPE = /^[a-z][a-z0-9_]{0,63}$/
 // context (which permits application-defined opaque ids), this convenience API
 // must make the privacy boundary structural: accept only conventional generated
 // identifiers, never email addresses, paths, prose, or serialized request data.
+// An EXPERIMENT key, not a flag key: `apps/web/lib/experiment-definition.ts` (`EXPERIMENT_KEY`) forbids
+// the dots a flag key allows, so a dotted `experiment_key` names no experiment that can exist and
+// must read as malformed rather than emit an exposure nothing can ever join (Codex, PR #167).
+const EXPERIMENT_KEY = /^[a-z][a-z0-9_-]{0,63}$/
 const OPAQUE_ID = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/
 const CONTROL_CHARS = /\p{Cc}/u
 const ENVIRONMENTS = new Set(['development', 'preview', 'production'])
@@ -174,10 +178,11 @@ function validSegments(value: unknown): value is FlagEvaluationSegments {
         (typeof segment === 'number' &&
           Number.isSafeInteger(segment) &&
           Math.abs(segment) <= 1_000_000_000_000_000) ||
-        (typeof segment === 'string' &&
-          segment.length > 0 &&
-          Array.from(segment).length <= 64 &&
-          !CONTROL_CHARS.test(segment)))
+        // EXACTLY an experiment predicate's scalar domain (`validScalarPredicate` in
+        // apps/web/lib/experiment-definition.ts): no NUL, at most 64 code points — the empty string
+        // included. Anything narrower here makes a condition that can be SAVED but whose exposures
+        // can never be sent (Codex, PR #167: `{ region: "" }`).
+        (typeof segment === 'string' && !segment.includes('\0') && Array.from(segment).length <= 64))
   )
 }
 
