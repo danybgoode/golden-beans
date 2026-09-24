@@ -20,6 +20,10 @@ export const MAX_EXPERIMENT_SAMPLE_PER_VARIANT = 1_000_000
 export const MAX_EXPERIMENT_DESCRIPTION_LENGTH = 500
 export const MAX_EXPERIMENT_EVENT_LENGTH = 128
 export const MAX_EXPERIMENT_PREDICATE_STRING_LENGTH = 64
+// experiments-for-humans D1 — the widened domain. The DB function in
+// 20260925100000_experiment_definition_widen.sql accepts exactly the same one.
+export const MAX_EXPERIMENT_VARIANT_LABEL_LENGTH = 40
+export const MAX_EXPERIMENT_PREDICATE_VALUES = 20
 
 const EXPERIMENT_KEY = /^[a-z][a-z0-9_-]{0,63}$/
 const ENTITY_TYPE = /^[a-z][a-z0-9_]{0,63}$/
@@ -27,7 +31,10 @@ const ALLOWED_SEGMENTS = new Set<string>(EXACT_SEGMENT_TAG_FIELDS)
 const CONTROL_CHARS = /\p{Cc}/u
 
 export type ExperimentDirection = 'increase' | 'decrease'
-export type ExperimentVariant = { key: string; weight: number }
+/** `label` is the version's human name ("New copy"); results read it, analysis never keys on it. */
+export type ExperimentVariant = { key: string; weight: number; label?: string }
+/** One value is an exact match; a list is one-of ("Mexico or Colombia"). */
+export type ExperimentPredicate = ExactSegmentScalar | ExactSegmentScalar[]
 export type ExperimentMetric = { event: string; direction: ExperimentDirection }
 
 export type ExperimentDefinition = {
@@ -35,7 +42,7 @@ export type ExperimentDefinition = {
   assignmentEntityType: string
   eligibility: {
     description: string
-    tags?: Partial<Record<ExactSegmentTagField, ExactSegmentScalar>>
+    tags?: Partial<Record<ExactSegmentTagField, ExperimentPredicate>>
   }
   variants: ExperimentVariant[]
   controlVariantKey: string
@@ -83,6 +90,46 @@ function validEventName(value: unknown): value is string {
   return (
     validBoundedText(value, MAX_EXPERIMENT_EVENT_LENGTH, true) &&
     codePointLength(value) >= 1 &&
+    value.trim() === value &&
+    !CONTROL_CHARS.test(value)
+  )
+}
+
+function validScalarPredicate(value: unknown): value is ExactSegmentScalar {
+  return (
+    typeof value === 'boolean' ||
+    (typeof value === 'string' &&
+      !value.includes('\0') &&
+      codePointLength(value) <= MAX_EXPERIMENT_PREDICATE_STRING_LENGTH) ||
+    (typeof value === 'number' &&
+      Number.isSafeInteger(value) &&
+      Math.abs(value) <= MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS)
+  )
+}
+
+/**
+ * D1 — a list must be 1-20 values, each a valid scalar, with no two equal by TYPE and value (so
+ * `["1", 1]` is two values and `[1, 1]` is a duplicate). That is jsonb equality, which is what the DB
+ * function counts with, and `sameScalar`, which is what `tagsMatch` matches with.
+ */
+function validListPredicate(value: unknown): value is ExactSegmentScalar[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_EXPERIMENT_PREDICATE_VALUES) return false
+  if (!value.every(validScalarPredicate)) return false
+  const seen = new Set(value.map((item) => `${typeof item}:${String(item)}`))
+  return seen.size === value.length
+}
+
+/**
+ * D1 — a version's human name. The whitespace rule is `trim() === value`, paired with the DB's
+ * explicit whitespace set exactly as event names already are; the control-character rule is `\p{Cc}`,
+ * paired with the DB's explicit `[\x01-\x1F\x7F-\x9F]` (NUL cannot reach jsonb at all).
+ */
+function validVariantLabel(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    !value.includes('\0') &&
+    codePointLength(value) >= 1 &&
+    codePointLength(value) <= MAX_EXPERIMENT_VARIANT_LABEL_LENGTH &&
     value.trim() === value &&
     !CONTROL_CHARS.test(value)
   )
@@ -156,7 +203,7 @@ export function parseExperimentDefinition(input: unknown): ExperimentDefinitionR
         `definition.eligibility.description must be a non-blank string up to ${MAX_EXPERIMENT_DESCRIPTION_LENGTH} characters`,
       )
     }
-    let tags: Partial<Record<ExactSegmentTagField, ExactSegmentScalar>> | undefined
+    let tags: Partial<Record<ExactSegmentTagField, ExperimentPredicate>> | undefined
     if (input.eligibility.tags !== undefined) {
       if (!isRecord(input.eligibility.tags)) {
         errors.push('definition.eligibility.tags must be an object')
@@ -172,21 +219,13 @@ export function parseExperimentDefinition(input: unknown): ExperimentDefinitionR
             errors.push(`${path} is not an allow-listed segment field`)
             continue
           }
-          const scalar =
-            typeof value === 'boolean' ||
-            (typeof value === 'string' &&
-              !value.includes('\0') &&
-              codePointLength(value) <= MAX_EXPERIMENT_PREDICATE_STRING_LENGTH) ||
-            (typeof value === 'number' &&
-              Number.isSafeInteger(value) &&
-              Math.abs(value) <= MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS)
-          if (!scalar) {
+          if (!validScalarPredicate(value) && !validListPredicate(value)) {
             errors.push(
-              `${path} must be a string up to ${MAX_EXPERIMENT_PREDICATE_STRING_LENGTH} characters, boolean, or safe integer with absolute value <= ${MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS}`,
+              `${path} must be a string up to ${MAX_EXPERIMENT_PREDICATE_STRING_LENGTH} characters, boolean, or safe integer with absolute value <= ${MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS}, or a list of 1-${MAX_EXPERIMENT_PREDICATE_VALUES} distinct such values`,
             )
             continue
           }
-          tags[field as ExactSegmentTagField] = value as ExactSegmentScalar
+          tags[field as ExactSegmentTagField] = Array.isArray(value) ? [...value] : value
         }
       }
     }
@@ -200,6 +239,7 @@ export function parseExperimentDefinition(input: unknown): ExperimentDefinitionR
 
   const variants: ExperimentVariant[] = []
   const variantKeys = new Set<string>()
+  const variantLabels = new Set<string>()
   if (!Array.isArray(input.variants) || input.variants.length < 2 || input.variants.length > MAX_EXPERIMENT_VARIANTS) {
     errors.push(`definition.variants must contain 2-${MAX_EXPERIMENT_VARIANTS} variants`)
   } else {
@@ -209,7 +249,18 @@ export function parseExperimentDefinition(input: unknown): ExperimentDefinitionR
         errors.push(`${path} must be an object`)
         return
       }
-      rejectUnknownKeys(raw, ['key', 'weight'], path, errors)
+      rejectUnknownKeys(raw, ['key', 'weight', 'label'], path, errors)
+      if (raw.label !== undefined) {
+        if (!validVariantLabel(raw.label)) {
+          errors.push(
+            `${path}.label must be 1-${MAX_EXPERIMENT_VARIANT_LABEL_LENGTH} characters with no control characters or edge whitespace`,
+          )
+        } else if (variantLabels.has(raw.label)) {
+          errors.push(`${path}.label duplicates ${raw.label}`)
+        } else {
+          variantLabels.add(raw.label)
+        }
+      }
       if (!validateExperimentKey(raw.key)) {
         errors.push(`${path}.key must be 1-64 lowercase characters using letters, numbers, hyphen or underscore`)
       } else if (variantKeys.has(raw.key)) {
@@ -230,7 +281,11 @@ export function parseExperimentDefinition(input: unknown): ExperimentDefinitionR
           Number.isInteger(raw.weight) &&
           raw.weight >= 1 &&
           raw.weight <= MAX_EXPERIMENT_WEIGHT) {
-        variants.push({ key: raw.key, weight: raw.weight })
+        variants.push({
+          key: raw.key,
+          weight: raw.weight,
+          ...(validVariantLabel(raw.label) ? { label: raw.label } : {}),
+        })
       }
     })
   }
