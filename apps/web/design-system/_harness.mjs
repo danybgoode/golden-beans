@@ -16,8 +16,13 @@ import { tmpdir } from 'node:os';
 export const HERE = dirname(fileURLToPath(import.meta.url));
 export const VIEWPORT = { width: 1440, height: 960 };
 
-export async function openPrototype() {
-  const body = readFileSync(join(HERE, 'console-prototype.html'), 'utf8');
+/**
+ * Opens ONE approved prototype. The console states live in `console-prototype.html`; the
+ * experiments-for-humans states (epic D12) run inside `approved-prototype.html`, which has its own
+ * globals. Each approved state names its source in `approved-states.mjs`.
+ */
+export async function openPrototype(source = 'console-prototype.html') {
+  const body = readFileSync(join(HERE, source), 'utf8');
   // ⚠️ A UNIQUE directory per call, not a fixed path (cross-family review, agy). It was
   // `join(tmpdir(), 'gb-console-prototype.html')` — one name shared by every caller on the machine.
   // Three scripts import this harness, and two developers, or one `&`-parallel invocation, would

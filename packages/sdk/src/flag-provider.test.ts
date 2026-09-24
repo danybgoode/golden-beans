@@ -133,6 +133,8 @@ test('loads a typed snapshot once and evaluates synchronously without exposing t
     reason: 'TARGETING_MATCH',
     flagMetadata: { owner: 'checkout' },
     flagVersion: 1,
+    // SDK 0.6.0 (experiments-for-humans D2.2): the provider passes the evaluator's rule through.
+    rulePriority: 1,
   })
   assert.equal(provider.resolveStringEvaluation('notice.copy', 'safe').value, 'Golden copy')
   assert.equal(provider.resolveNumberEvaluation('retries.maximum', 0).value, 3)

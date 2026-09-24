@@ -158,7 +158,14 @@ function tagsMatch(
 ): boolean {
   if (!predicates) return true
   for (const [field, expected] of Object.entries(predicates)) {
-    if (!sameScalar(tags?.[field], expected)) return false
+    // experiments-for-humans D1: a list is one-of. A missing or wrong-typed tag matches neither form.
+    const actual = tags?.[field]
+    if (
+      Array.isArray(expected)
+        ? !expected.some((value) => sameScalar(actual, value))
+        : !sameScalar(actual, expected)
+    )
+      return false
   }
   return true
 }

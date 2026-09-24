@@ -56,3 +56,82 @@ test('sampling and idempotency fingerprint are stable for one decision and versi
   assert.equal(normalizeFlagEvaluationSampleRate(2), 1)
   assert.equal(normalizeFlagEvaluationSampleRate(Number.NaN), 1)
 })
+
+// ── experiments-for-humans D2.3 / D2.4 ───────────────────────────────────────────────────────
+import { EXPERIMENT_METADATA_KEYS, experimentForResolution, segmentTags } from './flag-telemetry.ts'
+
+const experimentMetadata = {
+  [EXPERIMENT_METADATA_KEYS.key]: 'founding_copy_test',
+  [EXPERIMENT_METADATA_KEYS.version]: 3,
+  [EXPERIMENT_METADATA_KEYS.rules]: '0,10',
+  criticality: 'low',
+}
+
+test('experimentForResolution: an experiment rule is an exposure; a fallthrough or a feature rule is not', () => {
+  assert.deepEqual(
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 10,
+      flagMetadata: experimentMetadata,
+    }),
+    { key: 'founding_copy_test', definitionVersion: 3 }
+  )
+  // held out: fell through to the default
+  assert.equal(experimentForResolution({ reason: 'STATIC', flagMetadata: experimentMetadata }), undefined)
+  // served by the feature's own (shifted) rule, not the experiment's
+  assert.equal(
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 10000,
+      flagMetadata: experimentMetadata,
+    }),
+    undefined
+  )
+  // a flag that names no experiment
+  assert.equal(
+    experimentForResolution({
+      reason: 'TARGETING_MATCH',
+      rulePriority: 0,
+      flagMetadata: { criticality: 'low' },
+    }),
+    undefined
+  )
+})
+
+test('experimentForResolution is total: malformed metadata is "no experiment", never a throw', () => {
+  const base = { reason: 'TARGETING_MATCH', rulePriority: 0 }
+  for (const flagMetadata of [
+    { ...experimentMetadata, experiment_key: 'Not A Key' },
+    // a valid FLAG key that no experiment can have (Codex, PR #167)
+    { ...experimentMetadata, experiment_key: 'founding.copy_test' },
+    { ...experimentMetadata, experiment_version: 0 },
+    { ...experimentMetadata, experiment_version: '3' },
+    { ...experimentMetadata, experiment_rules: '' },
+    { ...experimentMetadata, experiment_rules: '0,,10' },
+    { ...experimentMetadata, experiment_rules: 0 },
+  ]) {
+    assert.equal(experimentForResolution({ ...base, flagMetadata }), undefined, JSON.stringify(flagMetadata))
+  }
+  assert.equal(experimentForResolution({}), undefined)
+})
+
+test('segments: an object is required; each entry outside the predicate domain is DROPPED, never fatal', () => {
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'MX', plan: 1 } }), true)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: { region: 'x'.repeat(65) } }), true)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: null }), false)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: ['MX'] }), false)
+  assert.equal(validateFlagEvaluationTelemetry({ ...evaluation, segments: 'MX' }), false)
+
+  // A caller passing the whole evaluation context: targetingKey is not a segment and is dropped.
+  assert.deepEqual(segmentTags({ targetingKey: 'merchant-1', region: 'MX', channel: 'web' }), {
+    region: 'MX',
+    channel: 'web',
+  })
+  // Exactly the predicate scalar domain: empty string yes, NUL no, 64 code points yes, 65 no.
+  assert.deepEqual(segmentTags({ region: '' }), { region: '' })
+  assert.deepEqual(segmentTags({ region: 'M\u0000X' }), {})
+  assert.deepEqual(segmentTags({ region: '𝐌'.repeat(64) }), { region: '𝐌'.repeat(64) })
+  assert.deepEqual(segmentTags({ region: '𝐌'.repeat(65), plan: 'pro' }), { plan: 'pro' })
+  assert.deepEqual(segmentTags({ region: ['MX'], plan: 1.5, source: 2 ** 60 }), {})
+  assert.deepEqual(segmentTags(undefined), {})
+})

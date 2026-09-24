@@ -31,6 +31,8 @@ tasks
 # reformatting it would silently do exactly that — the design would become unapproved because a
 # formatter ran. `tokens.test.ts` asserts the hash, so this is belt and braces on purpose.
 apps/web/design-system/console-prototype.html
+# The second approved artifact (experiments-for-humans, 2026-09-24), for the same reason.
+apps/web/design-system/approved-prototype.html
 
 # GENERATED from that prototype by `extract-css.mjs`, under a do-not-hand-edit header, and checked
 # by `--check` in CI. Prettier and the generator disagree about CSS value spacing
@@ -41,6 +43,7 @@ apps/web/design-system/console-prototype.html
 apps/web/design-system/tokens.css
 apps/web/design-system/tokens.ts
 apps/web/design-system/reference.css
+apps/web/design-system/reference-experiments.css
 apps/web/design-system/coverage.json
 
 # ── mockups-as-built · Story 1.1 / 1.3 ────────────────────────────────────────────────────────

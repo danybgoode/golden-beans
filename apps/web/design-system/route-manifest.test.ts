@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { STATE_IDS } from './approved-states.mjs'
+import { ALL_STATE_IDS } from './approved-states.mjs'
 import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory.ts'
 import {
   OUT_OF_SCOPE_PAGES,
@@ -96,11 +96,11 @@ test('the manifest and the repository agree about which routes exist', () => {
   )
 })
 
-test('every reference state is one of the 32 approved ids', () => {
+test('every reference state is one of the approved ids (38: 33 console + 5 experiments-for-humans)', () => {
   // "Adding a state without an approval line is the thing Rail 2 forbids." The inverse matters
   // just as much: citing a state id that was never approved gives a route a contract nobody agreed
   // to, and it fails as a typo rather than as a decision.
-  const approved = new Set(STATE_IDS)
+  const approved = new Set(ALL_STATE_IDS)
   for (const row of ROUTE_MANIFEST) {
     if (row.referenceState === null) continue
     assert.ok(
@@ -110,7 +110,7 @@ test('every reference state is one of the 32 approved ids', () => {
   }
 })
 
-test('the approved state list and APPROVED.md still describe the same 33 states', () => {
+test('the approved state list and APPROVED.md still describe the same 38 states', () => {
   // The weld between the code and the approval record. `APPROVED.md` lists the states in its batch
   // table; `approved-states.mjs` is what actually renders. Two lists that must agree get a test,
   // not a shared belief that they do.
@@ -126,10 +126,14 @@ test('the approved state list and APPROVED.md still describe the same 33 states'
   )
   assert.ok(batchTable.length > 200, 'APPROVED.md no longer contains the batch table')
   const documented = new Set([...batchTable.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]))
-  for (const id of STATE_IDS) {
+  for (const id of ALL_STATE_IDS) {
     assert.ok(documented.has(id), `state "${id}" renders but has no approval line in APPROVED.md`)
   }
-  assert.equal(STATE_IDS.length, 33, 'the approved set is 33 states — see APPROVED.md')
+  assert.equal(
+    ALL_STATE_IDS.length,
+    38,
+    'the approved set is 38 states (33 console + 5 experiments-for-humans) — see APPROVED.md'
+  )
 })
 
 test('every navigable surface in the inventory has a manifest row', () => {

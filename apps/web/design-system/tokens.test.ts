@@ -257,3 +257,22 @@ test('the approved prototype has not changed a byte', () => {
       'something reformatted or rewrote an approved artefact.'
   )
 })
+
+test('the SECOND approved artifact (experiments-for-humans batch 6) is byte-for-byte what was approved', () => {
+  // Same rule, same reason as the pin above; read from its own labelled row so the two hashes can
+  // never be confused for each other (the console one's regex would match this row's shape too).
+  const approved = readFileSync(join(HERE, 'APPROVED.md'), 'utf8')
+  const declared = /SHA-256 \(first 16\), approved-prototype\.html\*{0,2} \| `([0-9a-f]{16})`/.exec(
+    approved
+  )?.[1]
+  assert.ok(declared, 'APPROVED.md no longer states a SHA-256 for approved-prototype.html')
+  const actual = createHash('sha256')
+    .update(readFileSync(join(HERE, 'approved-prototype.html')))
+    .digest('hex')
+    .slice(0, 16)
+  assert.equal(
+    actual,
+    declared,
+    `approved-prototype.html hashes to ${actual}, and APPROVED.md says ${declared}`
+  )
+})

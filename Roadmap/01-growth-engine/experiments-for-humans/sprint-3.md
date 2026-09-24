@@ -1,13 +1,35 @@
 # Experiments for humans — Sprint 3: The builder
 
-**Status:** ⬜ not started · **Wave 2 (needs its own bet)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
+**Status:** ⬜ not started · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
 
 ## Build contract (locked by the architect before the builder started)
-<!-- D7, D9, D10 verified: the Start write order against transitionExperimentVersion and
-     activateFlagAction; the idempotency key; EXPERIMENT_BUILDER_ENABLED created DISABLED in every
-     Vercel env BEFORE the first PR merges; the structural assertions generated from the approved states. -->
-- D7 write order: _to be verified_
-- D9 gate created in every env: _to be verified_
+Cite the README's D-numbers; do not restate them.
+
+- **3.1 → D9, D10, A4, A6** (builder: mid tier). The dialog content mounts inside the existing
+  `NewThingDialog` on `/app/experiments/[projectSlug]`; with the gate off it renders exactly today's
+  manager (proved by rendering both off-states, LEARNINGS 2026-08-28). With it on: the six steps of
+  the approved `wizard-new-experiment` state, markup ported from `design-system/approved-prototype.html`
+  class names; styles ported by hand under `.ds` (as `system.css` is) from the generated reference
+  `design-system/reference-experiments.css` — a reference, never imported (D12). State lives in one client reducer;
+  every number and sentence comes from `buildExperimentPlan` (2.2) — no arithmetic in a component.
+  Catalog + served flags are loaded server-side once and passed in. No screenshot control (A4); one
+  start chip (A6). Closing keeps the draft in `sessionStorage` (try/catch, per-project key) and the
+  button reads "Continue new experiment". Spec: `e2e/experiment-builder-gate.spec.ts` (api, gate off =
+  old dialog, on the `:3100` server) + `e2e/experiment-builder.authed.spec.ts` (D10's zero-input
+  assertions, step labels, sentence present). Risk: low.
+- **3.2 → D6, D7** (builder: the architect). Migration `20260926100000_save_experiment_draft.sql`
+  (function only). Server action `saveExperimentDraftAction` in `app/app/experiments/[projectSlug]/
+  builder-actions.ts`: gate → ownership → re-run the planner **server-side** from the submitted answers
+  (the browser never sends a definition) → the function. Spec `e2e/experiment-save-draft.spec.ts`:
+  two concurrent saves create one version, one flag version, one binding; nothing activated; the flag
+  version carries D2's metadata; the grant probe is a function-level denial. The list shows the draft
+  with "Continue", which reopens at Review from the stored definition. Risk: **high**.
+- **3.3 → D7** (builder: the architect). `startExperimentAction`: gate → ownership → serving gate →
+  (0) re-date if needed → (1) transition → (2) activate Production. Spec `e2e/experiment-start.spec.ts`
+  incl. a forced activation failure (stale snapshot revision) that leaves the version running and a
+  retry that serves it. Risk: **high**.
+- **Deviations:** D13 — no preview smoke; the rendered look runs on the local authed rail with the
+  gate on. D7 — a second, function-only migration.
 
 ## Stories
 
@@ -57,7 +79,7 @@ Production and the experiment is running.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green; one rendered look at 360px and 1360px.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-Env: preview with `EXPERIMENT_BUILDER_ENABLED=true` first, then production once Daniel turns it on there.
+Env: local authed rail with `EXPERIMENT_BUILDER_ENABLED=true` first (previews cannot reach Supabase — D13), then production once the gate flips at 4.3.
 
 1. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez and click "+ New experiment".
    → The builder opens on "What are you changing, and why?" with "Copy or button" selected and the side panel reading "≈ N days at your traffic".

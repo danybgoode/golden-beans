@@ -22,7 +22,7 @@ Class **feature** · lane **shaped bet** · appetite **L** (two waves; amended f
 in a customer's Production).
 
 **The design is approved, and it is the contract.** Daniel approved the clickable prototype on
-2026-09-24 07:44 (America/Mexico_City): `Roadmap/01-growth-engine/experiments-for-humans/approved-prototype.html`
+2026-09-24 07:44 (America/Mexico_City): `apps/web/design-system/approved-prototype.html` (moved there by Story 1.1)
 (published at https://claude.ai/artifact/2MHJPipgJRHLT2tndtdmKx). Per WAYS-OF-WORKING step 1 (amended
 2026-08-29), an approved design is scope, not inspiration. Story 1.1 lands it in
 `apps/web/design-system/` with an approval line and a hash, the same way the 33 console states are

@@ -20,6 +20,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openPrototype, HERE } from './_harness.mjs';
+// ⚠️ Console states ONLY, deliberately (experiments-for-humans D12). MEASURED-SPEC.md is the console
+// vocabulary's numbers; the second prototype carries that same stylesheet verbatim (extract-css
+// asserts it), so its states would only re-measure the same rules under a different fixture.
 import { APPROVED_STATES } from './approved-states.mjs';
 
 const OUT = 'MEASURED-SPEC.md';

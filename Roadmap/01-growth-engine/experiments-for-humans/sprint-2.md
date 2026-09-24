@@ -1,13 +1,32 @@
 # Experiments for humans — Sprint 2: Event catalog and the planner
 
-**Status:** ⬜ not started · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
+**Status:** ⬜ not started (locked) · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
 
 ## Build contract (locked by the architect before the builder started)
-<!-- D3, D4, D5, D6 verified. The catalog's cost decided from LIVE row counts: events per project over
-     14 days for the busiest tenant. Bounded read + pure aggregation (no migration) vs a read-only SQL
-     function (migration → Story 2.1 becomes high). Name the fixture project the specs use. -->
-- Catalog read shape: _to be decided from live counts_
-- Planner location and signature: D3 — _to be verified_
+Cite the README's D-numbers; do not restate them.
+
+- **2.1 → D11** (builder: mid tier, own worktree). `lib/event-catalog.ts` (pure, zero imports) +
+  `lib/event-catalog-query.ts` (`server-only`, `getSupabaseServiceClient`, project id from the resolved
+  membership, never from input). Shape, all from ONE fetch: per event name `{ event, count14d,
+  count24h, daily: number[14] }`; per assignment entity type `{ type, subjects14d }` and per (event,
+  type) `baseline = subjects who did it / subjects of that type seen`; per segment field `{ field,
+  coverage, values: top 20 { value, share } }`; per flag key in Production over 24 h
+  `{ flagKey, evaluations }` (`event = 'flag_evaluated'` and `tags.environment = 'production'`);
+  `{ truncated, rowCap: 50000, windowDays: 14, asOf }`. Reserved events (`experiment_exposed`,
+  `flag_evaluated`, `$error`, `scenario_executed`) are counted but flagged `reserved: true` so the
+  builder never offers them as a metric. **Fixture:** the spec creates its own project on local
+  Supabase through the canonical ingest path (`POST /api/v1/track` with a minted key, the pattern in
+  `e2e/experiment-analysis-query.spec.ts`) and asserts every figure; a second project's events must not
+  appear (tenancy). AGENTS.md rule #1 table + "Key imports" gain the catalog in the same PR. Risk: low.
+- **2.2 → D3, D4, D5, D6** (builder: the architect). `lib/experiment-templates.ts` (the four templates
+  as data, copied from the approved prototype's `TEMPLATES`, with event NAMES replaced by D5 roles) and
+  `lib/experiment-builder-plan.ts`. Specs under `npm run test:unit`: the sentence and day count for
+  the prototype's own example (Copy template on a catalog fixture built from the prototype's `EVENTS`,
+  `FIELDS`, `ENTITIES` — the prototype says 18 days / 11,000-ish per version; the spec pins OUR numbers
+  and states where they differ and why); the stacked-rollout property test (D4); the six checks on a
+  pass / warn / fail fixture each; `stripExperiment` round trip (D8); every output through its parser.
+  Each spec observed red once by a mutation that compiles. Risk: low, reviewed as HIGH (shared seam).
+- **Deviation:** A2 — no stop at the end of this sprint; the ⛔ boundary below is superseded.
 
 ## Stories
 
@@ -39,7 +58,7 @@ the writes need, **so that** the UI is keystrokes and every number is tested onc
   catalog), each observed red once by mutation.
 **Risk:** low
 
-## ⛔ Wave boundary — stop here
+## ⛔ Wave boundary — SUPERSEDED by A2 (2026-09-24)
 At the end of this sprint the orchestrator **stops, reports what shipped and what Wave 2 now costs, and
 waits for the Wave 2 bet** (README → A1). Don't start Sprint 3 in the same run without it.
 

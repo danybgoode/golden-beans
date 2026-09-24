@@ -182,3 +182,72 @@ export const APPROVED_STATES = [
 
 /** Just the ids, in approval order. The half every non-browser consumer needs. */
 export const STATE_IDS = APPROVED_STATES.map(([id]) => id);
+
+// ── batch 6 · approved 2026-09-24 07:44 America/Mexico_City (experiments-for-humans, D12) ─────
+//
+// These run inside `approved-prototype.html`, NOT `console-prototype.html`: a second approved
+// artifact with its own globals (`W`, `APP`, `CREATED`, `newDraft`, `openExp`, …). They are a
+// separate list rather than extra rows above, because every consumer that loops `APPROVED_STATES`
+// evaluates each function inside the console prototype, where none of these names exist — a merged
+// list would throw on the first new state, or worse, run a same-named console global.
+//
+// They supersede `experiment-ready` / `experiment-blocked` (APPROVED.md, batch 6), which stay
+// registered until Sprint 4 of that epic rebuilds the route they describe.
+export const EXPERIMENT_BUILDER_STATES = [
+  [
+    'wizard-new-experiment',
+    () => {
+      W = newDraft('copy');
+      APP.view = 'list';
+      APP.overlay = 'builder';
+      render();
+      renderOverlay();
+    },
+  ],
+  [
+    'wizard-new-experiment-review',
+    () => {
+      W.step = 6;
+      renderOverlay();
+    },
+  ],
+  [
+    // "Still gathering" — the same point the prototype's own #results hash opens on (day 9).
+    'experiment-results',
+    () => {
+      APP.overlay = null;
+      renderOverlay();
+      CREATED.length = 0;
+      CREATED.unshift({ key: expKey(W), w: clone({ ...W, saved: true }), status: 'running' });
+      W.saved = true;
+      APP.day = 9;
+      APP.tab = 'results';
+      openExp(CREATED[0].key);
+    },
+  ],
+  [
+    'experiment-results-ready',
+    () => {
+      APP.day = CREATED[0].w.weeks * 7;
+      render();
+    },
+  ],
+  [
+    'experiment-decided',
+    () => {
+      CREATED[0].status = 'decided';
+      CREATED[0].outcome = 'ship_treatment';
+      CREATED[0].reason = DECISION_REASONS[0];
+      render();
+    },
+  ],
+];
+
+/** Every approved state, grouped by the prototype file it is evaluated inside. */
+export const STATE_SOURCES = [
+  ['console-prototype.html', APPROVED_STATES],
+  ['approved-prototype.html', EXPERIMENT_BUILDER_STATES],
+];
+
+/** Every approved id across both sources, in approval order. */
+export const ALL_STATE_IDS = STATE_SOURCES.flatMap(([, states]) => states.map(([id]) => id));

@@ -52,6 +52,32 @@ each published as a clickable prototype and reviewed screen by screen:
 | **3 · The hub** | `hub-roadmap` · `hub-epic` · `hub-horizon` · `hub-report` | 2026-08-29 |
 | **4 · The doors** | `door-login` · `door-signup-closed` · `door-signup-open` · `public-install` · `public-share` · `public-gone` · `public-talk` | 2026-08-29 |
 | **5 · The wizard** | `wizard-new-feature` | **2026-09-09** |
+| **6 · Experiments for humans** — in `approved-prototype.html` | `wizard-new-experiment` · `wizard-new-experiment-review` · `experiment-results` · `experiment-results-ready` · `experiment-decided` | **2026-09-24** |
+
+### Batch 6, approved 2026-09-24 07:44 America/Mexico_City (`experiments-for-humans`, epic D12)
+
+| | |
+|---|---|
+| **Approved by** | Daniel (product owner) |
+| **Source** | `approved-prototype.html` in this folder — a SECOND approved artifact |
+| **SHA-256 (first 16), approved-prototype.html** | `0f7c5be3c9c316e4` |
+| **States** | **5**: `wizard-new-experiment` (steps 1–5), `wizard-new-experiment-review`, `experiment-results` (still gathering), `experiment-results-ready`, `experiment-decided` |
+| **Published** | https://claude.ai/artifact/2MHJPipgJRHLT2tndtdmKx |
+
+Its stylesheet is `reference.css` **verbatim** followed by `x-`-prefixed additions on the same
+tokens; `extract-css.mjs` asserts the verbatim prefix and lifts the additions into
+`reference-experiments.css`. The states run inside their own prototype (`STATE_SOURCES` in
+`approved-states.mjs`), so the console prototype and its hash `5bc7e24ed5e3d0aa` are untouched.
+
+**Superseded, not deleted:** `experiment-ready` → `experiment-results-ready`, and
+`experiment-blocked` → `experiment-results` (a blocked readout is a gathering state with its blockers
+named). Both stay registered until `experiments-for-humans` Sprint 4 rebuilds
+`/app/experiments/[projectSlug]/[experimentKey]` on the new states; the route manifest moves then.
+
+**Not product UI**, though drawn in the approved file: the "Build notes" toggle and every `.bn`
+annotation, the `Prototype` pill, the "See this page on day …" picker, and the example screens inside
+version cards (epic A4 — screenshot upload is deferred). The "Monday 28 Sep, 9:00" start chip is
+dropped until a scheduler exists (epic A6).
 
 ## Design decisions settled at approval — the lock does NOT reopen these
 

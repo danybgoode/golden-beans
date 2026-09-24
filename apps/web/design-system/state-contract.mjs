@@ -39,7 +39,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { openPrototype, HERE } from './_harness.mjs';
-import { APPROVED_STATES } from './approved-states.mjs';
+import { ALL_STATE_IDS, STATE_SOURCES } from './approved-states.mjs';
 import { extractSignature, signatureArgs } from './state-contract-core.mjs';
 
 // The vocabulary and the comparison live in `state-contract-core.mjs` — see its header for why the
@@ -50,20 +50,24 @@ const OUT = 'STATE-CONTRACT.json';
 
 /** Read every approved state's signature out of the prototype. */
 export async function readContract() {
-  const { page, close } = await openPrototype();
   const errors = [];
-  page.on('pageerror', (error) => errors.push(String(error)));
   const contract = {};
-  try {
-    for (const [name, apply] of APPROVED_STATES) {
-      await page.evaluate(apply);
-      await page.waitForTimeout(120);
-      contract[name] = await page.evaluate(extractSignature, signatureArgs('proto'));
+  // One browser per approved artifact (epic experiments-for-humans D12): each state is evaluated
+  // inside the prototype that defines its globals.
+  for (const [source, states] of STATE_SOURCES) {
+    const { page, close } = await openPrototype(source);
+    page.on('pageerror', (error) => errors.push(`${source}: ${String(error)}`));
+    try {
+      for (const [name, apply] of states) {
+        await page.evaluate(apply);
+        await page.waitForTimeout(120);
+        contract[name] = await page.evaluate(extractSignature, signatureArgs('proto'));
+      }
+    } finally {
+      // The sibling of the fix `render-reference.mjs` records: a throw mid-loop orphans Chromium
+      // until Node exits, and CI runs these back to back on one runner.
+      await close();
     }
-  } finally {
-    // The sibling of the fix `render-reference.mjs` records: a throw mid-loop orphans Chromium
-    // until Node exits, and CI runs these back to back on one runner.
-    await close();
   }
   if (errors.length > 0) {
     throw new Error(`${errors.length} page error(s) while reading the prototype:\n  ${errors.join('\n  ')}`);
@@ -111,7 +115,7 @@ function serialise(contract) {
   return `${JSON.stringify(
     {
       _: 'GENERATED — do not hand-edit. Run: node apps/web/design-system/state-contract.mjs',
-      _source: 'console-prototype.html — the states approved in APPROVED.md',
+      _source: 'console-prototype.html + approved-prototype.html — the states approved in APPROVED.md',
       states: contract,
     },
     null,
@@ -125,11 +129,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const next = serialise(await readContract());
   if (!check) {
     writeFileSync(target, next);
-    console.log(`wrote ${relative(process.cwd(), target)} — ${APPROVED_STATES.length} approved states`);
+    console.log(`wrote ${relative(process.cwd(), target)} — ${ALL_STATE_IDS.length} approved states`);
   } else {
     const current = readFileSync(target, 'utf8');
     if (current === next) {
-      console.log(`${OUT} reproduces from the approved prototype (${APPROVED_STATES.length} states).`);
+      console.log(`${OUT} reproduces from the approved prototypes (${ALL_STATE_IDS.length} states).`);
     } else {
       console.error(
         `${OUT} does not reproduce from the approved prototype.\n` +

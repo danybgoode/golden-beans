@@ -9,6 +9,45 @@ typed local feature-flag evaluation.
 npm install @golden-frijoles/sdk
 ```
 
+## 0.6.0 — experiments report their own exposures
+
+**Additive only; nothing existing changes.** An experiment started from the Golden Frijoles
+experiment builder names itself in the flag version it serves, so your app no longer hard-codes an
+experiment key or version. Wire this ONCE, beside the flag check you already have:
+
+```ts
+import { experimentForResolution } from '@golden-frijoles/sdk'
+
+const context = { targetingKey: merchant.id, region: merchant.country, channel: 'web' }
+const details = flags.resolveBooleanEvaluation('growth.founding_merchants_enabled', false, context)
+
+await growth.trackFlagEvaluation({
+  flagKey: 'growth.founding_merchants_enabled',
+  flagVersion: details.flagVersion!,
+  variant: details.variant!,
+  reason: details.reason,
+  snapshotVersion,
+  environment: 'production',
+  subject: { type: 'merchant', id: merchant.id },          // the SAME id as targetingKey
+  segments: { region: merchant.country, channel: 'web' },  // the SAME values as the context
+  experiment: experimentForResolution(details),            // undefined unless it is an exposure
+})
+```
+
+- `details.rulePriority` is new: the rule that served this value (only on `TARGETING_MATCH`).
+- `experimentForResolution(details)` returns `{ key, definitionVersion }` only when the person was
+  served by one of the experiment's own rules. People held out of the test fall through and get
+  `undefined`, so they are recorded as an ordinary `flag_evaluated` and never counted in the test.
+- `segments` copies the evaluation context's `source · channel · campaign · plan · region` into the
+  event's tags. An experiment's eligibility conditions and its breakdowns are read from the
+  exposure's tags; without them every exposure of an experiment with a condition is rejected.
+  Entries that are not one of those five fields, or not a scalar an experiment predicate could hold
+  (at most 64 characters, no NUL), are dropped from the tags — the event itself is still sent.
+- `subject.id` and `targetingKey` must be the same identifier, or one person can be bucketed as two.
+
+A caller that keeps passing `experiment` by hand, with no `segments`, sends exactly the bytes 0.5.0
+sent. A pre-1.0 caret does not pick this up automatically; move to `^0.6.0`.
+
 ## 0.5.0 — the command core, for the CLI and the MCP tools
 
 **Additive only; nothing existing changes.** 0.5.0 exports the shared, pure command core that
