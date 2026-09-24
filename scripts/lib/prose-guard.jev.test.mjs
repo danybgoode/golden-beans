@@ -14,6 +14,7 @@ import {
   semanticNote,
 } from './prose-guard.mjs';
 import { parseJevConfig } from './jev.mjs';
+import { _resetAsked } from './config.mjs';
 
 const cfg = (mode) =>
   parseJevConfig({
@@ -212,4 +213,24 @@ test('one chunk failing does not discard what Jev found in the chunks that answe
 
 test('proseUnits: a markdown heading is structure, never a unit Jev is asked about', () => {
   assert.deepEqual(proseUnits('## What shipped\n\nThe rail is live.'), ['The rail is live.']);
+});
+
+test('egress not answered (null): the regex decides, why names it, and nothing is asked of Jev (D12)', async () => {
+  _resetAsked();
+  const config = parseJevConfig({ egress: null, rails: { prose: { mode: 'jev' } } });
+  let asked = 0;
+  const r = await judgeProse('The flag is on in production.', {}, {
+    config,
+    key: 'k',
+    ask: async () => {
+      asked += 1;
+      return { ok: false };
+    },
+    write: () => {},
+    log: () => {},
+  });
+  assert.equal(r.decider, 'regex');
+  assert.equal(r.why, 'egress not answered');
+  assert.equal(asked, 0);
+  _resetAsked();
 });

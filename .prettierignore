@@ -10,6 +10,14 @@ package-lock.json
 # Machine-written by `node scripts/jev-eval.mjs --live` (recorded Jev answers), and byte-identical to
 # dobby-foundation's template copy — formatting it here would fork a shared rail (jev-semantic-guards).
 scripts/jev-eval.fixtures.json
+# The golden-frijoles-plugin config core, byte-identical to the template (golden-frijoles/skills). The copy-in rule
+# replaces a shared rail only while it is an UNMODIFIED copy; reformatting these here would fork them on the first run.
+scripts/config.mjs
+scripts/config.test.mjs
+scripts/lib/config.mjs
+scripts/lib/config.test.mjs
+scripts/lib/config-registry.mjs
+scripts/lib/config.d.mts
 references
 apps/web/supabase/migrations
 Roadmap

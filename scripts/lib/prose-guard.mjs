@@ -707,7 +707,9 @@ export async function judgeProse(draft, evidence = {}, deps = {}) {
   const units = proseUnits(draft);
   const questions = proseQuestions(units, evidence);
   if (ctx.mode === 'off' || !questions.length || !String(draft ?? '').trim()) {
-    return { ...regex, decider: 'regex', mode: ctx.mode, regexCodes, jevCodes: null, fallback: [] };
+    // `why` names what kept Jev out (`egress not answered`, `no TYPESAFE_API_KEY`, …), the way the review judge's
+    // reason does, so a regex-decided draft never reads like the configured path.
+    return { ...regex, decider: 'regex', mode: ctx.mode, why: ctx.why, regexCodes, jevCodes: null, fallback: [] };
   }
 
   const chunks = [];

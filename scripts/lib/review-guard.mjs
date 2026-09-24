@@ -92,9 +92,26 @@ export function globToRegExp(glob) {
 /** `gh pr view --json files` returns at most this many files, silently. */
 export const GRAPHQL_FILE_CAP = 100;
 
+/**
+ * The files that DEFINE the security trigger always trigger it, whatever `securityPaths` says. The list is read from
+ * the reviewer's checkout, which may be the PR's own branch: a PR that narrows `review.securityPaths` in
+ * golden-frijoles.config.json (or scripts/review-config.json) must get the lens on exactly that change, or it could
+ * switch the lens off for itself (security lens on #49).
+ */
+export const ALWAYS_SECURITY_PATHS = Object.freeze([
+  'golden-frijoles.config.json',
+  'scripts/review-config.json',
+  // The code that reads that config and makes the decision is the trigger too: a PR that edits the loader or the
+  // router could make the settings say anything (security lens on #49, round 4).
+  'scripts/lib/config.mjs',
+  'scripts/lib/review-guard.mjs',
+  'scripts/review-route.mjs',
+  'scripts/cross-review.mjs',
+]);
+
 export function decideSecurityPass({ files = [], body = '', securityPaths = [], totalFiles = null }) {
   const paths = files.map((f) => (typeof f === 'string' ? f : f.path)).filter(Boolean);
-  const res = securityPaths.map(globToRegExp);
+  const res = [...ALWAYS_SECURITY_PATHS, ...securityPaths].map(globToRegExp);
   const matched = paths.filter((p) => res.some((r) => r.test(p)));
   if (matched.length)
     return {

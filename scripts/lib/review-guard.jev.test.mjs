@@ -11,6 +11,10 @@ import {
   parseJevMarker,
 } from './review-guard.mjs';
 import { parseJevConfig } from './jev.mjs';
+import { _resetAsked } from './config.mjs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const PROSE_FINDING =
   'The new check exits 1 on a 5xx, but triage treats exit 1 as spec drift (smoke-triage-scope.mjs:41), so a real outage is filed as drift and nobody is paged. Return 2 for HTTP 5xx.';
@@ -59,6 +63,42 @@ test('no key behaves exactly as off, even when the config says jev', async () =>
   assert.equal(v.ok, false, "today's regex rejects the prose finding");
   assert.equal(v.mode, 'off');
   assert.equal(calls.length, 0);
+});
+
+// ── D12/S5.4: egress:null (unanswered) — the fallback names it, and fetch is never reached ────
+test('egress not answered (null): behaves as off, names the reason, asks once, never touches fetch', async () => {
+  _resetAsked();
+  const fetchCalls = [];
+  const fetchSpy = async () => {
+    fetchCalls.push(1);
+    throw new Error('must not be called while egress is unanswered');
+  };
+  const writes = [];
+  const config = parseJevConfig({ egress: null, rails: { review: { mode: 'jev' } } });
+  // Its own empty project: needSetting asks only when the PROJECT has not answered, and the repo running this test
+  // may have (a consumer commits egress: true), which made the ask count depend on where the test ran.
+  const root = mkdtempSync(join(tmpdir(), 'jev-null-'));
+  const v1 = await judgeReviewOutput(
+    PROSE_FINDING,
+    {},
+    { config, key: 'k', root, fetch: fetchSpy, write: (s) => writes.push(s), log: () => {} }
+  );
+  assert.equal(v1.ok, false, "today's regex rejects the prose finding");
+  assert.equal(v1.mode, 'off');
+  assert.match(v1.reason, /jev could not look \(egress not answered\)/);
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(writes.length, 1);
+  assert.match(writes[0], /^GF-NEEDS-SETTING \{"key":"jev\.egress"/);
+
+  // a second call in the same process (e.g. the next PR file) must not ask a second time
+  await judgeReviewOutput(
+    PROSE_FINDING,
+    {},
+    { config, key: 'k', root, fetch: fetchSpy, write: (s) => writes.push(s), log: () => {} }
+  );
+  assert.equal(writes.length, 1, 'GF-NEEDS-SETTING is emitted once per process, not once per call');
+  _resetAsked();
+  rmSync(root, { recursive: true, force: true });
 });
 
 test('shadow: the regex decides, Jev is asked, both verdicts are logged', async () => {

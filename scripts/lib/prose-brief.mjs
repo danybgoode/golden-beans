@@ -24,10 +24,10 @@
 // report with the adjectives swapped.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { loadPromptBody } from './cross-agent-cli.mjs';
 import { loadLessons, buildWriterPrompt } from './prose-writer.mjs';
-import { projectAsset } from './project-root.mjs';
+import { kitRoot, projectAsset, projectRoot } from './project-root.mjs';
 
 /**
  * Read a sprint doc's `**Status:**` line. Pure-ish (single read), used to describe sprint movement in
@@ -134,8 +134,14 @@ export function buildQuietBrief(windowLabel) {
 /** Load the shared persona + a per-surface task file. */
 export function loadPersonaAndTask(scriptsDir, surface) {
   return [
-    // The persona is a TEMPLATE FILL-IN the project owns (D2); the task file is the kit's.
-    loadPromptBody(projectAsset('prose/cpo-persona.md', { root: scriptsDir })),
+    // The persona is a TEMPLATE FILL-IN the project owns (D2); the task file is the kit's. An explicit scriptsDir that
+    // isn't this set's own names its project directly (golden-frijoles-plugin X20): a fixture gets ITS persona.
+    loadPromptBody(
+      projectAsset('prose/cpo-persona.md', {
+        root: scriptsDir,
+        project: resolve(scriptsDir) === kitRoot() ? projectRoot() : dirname(resolve(scriptsDir)),
+      })
+    ),
     loadPromptBody(join(scriptsDir, 'prose', `${surface}.task.md`)),
   ].join('\n\n');
 }

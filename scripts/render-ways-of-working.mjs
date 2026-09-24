@@ -22,14 +22,36 @@
 //
 // Zero deps — Node 18+.
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readSection } from './lib/config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
 export const TEMPLATE_PATH = join(REPO, 'Roadmap', 'WAYS-OF-WORKING.template.md');
 export const FILLINS_PATH = join(REPO, 'Roadmap', 'fill-ins.yml');
+// `ways.fillIns` in golden-frijoles.config.json may move the prose file (X15); the file itself stays the prose's home.
+// It must stay inside the project: this file's lines are echoed in parse errors, so `../.env.local` would leak.
+const fillInsPath = () => {
+  const moved = readSection('ways', { root: REPO }).raw?.fillIns;
+  const abs = moved ? resolve(REPO, moved) : FILLINS_PATH;
+  // The file's lines are echoed in parse errors, so whatever is read must be a fill-ins YAML INSIDE the project —
+  // lexically, through symlinks, and by extension: `Roadmap/../.env.local` is inside the project, and a
+  // `fill-ins.yml` symlink to it passes a containment check alone (security lens on #49). A missing file is left to
+  // the reader, which reports it as missing. The default path gets the same checks.
+  const realRepo = realpathSync(REPO);
+  const real = existsSync(abs) ? realpathSync(abs) : abs;
+  const inside = (p, root) => p.startsWith(root + sep);
+  const shown = moved ?? 'Roadmap/fill-ins.yml';
+  if (!inside(abs, REPO) || (existsSync(abs) && !inside(real, realRepo))) {
+    throw new Error(`ways.fillIns "${shown}" resolves outside the project; refusing to read it.`);
+  }
+  if (!/\.ya?ml$/i.test(real)) {
+    throw new Error(`ways.fillIns "${shown}" is not a .yml/.yaml file; refusing to read it.`);
+  }
+  return real;
+};
 export const OUT_PATH = join(REPO, 'Roadmap', 'WAYS-OF-WORKING.md');
 
 const BANNER =
@@ -171,7 +193,7 @@ function main() {
     process.exit(1);
   }
   try {
-    values = parseFillIns(readFileSync(FILLINS_PATH, 'utf8'));
+    values = parseFillIns(readFileSync(fillInsPath(), 'utf8'));
   } catch (e) {
     process.stderr.write(`✗ ${e.message}\n`);
     process.exit(1);
@@ -214,5 +236,13 @@ function main() {
   );
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// realpath on both sides: through a symlinked dir (macOS /var → /private/var) a lexical compare is false and the
+// script silently does nothing, exit 0.
+const isMain = (() => {
+  try {
+    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (isMain) main();

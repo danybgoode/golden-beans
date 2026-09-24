@@ -102,3 +102,17 @@ test('evaluate: a recording made by a different model than the pinned one is sta
   });
   assert.match(failures[0], /recorded by jev-1.12.0, config pins jev-1.13.0/);
 });
+
+test('evaluate live refuses unless egress is true: null (unanswered) and false never send (cross-review of #50)', async () => {
+  const fixtures = JSON.parse(readFileSync(new URL('./jev-eval.fixtures.json', import.meta.url), 'utf8'));
+  const rails = await loadRails();
+  for (const egress of [null, false]) {
+    let asked = 0;
+    const config = { ...loadJevConfig({ root: repoRoot() }), egress };
+    await assert.rejects(
+      evaluate({ fixtures, rails, config, live: true, ask: async () => ((asked += 1), {}) }),
+      /refusing to send/
+    );
+    assert.equal(asked, 0, `egress ${egress}: nothing asked`);
+  }
+});

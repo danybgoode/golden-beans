@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,7 @@ import {
   findProjectRoot,
   isInstalled,
   kitRoot,
+  ProjectAssetError,
   projectAsset,
   projectRoot,
 } from './project-root.mjs';
@@ -128,4 +129,22 @@ test('projectAsset in copied mode: both candidates are the same file', () => {
   writeFileSync(join(project, 'scripts', 'prose-lessons.md'), 'x');
   const root = join(project, 'scripts');
   assert.equal(projectAsset('prose-lessons.md', { project, root }), join(root, 'prose-lessons.md'));
+});
+
+test('projectAsset refuses a project file that is a symlink leaving the project (X20)', () => {
+  const project = tmp();
+  const outside = tmp();
+  writeFileSync(join(outside, 'secret.env'), 'TOKEN=shh');
+  mkdirSync(join(project, 'scripts', 'prose'), { recursive: true });
+  symlinkSync(join(outside, 'secret.env'), join(project, 'scripts', 'prose', 'cpo-persona.md'));
+  assert.throws(() => projectAsset('prose/cpo-persona.md', { project, root: fakeKit() }), ProjectAssetError);
+});
+
+test('projectAsset allows a symlink that stays inside the project', () => {
+  const project = tmp();
+  mkdirSync(join(project, 'scripts', 'prose'), { recursive: true });
+  mkdirSync(join(project, 'docs'));
+  writeFileSync(join(project, 'docs', 'persona.md'), 'ours');
+  symlinkSync(join(project, 'docs', 'persona.md'), join(project, 'scripts', 'prose', 'cpo-persona.md'));
+  assert.equal(projectAsset('prose/cpo-persona.md', { project, root: fakeKit() }), join(project, 'docs', 'persona.md'), 'the REAL path is returned (#9: nothing to swap between check and read)');
 });

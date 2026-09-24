@@ -277,3 +277,17 @@ test('re-review detection is per lens', () => {
   assert.equal(isReReview([security], 'security'), true);
   assert.equal(isReReview(['lgtm'], null), false);
 });
+
+test('decideSecurityPass: a PR that edits the trigger config gets the lens, whatever securityPaths says (security lens on #49)', () => {
+  for (const file of ['golden-frijoles.config.json', 'scripts/review-config.json']) {
+    const d = decideSecurityPass({ files: [file, 'app/payments/charge.ts'], securityPaths: ['nothing/matches/**'] });
+    assert.equal(d.run, true, file);
+    assert.ok(d.matched.includes(file));
+  }
+  assert.equal(decideSecurityPass({ files: ['README.md'], securityPaths: [] }).run, false);
+});
+
+test('decideSecurityPass: the config loader and the router trigger the lens too (security lens on #49, round 4)', () => {
+  for (const file of ['scripts/lib/config.mjs', 'scripts/lib/review-guard.mjs', 'scripts/review-route.mjs', 'scripts/cross-review.mjs'])
+    assert.equal(decideSecurityPass({ files: [file], securityPaths: [] }).run, true, file);
+});
