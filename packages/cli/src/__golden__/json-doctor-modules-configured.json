@@ -19,14 +19,14 @@
   },
   {
     "module": "Measure",
-    "state": "not-configured",
-    "detail": "nothing to set in this release; it arrives with the module.",
+    "state": "configured",
+    "detail": "nothing to set in this release.",
     "fix": null
   },
   {
     "module": "Spend",
-    "state": "not-configured",
-    "detail": "nothing to set in this release; it arrives with the module.",
+    "state": "configured",
+    "detail": "nothing to set in this release.",
     "fix": null
   },
   {

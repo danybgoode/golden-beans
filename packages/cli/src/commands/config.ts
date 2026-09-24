@@ -233,11 +233,18 @@ export const setupCommand: Command = {
       return configFailure(context, core, err)
     }
     const next = nextSteps(answers, kitVersion())
+    const envKeys = new Set(core.REGISTRY.filter((row) => row.store === 'env').map((row) => row.key))
+    const saved = Object.entries(answers).filter(([key]) => !envKeys.has(key))
+    const notSaved = Object.entries(answers).filter(([key]) => envKeys.has(key))
     context.emit.ok(
       { root, answers, next },
       [
-        `Saved to ${core.CONFIG_FILENAME} in ${root}:`,
-        ...Object.entries(answers).map(([key, value]) => `  ${key} = ${show(value)}`),
+        `Saved to ${core.CONFIG_FILENAME} in ${root}${yes ? ' (--yes: every default)' : ''}:`,
+        ...saved.map(([key, value]) => `  ${key} = ${show(value)}`),
+        ...(notSaved.length
+          ? ['Not saved (an account lives in .env.local, via `gf login` + `gf init`):']
+          : []),
+        ...notSaved.map(([key, value]) => `  ${key} = ${show(value)}`),
         '',
         'Next:',
         ...next.map((step) => `  ${step}`),

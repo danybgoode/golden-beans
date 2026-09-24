@@ -108,11 +108,13 @@ test('gf config get falls back to the registry default when nothing sets the key
 
 test('⚠️ gf config set refuses a secret (EXIT.USAGE) and writes nothing', async () => {
   const { root, env } = project()
-  const token = `ghp_${'a'.repeat(36)}`
-  const set = await gf(['config', 'set', 'reporting.destination', token, '--json'], env)
-  assert.equal(set.code, EXIT.USAGE)
-  assert.equal(JSON.parse(set.out).code, 'invalid')
-  assert.equal(existsSync(join(root, CONFIG)), false)
+  // Golden Frijoles' own CLI credential first: the one a `gf` user is most likely to paste by mistake.
+  for (const token of [`gf_pat_${'a'.repeat(32)}`, `ghp_${'a'.repeat(36)}`, 'postgres://u:pa55word@db/x']) {
+    const set = await gf(['config', 'set', 'reporting.destination', token, '--json'], env)
+    assert.equal(set.code, EXIT.USAGE, token)
+    assert.equal(JSON.parse(set.out).code, 'invalid')
+    assert.equal(existsSync(join(root, CONFIG)), false)
+  }
 })
 
 test('a malformed golden-frijoles.config.json is a usage error naming the file, not a crash', async () => {
@@ -253,6 +255,8 @@ test('doctor: a fresh project — every askable module is not configured, each w
     modules.map((line) => line.module),
     ['Plan', 'Build', 'Ship', 'Measure', 'Spend', 'Operate']
   )
+  for (const line of modules.filter((row) => row.state === 'not-configured'))
+    assert.ok(line.fix, `${line.module}: not configured must name its fix`)
   const plan = modules.find((line) => line.module === 'Plan')!
   assert.equal(plan.state, 'not-configured')
   assert.match(plan.fix!, /gf setup/)
@@ -277,7 +281,7 @@ test('doctor: every question answered — the modules read configured', async ()
     '.env.local': 'GOLDEN_FRIJOLES_FLAG_READ_KEY=gf_flag_read_x\n',
   })
   const { modules } = await doctorModules(env)
-  for (const name of ['Plan', 'Build', 'Ship', 'Operate'])
+  for (const name of ['Plan', 'Build', 'Ship', 'Measure', 'Spend', 'Operate'])
     assert.equal(modules.find((line) => line.module === name)!.state, 'configured', name)
   golden('json-doctor-modules-configured.json', JSON.stringify(modules, null, 2))
 })

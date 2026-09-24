@@ -61,13 +61,9 @@ export function moduleLines(
   try {
     return MODULE_ORDER.map((module): ModuleLine => {
       const asked = core.REGISTRY.filter((row) => row.module === module && row.askWhen !== 'never-yet')
+      // Nothing to answer is not "not configured": that state promises a fix, and there is none to give.
       if (asked.length === 0)
-        return {
-          module,
-          state: 'not-configured',
-          detail: 'nothing to set in this release; it arrives with the module.',
-          fix: null,
-        }
+        return { module, state: 'configured', detail: 'nothing to set in this release.', fix: null }
       // Missing = needs an answer to work: an account not connected, or a setting that is required or
       // has no safe default (`null`: "unanswered", which a rail treats as its safest choice — jev.egress
       // never sends). A setting with a real default is not missing; the rail already uses the default.
