@@ -12,8 +12,9 @@ Cite the README's D-numbers; do not restate them. Builder: the architect (never 
   `experiment-results` = `#results` at day 3 (gathering), `experiment-results-ready` = day ≥ planned,
   `experiment-decided` = `#decided`). `experiment-ready` / `experiment-blocked` stay registered and
   are marked **superseded** (by `experiment-results*`) in `APPROVED.md`, not deleted — their routes
-  still render them until Sprint 4. `extract-css.mjs` emits `experiments.css` (the `x-` rules,
-  verbatim) and `--check` covers it. The handoff copy in this folder is deleted in the same commit.
+  still render them until Sprint 4. `extract-css.mjs` emits `reference-experiments.css` (the
+  prototype's additions after its verbatim copy of `reference.css`, which it asserts) and `--check`
+  covers it. The handoff copy in this folder is deleted in the same commit.
   `route-manifest.test.ts`' batch/approval agreement stays green.
 - **1.2 → D1.** Migration `20260925100000_experiment_definition_widen.sql` (CREATE OR REPLACE only;
   re-REVOKE; no table change). Fixtures in ONE module, fed to both the parser and the DB function

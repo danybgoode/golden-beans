@@ -154,13 +154,64 @@ ${style}
 `;
 }
 
+// ── The second approved artifact (experiments-for-humans, epic D12) ─────────────────────────────
+//
+// `approved-prototype.html` (approved 2026-09-24) is `reference.css` INLINED VERBATIM followed by
+// its own additions, all `x-`-prefixed except a handful of prototype-chrome rules. The additions are
+// lifted into `reference-experiments.css` — a porting REFERENCE like `reference.css`, never imported
+// by the product (product CSS is ported by hand under `.ds`).
+//
+// ⚠️ The prefix is ASSERTED, not assumed. If either prototype's copy of the console stylesheet
+// drifts from the other, the second artifact is no longer an extension of the first — it is a
+// different design wearing the same class names — and that needs a new approval, not a quiet regen.
+export const EXPERIMENTS_PROTOTYPE = 'approved-prototype.html';
+
+export function readExperimentsAdditions(root = HERE, referenceCss) {
+  const source = readFileSync(join(root, EXPERIMENTS_PROTOTYPE), 'utf8');
+  const blocks = [...source.matchAll(/<style>([\s\S]*?)<\/style>/g)];
+  if (blocks.length !== 1) {
+    throw new Error(
+      `extract-css: expected exactly one <style> block in ${EXPERIMENTS_PROTOTYPE}, found ${blocks.length}`
+    );
+  }
+  const style = blocks[0][1].replace(/^\n/, '');
+  if (!style.startsWith(referenceCss)) {
+    throw new Error(
+      `extract-css: ${EXPERIMENTS_PROTOTYPE} no longer begins with reference.css verbatim, so it is not ` +
+        'an extension of the approved console design. Re-approve it (APPROVED.md) before regenerating.'
+    );
+  }
+  const additions = style.slice(referenceCss.length).trim();
+  if (additions.length === 0) throw new Error(`extract-css: ${EXPERIMENTS_PROTOTYPE} has no additions`);
+  return additions;
+}
+
+export function buildExperimentsReferenceCss(additions) {
+  return `/* reference-experiments.css — the experiments-for-humans additions, VERBATIM
+ *
+ * ⚠️ GENERATED — DO NOT HAND-EDIT. Regenerate with:
+ *     node apps/web/design-system/extract-css.mjs
+ * CI runs \`--check\` and fails on any diff.
+ *
+ * Source: apps/web/design-system/${EXPERIMENTS_PROTOTYPE} — the 5 states approved 2026-09-24 07:44
+ * America/Mexico_City (APPROVED.md, batch 6). Everything in that prototype's stylesheet AFTER its
+ * verbatim copy of reference.css. A porting reference, never imported: port the \`x-\` rules under
+ * \`.ds\`; the prototype-chrome rules (build notes, the day picker, example screens) are NOT product UI.
+ */
+
+${additions}
+`;
+}
+
 export function generate(root = HERE) {
   const style = readPrototypeStyle(root);
   const tokens = readTokens(style);
+  const referenceCss = buildReferenceCss(style);
   return {
-    'reference.css': buildReferenceCss(style),
+    'reference.css': referenceCss,
     'tokens.css': buildTokensCss(tokens),
     'tokens.ts': buildTokensTs(tokens),
+    'reference-experiments.css': buildExperimentsReferenceCss(readExperimentsAdditions(root, referenceCss)),
   };
 }
 

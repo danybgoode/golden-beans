@@ -1,6 +1,6 @@
 {
   "_": "GENERATED — do not hand-edit. Run: node apps/web/design-system/state-contract.mjs",
-  "_source": "console-prototype.html — the states approved in APPROVED.md",
+  "_source": "console-prototype.html + approved-prototype.html — the states approved in APPROVED.md",
   "states": {
     "ship-features": {
       "missing": false,
@@ -820,6 +820,138 @@
         },
         {
           "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "wizard-new-experiment": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "builder-steps",
+          "count": 6
+        },
+        {
+          "kind": "builder-panes"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "wizard-new-experiment-review": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "builder-steps",
+          "count": 6
+        },
+        {
+          "kind": "builder-panes"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "experiment-results": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "results-tabs"
+        },
+        {
+          "kind": "results-top"
+        },
+        {
+          "kind": "results-kpis"
+        },
+        {
+          "kind": "results-two"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "experiment-results-ready": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "results-tabs"
+        },
+        {
+          "kind": "results-top"
+        },
+        {
+          "kind": "results-kpis"
+        },
+        {
+          "kind": "results-two"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "experiment-decided": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "results-tabs"
+        },
+        {
+          "kind": "results-top"
+        },
+        {
+          "kind": "results-kpis"
+        },
+        {
+          "kind": "results-two"
         }
       ],
       "disclosures": 0,

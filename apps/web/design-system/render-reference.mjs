@@ -13,16 +13,18 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { openPrototype, HERE } from './_harness.mjs';
-import { APPROVED_STATES } from './approved-states.mjs';
+import { ALL_STATE_IDS, STATE_SOURCES } from './approved-states.mjs';
 
 const DIR = join(HERE, 'reference');
 mkdirSync(DIR, { recursive: true });
 
-const { page, close } = await openPrototype();
 const errors = [];
-page.on('pageerror', (e) => errors.push(String(e)));
+// One browser per approved artifact (experiments-for-humans D12).
+for (const [source, states] of STATE_SOURCES) {
+const { page, close } = await openPrototype(source);
+page.on('pageerror', (e) => errors.push(`${source}: ${String(e)}`));
 try {
-  for (const [name, fn] of APPROVED_STATES) {
+  for (const [name, fn] of states) {
     await page.evaluate(fn);
     await page.waitForTimeout(250);
     // ⚠️ **FULL PAGE — epic `mockups-as-built`, D9.** This shot was the VIEWPORT, so eleven of the
@@ -42,9 +44,10 @@ try {
   // instance I did not sweep for.
   await close();
 }
+}
 if (errors.length) {
   console.error(`\n${errors.length} page error(s) while rendering:`);
   errors.forEach((e) => console.error('  ' + e));
   process.exit(1);
 }
-console.log(`\n${APPROVED_STATES.length} reference states rendered at 1440x960 @2x, zero page errors.`);
+console.log(`\n${ALL_STATE_IDS.length} reference states rendered at 1440x960 @2x, zero page errors.`);

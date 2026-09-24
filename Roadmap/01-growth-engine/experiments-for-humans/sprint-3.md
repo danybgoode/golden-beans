@@ -9,7 +9,8 @@ Cite the README's D-numbers; do not restate them.
   `NewThingDialog` on `/app/experiments/[projectSlug]`; with the gate off it renders exactly today's
   manager (proved by rendering both off-states, LEARNINGS 2026-08-28). With it on: the six steps of
   the approved `wizard-new-experiment` state, markup ported from `design-system/approved-prototype.html`
-  class names, styles from the generated `experiments.css` only. State lives in one client reducer;
+  class names; styles ported by hand under `.ds` (as `system.css` is) from the generated reference
+  `design-system/reference-experiments.css` — a reference, never imported (D12). State lives in one client reducer;
   every number and sentence comes from `buildExperimentPlan` (2.2) — no arithmetic in a component.
   Catalog + served flags are loaded server-side once and passed in. No screenshot control (A4); one
   start chip (A6). Closing keeps the draft in `sessionStorage` (try/catch, per-project key) and the

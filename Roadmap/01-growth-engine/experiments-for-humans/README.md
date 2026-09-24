@@ -310,8 +310,13 @@ The harness (`approved-states.mjs`, `render-reference.mjs`, `state-contract.mjs`
 hard-wired to `console-prototype.html`. The new states run inside `approved-prototype.html`, which has
 its own globals, so Story 1.1 teaches the registry a per-state **source** and gives the new states their
 own evaluation functions (`boot` hashes `#review`, `#results`, `#decided`, `#list` already exist).
-`extract-css.mjs` gains a second output, `experiments.css`: the prototype's `x-`-prefixed rules,
-verbatim, with the same `--check`. `console-prototype.html` is untouched and its hash `5bc7e24ed5e3d0aa`
+`extract-css.mjs` gains a second output, `reference-experiments.css`: everything in the new
+prototype's stylesheet after its verbatim copy of `reference.css` (the prefix is asserted), with the
+same `--check`. Like `reference.css` it is a porting reference, never imported — product CSS is
+ported by hand under `.ds`. *(Corrected while building 1.1: the lock first called it `experiments.css`
+and implied the product would import it.)* The block vocabulary gains six pairs (`builder-steps`,
+`builder-panes`, `results-tabs`, `results-top`, `results-kpis`, `results-two`); the day picker
+(`.x-proto`) is reviewer chrome and joins the annotation selector. `console-prototype.html` is untouched and its hash `5bc7e24ed5e3d0aa`
 still holds. The new file's hash is **`0f7c5be3c9c316e4`**.
 
 ### D13 — Where each smoke can actually run *(corrected)*

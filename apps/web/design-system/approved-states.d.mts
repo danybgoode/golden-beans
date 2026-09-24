@@ -8,3 +8,6 @@ export const APPROVED_STATES: readonly (readonly [string, () => void])[]
 
 /** Just the ids, in approval order. The half every non-browser consumer needs. */
 export const STATE_IDS: readonly string[]
+export const EXPERIMENT_BUILDER_STATES: readonly (readonly [string, () => void])[]
+export const STATE_SOURCES: readonly (readonly [string, readonly (readonly [string, () => void])[]])[]
+export const ALL_STATE_IDS: readonly string[]

@@ -126,6 +126,24 @@ export const BLOCK_KINDS = [
   // gap in it. Widening `versions` to also match `.ds-listcard` would make the two agree by
   // deleting the question.
   { kind: 'versions', proto: '.vers', product: '.ds-vers' },
+  // ── batch 6 · experiments-for-humans (approved-prototype.html, epic D12) ────────────────────
+  // The builder modal: its step strip (six steps, counted — D10's "step count") and the two-pane
+  // body (the step on the left, the live plan on the right; one pane on Review).
+  {
+    kind: 'builder-steps',
+    proto: '.x-steps',
+    product: '.ds-x-steps',
+    facts: { count: { proto: '.x-step', product: '.ds-x-step' } },
+  },
+  { kind: 'builder-panes', proto: '.x-panes', product: '.ds-x-panes' },
+  // The decision-first readout (D10's ordered block sequence): Results/Plan tabs, the lift card +
+  // verdict row, the KPI tiles, and "How sure we are" + "Who saw what". The KPI COUNT is data (one
+  // tile per guardrail), so it is deliberately not a fact here — see "a per-item COUNT of something
+  // the data produces is not structure" in LEARNINGS.
+  { kind: 'results-tabs', proto: '.x-ptabs', product: '.ds-x-ptabs' },
+  { kind: 'results-top', proto: '.x-res-top', product: '.ds-x-res-top' },
+  { kind: 'results-kpis', proto: '.x-kpis', product: '.ds-x-kpis' },
+  { kind: 'results-two', proto: '.x-two', product: '.ds-x-two' },
   // A product callout is real copy; a `.callout.info` is the designer's annotation and never
   // reaches here (see ANNOTATION above).
   { kind: 'callout', proto: '.callout:not(.info)', product: '.ds-callout:not(.ds-callout--info)' },
@@ -148,7 +166,10 @@ export const BLOCK_KINDS = [
  * hidden one, which is why the count is emitted: a state that gains or loses one shows up in the
  * diff even though the sequence ignores it.
  */
-export const ANNOTATION = { proto: '.callout.info', product: '.ds-callout--info' };
+// `.x-proto` joined 2026-09-24 (experiments-for-humans): the approved readout draws a "See this page
+// on day …" picker so a reviewer can scrub time. It is reviewer chrome, like the `◆` callouts, and
+// the product must never build it — so it is excluded from the sequence and merely counted.
+export const ANNOTATION = { proto: '.callout.info, .x-proto', product: '.ds-callout--info' };
 
 /**
  * Text that is in the accessibility tree and NOT on the screen, removed before any word is compared.
