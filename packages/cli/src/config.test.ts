@@ -345,3 +345,10 @@ test('gf config list and gf setup refuse stray arguments, writing nothing (cross
   assert.equal((await gf(['setup', 'now', '--yes'], env)).code, EXIT.USAGE)
   assert.equal(existsSync(join(root, CONFIG)), false)
 })
+
+test('gf config set refuses a token hidden behind whitespace (security lens on #164; kit 0.5.1)', async () => {
+  const { root, env } = project()
+  const set = await gf(['config', 'set', 'reporting.destination', ` sk-${'a'.repeat(20)}`], env)
+  assert.equal(set.code, EXIT.USAGE)
+  assert.equal(existsSync(join(root, CONFIG)), false)
+})
