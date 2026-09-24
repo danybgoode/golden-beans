@@ -1,0 +1,38 @@
+[
+  {
+    "module": "Plan",
+    "state": "configured",
+    "detail": "4 of 4 settings answered; the rest use their defaults.",
+    "fix": null
+  },
+  {
+    "module": "Build",
+    "state": "configured",
+    "detail": "5 of 5 settings answered; the rest use their defaults.",
+    "fix": null
+  },
+  {
+    "module": "Ship",
+    "state": "configured",
+    "detail": "1 of 2 settings answered; the rest use their defaults.",
+    "fix": null
+  },
+  {
+    "module": "Measure",
+    "state": "not-configured",
+    "detail": "nothing to set in this release; it arrives with the module.",
+    "fix": null
+  },
+  {
+    "module": "Spend",
+    "state": "not-configured",
+    "detail": "nothing to set in this release; it arrives with the module.",
+    "fix": null
+  },
+  {
+    "module": "Operate",
+    "state": "configured",
+    "detail": "2 of 2 settings answered; the rest use their defaults.",
+    "fix": null
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "module": "Plan",
+    "state": "not-configured",
+    "detail": "not answered: project.mode.",
+    "fix": "`gf setup`"
+  },
+  {
+    "module": "Build",
+    "state": "not-configured",
+    "detail": "not answered: review.securityPaths, jev.egress.",
+    "fix": "`gf config set review.securityPaths <value>` · `gf config set jev.egress <value>`"
+  },
+  {
+    "module": "Ship",
+    "state": "not-configured",
+    "detail": "not answered: project.account.",
+    "fix": "`gf login`, then `gf init`"
+  },
+  {
+    "module": "Measure",
+    "state": "not-configured",
+    "detail": "nothing to set in this release; it arrives with the module.",
+    "fix": null
+  },
+  {
+    "module": "Spend",
+    "state": "not-configured",
+    "detail": "nothing to set in this release; it arrives with the module.",
+    "fix": null
+  },
+  {
+    "module": "Operate",
+    "state": "not-configured",
+    "detail": "not answered: reporting.destination, deploy.vercelProject.",
+    "fix": "`gf config set reporting.destination <value>` · `gf config set deploy.vercelProject <value>`"
+  }
+]

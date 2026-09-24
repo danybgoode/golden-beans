@@ -7,6 +7,9 @@ Runs whether or not you are logged in — diagnosing a missing credential is the
   point. Prints no key material in either mode.
 
   Exits 0 when every check that could run passed, and non-zero naming the first that did not.
+  Then one line per module (Plan, Build, Ship, Measure, Spend, Operate): configured, not
+  configured (with the command that fixes it) or could not look. Module lines never change the
+  exit code.
 
 Flags
   --project <slug>  check this project instead of the remembered one

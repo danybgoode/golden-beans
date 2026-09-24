@@ -1,0 +1,21 @@
+gf setup — answer the setup questions (each has a default; only the first is required)
+
+Usage
+  gf setup [--yes] [--json]
+
+Asks what you are working on, where you are starting, and whether to connect an
+  account now — arrow keys to choose, Esc to take the default. --yes takes every default without
+  asking. Answers go to golden-frijoles.config.json; an account is connected with `gf login` and
+  `gf init`, which write .env.local, never the config file.
+
+Flags
+  --yes  take every default without asking (required when not on a terminal)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

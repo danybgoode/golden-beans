@@ -49,6 +49,40 @@
         ]
       },
       {
+        "command": "setup",
+        "summary": "answer the setup questions (each has a default; only the first is required)",
+        "usage": "gf setup [--yes] [--json]",
+        "needsAuth": false,
+        "flags": [
+          {
+            "flag": "--yes",
+            "takesValue": false,
+            "describe": "take every default without asking (required when not on a terminal)"
+          }
+        ]
+      },
+      {
+        "command": "config list",
+        "summary": "every setting in golden-frijoles.config.json and the legacy files, and where it came from",
+        "usage": "gf config list [--json]",
+        "needsAuth": false,
+        "flags": []
+      },
+      {
+        "command": "config get",
+        "summary": "one setting's effective value (or its default when nothing sets it)",
+        "usage": "gf config get <key> [--json]",
+        "needsAuth": false,
+        "flags": []
+      },
+      {
+        "command": "config set",
+        "summary": "change one setting in golden-frijoles.config.json",
+        "usage": "gf config set <key> <value> [--json]",
+        "needsAuth": false,
+        "flags": []
+      },
+      {
         "command": "init",
         "summary": "project, key, .env.local and the snippet — in one verb",
         "usage": "gf init [--env <environment>] [--json] [--yes]",
