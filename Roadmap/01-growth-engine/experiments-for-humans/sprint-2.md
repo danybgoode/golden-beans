@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 2: Event catalog and the planner
 
-**Status:** ⬜ not started (locked) · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
+**Status:** 🟦 In review · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
@@ -68,11 +68,20 @@ waits for the Wave 2 bet** (README → A1). Don't start Sprint 3 in the same run
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
-Env: production · https://goldenfrijoles.com
+Env: production · https://goldenfrijoles.com (sign in as the `miyagisanchez` owner). Nothing in this
+sprint is visible in the product: the catalog read has no caller until Sprint 3, and the builder is
+dark. The walkthrough checks that nothing moved, and where the numbers are proven.
 
 1. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez
-   → Nothing visible has changed (the builder is still dark).
-2. Open the Sprint 2 PR and find the planner spec output for the Copy template on the fixture catalog.
-   → It shows a sentence and a day count, and the spec asserts both.
+   → The page is exactly as after Sprint 1: the list, "+ New experiment" opening the old dialog,
+   `founding-message-v2` and `fundadoras_promise_cta` reading Decided.
+2. Open the Sprint 2 PR and find `apps/web/lib/experiment-builder-plan.test.ts`, test "the Copy
+   template on the prototype catalog".
+   → It pins the sentence *"New copy goes to half of merchants in MX. It wins if application
+   completed rises by at least 10%, as long as application abandoned don't rise."* and **36 days**
+   (the prototype drew 13 from a hand-typed 780 merchants/day; the catalog can only know the 279/day
+   it has seen — the test says so).
+3. In the same PR, find the CI job "Static gate + build" (it runs `npm run test:unit`).
+   → Green, including the 100k-key stacked-rollout property test.
 
 If any step fails, note the step number + what you saw — that's the bug report.
