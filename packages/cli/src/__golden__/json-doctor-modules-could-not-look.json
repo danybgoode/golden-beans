@@ -1,0 +1,38 @@
+[
+  {
+    "module": "Plan",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  },
+  {
+    "module": "Build",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  },
+  {
+    "module": "Ship",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  },
+  {
+    "module": "Measure",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  },
+  {
+    "module": "Spend",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  },
+  {
+    "module": "Operate",
+    "state": "could-not-look",
+    "detail": "could not read the project's settings: <project>/golden-frijoles.config.json: not valid JSON …",
+    "fix": null
+  }
+]

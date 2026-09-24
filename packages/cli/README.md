@@ -103,6 +103,25 @@ could run: the credentials file, the credential, its shape, whether the deployme
 it accepts you, whether your active project is reachable, and whether this CLI is current. It never
 prints key material.
 
+Then one line per module (Plan, Build, Ship, Measure, Spend, Operate): *configured*, *not
+configured* (with the command that fixes it) or *could not look*. Module lines never change the
+exit code.
+
+## Settings: `gf setup` and `gf config`
+
+```bash
+gf setup                                   # three questions, each with a default; --yes takes them all
+gf config list                             # every setting, and which file it came from
+gf config get review.reviewScope
+gf config set review.reviewScope every-pr
+```
+
+Settings live in the project's `golden-frijoles.config.json`, the same file the Golden Frijoles
+skills read and write: these verbs use the config core that ships in `@golden-frijoles/kit`, so
+there is one set of rules. `set` refuses anything that looks like a secret (keep those in
+`.env.local`), and legacy files such as `review-config.json` are read but never edited. None of these
+verbs needs a credential.
+
 ## Environment
 
 | Variable | What it does |

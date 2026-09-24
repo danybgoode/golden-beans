@@ -7,4 +7,4 @@
 //
 // It is a literal, and `version.test.ts` asserts it equals `package.json`'s — so the two cannot
 // drift, and the drift is caught by the unit gate rather than by someone reading `gf --version`.
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'

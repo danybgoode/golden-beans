@@ -20,12 +20,17 @@ import { flagsDiffCommand, flagsHistoryCommand } from './flags-history'
 import { flagsSyncCommand } from './flags-sync'
 import { keysCreateCommand, keysLsCommand, keysRevokeCommand } from './keys'
 import { doctorCommand } from './doctor'
+import { configGetCommand, configListCommand, configSetCommand, setupCommand } from './config'
 
 export const COMMANDS: readonly Command[] = [
   loginCommand,
   logoutCommand,
   whoamiCommand,
   doctorCommand,
+  setupCommand,
+  configListCommand,
+  configGetCommand,
+  configSetCommand,
   initCommand,
   projectsLsCommand,
   projectsCreateCommand,

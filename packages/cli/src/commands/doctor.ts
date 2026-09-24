@@ -24,6 +24,8 @@ import { CLI_TOKEN_FORMAT, credentialsPath, readCredentials } from '../credentia
 import { EXIT, type ExitCode } from '../exit-codes'
 import { pad } from '../output'
 import { VERSION } from '../version'
+import { loadConfigCore } from '../config-core'
+import { moduleLines, type ModuleLine } from '../modules'
 
 export type CheckStatus = 'ok' | 'fail' | 'warn' | 'skipped'
 export type Check = {
@@ -47,10 +49,15 @@ export const doctorCommand: Command = {
   detail: `Runs whether or not you are logged in — diagnosing a missing credential is the
   point. Prints no key material in either mode.
 
-  Exits 0 when every check that could run passed, and non-zero naming the first that did not.`,
+  Exits 0 when every check that could run passed, and non-zero naming the first that did not.
+  Then one line per module (Plan, Build, Ship, Measure, Spend, Operate): configured, not
+  configured (with the command that fixes it) or could not look. Module lines never change the
+  exit code.`,
   flags: [{ name: 'project', value: '<slug>', describe: 'check this project instead of the remembered one' }],
   async run(context): Promise<ExitCode> {
     const checks: Check[] = []
+    const modules = await moduleReport(context)
+    const report = (ctx: CommandContext, list: Check[]) => printReport(ctx, list, modules)
     const path = credentialsPath(context.env)
 
     // ── 1. is there a credential at all, and where did it come from ───────────────────────────
@@ -236,18 +243,43 @@ function describeSource(source: string): string {
  * legitimately be living with, and a doctor that exits non-zero for them is a doctor whose exit code
  * nobody can put in a CI step.
  */
-function report(context: CommandContext, checks: Check[]): ExitCode {
+function printReport(context: CommandContext, checks: Check[], modules: ModuleLine[]): ExitCode {
   const failed = checks.find((check) => check.status === 'fail')
   context.emit.ok(
-    { checks, healthy: failed === undefined },
-    checks.map((check) => `${symbol(check.status)} ${pad(check.id, 20)} ${check.detail}`).join('\n')
+    { checks, healthy: failed === undefined, modules },
+    [
+      ...checks.map((check) => `${symbol(check.status)} ${pad(check.id, 20)} ${check.detail}`),
+      '',
+      'modules',
+      ...modules.map(
+        (line) =>
+          `${pad(line.module, 8)} ${pad(line.state.replace(/-/g, ' '), 15)} ${line.detail}${line.fix ? `  Fix: ${line.fix}` : ''}`
+      ),
+    ].join('\n')
   )
+  // D13: `modules` is reported, never scored. The exit code below is the checks' alone.
   if (!failed) return EXIT.OK
   // The failing check decides the code, so a caller branching on it gets the same vocabulary the
   // other verbs use rather than a doctor-specific number.
   if (failed.id === 'api-reachable') return EXIT.SERVER
   if (failed.id === 'active-project') return EXIT.NOT_FOUND
   return EXIT.AUTH
+}
+
+/** The module lines for this project. Loading the kit can fail; that is could-not-look, never a thrown error. */
+async function moduleReport(context: CommandContext): Promise<ModuleLine[]> {
+  const hasCredential = context.auth.token !== null
+  try {
+    const core = await loadConfigCore()
+    const root = core.projectRoot({ env: context.env, cwd: context.cwd })
+    return moduleLines(core, { root, hasCredential })
+  } catch (err) {
+    return moduleLines(null, {
+      root: null,
+      hasCredential,
+      unavailable: `could not load @golden-frijoles/kit: ${err instanceof Error ? err.message : String(err)}`,
+    })
+  }
 }
 
 function symbol(status: CheckStatus): string {
