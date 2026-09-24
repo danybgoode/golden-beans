@@ -266,6 +266,23 @@ then (2) so exposures can never arrive for a version that is not running. If (2)
 **"Running, but the split isn't serving yet"** with a retry that repeats (2) only. `FLAG_SERVING_ENABLED`
 must be on (it is, in Production) or Start refuses before (1).
 
+**D7, corrected before Sprint 3 was built (2026-09-24, the architect).** Two acceptance criteria
+need the builder's ANSWERS after Save, and a saved draft holds only its definition: "Continue reopens
+at Review" (3.2) and "fail blocks Start" (D6 — the checks are computed from answers, and the server
+must recompute them rather than trust the browser). A definition cannot be turned back into answers:
+the template, the reason, the smallest change worth knowing about and the version names' origin are
+not in it. So the Save migration also creates **`experiment_builder_answers`** — one row per
+experiment version, `(project_id, experiment_id, version_id)`, the planner's input JSON (≤ 16 KiB),
+service-role only, append-only, written only by `save_experiment_draft`. And **Start re-plans**:
+it rebuilds the plan server-side from the stored answers against the CURRENT served flag and catalog,
+refuses while any check fails, and if the plan differs from the saved draft (someone changed the
+feature since, or the window needs re-dating) it Saves first — the idempotent function makes that a
+no-op when nothing changed. Activating a flag version built from a stale served definition would
+silently roll back someone else's change; this is what prevents it. **CI:** the push credential cannot
+edit `.github/workflows/ci.yml` (no `workflow` scope), so no spec depends on the gate being ON in CI:
+the commands are tested with the gate injected (the `experiment-create-command.ts` pattern), and the
+gate-OFF path is CI's default.
+
 ### D8 — "Roll out to everyone" is a separate flag write after the decision *(verified; Story 4.2)*
 `recordExperimentDecision` requires a **stopped** version (RPC: *"initial decision requires an
 undecided stopped experiment"*), so the decide flow is three writes, each with its own confirmation
