@@ -352,3 +352,15 @@ test('gf config set refuses a token hidden behind whitespace (security lens on #
   assert.equal(set.code, EXIT.USAGE)
   assert.equal(existsSync(join(root, CONFIG)), false)
 })
+
+test('gf config list and get redact a secret a legacy file still holds (kit 0.5.2)', async () => {
+  const token = `123456789:${'A'.repeat(35)}`
+  const { env } = project({
+    'reporting.config.json': JSON.stringify({ telegram: { botToken: token, chatId: '42' } }),
+  })
+  const list = await gf(['config', 'list', '--json'], env)
+  assert.equal(list.code, EXIT.OK)
+  assert.ok(!list.out.includes(token))
+  const get = await gf(['config', 'get', 'reporting.telegram.botToken'], env)
+  assert.ok(!get.out.includes(token))
+})
