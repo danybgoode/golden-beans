@@ -33,10 +33,10 @@ import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve, isAbsolute, normalize } from 'node:path';
+import { join, isAbsolute, normalize } from 'node:path';
+import { projectRoot } from './lib/project-root.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..');
+const REPO_ROOT = projectRoot(); // D2
 export const CONFIG_FILENAME = 'live-smoke.config.json';
 const OUT_DIR = process.env.LIVE_SMOKE_OUT ?? 'test-results/live-smoke';
 

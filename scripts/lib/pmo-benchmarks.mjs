@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { kitRoot } from './project-root.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..', '..');
-export const BENCHMARKS_PATH = join(ROOT, 'scripts', 'pmo', 'benchmarks.json');
+export const BENCHMARKS_PATH = join(kitRoot(), 'pmo', 'benchmarks.json'); // D2: a kit asset
 
 const REQUIRED_SOURCE_FIELDS = ['title', 'publisher', 'url', 'publishedDate', 'accessedDate'];
 

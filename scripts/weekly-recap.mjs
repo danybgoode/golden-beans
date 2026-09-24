@@ -49,9 +49,10 @@ import {
   deriveEvidenceFlags,
   loadOwedLedger,
 } from './lib/prose-brief.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
+const ROOT = projectRoot(); // D2
 
 // The window-tracking log lives on a dedicated `claude/`-prefixed branch, not committed to `main` — a
 // routine's DEFAULT push scope already covers `claude/`-prefixed branches, so this needs no extra

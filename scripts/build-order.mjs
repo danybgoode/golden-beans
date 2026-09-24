@@ -13,11 +13,12 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { EPIC_STATUS_ORDER, SEED_FUNNEL_STATUSES } from './lib/roadmap-status-buckets.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO = resolve(__dirname, '..');
+const REPO = projectRoot(); // D2
 const OUT = join(REPO, 'Roadmap', '00-ideas', 'BUILD-ORDER.md');
 const EXTRACTOR = join(__dirname, 'roadmap-extract.mjs');
 

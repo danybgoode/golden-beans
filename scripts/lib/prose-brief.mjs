@@ -27,6 +27,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadPromptBody } from './cross-agent-cli.mjs';
 import { loadLessons, buildWriterPrompt } from './prose-writer.mjs';
+import { projectAsset } from './project-root.mjs';
 
 /**
  * Read a sprint doc's `**Status:**` line. Pure-ish (single read), used to describe sprint movement in
@@ -133,7 +134,8 @@ export function buildQuietBrief(windowLabel) {
 /** Load the shared persona + a per-surface task file. */
 export function loadPersonaAndTask(scriptsDir, surface) {
   return [
-    loadPromptBody(join(scriptsDir, 'prose', 'cpo-persona.md')),
+    // The persona is a TEMPLATE FILL-IN the project owns (D2); the task file is the kit's.
+    loadPromptBody(projectAsset('prose/cpo-persona.md', { root: scriptsDir })),
     loadPromptBody(join(scriptsDir, 'prose', `${surface}.task.md`)),
   ].join('\n\n');
 }

@@ -569,7 +569,7 @@ The ad-funded local print magazine (México-86 retro aesthetic) — Miyagi's fir
   swap, removed one dead placeholder section, and tightened wording on ~20 dense multi-corollary bullets,
   keeping every retained line's why + date/source (reviewed diff, confirmed by Daniel before merge). The
   `README.md` poster's Feature map was audited — no dead lines found. Stood up `skills/doc-hygiene/` +
-  `scripts/doc-hygiene.mjs`, a repeatable advisory check (always-read-set size + dedupe/staleness
+  `doc-hygiene` (run from `@golden-frijoles/kit`), a repeatable advisory check (always-read-set size + dedupe/staleness
   candidates) wired into weekly Routine C; it never auto-edits. See [09 · Platform & Infra › Doc
   hygiene](09-platform-infra/doc-hygiene-learnings-sweep/).
 - **2026-07-01 — Model split: Sonnet 5 builds, Opus 4.8 plans, escalate-don't-guess (1 sprint; LOW,

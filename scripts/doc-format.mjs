@@ -39,11 +39,12 @@ import {
   validateEpicFrontmatter,
   validateSprintFrontmatter,
 } from './lib/roadmap-contract.mjs';
+import { projectAsset, projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO = resolve(__dirname, '..');
+const REPO = projectRoot(); // D2
 const EXTRACTOR = join(__dirname, 'roadmap-extract.mjs');
-const ENFORCED_PATH = join(__dirname, 'doc-format.enforced.json');
+const ENFORCED_PATH = projectAsset('doc-format.enforced.json'); // per-project policy, kit default
 
 // Active (non-archived) epics are the only ones the sweep + hard gate ever apply to — status:
 // archived epics are frozen historical record (Decision D3, doc-format-consistency epic README).

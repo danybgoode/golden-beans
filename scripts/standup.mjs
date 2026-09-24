@@ -54,9 +54,10 @@ import {
   loadOwedLedger,
 } from './lib/prose-brief.mjs';
 import { parseStatusFlipsFromLog } from './weekly-recap.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
+const ROOT = projectRoot(); // D2
 
 // The delta log lives on a dedicated `claude/`-prefixed branch, not committed to `main` — a routine's
 // DEFAULT push scope already covers `claude/`-prefixed branches, so this needs no extra permission (see
@@ -173,15 +174,15 @@ function gatherSmoke(smokeConfig) {
 // ---- gather: local scripts ----
 
 function gatherBuildOrderDrift() {
-  const r = spawnSync('node', ['scripts/build-order.mjs', '--check'], { cwd: ROOT, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [join(__dirname, 'build-order.mjs'), '--check'], { cwd: ROOT, encoding: 'utf8' });
   return { drifted: r.status !== 0 };
 }
 
 function gatherStalePreviews(ageDays, project) {
   if (!ageDays || !project) return { available: false };
   const r = spawnSync(
-    'node',
-    ['scripts/vercel-prune-previews.mjs', '--project', project, '--age', String(ageDays)],
+    process.execPath,
+    [join(__dirname, 'vercel-prune-previews.mjs'), '--project', project, '--age', String(ageDays)],
     {
       cwd: ROOT,
       encoding: 'utf8',

@@ -22,9 +22,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { ensureGh, die } from './lib/cross-agent-cli.mjs';
 import { createPullRequest } from './lib/gh-rest.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
+const ROOT = projectRoot(); // D2: the user's project, wherever this set runs from
 const BOARD_PATH = 'Roadmap/00-ideas/BUILD-ORDER.md';
 const BANNER =
   "> **Advisory — docs-only.** Auto-regenerated from the SSOT (each epic README's frontmatter " +
@@ -65,12 +66,12 @@ export function repoSlugFromRemoteUrl(url) {
 }
 
 function isDrifted() {
-  const r = run('node', ['scripts/build-order.mjs', '--check']);
+  const r = run(process.execPath, [join(__dirname, 'build-order.mjs'), '--check']); // a sibling, never the project's copy
   return r.status !== 0;
 }
 
 function regenerate() {
-  const r = run('node', ['scripts/build-order.mjs']);
+  const r = run(process.execPath, [join(__dirname, 'build-order.mjs')]);
   if (r.status !== 0) die(`build-order.mjs regen failed: ${(r.stderr || r.stdout || '').trim()}`);
 }
 
