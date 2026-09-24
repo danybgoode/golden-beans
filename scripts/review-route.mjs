@@ -29,7 +29,6 @@
 // Zero npm deps — Node 18+. Pure policy exported for node:test; the CLI is a thin shell.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
