@@ -44,13 +44,17 @@ const show = (value: unknown) => (typeof value === 'string' ? value : JSON.strin
 
 export const configListCommand: Command = {
   path: ['config', 'list'],
-  summary: "every setting in golden-frijoles.config.json and the legacy files, and where it came from",
+  summary: 'every setting in golden-frijoles.config.json and the legacy files, and which files each section came from',
   usage: 'gf config list [--json]',
   needsAuth: false,
   detail: `Reads the project's golden-frijoles.config.json and any legacy config files
   (review-config.json, jev.config.json, …). Where both set a section, the new file wins.`,
   flags: [],
   async run(context): Promise<ExitCode> {
+    if (context.args.positionals.length > 0) {
+      context.emit.fail('invalid', 'Usage: `gf config list` takes no arguments. For one setting: `gf config get <key>`.')
+      return EXIT.USAGE
+    }
     const loaded = await coreOrFail(context)
     if (!loaded) return EXIT.SERVER
     const { core, root } = loaded
@@ -202,6 +206,10 @@ export const setupCommand: Command = {
   flags: [{ name: 'yes', describe: 'take every default without asking (required when not on a terminal)' }],
   async run(context): Promise<ExitCode> {
     const yes = boolFlag(context.args, 'yes')
+    if (context.args.positionals.length > 0) {
+      context.emit.fail('invalid', 'Usage: `gf setup [--yes]` takes no arguments.')
+      return EXIT.USAGE
+    }
     if (!yes && !setupIo.isInteractive()) {
       context.emit.fail(
         'invalid',

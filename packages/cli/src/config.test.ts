@@ -319,3 +319,10 @@ test('moduleLines: no core is could not look, with the reason', async () => {
   // and the real core loads (the dependency is installed), so the other two states above are not vacuous
   assert.ok((await loadConfigCore()).REGISTRY.length > 0)
 })
+
+test('gf config list and gf setup refuse stray arguments, writing nothing (cross-review of #164)', async () => {
+  const { root, env } = project()
+  assert.equal((await gf(['config', 'list', 'review'], env)).code, EXIT.USAGE)
+  assert.equal((await gf(['setup', 'now', '--yes'], env)).code, EXIT.USAGE)
+  assert.equal(existsSync(join(root, CONFIG)), false)
+})

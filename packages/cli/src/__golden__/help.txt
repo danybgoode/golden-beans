@@ -15,7 +15,7 @@ Commands
   init             project, key, .env.local and the snippet — in one verb
 
   config
-  config list      every setting in golden-frijoles.config.json and the legacy files, and where it came from
+  config list      every setting in golden-frijoles.config.json and the legacy files, and which files each section came from
   config get       one setting's effective value (or its default when nothing sets it)
   config set       change one setting in golden-frijoles.config.json
 

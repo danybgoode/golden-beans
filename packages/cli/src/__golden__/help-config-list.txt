@@ -1,4 +1,4 @@
-gf config list — every setting in golden-frijoles.config.json and the legacy files, and where it came from
+gf config list — every setting in golden-frijoles.config.json and the legacy files, and which files each section came from
 
 Usage
   gf config list [--json]

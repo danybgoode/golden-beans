@@ -63,7 +63,7 @@
       },
       {
         "command": "config list",
-        "summary": "every setting in golden-frijoles.config.json and the legacy files, and where it came from",
+        "summary": "every setting in golden-frijoles.config.json and the legacy files, and which files each section came from",
         "usage": "gf config list [--json]",
         "needsAuth": false,
         "flags": []
