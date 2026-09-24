@@ -167,3 +167,14 @@ test('statusLineFrom: reads a sprint Status line, or null when absent', () => {
   assert.equal(statusLineFrom('# T\n\n**Status:** 🟦 In review\n'), '🟦 In review');
   assert.equal(statusLineFrom('# T\n\nno status here\n'), null);
 });
+
+test('loadPersonaAndTask honours an explicit scriptsDir: a fixture project gets ITS persona (X20)', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, realpathSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const fixture = realpathSync(mkdtempSync(join(tmpdir(), 'persona-')));
+  mkdirSync(join(fixture, 'scripts', 'prose'), { recursive: true });
+  writeFileSync(join(fixture, 'scripts', 'prose', 'cpo-persona.md'), '<!-- h -->\n---\nFIXTURE PERSONA\n');
+  writeFileSync(join(fixture, 'scripts', 'prose', 'standup.task.md'), '<!-- h -->\n---\nFIXTURE TASK\n');
+  const s = loadPersonaAndTask(join(fixture, 'scripts'), 'standup');
+  assert.match(s, /FIXTURE PERSONA/);
+});

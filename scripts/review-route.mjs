@@ -35,6 +35,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need, hasCmd, AGENT_BIN } from './lib/cross-agent-cli.mjs';
 import { changedFileCount, decideSecurityPass, parseReviewConfig } from './lib/review-guard.mjs';
+import { readSection } from './lib/config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -153,7 +154,15 @@ function main() {
   if (!pr) die('a PR number is required');
   if (!BUILDERS.includes(builder)) die(`unknown --builder '${builder}' (expected: ${BUILDERS.join(' | ')})`);
 
-  const config = parseReviewConfig(JSON.parse(readFileSync(join(__dirname, 'review-config.json'), 'utf8')));
+  // The `review` section of golden-frijoles.config.json over scripts/review-config.json (D9).
+  const { raw: reviewRaw, present: reviewPresent } = readSection('review', {
+    legacyPath: join(__dirname, 'review-config.json'),
+    onLegacyError: (_p, e) => {
+      throw e;
+    },
+  });
+  if (!reviewPresent) die('scripts/review-config.json not found, and golden-frijoles.config.json has no review section');
+  const config = parseReviewConfig(reviewRaw);
   let securityPass = forceSecurity;
   let trigger = forceSecurity ? 'forced with --security' : null;
   if (!forceSecurity) {

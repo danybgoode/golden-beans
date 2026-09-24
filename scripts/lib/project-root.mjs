@@ -23,8 +23,8 @@
 // `--root <dir>` is parsed by kit/bin.mjs only, which exports it as GF_PROJECT_ROOT — no script's own argument
 // parser ever sees a new flag. Zero deps; no side effects at import.
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const KIT_PACKAGE_NAME = '@golden-frijoles/kit';
@@ -72,7 +72,27 @@ export function projectRoot({
 }
 
 /** A project-owned file with a kit default: the project's `scripts/<rel>` if present, else the kit's `<rel>`. */
-export function projectAsset(rel, { project = projectRoot(), root = kitRoot(), exists = existsSync } = {}) {
+export class ProjectAssetError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ProjectAssetError';
+  }
+}
+
+export function projectAsset(
+  rel,
+  { project = projectRoot(), root = kitRoot(), exists = existsSync, real = realpathSync } = {}
+) {
   const own = join(project, 'scripts', rel);
-  return exists(own) ? own : join(root, rel);
+  if (!exists(own)) return join(root, rel);
+  // A project-owned asset is read into prompts some rails send to an external model, so it must be the project's
+  // own file. A symlink that leaves the project (to .env.local's neighbours, ~/.ssh, …) is refused loudly: it is
+  // a configuration problem a person has to look at, never something to follow (golden-frijoles-plugin X20).
+  const realOwn = real(own);
+  const realProject = real(project);
+  if (realOwn !== realProject && !realOwn.startsWith(realProject + sep)) {
+    throw new ProjectAssetError(`${own} resolves outside the project (${realOwn}); refusing to read it.`);
+  }
+  // The REAL path, already checked: returning the symlink would let it be swapped between this check and the read.
+  return realOwn;
 }

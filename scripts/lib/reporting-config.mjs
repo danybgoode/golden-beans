@@ -29,6 +29,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { projectRoot } from './project-root.mjs';
+import { readSection } from './config.mjs';
 
 export const DEFAULT_ROOT = projectRoot(); // D2
 export const CONFIG_FILENAME = 'reporting.config.json';
@@ -219,7 +220,16 @@ export function loadReportingConfig({
   exists = existsSync,
 } = {}) {
   const path = configPath({ root, env });
-  if (!exists(path)) {
+  // The `reporting` section of golden-frijoles.config.json over the legacy file (D9); REPORTING_CONFIG still moves
+  // the legacy file, the local override still layers on top, and validation stays here.
+  const section = readSection('reporting', {
+    root,
+    legacyRead: read,
+    legacyExists: exists,
+    legacyPath: path,
+    onLegacyError: (p, e) => fail(p, `is not valid JSON (${e.message})`),
+  });
+  if (!section.present) {
     throw new ReportingConfigError(
       `${path} not found — the reporting scripts refuse to guess which repos to read or where to post.\n` +
         `  Copy ${EXAMPLE_FILENAME} to ${CONFIG_FILENAME} at the repo root, fill it in, and commit it.`
@@ -232,7 +242,7 @@ export function loadReportingConfig({
       return fail(p, `is not valid JSON (${e.message})`);
     }
   };
-  let raw = parse(path);
+  let raw = section.raw;
   const localPath = join(dirname(path), LOCAL_FILENAME);
   if (exists(localPath)) raw = mergeLocal(raw, parse(localPath));
   return validateReportingConfig(raw, path);

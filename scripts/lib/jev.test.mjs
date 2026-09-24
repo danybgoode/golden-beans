@@ -18,6 +18,7 @@ import {
   STATE_CHAR_BUDGET,
   textHash,
 } from './jev.mjs';
+import { _resetAsked } from './config.mjs';
 
 const Q = { is_urgent: { type: 'noul', instructions: 'Urgent?' } };
 const ok = (answers = { is_urgent: { type: 'noul', noul: 0.9 } }) => ({
@@ -182,6 +183,64 @@ test('effectiveMode: egress:false or no key behaves exactly as off', () => {
   assert.equal(effectiveMode(noEgress, 'review', { key: 'k' }).mode, 'off');
 });
 
+// ── D12/S5.4: egress is a tri-state, and unanswered (null) behaves as no ──────────────────────
+test('parseJevConfig: an explicit egress:null survives as null — never coerced to true', () => {
+  const c = parseJevConfig({ egress: null, rails: { review: { mode: 'jev' } } });
+  assert.equal(c.egress, null);
+  // an ABSENT egress key still falls back to true (a consumer's legacy config that never mentions it)
+  assert.equal(parseJevConfig({}).egress, true);
+  assert.equal(parseJevConfig({ egress: true }).egress, true);
+  assert.equal(parseJevConfig({ egress: false }).egress, false);
+});
+
+test('effectiveMode: egress:null is UNANSWERED, not the same reason as egress:false or no key', () => {
+  const c = parseJevConfig({ egress: null, rails: { review: { mode: 'jev' } } });
+  const eff = effectiveMode(c, 'review', { key: 'k' });
+  assert.equal(eff.mode, 'off');
+  assert.equal(eff.why, 'egress not answered');
+  assert.equal(eff.unanswered, true);
+  // unanswered egress is decided before the key is even looked at — "no key" never masks "unanswered"
+  assert.equal(effectiveMode(c, 'review', { key: null }).why, 'egress not answered');
+});
+
+test('jevContext: a null-egress config asks the D12 question once (GF-NEEDS-SETTING jev.egress), never touching fetch', () => {
+  _resetAsked();
+  const dir = mkdtempSync(join(tmpdir(), 'jev-'));
+  const writes = [];
+  const fetchSpy = async () => {
+    throw new Error('fetch must never be called while egress is unanswered');
+  };
+  const config = parseJevConfig({ egress: null, rails: { review: { mode: 'jev' } } });
+  const ctx1 = jevContext('review', { config, key: 'k', root: dir, fetch: fetchSpy, write: (s) => writes.push(s) });
+  assert.equal(ctx1.mode, 'off');
+  assert.equal(ctx1.why, 'egress not answered');
+  assert.equal(writes.length, 1);
+  assert.match(writes[0], /^GF-NEEDS-SETTING /);
+  const line = JSON.parse(writes[0].slice('GF-NEEDS-SETTING '.length));
+  assert.equal(line.key, 'jev.egress');
+
+  // a second rail (prose) hitting the same unanswered key in the same process must not ask twice
+  jevContext('prose', { config, key: 'k', root: dir, fetch: fetchSpy, write: (s) => writes.push(s) });
+  assert.equal(writes.length, 1, 'the marker is emitted once per process, not once per rail');
+  _resetAsked();
+});
+
+test('jevContext: egress:true (existing consumers) and egress:false (today) are unaffected by the tri-state', () => {
+  const trueCtx = jevContext('review', {
+    config: parseJevConfig({ egress: true, rails: { review: { mode: 'jev' } } }),
+    key: 'k',
+    write: () => assert.fail('egress:true must never emit GF-NEEDS-SETTING'),
+  });
+  assert.equal(trueCtx.mode, 'jev');
+  const falseCtx = jevContext('review', {
+    config: parseJevConfig({ egress: false, rails: { review: { mode: 'jev' } } }),
+    key: 'k',
+    write: () => assert.fail('egress:false must never emit GF-NEEDS-SETTING'),
+  });
+  assert.equal(falseCtx.mode, 'off');
+  assert.equal(falseCtx.why, 'egress disabled (jev.egress: false)');
+});
+
 test('readApiKey: env wins, else .env.local at the root', () => {
   const dir = mkdtempSync(join(tmpdir(), 'jev-'));
   assert.equal(readApiKey({ env: {}, root: dir, cwd: dir }), null);
@@ -317,4 +376,40 @@ test('logDecision writes the log owner-only (it can quote private code)', () => 
   const dir = mkdtempSync(join(tmpdir(), 'jev-'));
   logDecision({ rail: 'review', mode: 'jev', decider: 'jev', text: 't' }, { root: dir });
   assert.equal(statSync(join(dir, '.jev', 'decisions.jsonl')).mode & 0o777, 0o600);
+});
+
+// ── D12 through the loader: the new file's null must not become `true` (review of the S5 diff) ──────────────
+test('loadJevConfig: egress:null in golden-frijoles.config.json with no legacy file is unanswered — fetch is never called', async () => {
+  _resetAsked();
+  const dir = mkdtempSync(join(tmpdir(), 'jev-'));
+  writeFileSync(
+    join(dir, 'golden-frijoles.config.json'),
+    JSON.stringify({ jev: { egress: null, rails: { review: { mode: 'jev' }, prose: { mode: 'jev' } } } })
+  );
+  const config = loadJevConfig({ root: dir });
+  assert.equal(config.egress, null);
+  let fetches = 0;
+  const writes = [];
+  const ctx = jevContext('prose', {
+    config,
+    key: 'k',
+    root: dir,
+    fetch: async () => {
+      fetches += 1;
+      throw new Error('must not send');
+    },
+    write: (s) => writes.push(s),
+  });
+  assert.equal(ctx.mode, 'off');
+  assert.equal(fetches, 0);
+  assert.equal(writes.length, 1, 'the question is asked once');
+  _resetAsked();
+});
+
+test('loadJevConfig: a section that never mentions egress is unanswered too; an explicit true still sends', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jev-'));
+  writeFileSync(join(dir, 'golden-frijoles.config.json'), JSON.stringify({ jev: { rails: { review: { mode: 'jev' } } } }));
+  assert.equal(loadJevConfig({ root: dir }).egress, null);
+  writeFileSync(join(dir, 'jev.config.json'), JSON.stringify({ egress: true, rails: { review: { mode: 'jev' } } }));
+  assert.equal(loadJevConfig({ root: dir }).egress, true, 'a consumer committed true: unchanged');
 });

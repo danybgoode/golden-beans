@@ -142,11 +142,22 @@ export async function loadRails() {
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-/** Jev config for evaluation: the rail forced to `jev` so Jev's answer — not the regex — is what is scored. */
+/**
+ * Jev config for evaluation: the rail forced to `jev` so Jev's answer — not the regex — is what is scored.
+ *
+ * `egress` is forced to `true` too — for REPLAY, which sends nothing; `evaluate` refuses a live run without a
+ * committed `true` — for the same reason `mode` is forced (golden-frijoles-plugin D12,
+ * S5.4): this harness measures what Jev WOULD decide against a replayed or live answer, never gated by
+ * whether this checkout's OWN `jev.config.json` has answered the egress question yet. `projectRoot()`
+ * resolves to `template/` for a script run as `node template/scripts/…` (D2's documented copied-mode
+ * root for this repo's own dogfooding), so `template/jev.config.json`'s tri-state `egress` IS this
+ * process's live config — and its new default (`null`, unanswered) would otherwise score every fixture
+ * as if the rail were off, which is a fact about this repo's own config, not about Jev's accuracy.
+ */
 const evalConfig = (base, rail) =>
   parseJevConfig({
     model: base.model,
-    egress: base.egress,
+    egress: true,
     rails: { ...base.rails, [rail]: { ...base.rails[rail], mode: 'jev', shadowExpires: null } },
   });
 
@@ -155,6 +166,13 @@ const evalConfig = (base, rail) =>
  * live=false replays recordings; live=true re-asks through deps.ask and rewrites them.
  */
 export async function evaluate({ fixtures, rails, config, live = false, ask = null, only = null }) {
+  // Replay forces egress on (evalConfig) because it sends nothing. LIVE sends every fixture to TypeSafe, so it needs
+  // the project's explicit yes: `egress: true`, never null (unanswered) or false (D12; cross-review of #50 — the
+  // CLI refused this, but a caller of this export did not).
+  if (live && config?.egress !== true)
+    throw new Error(
+      `jev-eval live: egress is ${JSON.stringify(config?.egress ?? null)}, not true — refusing to send fixtures to Jev.`
+    );
   const failures = [];
   const report = {};
   for (const [name, rail] of Object.entries(rails)) {
@@ -252,10 +270,11 @@ async function main() {
     if (!rails[name]) process.stdout.write(`${name}: no judge in this checkout yet — skipped\n`);
 
   let ask = null;
-  if (live && !config.egress) {
-    // egress:false means no text leaves this machine — `--live` sends every fixture (agy, golden-beans #159).
+  if (live && config.egress !== true) {
+    // false: no text leaves this machine; null: nobody has said yes yet (D12). `--live` sends every fixture.
     process.stderr.write(
-      'jev-eval --live: jev.config.json sets egress:false — refusing to send fixtures to Jev.\n'
+      `jev-eval --live: jev.egress is ${JSON.stringify(config.egress)}, not true — refusing to send fixtures to Jev. ` +
+        'Say yes with `gf-kit config set jev.egress true` first.\n'
     );
     process.exit(2);
   }
