@@ -1,12 +1,14 @@
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
 import { CLI_BIN, CLI_GLOBAL_INSTALL, CLI_KILL_SWITCH_STORY, CLI_NPX_INIT } from '@/lib/cli-install'
+import { INSTALL_PROMPT } from '@/lib/install-prompt'
 import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Icon } from '@/components/ui/Icon'
 import { Frame, FrameLink } from '@/design-system/Frame'
 import { Callout, ListCard, Step, Steps } from '@/design-system/primitives'
 import { CopyField } from '@/design-system/copy-field'
+import { CopyPromptCard } from '@/components/landing/CopyPromptCard'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page: copy-your-URL field, "Add to
 // Claude" deep-link, and the real SDK integration docs. Same force-dynamic rationale as
@@ -49,6 +51,17 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 // would silently undo a shipped epic's decision, and the prototype has no reason to draw it — it has
 // no SDK. It becomes a THIRD labelled section inside the one card rather than a card of its own,
 // which is how both hold at once: the approved block sequence exactly, and nothing lost.
+//
+// ── golden-frijoles-plugin · Sprint 3, Story 3.3 — the install prompt is a FOURTH section ───────
+// Same technique, same reason: `INSTALL_PROMPT` (`lib/install-prompt.ts`) is a `CopyPromptCard`
+// placed FIRST inside the one `.listcard` — before "Demo connector URL" — because it is the single
+// action most visitors of this page actually want (plan and build with an agent), and it needs no
+// signed-in project, no seeded demo data and no CLI token to be useful immediately. It is a labelled
+// section of the SAME card, never a card of its own, for the identical reason the SDK block is:
+// adding a card would change the approved `public-install` block sequence
+// (`title → note → demobar → list`), which `apps/web/design-system/state-contract.mjs --check` and
+// its console-visual spec both assert. Measured before and after this change — see the sprint
+// report — and the built page's signature is unchanged.
 export default async function InstallPage() {
   // A cross-review catch: if this ever runs in real Vercel production without SITE_URL set, show
   // the honest "not ready" state instead of a live-looking but broken localhost URL.
@@ -81,6 +94,16 @@ export default async function InstallPage() {
       {/* `ListCard plain` — the approved `.listcard` used as a padded SURFACE, with no header row
           and no rows in it. Every labelled section below is a section of THIS card. */}
       <ListCard plain>
+        {/* ── golden-frijoles-plugin · Sprint 3, Story 3.3 — the install prompt, first ──────────
+            Needs no signed-in session, no seeded demo data, nothing below to have loaded. */}
+        <h2 className="ds-label">Plan and build with an agent</h2>
+        <p className="ds-hint">
+          Paste this into Claude Code, Codex, or any agent <code>npx skills</code> supports. It installs the
+          Golden Frijoles plugin and starts you planning your first idea — the demo connector and CLI below
+          are a different thing: your <em>product&apos;s</em> own data, once you have one connected.
+        </p>
+        <CopyPromptCard label="Paste this into your agent" prompt={INSTALL_PROMPT} />
+
         {/* ⚠️ An `h2`, not a `ds-label` span — fresh reviewer, Minor. The page this replaced had two
             `<h2>`s and the port turned both into styled spans, leaving the outline h1-only: heading
             navigation got a screen-reader user nowhere on a page whose whole job is three steps.

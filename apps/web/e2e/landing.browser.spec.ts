@@ -22,8 +22,10 @@ test('the landing renders the maker-ops narrative', async ({ page }) => {
   // TWO copy-a-prompt blocks, and the count changed WITH its reasoning rather than quietly
   // (agentic-pm-public-surface, epic D5). `landing-readability-pass` D1 cut the old §try because
   // two such blocks read as a pattern rather than an invitation — true of two blocks asking the
-  // SAME thing. These ask different things at different moments: the hero offers to teach you
-  // something, and the closing CTA asks your own agent whether to bother with us at all.
+  // SAME thing. These do different jobs at different moments: the hero offers to teach you
+  // something (`handoffPrompt`), and the closing CTA hands your agent the actual install command
+  // (`INSTALL_PROMPT`, golden-frijoles-plugin S3.3 — it replaced the closing card's `decisionPrompt`,
+  // which is still reachable from `/northstar-self-serve.md`'s own links).
   //
   // A comment justifying the opposite of what the assertion below checks is CODE-QUALITY #3, and
   // it is the kind a reviewer reads as evidence and then stops looking.
