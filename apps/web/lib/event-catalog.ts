@@ -86,7 +86,12 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
   }
 
   const asOfTime = asOf.getTime()
-  const windowStart = asOfTime - EVENT_CATALOG_WINDOW_DAYS * 86_400_000
+  // The window is the 14 UTC days the `daily` series draws — today (partial, up to asOf) and the 13
+  // before it — so `count14d` always equals the sum of `daily` (fresh reviewer, PR #169: a rolling
+  // 14×24h window counted the oldest partial day in the total and in no bucket).
+  const windowStart =
+    Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate()) -
+    (EVENT_CATALOG_WINDOW_DAYS - 1) * 86_400_000
   const dayKeysInOrder = dayKeys(asOf)
   const dayIndex = new Map(dayKeysInOrder.map((day, index) => [day, index]))
   const parsedRows: ParsedRow[] = []
@@ -199,6 +204,7 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
     flagEvaluations: [...flagEvaluations.entries()]
       .map(([flagKey, evaluations]) => ({ flagKey, evaluations }))
       .sort((a, b) => a.flagKey.localeCompare(b.flagKey)),
+    // At exactly the cap we cannot tell "exactly 50,000" from "more", so it reads as "at least".
     truncated: rows.length >= rowCap,
     rowCap,
     windowDays,

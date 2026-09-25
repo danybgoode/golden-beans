@@ -154,3 +154,23 @@ test('buildEventCatalog represents a seen type with no subject identifier as an 
   assert.deepEqual(result.entities, [{ type: 'anonymous', subjects14d: 0 }])
   assert.deepEqual(result.baselines, [{ event: 'checkout_completed', type: 'anonymous', baseline: null }])
 })
+
+// ── the window's edges (fresh reviewer, PR #169: no fixture sat on a boundary) ──────────────────
+test('the window is exactly the 14 UTC days the daily series draws, inclusive of asOf and of the first midnight', () => {
+  const result = catalog([
+    row({ created_at: '2026-09-11T00:00:00.000Z' }), // first bucket's midnight — in
+    row({ created_at: '2026-09-10T23:59:59.999Z' }), // the day before — out
+    row({ created_at: '2026-09-24T12:00:00.000Z' }), // exactly asOf — in
+    row({ created_at: '2026-09-24T12:00:00.001Z' }), // after asOf — out
+    row({ created_at: '2026-09-23T12:00:00.000Z' }), // exactly asOf − 24h — in the 24h count
+    row({ created_at: '2026-09-23T11:59:59.999Z' }), // just before — out of it
+  ])
+  const event = result.events[0]
+  assert.equal(event.count14d, 4)
+  assert.equal(
+    event.daily.reduce((sum, n) => sum + n, 0),
+    event.count14d
+  )
+  assert.equal(event.daily[0], 1)
+  assert.equal(event.count24h, 2)
+})

@@ -193,6 +193,11 @@ test('catalog aggregates canonical ingest facts and cannot cross project boundar
 
 // ⚠️ The row cap PostgREST enforces is 1,000 per request whatever `.limit()` says (architect's review
 // of this story: the first version read one page and would have reported `truncated: false` at 1,000).
+// Rows share timestamps in runs of 50, so page boundaries fall INSIDE a run of equal `created_at`.
+// ⚠️ This does NOT make the `id` tie-break testable: removing it was tried and stayed green, because
+// Postgres happens to return equal keys in a stable order for this data. The tie-break is correct by
+// construction (without a total order, OFFSET paging may repeat or skip rows at a boundary), and this
+// spec guards the paging itself, not the tie-break. Named as a gap rather than implied as covered.
 // 1,205 rows are seeded in ONE statement — a fixture, not an application write (AGENTS rule #1 is
 // about product code) — so the read has to cross a page boundary and land between two.
 test('catalog pages past PostgREST max_rows: 1,205 events count as 1,205, not 1,000', async () => {
@@ -204,7 +209,7 @@ test('catalog pages past PostgREST max_rows: 1,205 events count as 1,205, not 1,
   try {
     await pg.query(
       `insert into events (project_id, user_id, event, tags, created_at)
-       select $1, 'u' || n, 'page_seen', '{"region":"MX"}'::jsonb, now() - (n || ' seconds')::interval
+       select $1, 'u' || n, 'page_seen', '{"region":"MX"}'::jsonb, now() - ((n / 50) || ' seconds')::interval
        from generate_series(1, 1205) n`,
       [project.id]
     )
