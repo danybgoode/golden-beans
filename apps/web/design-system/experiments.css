@@ -1,0 +1,590 @@
+/* experiments-for-humans — product port of reference-experiments.css; tokens only. */
+.ds .ds-x-head-key {
+  display: flex;
+  gap: 8px;
+  margin-top: 7px;
+  color: var(--dim-2);
+  font-size: 12px;
+}
+.ds .ds-x-steps {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 0 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.ds .ds-x-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.ds .ds-x-step:hover {
+  color: var(--crema);
+  background: var(--card-2);
+}
+.ds .ds-x-step .ds-n {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--dim-2);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.ds .ds-x-step[aria-current='step'] {
+  border-color: var(--line);
+  background: var(--card-3);
+  color: var(--crema);
+  font-weight: 600;
+}
+.ds .ds-x-step[aria-current='step'] .ds-n {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--roast);
+}
+.ds .ds-x-panes {
+  display: grid;
+}
+.ds .ds-x-main {
+  min-width: 0;
+  padding: 22px 22px 26px;
+}
+.ds .ds-x-main h3 {
+  margin: 0;
+  font-size: 19px;
+}
+.ds .ds-x-lede {
+  max-width: 62ch;
+  margin: 5px 0 22px;
+  color: var(--dim);
+  font-size: 13.5px;
+}
+.ds .ds-x-side {
+  padding: 20px;
+  border-top: 1px solid var(--line);
+  background: var(--roast-2);
+}
+.ds .ds-x-filled {
+  margin: 0 0 20px;
+  padding: 9px 12px;
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--r);
+  background: var(--card-2);
+  color: var(--crema);
+  font-size: 12.5px;
+}
+.ds .ds-x-tpls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.ds .ds-x-tpl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  text-align: left;
+}
+.ds .ds-x-tpl[aria-pressed='true'],
+.ds .ds-x-metric[aria-pressed='true'],
+.ds .ds-x-trade button[aria-pressed='true'] {
+  border-color: var(--gold);
+  background: var(--card-2);
+}
+.ds .ds-x-tpl .ds-d,
+.ds .ds-x-hint,
+.ds .ds-x-cov {
+  color: var(--dim-2);
+  font-size: 12px;
+}
+.ds .ds-x-sel {
+  display: block;
+  margin-top: 16px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+.ds .ds-x-sel select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--roast-2);
+}
+.ds .ds-x-sentence,
+.ds .ds-x-big-sentence {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  color: var(--dim);
+  line-height: 2;
+}
+.ds .ds-x-sentence b {
+  color: var(--crema);
+}
+.ds .ds-x-inl select {
+  border: 0;
+  border-bottom: 1px dashed var(--gold-deep);
+  border-radius: 4px 4px 0 0;
+  background: var(--card-2);
+  color: var(--gold-hot);
+  font: inherit;
+  font-weight: 600;
+}
+.ds .ds-x-segmented,
+.ds .ds-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0;
+}
+.ds .ds-x-segmented button,
+.ds .ds-chip {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--roast-2);
+}
+.ds .ds-x-segmented button[aria-pressed='true'],
+.ds .ds-chip[aria-pressed='true'] {
+  border-color: var(--gold);
+  color: var(--gold-hot);
+}
+.ds .ds-x-rule,
+.ds .ds-x-ver {
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+}
+.ds .ds-x-rule-top,
+.ds .ds-x-ver-head,
+.ds .ds-x-ver-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ds .ds-rm,
+.ds .ds-edit,
+.ds .ds-fix,
+.ds .ds-x-add {
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font-size: 12.5px;
+}
+.ds .ds-rm {
+  margin-left: auto;
+  color: var(--dim-2);
+}
+.ds .ds-x-vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ds .ds-pc,
+.ds .ds-x-pick small,
+.ds .ds-num small {
+  color: var(--dim-2);
+  font-size: 11px;
+}
+.ds .ds-x-range {
+  width: 100%;
+  accent-color: var(--gold);
+}
+.ds .ds-x-label {
+  margin: 20px 0 8px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+.ds .ds-x-picklist,
+.ds .ds-x-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds .ds-x-pick,
+.ds .ds-x-metric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  text-align: left;
+}
+.ds .ds-radio {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+  border: 1px solid var(--dim-2);
+  border-radius: 50%;
+}
+.ds .ds-x-pick[aria-pressed='true'] .ds-radio::after,
+.ds .ds-x-metric[aria-pressed='true'] .ds-radio::after {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  content: '';
+}
+.ds .ds-cb .ds-radio {
+  border-radius: 4px;
+}
+.ds .ds-x-vers {
+  display: grid;
+  gap: 12px;
+}
+.ds .ds-x-ver {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+}
+.ds .ds-x-ver-head {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ds .ds-x-ver-head select {
+  margin-left: auto;
+}
+.ds .ds-x-ver-body {
+  flex: 1;
+  padding: 12px;
+}
+.ds .ds-x-ver-foot {
+  padding: 9px 12px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--dim-2);
+  font-size: 12px;
+}
+.ds .ds-pct {
+  margin-left: auto;
+  color: var(--crema);
+  font-family: var(--mono);
+}
+.ds .ds-x-tag {
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.ds .ds-x-tag.ds-control {
+  color: var(--dim);
+}
+.ds .ds-x-tag.ds-treat {
+  border-color: var(--blue-deep);
+  color: var(--blue);
+}
+.ds .ds-x-ver-add {
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--dim);
+}
+.ds .ds-x-ver-add small {
+  color: var(--dim-2);
+}
+.ds .ds-x-metric .ds-nm,
+.ds .ds-x-metric .ds-ev {
+  display: block;
+}
+.ds .ds-x-metric .ds-ev {
+  color: var(--dim-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+.ds .ds-x-metric .ds-num {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+}
+.ds .ds-x-metric .ds-num b {
+  display: block;
+  color: var(--crema);
+  font-family: var(--mono);
+}
+.ds .ds-spark {
+  width: 64px;
+  height: 22px;
+  stroke: var(--gold);
+  stroke-width: 2;
+}
+.ds .ds-sug {
+  margin-left: 6px;
+  color: var(--gold-hot);
+  font-size: 10.5px;
+}
+.ds .ds-stale {
+  margin-left: 6px;
+  color: var(--red);
+  font-size: 10.5px;
+}
+.ds .ds-x-mde {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.ds .ds-x-mde strong,
+.ds .ds-x-est strong,
+.ds .ds-x-days strong {
+  color: var(--gold-hot);
+  font-family: var(--mono);
+  font-size: 30px;
+}
+.ds .ds-x-trade {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+.ds .ds-x-trade button,
+.ds .ds-x-est {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  text-align: left;
+}
+.ds .ds-x-trade small {
+  display: block;
+  color: var(--dim-2);
+}
+.ds .ds-x-est {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 16px 0;
+}
+.ds .ds-x-plan-sentence {
+  color: var(--crema);
+  line-height: 1.55;
+}
+.ds .ds-x-plan-sentence em,
+.ds .ds-x-big-sentence em {
+  color: var(--gold-hot);
+  font-style: normal;
+}
+.ds .ds-x-days {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+.ds .ds-x-days span,
+.ds .ds-x-kv span {
+  color: var(--dim-2);
+}
+.ds .ds-x-kv {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 12.5px;
+}
+.ds .ds-x-kv div,
+.ds .ds-x-mini-vers div,
+.ds .ds-review div {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+.ds .ds-x-checksum {
+  margin-top: 18px;
+}
+.ds .ds-x-rev-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+.ds .ds-x-mini-vers {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.ds .ds-x-mini-vers div {
+  flex-wrap: wrap;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.ds .ds-review div {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ds .ds-edit {
+  margin-left: auto;
+}
+.ds .ds-x-checks {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.ds .ds-x-check {
+  display: flex;
+  gap: 10px;
+  padding: 11px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ds .ds-x-check:last-child {
+  border-bottom: 0;
+}
+.ds .ds-x-check p {
+  margin: 2px 0;
+  color: var(--dim);
+  font-size: 13px;
+}
+.ds .ds-x-check.ds-fail {
+  background: var(--card-3);
+}
+.ds .ds-mk {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+/* Status is colour AND a shape AND (for screen readers) a word — DD4. The tints are the prototype's
+   rgb(… / 14–16 %) of the same three tokens, written as colour-mix so no literal enters the port. */
+.ds .ds-mk--ok {
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+}
+.ds .ds-mk--warn {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  color: var(--gold-hot);
+}
+.ds .ds-mk--fail {
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
+}
+.ds .ds-x-message {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .ds .ds-x-vers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 760px) {
+  .ds .ds-x-tpls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 980px) {
+  .ds .ds-x-panes.ds-x-split {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+  .ds .ds-x-side {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+  .ds .ds-x-rev-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* The template card's title (prototype `.x-tpl .t`) and the footer note (`.modal-foot .note`),
+   ported on the same tokens — they were rendered without a rule (defined-classes.test.ts). */
+.ds .ds-x-tpl .ds-t {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ds .ds-dialog-note {
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-right: auto;
+  max-width: 40ch;
+}
+
+/* The builder is the approved WIDE modal (prototype `.modal.x-builder { max-width: 1140px }`): its
+   head, steps and footer stay put and only the panes scroll, so Save draft / Continue never sit below
+   the fold (found in the rendered look at 1360 × 900). `[open]` keeps the UA's `display: none` for a
+   closed dialog. */
+.ds .ds-dialog.ds-x-builder {
+  width: min(1140px, calc(100vw - 32px));
+  max-width: none;
+}
+.ds .ds-dialog.ds-x-builder[open] {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+}
+.ds .ds-dialog.ds-x-builder[open] > .ds-x-panes {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.ds .ds-x-link-tok {
+  display: inline;
+  font: inherit;
+  font-weight: 600;
+  color: var(--crema);
+  background: none;
+  border: 0;
+  border-bottom: 1.5px solid var(--line);
+  padding: 1px 2px;
+  cursor: pointer;
+}
+.ds .ds-x-link-tok:hover {
+  border-bottom-color: var(--gold);
+  color: var(--gold-hot);
+}
+.ds .ds-x-link-tok small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--dim-2);
+  margin-left: 4px;
+}
+.ds .ds-x-door-blocked {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 40ch;
+  text-align: right;
+}
+
+/* The hypothesis is ONE SENTENCE of choices (prototype `.x-inl`): its selects sit inline at their own
+   width. A wider `.ds` form rule made each a full-width block (rendered look, 1360 px). */
+.ds .ds-x-sentence .ds-x-inl {
+  display: inline-block;
+  vertical-align: baseline;
+  width: auto;
+}
+.ds .ds-x-sentence .ds-x-inl select {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  appearance: none;
+  padding: 1px 22px 1px 6px;
+  font-weight: 600;
+}

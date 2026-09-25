@@ -400,7 +400,11 @@ export function experimentKeyFor(
   taken: readonly string[]
 ): string | null {
   const short = slug((flagKey.split('.').pop() ?? flagKey).replace(/_enabled$/, '')) || 'feature'
-  const base = `${/^[a-z]/.test(short) ? short : `f_${short}`}_${EXPERIMENT_TEMPLATES[template].suffix}`
+  const suffix = EXPERIMENT_TEMPLATES[template].suffix
+  const named = /^[a-z]/.test(short) ? short : `f_${short}`
+  // A feature created FOR the test is already named after it (`experiments.copy_test_enabled`); do not
+  // say it twice (`copy_test_copy_test`, seen in the rendered look).
+  const base = named === suffix || named.endsWith(`_${suffix}`) ? named : `${named}_${suffix}`
   return unique(base, taken, 64)
 }
 
@@ -734,6 +738,12 @@ export function buildExperimentPlan(
     notes.push(
       `${flagKey} has ${flagBase.rules.length} rule${flagBase.rules.length === 1 ? '' : 's'} of its own. People left out of the test fall through to them, so some may not see ${names[0]}.`
     )
+  if (needPerVersion !== null && needPerVersion > MAX_EXPERIMENT_SAMPLE_PER_VARIANT)
+    // The definition's minimum is capped by its contract; say so rather than let the saved plan quietly
+    // promise a smaller sample than the one shown (Codex, round 7).
+    notes.push(
+      `It needs about ${needPerVersion.toLocaleString('en-US')} per version, more than a plan can declare; the recorded minimum is ${MAX_EXPERIMENT_SAMPLE_PER_VARIANT.toLocaleString('en-US')}.`
+    )
   if (!shareExact)
     notes.push(
       'The number of people a day is approximate: your events carry more tag combinations than the estimate can hold, so the conditions are treated as independent.'
@@ -1034,7 +1044,19 @@ function computeChecks(
   const fitting =
     (WEEK_OPTIONS as readonly number[]).find((weeks) => derived.days !== null && weeks * 7 >= derived.days) ??
     8
-  if (derived.inTestPerDay <= 0 && !derived.estimateExact) {
+  // Less than a day left is over, too: a test cannot collect anything useful in hours.
+  if (derived.savedWindow && derived.endAt.getTime() - context.now.getTime() < DAY_MS) {
+    // A FACT, so it comes before every estimate (fresh reviewer, round 6): a draft whose dates have
+    // passed must be re-dated before it can start, whatever the traffic says.
+    checks.push({
+      id: 'window',
+      status: 'fail',
+      step: 5,
+      title: 'This draft’s dates have run out',
+      detail: `It was planned to end on ${derived.endAt.toISOString().slice(0, 10)}.`,
+      fix: { label: 'Plan it from today', kind: 'replan-from-today' },
+    })
+  } else if (derived.inTestPerDay <= 0 && !derived.estimateExact) {
     // An approximate zero is not evidence that nobody matches — never block Start on it.
     checks.push({
       id: 'window',
@@ -1081,7 +1103,7 @@ function computeChecks(
   ) {
     checks.push({
       id: 'window',
-      status: derived.estimateExact || remainingDays <= 0 ? 'fail' : 'warn',
+      status: derived.estimateExact ? 'fail' : 'warn',
       step: 5,
       title: 'This draft’s dates have run out',
       detail: `It was planned from ${derived.startAt.toISOString().slice(0, 10)}; ${Math.max(0, remainingDays)} days are left and it needs about ${derived.days}.`,
