@@ -400,10 +400,15 @@ test('six checks, all passing, on the approved example with a long enough window
   assert.equal(result.plan.failing, 0)
 })
 
-test('check 5 fails a short window and its fix is the smallest run that fits', () => {
-  const window = checkOf({ ...copyAnswers(), weeks: 2 }).window
+test('check 5 fails a short window for EVERYONE and its fix is the smallest run that fits', () => {
+  const everyone = { mode: 'everyone' as const, conditions: [], allocation: 100 }
+  const window = checkOf({ ...copyAnswers(), weeks: 2, who: everyone }).window
   assert.equal(window.status, 'fail')
-  assert.deepEqual(window.fix, { label: 'Run it for 6 weeks', kind: 'set-weeks', weeks: 6 })
+  assert.equal(window.fix?.kind, 'set-weeks')
+  const weeks = window.fix?.kind === 'set-weeks' ? window.fix.weeks : 0
+  assert.equal(checkOf({ ...copyAnswers(), weeks, who: everyone }).window.status, 'ok')
+  // The same shortfall with a condition is a share of events standing in for people: it only warns.
+  assert.equal(checkOf({ ...copyAnswers(), weeks: 2 }).window.status, 'warn')
 })
 
 test('check 3: a campaign condition fails (3% coverage) with a one-click removal; a plan condition warns (64%)', () => {
@@ -551,16 +556,23 @@ test('re-planning a saved draft keeps its names even when they are taken (by its
 
 test('check 5 on a saved draft: changing the run length re-plans the window, so the offered fix clears itself', () => {
   const savedWindow = { startAt: '2026-09-25T00:00:00.000Z', endAt: '2026-10-09T00:00:00.000Z' } // 2 weeks
-  const short = checkOf({ ...copyAnswers(), weeks: 2 }, context({ savedWindow })).window
+  const everyone = { mode: 'everyone' as const, conditions: [], allocation: 100 }
+  const short = checkOf({ ...copyAnswers(), weeks: 2, who: everyone }, context({ savedWindow })).window
   assert.equal(short.status, 'fail')
   assert.ok(short.fix?.kind === 'set-weeks' || short.fix?.kind === 'replan-from-today')
   const weeks = short.fix?.kind === 'set-weeks' ? short.fix.weeks : 6
-  assert.equal(checkOf({ ...copyAnswers(), weeks }, context({ savedWindow })).window.status, 'ok')
+  assert.equal(
+    checkOf({ ...copyAnswers(), weeks, who: everyone }, context({ savedWindow })).window.status,
+    'ok'
+  )
 })
 
 test('check 5 never offers a run length that cannot fit (more than 8 weeks needed)', () => {
   const thin = prototypeCatalog({ entities: [{ type: 'merchant', subjects14d: 60 }] })
-  const window = checkOf({ ...copyAnswers(), weeks: 8 }, context({ catalog: thin })).window
+  const window = checkOf(
+    { ...copyAnswers(), weeks: 8, who: { mode: 'everyone' as const, conditions: [], allocation: 100 } },
+    context({ catalog: thin })
+  ).window
   assert.equal(window.status, 'fail')
   assert.equal(window.fix?.kind, 'step')
 })
@@ -688,7 +700,8 @@ test('two conditions use the JOINT share: tags that never arrive together mean n
   const result = buildExperimentPlan({ ...copyAnswers(), who }, context({ catalog }))
   assert.ok(result.ok)
   assert.equal(result.plan.estimate.inTestPerDay, 0) // the product of marginals would have said 0.6 × 0.4
-  assert.equal(result.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+  // A zero share of EVENTS is still not a count of people, so it warns rather than blocks.
+  assert.equal(result.plan.checks.find((check) => check.id === 'window')?.status, 'warn')
 })
 
 test('a saved draft that has NOT started yet but is too short is offered more weeks, not "dates have run out"', () => {
@@ -848,10 +861,6 @@ test('an approximate (independence) estimate that says "too long" warns instead 
   const window = result.plan.checks.find((check) => check.id === 'window')!
   assert.equal(window.status, 'warn')
   assert.ok(window.fix) // the fix is still offered
-  // …and the SAME plan on a complete table is exact, so it does block.
-  const exact = buildExperimentPlan({ ...copyAnswers(), weeks: 2, who }, context())
-  assert.ok(exact.ok)
-  assert.equal(exact.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
 })
 
 test("the engine's own telemetry is never a metric or a guardrail", () => {
@@ -882,7 +891,16 @@ test('the "ends before it has enough people" branch also only warns on an approx
   const window = approx.plan.checks.find((check) => check.id === 'window')!
   assert.equal(window.title, 'The test ends before it has enough people')
   assert.equal(window.status, 'warn')
-  const exact = buildExperimentPlan({ ...copyAnswers(), weeks: 2, who }, context())
-  assert.ok(exact.ok)
-  assert.equal(exact.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+})
+
+test('a TRUNCATED catalog never blocks Start, even for everyone (fresh reviewer + Codex, round 5)', () => {
+  const everyone = { mode: 'everyone' as const, conditions: [], allocation: 100 }
+  assert.equal(checkOf({ ...copyAnswers(), weeks: 1, who: everyone }).window.status, 'fail')
+  assert.equal(
+    checkOf(
+      { ...copyAnswers(), weeks: 1, who: everyone },
+      context({ catalog: prototypeCatalog({ truncated: true }) })
+    ).window.status,
+    'warn'
+  )
 })
