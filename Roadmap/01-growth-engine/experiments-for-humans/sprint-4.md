@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 4: Decision-first readout, decide, retire the JSON box
 
-**Status:** 🟦 In review · **Wave 2** · branch `feat/experiments-for-humans-s4` (stacked on S3)
+**Status:** ✅ shipped 2026-09-25 — danybgoode/golden-beans#172, squash `bb25522`, production deploy succeeded; `EXPERIMENT_BUILDER_ENABLED=true` set in golden-beans Production before the merge and verified by opening the builder on goldenfrijoles.com; 8 review rounds (round 8 clean from Codex + the fresh reviewer) · **Wave 2** · branch `feat/experiments-for-humans-s4` (stacked on S3)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.

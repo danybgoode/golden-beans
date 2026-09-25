@@ -63,6 +63,12 @@ independently shippable slice of value.
   exercise and manual/automatic protective transitions are evidenced, and all three proof-only gates
   are back OFF. The authenticated browser walkthrough was unavailable to this session; HTTP
   auth-boundary proof is recorded.
+- ✅ [Experiments for humans](01-growth-engine/experiments-for-humans/README.md) (five-question
+  builder · served experiment bindings · decision-first readout · decide in chips + roll out with
+  undo · JSON authoring retired) — **live in production** (2026-09-25, PRs #167, #169, #170, #172).
+  An owner plans, starts, reads and decides an experiment without writing JSON; the page leads with
+  what to do next, and every Production flag write is a compare-and-set that refuses to override a
+  change it did not plan against.
 - ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
   funnel · North Star metric · A/B bucketing) — live in production at
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
@@ -341,6 +347,15 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-09-25** — `experiments-for-humans` **shipped & live** (PRs #167, #169, #170, #172): the
+  JSON textarea is gone; an experiment is five answered questions, and its page says what to do next.
+  The lock caught two design errors before any code (adjacent FNV priorities collided; a saved draft
+  could not be turned back into answers). The Production-write path is a revision-first
+  compare-and-set that refuses to activate over a change it did not plan against — Start, Retry,
+  roll-out and undo each name the exact version they replace. #172 took eight review rounds; two of
+  them fixed over-corrections of the previous round's fix, and one fixed a seam patched at one caller
+  but not its siblings.
 
 - **2026-09-18** — `golden-frijoles-cli` **shipped & live** (PRs #149–#152): the engine's first write
   surface an agent can drive end to end. The architecture lock disproved three of the scope doc's
