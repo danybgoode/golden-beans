@@ -11,6 +11,7 @@ import {
   eventWords,
   metricCandidates,
   predicateValueAllowed,
+  versionWeights,
   whoWords,
   type ExperimentCheck,
   type ExperimentPlan,
@@ -133,8 +134,9 @@ export function ExperimentBuilder({
   }, [continueDraft, data, projectId])
   useEffect(() => {
     // Only a builder somebody opened is "in progress"; the defaults a page load computes are not.
-    if (open && state && writeStored(projectId, state)) setStored(true)
-  }, [open, projectId, state])
+    // A draft being CONTINUED is already saved; storing it would overwrite a new plan in progress.
+    if (!continueDraft && open && state && writeStored(projectId, state)) setStored(true)
+  }, [continueDraft, open, projectId, state])
   useEffect(() => {
     const element = dialog.current
     if (!element) return
@@ -234,6 +236,15 @@ export function ExperimentBuilder({
     if (!response.ok) {
       setError(response.error)
       return
+    }
+    if (!response.serving) {
+      setError('Still not serving. Try again in a moment.')
+      return
+    }
+    try {
+      sessionStorage.removeItem(builderStorageKey(projectId))
+    } catch {
+      // storage unavailable — nothing to clear
     }
     router.push(`/app/experiments/${slug}/${encodeURIComponent(retryKey)}`)
   }
@@ -654,10 +665,8 @@ function Who({
   )
 }
 function See({ state, dispatch }: { state: BuilderState; dispatch: (action: BuilderAction) => void }) {
-  const weights =
-    state.answers.versions.length === 2
-      ? [100 - state.answers.split, state.answers.split]
-      : state.answers.versions.map(() => 'equal')
+  // The planner's own split — never a second formula (and never "equal%": agy, PR #170).
+  const weights = versionWeights(state.answers.versions.length, state.answers.split)
   return (
     <>
       <h3>What they see</h3>
@@ -1008,7 +1017,7 @@ function Review({
         <div>
           <div className="ds-x-mini-vers">
             {state.answers.versions.map((version, index) => (
-              <div key={version}>
+              <div key={`${version}-${index}`}>
                 <span className={`ds-x-tag ${index ? 'ds-treat' : 'ds-control'}`}>
                   {index ? `Version ${String.fromCharCode(65 + index)}` : 'Control'}
                 </span>
@@ -1031,7 +1040,7 @@ function Review({
         </div>
         <div>
           <p className="ds-label">
-            Before it starts · {plan.checks.filter((check) => check.status !== 'fail').length} of 6 pass
+            Before it starts · {plan.checks.length - plan.failing} of {plan.checks.length} pass
           </p>
           <CheckList checks={plan.checks} dispatch={dispatch} />
           <p className="ds-x-hint">
@@ -1115,7 +1124,9 @@ function PlanPanel({ plan, weeks }: { plan: ExperimentPlan | null; weeks: number
             </div>
           </div>
           <p className="ds-x-checksum">
-            <b>{plan.checks.filter((check) => check.status === 'ok').length} of 6 checks pass</b>
+            <b>
+              {plan.checks.length - plan.failing} of {plan.checks.length} checks pass
+            </b>
           </p>
         </>
       ) : (

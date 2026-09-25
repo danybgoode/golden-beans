@@ -91,7 +91,12 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
     case 'direction':
       return { ...state, answers: { ...a, direction: action.direction } }
     case 'metric':
-      return { ...state, answers: { ...a, metric: action.metric } }
+      // A metric cannot also be its own guardrail — and the guardrail list hides the chosen metric, so
+      // leaving it there would strand it with no way to remove it (agy, PR #170).
+      return {
+        ...state,
+        answers: { ...a, metric: action.metric, guardrails: a.guardrails.filter((event) => event !== action.metric) },
+      }
     case 'guardrail':
       return {
         ...state,
