@@ -421,6 +421,13 @@ shared seam, S3 a migration + Production writes, S4 Production writes).
 - **`lib/flag-registry.ts` builds `.in('flag_id', ids)` over every flag in a project.** At ~200 flags the
   request URL overflows ("URI too long") and the flags page and CLI reads 500. Reproduced locally on an
   accumulated fixture project (210 flags); production's largest project has 43.
+- **Builder, in-tab stale binding (PR #170 round 5, fresh reviewer; not a regression).** A header Start
+  that *fails*, followed by starting the same draft from its row, leaves the header's in-memory plan
+  bound to a key that is no longer a draft until the page reloads (the restore effect only acts on a
+  non-null read). Save from it is refused server-side ("That experiment has already started."), so
+  nothing is written. Fix: when the restore read is null and `state.continuing` is not a draft, reset.
+- **Builder page reads drafts N+1** (`loadBuilderPage` → `loadDraft` per experiment). Fine at today's
+  counts (≤ 10 experiments per tenant); batch it before a tenant has hundreds.
 
 ## Deploy order (locked)
 

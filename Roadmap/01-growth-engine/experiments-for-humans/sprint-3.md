@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 3: The builder
 
-**Status:** 🟦 In review (PR #170) · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
+**Status:** ✅ shipped (PR #170, `e05d677`, 2026-09-25; migration applied to prod before merge; builder dark until 4.3) · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
