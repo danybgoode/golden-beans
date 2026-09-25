@@ -498,4 +498,51 @@ test.describe('Start (D7)', () => {
       CHANGED
     )
   })
+
+  test('Change the plan saves the NEXT version beside a started one; it starts only once that one stops', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    expect(await startExperimentCommand(fx.slug, key, deps(client, fx))).toMatchObject({
+      ok: true,
+      serving: true,
+    })
+
+    // Plain Continue still refuses a started key; the deliberate revise path does not.
+    const changed = answers({ versions: ['Current', 'Other copy'] })
+    expect((await saveExperimentDraftCommand(fx.slug, changed, key, deps(client, fx))).ok).toBe(false)
+    const revised = await saveExperimentDraftCommand(fx.slug, changed, key, deps(client, fx), {
+      revise: true,
+    })
+    expect(revised).toMatchObject({ ok: true, version: 2, created: true })
+    expect(await statusOf(client, fx.projectId)).toEqual([
+      { version: 1, status: 'running' },
+      { version: 2, status: 'draft' },
+    ])
+
+    expect(await startExperimentCommand(fx.slug, key, deps(client, fx))).toEqual({
+      ok: false,
+      error: 'Version 1 is still running. Stop it before starting this one.',
+    })
+
+    const io = createBuilderIo(client)
+    const v1 = await client
+      .from('experiment_definition_versions')
+      .select('id, experiment_id')
+      .eq('project_id', fx.projectId)
+      .eq('version', 1)
+      .single()
+    const stop = await client.rpc('transition_experiment_version', {
+      p_project_id: fx.projectId,
+      p_experiment_id: v1.data!.experiment_id,
+      p_version_id: v1.data!.id,
+      p_target_status: 'stopped',
+      p_actor_user_id: fx.owner,
+    })
+    expect(stop.error).toBeNull()
+    const second = await startExperimentCommand(fx.slug, key, deps(client, fx, io))
+    expect(second).toMatchObject({ ok: true, version: 2, serving: true })
+    const serving = await productionVersionOf(client, fx.projectId)
+    expect(serving.flag_definition_versions.definition.metadata).toMatchObject({ experiment_version: 2 })
+  })
 })

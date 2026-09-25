@@ -86,7 +86,8 @@ export async function saveExperimentDraftCommand(
   slug: unknown,
   rawAnswers: unknown,
   continuing: unknown,
-  deps: BuilderDependencies
+  deps: BuilderDependencies,
+  options: { revise?: boolean } = {}
 ): Promise<SaveDraftResult> {
   // The gate FIRST — an OFF deployment must not reach ownership, the database, or the planner.
   if (!deps.builderEnabled()) return { ok: false, error: BUILDER_PAUSED }
@@ -99,14 +100,23 @@ export async function saveExperimentDraftCommand(
     if (!stored) return { ok: false, error: 'That draft no longer exists.' }
     // Only a DRAFT is continued: re-saving a running or decided key would mint a stray next version
     // behind a live test (Codex + fresh reviewer, #170). Changing a started plan is its own path.
-    if (stored.status !== 'draft') return { ok: false, error: 'That experiment has already started.' }
-    // Its saved window too, so a Continue that changes nothing is the idempotent no-op it looks like.
-    draft = {
-      experimentKey: continuing,
-      flagKey: stored.flagKey,
-      version: stored.version,
-      window: stored.definition.plannedWindow,
+    if (stored.status !== 'draft') {
+      if (!options.revise) return { ok: false, error: 'That experiment has already started.' }
+      // Story 4.1's "Change the plan" — the DELIBERATE path: the next version, as a new draft beside
+      // the started one (which stays immutable), dated from today.
+      if (stored.status === 'invalid') return { ok: false, error: 'That experiment was invalidated.' }
+      draft = { experimentKey: continuing, flagKey: stored.flagKey, version: stored.version }
+    } else {
+      // Its saved window too, so a Continue that changes nothing is the idempotent no-op it looks like.
+      draft = {
+        experimentKey: continuing,
+        flagKey: stored.flagKey,
+        version: stored.version,
+        window: stored.definition.plannedWindow,
+      }
     }
+  } else if (options.revise) {
+    return { ok: false, error: 'Name the experiment whose plan changes.' }
   }
   const planned = await planFor(deps, projectId, rawAnswers, draft)
   if (!planned.ok) return planned
@@ -148,6 +158,9 @@ export async function startExperimentCommand(
 
   const stored = await deps.io.loadDraft(projectId, experimentKey)
   if (!stored || stored.status !== 'draft') return { ok: false, error: 'There is no draft to start.' }
+  const running = await deps.io.runningVersion(projectId, stored.experimentId)
+  if (running !== null)
+    return { ok: false, error: `Version ${running} is still running. Stop it before starting this one.` }
   if (!stored.answers)
     return { ok: false, error: 'This draft was not made in the builder; start it from its plan.' }
   const base = { experimentKey, flagKey: stored.flagKey, version: stored.version }
