@@ -116,7 +116,8 @@ export function createBuilderIo(client: SupabaseClient) {
   async function readBase(
     projectId: string,
     flagId: string,
-    flagVersionId: string
+    flagVersionId: string,
+    replacing?: string
   ): Promise<{ outcome: 'ready'; revision: number } | { outcome: ActivationOutcome }> {
     const { data: target, error: targetError } = await client
       .from('flag_definition_versions')
@@ -142,6 +143,13 @@ export function createBuilderIo(client: SupabaseClient) {
       .maybeSingle()
     if (currentError) return { outcome: 'failed' }
     if (current?.version_id === flagVersionId) return { outcome: 'serving' }
+    // A rollout or its undo changes the feature ON PURPOSE, so "same base" cannot be its test: it
+    // replaces exactly the version it was planned against, or nothing (Story 4.2, D8).
+    if (replacing !== undefined) {
+      return current?.version_id === replacing
+        ? { outcome: 'ready', revision: Number(state?.snapshot_version ?? 0) }
+        : { outcome: 'moved' }
+    }
     const served = (
       current as unknown as { flag_definition_versions?: { definition: FlagDefinition } } | null
     )?.flag_definition_versions?.definition
@@ -291,9 +299,11 @@ export function createBuilderIo(client: SupabaseClient) {
       flagVersionId: string
       actorUserId: string
       reason: string
+      /** Replace exactly this served version (rollout, undo) instead of checking the base. */
+      replacing?: string
     }): Promise<ActivationOutcome> {
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        const base = await readBase(input.projectId, input.flagId, input.flagVersionId)
+        const base = await readBase(input.projectId, input.flagId, input.flagVersionId, input.replacing)
         if (base.outcome !== 'ready') return base.outcome
         const { data, error } = await client.rpc('set_flag_activation', {
           p_project_id: input.projectId,

@@ -32,8 +32,8 @@ export async function rolloutExperimentCommand(
     return { ok: false, error: 'Invalid request.' }
   if (typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1)
     return { ok: false, error: 'Invalid version.' }
-  const { projectId, userId } = await deps.requireOwnership(slug)
   if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
+  const { projectId, userId } = await deps.requireOwnership(slug)
 
   const stored = await deps.io.loadDraft(projectId, experimentKey)
   if (!stored || stored.version !== version || !stored.flagId)
@@ -56,13 +56,22 @@ export async function rolloutExperimentCommand(
     actorUserId: userId,
   })
   if (!created) return { ok: false, error: 'The rollout could not be written; nothing was changed.' }
-  const serving = await deps.io.activateInProduction({
+  // Only over the version the rollout was planned from — a change that landed since is never
+  // rolled back by a rollout either.
+  const outcome = await deps.io.activateInProduction({
     projectId,
     flagId: stored.flagId,
     flagVersionId: created.versionId,
     actorUserId: userId,
     reason: `Roll out ${variantKey} to everyone after ${experimentKey} v${version}`,
+    replacing: served.versionId,
   })
+  if (outcome === 'moved')
+    return {
+      ok: false,
+      error: 'The feature changed while you were rolling out. Nothing was changed; try again.',
+    }
+  const serving = outcome === 'serving'
   return {
     ok: true,
     flagKey: served.flagKey,
@@ -81,22 +90,38 @@ export async function undoRolloutCommand(
   slug: unknown,
   experimentKey: unknown,
   previousVersionId: unknown,
+  rolloutVersionId: unknown,
   deps: BuilderDependencies
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!deps.builderEnabled()) return { ok: false, error: BUILDER_PAUSED }
-  if (typeof slug !== 'string' || typeof experimentKey !== 'string' || typeof previousVersionId !== 'string')
+  if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
+  if (
+    typeof slug !== 'string' ||
+    typeof experimentKey !== 'string' ||
+    typeof previousVersionId !== 'string' ||
+    typeof rolloutVersionId !== 'string'
+  )
     return { ok: false, error: 'Invalid request.' }
   const { projectId, userId } = await deps.requireOwnership(slug)
-  if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
   const stored = await deps.io.loadDraft(projectId, experimentKey)
   if (!stored?.flagId || !(await deps.io.flagVersionBelongs(projectId, stored.flagId, previousVersionId)))
     return { ok: false, error: 'Nothing to undo.' }
-  const served = await deps.io.activateInProduction({
+  // The undo replaces only the rollout it undoes: if anything was activated since, undoing would
+  // roll THAT back, so it refuses.
+  const outcome = await deps.io.activateInProduction({
     projectId,
     flagId: stored.flagId,
     flagVersionId: previousVersionId,
     actorUserId: userId,
     reason: `Undo the rollout after ${experimentKey}`,
+    replacing: rolloutVersionId,
   })
-  return served ? { ok: true } : { ok: false, error: 'The undo could not be applied.' }
+  if (outcome === 'serving') return { ok: true }
+  return {
+    ok: false,
+    error:
+      outcome === 'moved'
+        ? 'The feature changed after the rollout, so undoing it now would undo that too. Nothing was changed.'
+        : 'The undo could not be applied.',
+  }
 }

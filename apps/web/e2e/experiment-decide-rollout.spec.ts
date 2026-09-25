@@ -159,7 +159,6 @@ async function productionVersionOf(client: SupabaseClient, projectId: string) {
   return data as unknown as { version_id: string; flag_definition_versions: { definition: FlagDefinition } }
 }
 
-
 async function decide(
   client: SupabaseClient,
   fx: Fixture,
@@ -256,6 +255,7 @@ test.describe('Decide, then roll out (D8)', () => {
       fx.slug,
       key,
       rollout.ok ? rollout.previousVersionId : '',
+      rollout.ok ? rollout.rolloutVersionId : '',
       deps(client, fx)
     )
     expect(undo).toEqual({ ok: true })
@@ -274,8 +274,70 @@ test.describe('Decide, then roll out (D8)', () => {
     expect(await rolloutExperimentCommand(fx.slug, key, 1, 'nope', deps(client, fx))).toMatchObject({
       ok: false,
     })
-    expect(await undoRolloutCommand(fx.slug, key, crypto.randomUUID(), deps(client, fx))).toMatchObject({
+    expect(
+      await undoRolloutCommand(fx.slug, key, crypto.randomUUID(), crypto.randomUUID(), deps(client, fx))
+    ).toMatchObject({
       ok: false,
     })
+  })
+
+  const CHANGED: FlagDefinition = {
+    ...SERVED,
+    rules: [
+      { priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    ],
+  }
+
+  test('the undo refuses once the feature changed after the rollout — it never rolls that change back', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    await decide(client, fx, key, 'ship_treatment')
+    const rollout = await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))
+    expect(rollout).toMatchObject({ ok: true, serving: true })
+    const theirs = await activate(client, fx, CHANGED)
+    const undo = await undoRolloutCommand(
+      fx.slug,
+      key,
+      rollout.ok ? rollout.previousVersionId : '',
+      rollout.ok ? rollout.rolloutVersionId : '',
+      deps(client, fx)
+    )
+    expect(undo.ok).toBe(false)
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(theirs.version_id)
+  })
+
+  test('a change landing between the rollout plan and its write is never overwritten', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    await decide(client, fx, key, 'ship_treatment')
+    let theirs: { version_id: string } | null = null
+    let calls = 0
+    const racing = new Proxy(client, {
+      get(target, property) {
+        if (property === 'rpc') {
+          return async (name: string, args: Record<string, unknown>) => {
+            if (name === 'set_flag_activation' && calls++ === 0) theirs = await activate(client, fx, CHANGED)
+            return target.rpc(name, args)
+          }
+        }
+        const value = Reflect.get(target, property)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    }) as SupabaseClient
+    const rollout = await rolloutExperimentCommand(
+      fx.slug,
+      key,
+      1,
+      'on',
+      deps(client, fx, createBuilderIo(racing))
+    )
+    expect(rollout.ok).toBe(false)
+    expect(calls).toBe(1)
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(theirs!.version_id)
+    expect(await decisionBytes(fx.projectId)).toHaveLength(1)
   })
 })
