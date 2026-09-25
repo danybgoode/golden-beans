@@ -34,7 +34,10 @@ export type Readout = {
     event: string
     label: string
     delta: number | null
+    /** The LEAD treatment's own result on this guardrail. */
     status: 'fine' | 'worse' | 'unknown'
+    /** Labels of OTHER treatments that moved it the wrong way (named, never pinned on the lead). */
+    harmedBy: string[]
   }>
 }
 
@@ -109,24 +112,41 @@ export function buildReadout(input: ReadoutInput): Readout {
   const unfavourable = lift ? (wantUp ? lift.high < 0 : lift.low > 0) : false
   const guardrails = analysis.guardrailMetrics.map((guard) => {
     const row = guard.variants.find((variant) => variant.key === treatmentKey)
-    // Worse if ANY treatment harmed it, not only the one the page leads with — the owner can ship
-    // any of them (Codex, #172 round 6). The delta shown stays the lead's.
-    const harmed = guard.variants.some(
-      (variant) => variant.key !== controlKey && variant.directionalStatus === 'unfavorable'
-    )
+    // The lead's row states the LEAD's result; any other treatment that harmed the guardrail is NAMED
+    // beside it (Codex, #172 round 6 — it must appear; fresh reviewer, round 7 — never pinned on the
+    // lead, whose clean win must not be withheld for another arm's harm).
+    const harmedBy = guard.variants
+      .filter(
+        (variant) =>
+          variant.key !== controlKey &&
+          variant.key !== treatmentKey &&
+          variant.directionalStatus === 'unfavorable'
+      )
+      .map((variant) => label(definition, variant.key))
     const delta =
       row?.liftFromControl === null || row?.liftFromControl === undefined ? null : row.liftFromControl * 100
     return {
       event: guard.event,
       label: eventWords(guard.event),
       delta,
-      status: harmed ? ('worse' as const) : delta === null ? ('unknown' as const) : ('fine' as const),
+      status:
+        row?.directionalStatus === 'unfavorable'
+          ? ('worse' as const)
+          : delta === null
+            ? ('unknown' as const)
+            : ('fine' as const),
+      harmedBy,
     }
   })
   const guardHeld = !guardrails.some((guard) => guard.status === 'worse')
   // A roll-out is offered only for a win that cost nothing the owner said must hold.
   const canShip = favourable && guardHeld
-  const guardWords = !guardHeld ? 'A guardrail moved the wrong way' : 'Guardrails fine'
+  const others = [...new Set(guardrails.flatMap((guard) => guard.harmedBy))]
+  const guardWords = !guardHeld
+    ? 'A guardrail moved the wrong way'
+    : others.length > 0
+      ? `Guardrails fine for ${B}, but ${others.join(' and ')} moved one the wrong way`
+      : 'Guardrails fine'
   const srm = analysis.diagnostics.srm.status
   const srmWords =
     srm === 'clear'

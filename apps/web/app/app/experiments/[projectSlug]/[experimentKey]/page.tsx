@@ -474,13 +474,7 @@ function Results({
             key={guard.event}
             label={`${guard.label} · guardrail`}
             value={signed(guard.delta)}
-            detail={
-              guard.status === 'fine'
-                ? 'held'
-                : guard.status === 'worse'
-                  ? 'moved the wrong way'
-                  : 'not enough yet'
-            }
+            detail={`${guard.status === 'fine' ? 'held' : guard.status === 'worse' ? 'moved the wrong way' : 'not enough yet'}${guard.harmedBy.length > 0 ? ` · ${guard.harmedBy.join(' and ')} moved it the wrong way` : ''}`}
           />
         ))}
       </div>

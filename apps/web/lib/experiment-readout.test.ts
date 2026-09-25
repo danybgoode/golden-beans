@@ -309,7 +309,7 @@ test('a REAL blocker on a short sample is still named — stopped offers invalid
   assert.equal(running.state, 'blocked')
 })
 
-test('a guardrail harmed by ANY treatment blocks the roll-out, even when the lead is the winner', () => {
+test('another arm’s guardrail harm is named — and neither pinned on the clean lead nor blocking its roll-out', () => {
   const three: Definition = {
     ...definition,
     variants: [
@@ -376,8 +376,63 @@ test('a guardrail harmed by ANY treatment blocks the roll-out, even when the lea
     serving: true,
     now: new Date(now),
   })
+  // B is a clean winner: its row is fine and its roll-out is offered; C's harm is NAMED, never pinned on B.
   assert.equal(result.treatment.key, 'b')
+  assert.equal(result.guardrails[0].status, 'fine')
+  assert.deepEqual(result.guardrails[0].harmedBy, ['Version C'])
+  assert.deepEqual(result.verdict.actions, ['rollout', 'keep'])
+  assert.match(
+    sentenceText(result.answer),
+    /Guardrails fine for Version B, but Version C moved one the wrong way/
+  )
+})
+
+test('the LEAD harming a guardrail withholds its roll-out', () => {
+  const guarded: Definition = {
+    ...definition,
+    guardrailMetrics: [{ event: 'refund_requested', direction: 'decrease' }],
+  }
+  const facts: Fact[] = exposures(150, 30, 75)
+  for (let i = 0; i < 90; i += 1)
+    facts.push({
+      id: `r-on-${i}`,
+      event: 'refund_requested',
+      featureId: null,
+      tags: null,
+      subjectType: 'merchant',
+      subjectId: `on-${i}`,
+      occurredAt: at(i + 3),
+      createdAt: at(i + 3),
+    })
+  for (let i = 0; i < 5; i += 1)
+    facts.push({
+      id: `r-off-${i}`,
+      event: 'refund_requested',
+      featureId: null,
+      tags: null,
+      subjectType: 'merchant',
+      subjectId: `off-${i}`,
+      occurredAt: at(i + 3),
+      createdAt: at(i + 3),
+    })
+  const now = '2026-09-10T00:00:00.000Z'
+  const analysis = computeExperimentAnalysis({
+    experimentKey: 'copy_test',
+    definitionVersion: 1,
+    definition: guarded,
+    lifecycle: { status: 'running', startedAt: START, endedAt: null },
+    asOf: now,
+    facts,
+  })
+  const result = buildReadout({
+    definition: guarded,
+    analysis,
+    lifecycle: 'running',
+    decision: null,
+    serving: true,
+    now: new Date(now),
+  })
   assert.equal(result.guardrails[0].status, 'worse')
   assert.equal(result.verdict.actions.includes('rollout'), false)
-  assert.equal(result.verdict.title, 'Version B is ahead, but a guardrail moved the wrong way.')
+  assert.equal(result.verdict.title, 'New copy is ahead, but a guardrail moved the wrong way.')
 })
