@@ -87,7 +87,9 @@ export async function rolloutExperimentCommand(
   if (outcome === 'moved')
     return {
       ok: false,
-      error: 'The feature changed while you were rolling out. Nothing was changed; try again.',
+      // Accurate about the one durable write (Codex, #172 round 4): the version was saved, never served.
+      error:
+        'The feature changed while you were rolling out, so Production was not touched. The roll-out was saved as an unused version of the feature; try again.',
     }
   const serving = outcome === 'serving'
   return {

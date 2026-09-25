@@ -156,7 +156,13 @@ export function buildReadout(input: ReadoutInput): Readout {
   const bold = (text: string): SentencePart => ({ text, emphasis: true })
 
   // The blockers in words, never their storage codes (Sprint contract #9; general pass, #172 round 3).
-  const blockerSentences = analysis.blockers
+  // Only `srm_not_evaluable` is a SAMPLE fact — too few people to check the split, clearing itself
+  // as more arrive — so only it waits for the sample; every other blocker is real at any size
+  // (fresh reviewer, #172 round 4).
+  const trustBlockers = analysis.blockers.filter(
+    (blocker) => !(blocker === 'srm_not_evaluable' && analysis.sampleStatus !== 'met')
+  )
+  const blockerSentences = trustBlockers
     .map((blocker) => blockerWords(blocker).what)
     .join(' ')
     .replace(/^./, (c) => c.toLowerCase())
@@ -206,9 +212,9 @@ export function buildReadout(input: ReadoutInput): Readout {
     const ready = analysis.decisionReady
     // A blocker is not a short sample (fresh reviewer, #172 round 2): say the numbers can't be
     // trusted, and let "invalid" be the honest call — before any sentence about the sample.
-    // Only with the sample met, like the running `blocked` state: a short sample raises
-    // `srm_not_evaluable` on its own, and that is "not enough people", never "invalid" (round 3).
-    if (exposed > 0 && analysis.blockers.length > 0 && analysis.sampleStatus === 'met') {
+    // A short sample's `srm_not_evaluable` is "not enough people", never "invalid" (round 3);
+    // `trustBlockers` keeps every other blocker (round 4).
+    if (exposed > 0 && trustBlockers.length > 0) {
       return {
         ...common,
         state: 'stopped',
@@ -291,7 +297,7 @@ export function buildReadout(input: ReadoutInput): Readout {
       },
     }
   }
-  if (analysis.blockers.length > 0 && analysis.sampleStatus === 'met') {
+  if (trustBlockers.length > 0) {
     return {
       ...common,
       state: 'blocked',

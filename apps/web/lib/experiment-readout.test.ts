@@ -296,3 +296,15 @@ test('stopped on a SHORT sample is "not enough people", never "can’t be truste
   assert.doesNotMatch(sentenceText(result.answer), /can’t be trusted/)
   assert.deepEqual(result.verdict.actions, ['iterate'])
 })
+
+test('a REAL blocker on a short sample is still named — stopped offers invalid, running is blocked', () => {
+  // 60 vs 20 on a 50/50 plan (minimum 100): the sample is short, and the split is provably off.
+  const facts = exposures(60, 12, 4).filter(
+    (fact) => !(fact.id.match(/^[xc]-on-(\d+)$/) && Number(fact.id.split('-')[2]) >= 20)
+  )
+  const stopped = readout(facts, { lifecycle: 'stopped' })
+  assert.match(sentenceText(stopped.answer), /The numbers can’t be trusted: people were not divided evenly/)
+  assert.deepEqual(stopped.verdict.actions, ['invalid', 'iterate'])
+  const running = readout(facts)
+  assert.equal(running.state, 'blocked')
+})
