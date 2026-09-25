@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 3: The builder
 
-**Status:** ⬜ not started · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
+**Status:** 🟦 In review (PR #170) · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
@@ -14,8 +14,10 @@ Cite the README's D-numbers; do not restate them.
   every number and sentence comes from `buildExperimentPlan` (2.2) — no arithmetic in a component.
   Catalog + served flags are loaded server-side once and passed in. No screenshot control (A4); one
   start chip (A6). Closing keeps the draft in `sessionStorage` (try/catch, per-project key) and the
-  button reads "Continue new experiment". Spec: `e2e/experiment-builder-gate.spec.ts` (api, gate off =
-  old dialog, on the `:3100` server) + `e2e/experiment-builder.authed.spec.ts` (D10's zero-input
+  button reads "Continue new experiment". Spec: ~~`e2e/experiment-builder-gate.spec.ts`~~ **dropped
+  (deviation):** the `api` project cannot render a signed-in page, so "gate off = old dialog" is proved by
+  walkthrough step 1 and by `experiment-start.spec.ts`'s gate test (every write refuses before ownership)
+  + `e2e/experiment-builder.authed.spec.ts` (D10's zero-input
   assertions, step labels, sentence present). Risk: low.
 - **3.2 → D6, D7** (builder: the architect). Migration `20260926100000_save_experiment_draft.sql`
   (function only). Server action `saveExperimentDraftAction` in `app/app/experiments/[projectSlug]/
@@ -64,14 +66,18 @@ the whole plan and park it safely.
 Production and the experiment is running.
 **Acceptance:**
 - Start is disabled while any check fails. The footer says how many things to fix.
-- Start runs D7's two writes in order. On success: toast "‹key› started · ‹feature› is splitting 50 / 50",
-  then the experiment page at "It's live. Results start tomorrow."
+- Start runs D7's two writes in order. On success: the experiment's page. (**Deviation:** no toast — the
+  page navigates away, so a toast would never be read; "It's live. Results start tomorrow." is that
+  page's readout, which Sprint 4's Story 4.1 draws.) Start never activates over a change: if Production's
+  feature moved since the plan, it refuses before running ("The feature changed while you were starting.
+  Press Start again.").
 - A forced activation failure (spec) leaves the experiment running and shows "running, but the split
-  isn't serving yet" with a working retry.
+  isn't serving yet" with a working retry — derived by the page from Production, so it survives a reload.
+  Retry refuses (and says to stop and start again) if serving would undo a change made since.
 **Risk:** high
 
 ## Sprint QA
-- **api spec(s):** `e2e/experiment-builder-gate.spec.ts` (3.1: gate off = old dialog),
+- **api spec(s):** ~~`e2e/experiment-builder-gate.spec.ts`~~ (dropped, see 3.1),
   `e2e/experiment-save-draft.spec.ts` (3.2: idempotent, nothing activated),
   `e2e/experiment-start.spec.ts` (3.3 incl. the forced failure). Browser spec for D10's zero-inputs assertion.
 - **browser smoke owed:** **yes, to Daniel.** Start activates a flag version in a customer's
@@ -79,19 +85,32 @@ Production and the experiment is running.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green; one rendered look at 360px and 1360px.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-Env: local authed rail with `EXPERIMENT_BUILDER_ENABLED=true` first (previews cannot reach Supabase — D13), then production once the gate flips at 4.3.
+Env: production · https://goldenfrijoles.com, signed in as the `miyagisanchez` owner. The builder is
+behind `EXPERIMENT_BUILDER_ENABLED`, which Sprint 4 (Story 4.3) turns on in Production; until then
+steps 1–2 check that nothing moved, and steps 3–8 are run after the flip. Previews cannot run this
+(no Supabase on previews — D13).
 
 1. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez and click "+ New experiment".
-   → The builder opens on "What are you changing, and why?" with "Copy or button" selected and the side panel reading "≈ N days at your traffic".
-2. Click "Pricing page".
-   → Every step changes: a toast says the template was applied to all five steps.
-3. Click "Continue" four times, then "Review".
-   → One sentence describes the plan, and the checks list shows how many pass.
-4. On "Who's in it", add a Campaign condition, then return to Review.
-   → The eligibility check fails with "Remove the campaign condition →", and "Start experiment" is disabled.
-5. Click that fix, then "Save draft".
-   → The list shows the experiment as Draft with a "Continue" button.
-6. (**production flag write, owed to Daniel by name**) Click "Continue" → "Start experiment".
-   → "It's live. Results start tomorrow." The feature's page shows the new version serving in Production.
+   → Gate off: the dialog is exactly the old one (the key box and the Definition JSON).
+2. Close it without saving.
+   → Nothing was created: the list still shows `founding-message-v2` and `fundadoras_promise_cta`.
+3. (after 4.3) Click "+ New experiment".
+   → The builder opens on "What are you changing, and why?" with "Copy or button" selected, and the
+   side panel shows the plan sentence and a day estimate (or "—" if your events can't support one yet).
+4. Click "Pricing page".
+   → The plan sentence on the side changes to the pricing template's (the answers on all five steps
+   change with it).
+5. Click "Continue" four times, then "Review".
+   → One sentence describes the plan and the list shows six checks, each passing, warning or failing,
+   with a fix button on the ones that can be fixed in one click.
+6. Click "Save draft".
+   → "‹key› saved as a draft" under the header; the list shows the experiment as Draft with "Continue",
+   and the header button reads "+ New experiment" again.
+7. Click "Continue" on that row.
+   → The builder reopens at Review with the same answers.
+8. (**production flag write, owed to Daniel by name**) If every check passes, click "Start experiment".
+   → The experiment's page; on the feature's page, Production now serves the experiment's version. If
+   the builder instead says "Running, but the split isn't serving yet", reload the list: the row says
+   the same with "Retry serving" — click it.
 
 If any step fails, note the step number + what you saw — that's the bug report.

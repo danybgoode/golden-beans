@@ -1,5 +1,8 @@
 import type { ExperimentListRow, ExperimentRowState } from '@/lib/experiment-list-view'
 import { Col, ListCard, ListHead, Row, RowMain, RowState, Tag, TableEmpty } from '@/design-system/primitives'
+import type { BuilderPageData } from '@/lib/experiment-builder-io'
+import { ExperimentBuilder } from './experiment-builder'
+import { RetryServing } from './retry-serving'
 
 // design-system-rails · Sprint 5, Story 5.4 — the Experiments list, reference state
 // `ship-experiments`.
@@ -30,7 +33,19 @@ const STATE_WORDS: Record<ExperimentRowState, { word: string; tone: 'on' | 'off'
   invalid: { word: 'Invalidated', tone: 'off' },
 }
 
-export function ExperimentRows({ slug, rows }: { slug: string; rows: ExperimentListRow[] }) {
+export function ExperimentRows({
+  slug,
+  rows,
+  builderEnabled = false,
+  builderData = null,
+  projectId = '',
+}: {
+  slug: string
+  rows: ExperimentListRow[]
+  builderEnabled?: boolean
+  builderData?: BuilderPageData | null
+  projectId?: string
+}) {
   if (rows.length === 0) {
     return (
       <ListCard>
@@ -95,6 +110,11 @@ export function ExperimentRows({ slug, rows }: { slug: string; rows: ExperimentL
                   approved design means by "same row, same state pill, same version words". Showing
                   the draft as the row's state would hide a running experiment behind an unstarted
                   plan, which is exactly what it did before this. */}
+              {builderData?.notServing.includes(row.key) ? (
+                <span className="ds-state-detail">
+                  <Tag tone="unclassified">Running, but the split isn&rsquo;t serving</Tag>
+                </span>
+              ) : null}
               {row.waitingDraftVersion === null ? null : (
                 <span className="ds-state-detail">
                   <Tag tone="unclassified">Draft v{row.waitingDraftVersion} waiting</Tag>
@@ -102,6 +122,20 @@ export function ExperimentRows({ slug, rows }: { slug: string; rows: ExperimentL
               )}
             </Col>
             <Col width="act">
+              {builderEnabled &&
+              builderData &&
+              row.state === 'draft' &&
+              builderData.drafts.some((draft) => draft.experimentKey === row.key) ? (
+                <ExperimentBuilder
+                  slug={slug}
+                  projectId={projectId}
+                  data={builderData}
+                  continueDraft={row.key}
+                />
+              ) : null}
+              {builderEnabled && builderData?.notServing.includes(row.key) ? (
+                <RetryServing slug={slug} experimentKey={row.key} />
+              ) : null}
               <a
                 className="ds-btn ds-btn--secondary ds-btn--sm"
                 href={`/app/experiments/${slug}/${encodeURIComponent(row.key)}${

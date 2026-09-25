@@ -18,6 +18,8 @@ import {
   isDestinationDeliveryEnabled,
   isJourneyProjectionsEnabled,
   isExperimentGovernanceEnabled,
+  isExperimentBuilderEnabled,
+  isExperimentBuilderWritable,
   isReportSharesEnabled,
   isJourneyMcpToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
@@ -55,6 +57,7 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['DESTINATION_DELIVERY_ENABLED', isDestinationDeliveryEnabled],
   ['JOURNEY_PROJECTIONS_ENABLED', isJourneyProjectionsEnabled],
   ['EXPERIMENT_GOVERNANCE_ENABLED', isExperimentGovernanceEnabled],
+  ['EXPERIMENT_BUILDER_ENABLED', isExperimentBuilderEnabled],
   // ⚠️ NOT added by the epic that built it — added 2026-08-27 by console-ia-overhaul Story 1.1,
   // because the exhaustiveness test below went red on its FIRST run and named this flag. It had
   // been reading `process.env.REPORT_SHARES_ENABLED` since pod-report S3 while inheriting NONE of
@@ -339,4 +342,16 @@ test('flags are read fresh per call, not captured once at module load', () => {
     process.env.SIGNUP_ENABLED = 'false'
     assert.equal(isSignupEnabled(), false)
   })
+})
+
+test('builder writes need BOTH governance and the builder gate', () => {
+  for (const governance of [undefined, 'true']) {
+    for (const builder of [undefined, 'true']) {
+      withEnv('EXPERIMENT_GOVERNANCE_ENABLED', governance, () => {
+        withEnv('EXPERIMENT_BUILDER_ENABLED', builder, () => {
+          assert.equal(isExperimentBuilderWritable(), governance === 'true' && builder === 'true')
+        })
+      })
+    }
+  }
 })

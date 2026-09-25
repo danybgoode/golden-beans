@@ -277,6 +277,38 @@ then (2) so exposures can never arrive for a version that is not running. If (2)
 **"Running, but the split isn't serving yet"** with a retry that repeats (2) only. `FLAG_SERVING_ENABLED`
 must be on (it is, in Production) or Start refuses before (1).
 
+**D7, corrected before Sprint 3 was built (2026-09-24, the architect).** Two acceptance criteria
+need the builder's ANSWERS after Save, and a saved draft holds only its definition: "Continue reopens
+at Review" (3.2) and "fail blocks Start" (D6 — the checks are computed from answers, and the server
+must recompute them rather than trust the browser). A definition cannot be turned back into answers:
+the template, the reason, the smallest change worth knowing about and the version names' origin are
+not in it. So the Save migration also creates **`experiment_builder_answers`** — one row per
+experiment version, `(project_id, experiment_id, version_id)`, the planner's input JSON (≤ 16 KiB),
+service-role only, append-only, written only by `save_experiment_draft`. And **Start re-plans**:
+it rebuilds the plan server-side from the stored answers against the CURRENT served flag and catalog,
+refuses while any check fails, and if the plan differs from the saved draft (someone changed the
+feature since, or the window needs re-dating) it Saves first — the idempotent function makes that a
+no-op when nothing changed. Activating a flag version built from a stale served definition would
+silently roll back someone else's change; this is what prevents it — **but only up to the save**
+(fresh reviewer, PR #170, Blocking): a change landing after the re-plan still reached activation.
+So the activation itself is guarded (`activateInProduction` → `readBase`, `lib/experiment-builder-io.ts`):
+it reads the snapshot revision FIRST, then what Production serves for the flag, and refuses (`moved`,
+nothing written) unless that is the same feature once each side's experiment is stripped **and** no
+other experiment sits on it; the activation carries that revision, so anything activated after the
+check conflicts (`P0001` "flag snapshot version conflict" — `20260807160000` replaced 40001) and the check
+re-runs. Rules are compared as a priority-keyed set (evaluation sorts at read time; stored order is
+not meaning). Start asks the same question before `running` and
+refuses cleanly; a change that lands between the two leaves the honest partial state. **Retry never
+re-plans** (a running version's flag version is fixed) — it refuses with "stop the test and start it
+again". The partial state is **derived by the page** from Production (`BuilderPageData.notServing`),
+not held by the tab that pressed Start. **Known, accepted:** two tabs starting two different
+experiments on one feature can both pass the pre-check and both reach `running`; the second then
+refuses to serve (RETRY_MOVED) — honest, but it leaves a running experiment that never served, which
+its owner stops. **CI:** the push credential cannot
+edit `.github/workflows/ci.yml` (no `workflow` scope), so no spec depends on the gate being ON in CI:
+the commands are tested with the gate injected (the `experiment-create-command.ts` pattern), and the
+gate-OFF path is CI's default.
+
 ### D8 — "Roll out to everyone" is a separate flag write after the decision *(verified; Story 4.2)*
 `recordExperimentDecision` requires a **stopped** version (RPC: *"initial decision requires an
 undecided stopped experiment"*), so the decide flow is three writes, each with its own confirmation

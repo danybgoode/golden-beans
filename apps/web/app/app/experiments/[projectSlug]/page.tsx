@@ -5,7 +5,9 @@ import { listExperimentFlagBindings } from '@/lib/experiment-flag-bindings'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
 import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-request'
-import { isExperimentGovernanceEnabled } from '@/lib/flags'
+import { isExperimentBuilderEnabled, isExperimentGovernanceEnabled } from '@/lib/flags'
+import { createBuilderIo } from '@/lib/experiment-builder-io'
+import { getSupabaseServiceClient } from '@/lib/supabase'
 import { isOwner } from '@/lib/roles'
 import {
   describingVersion,
@@ -19,6 +21,7 @@ import { ExperimentRows } from './experiment-rows'
 import { ProductShell } from '@/components/product/ProductShell'
 import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { Answer, PageHead } from '@/design-system/primitives'
+import { ExperimentBuilder } from './experiment-builder'
 
 // design-system-rails · Sprint 5, Story 5.4 — reference state `ship-experiments`.
 //
@@ -44,10 +47,15 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
   if (!isExperimentGovernanceEnabled()) notFound()
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
-  const [experiments, flagRegistry, bindings] = await Promise.all([
+  const canManage = canManageExperiments(membership)
+  const builderEnabled = isExperimentBuilderEnabled() && canManage
+  const [experiments, flagRegistry, bindings, builderData] = await Promise.all([
     listExperimentRegistries(membership.projectId),
     getFlagRegistryView(membership.projectId),
     listExperimentFlagBindings(membership.projectId),
+    builderEnabled
+      ? createBuilderIo(getSupabaseServiceClient()).loadBuilderPage(membership.projectId)
+      : Promise.resolve(null),
   ])
 
   // ⚠️ **Every version is handed to the module, which decides which one the row describes.**
@@ -85,23 +93,33 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
             // says "the same wizard shape as New feature" — which is the 33rd approved state (D8).
             // `experiment-manager.tsx` is the only consumer of create/transition/bind, so this is
             // where those live now.
-            <NewThingDialog
-              label="+ New experiment"
-              title="New experiment"
-              lede="An experiment is a lever with consequences — same shape as a new feature."
-            >
-              <ExperimentManager
-                slug={projectSlug}
-                experiments={experiments}
-                flags={flagRegistry.flags}
-                bindings={bindings}
-                canManage={canManageExperiments(membership)}
-              />
-            </NewThingDialog>
+            builderEnabled && builderData ? (
+              <ExperimentBuilder slug={projectSlug} projectId={membership.projectId} data={builderData} />
+            ) : (
+              <NewThingDialog
+                label="+ New experiment"
+                title="New experiment"
+                lede="An experiment is a lever with consequences — same shape as a new feature."
+              >
+                <ExperimentManager
+                  slug={projectSlug}
+                  experiments={experiments}
+                  flags={flagRegistry.flags}
+                  bindings={bindings}
+                  canManage={canManageExperiments(membership)}
+                />
+              </NewThingDialog>
+            )
           }
         />
         <Answer>{experimentAnswer(rows)}</Answer>
-        <ExperimentRows slug={projectSlug} rows={rows} />
+        <ExperimentRows
+          slug={projectSlug}
+          rows={rows}
+          builderEnabled={builderEnabled}
+          builderData={builderData}
+          projectId={membership.projectId}
+        />
       </main>
     </ProductShell>
   )
