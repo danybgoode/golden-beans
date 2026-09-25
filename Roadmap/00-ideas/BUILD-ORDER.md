@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (2)
 
-- [Experiments for humans](../../01-growth-engine/experiments-for-humans/README.md) — 01 Growth Engine · 0/11 stories · risk: High · audit-wave-A
+- [Experiments for humans](../../01-growth-engine/experiments-for-humans/README.md) — 01 Growth Engine · 3/11 stories · risk: High · audit-wave-A
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 
 ## 📋 Ready to build (scaffolded, not started) (1)

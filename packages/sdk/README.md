@@ -45,6 +45,9 @@ await growth.trackFlagEvaluation({
   (at most 64 characters, no NUL), are dropped from the tags — the event itself is still sent.
 - `subject.id` and `targetingKey` must be the same identifier, or one person can be bucketed as two.
 
+Also exported for the Golden Frijoles experiment planner: `MAX_FLAG_METADATA_ENTRIES` and the
+`FlagScalar` type.
+
 A caller that keeps passing `experiment` by hand, with no `segments`, sends exactly the bytes 0.5.0
 sent. A pre-1.0 caret does not pick this up automatically; move to `^0.6.0`.
 

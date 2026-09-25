@@ -57,6 +57,9 @@ export {
   // the first time the parser changes, and it disagrees SILENTLY, by refusing input the backend
   // would have accepted. Exporting them is what makes "read the constant" possible at all.
   MAX_FLAG_CLAUSES,
+  // experiments-for-humans (0.6.0): the experiment planner adds three metadata keys to a served
+  // definition and must refuse — not truncate — a definition that would pass the parser's cap.
+  MAX_FLAG_METADATA_ENTRIES,
   MAX_FLAG_RULES,
   MAX_FLAG_VARIANTS,
   evaluateFlag,
@@ -85,6 +88,7 @@ export type {
   FlagEvaluationExplanation,
   FlagRuleExplanation,
   FlagRuleOutcome,
+  FlagScalar,
   FlagSnapshot,
   FlagSnapshotFlag,
   FlagValueType,

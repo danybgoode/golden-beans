@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 1: Widen the contract
 
-**Status:** 🟨 in progress · **Wave 1** · branch `feat/experiments-for-humans` · strongest tier, never delegated
+**Status:** ✅ shipped 2026-09-24 — PR #167, squash `7f81540`, production deploy succeeded; migration applied + D1 probes live (PR comment). Owed to Daniel: SDK 0.6.0 publish; the migration's `schema_migrations` row · **Wave 1** · branch `feat/experiments-for-humans` · strongest tier, never delegated
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them. Builder: the architect (never delegated).
