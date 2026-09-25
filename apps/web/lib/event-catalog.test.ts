@@ -174,3 +174,20 @@ test('the window is exactly the 14 UTC days the daily series draws, inclusive of
   assert.equal(event.daily[0], 1)
   assert.equal(event.count24h, 2)
 })
+
+test('segment combinations keep what arrives TOGETHER, and observedDays is the real span', () => {
+  const result = catalog([
+    row({ tags: { region: 'MX', plan: 'pro' } }),
+    row({ tags: { region: 'MX', plan: 'pro' } }),
+    row({ tags: { region: 'US' } }),
+    row({ tags: { region: 1 } }),
+    row({ tags: { region: '1' } }),
+    row({ tags: {} }),
+  ])
+  assert.equal(result.segmentCombos.rows, 6)
+  assert.equal(result.segmentCombos.complete, true)
+  assert.deepEqual(result.segmentCombos.combos[0], { values: { region: 'MX', plan: 'pro' }, count: 2 })
+  // 1 and "1" are different values, so they are different combinations.
+  assert.equal(result.segmentCombos.combos.filter((combo) => String(combo.values.region) === '1').length, 2)
+  assert.equal(result.observedDays, 13.5) // 13 whole days + 12 hours of 2026-09-24
+})

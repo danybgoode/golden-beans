@@ -6,6 +6,19 @@
 
 export const EVENT_CATALOG_WINDOW_DAYS = 14
 export const EVENT_CATALOG_ROW_CAP = 50_000
+export const SEGMENT_COMBO_CAP = 500
+
+/**
+ * The start of the catalog's window: UTC midnight 13 days before `asOf`'s day — the 14 days the
+ * `daily` series draws. ONE definition, used by the read (what to fetch) and the aggregation (what to
+ * count), so the two cannot disagree about which rows are in.
+ */
+export function catalogWindowStart(asOf: Date): number {
+  return (
+    Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate()) -
+    (EVENT_CATALOG_WINDOW_DAYS - 1) * 86_400_000
+  )
+}
 
 const RESERVED_EVENTS = new Set(['experiment_exposed', 'flag_evaluated', '$error', 'scenario_executed'])
 
@@ -36,7 +49,26 @@ export type EventCatalog = {
     coverage: number
     values: Array<{ value: EventCatalogScalar; share: number }>
   }>
+  /**
+   * Which segment values arrive TOGETHER, deduplicated with counts (Codex, PR #169). Marginals alone
+   * cannot say whether "Mexico AND the free plan" ever happens; multiplying them invents traffic for
+   * tags that never co-occur. Capped at the most common `SEGMENT_COMBO_CAP`; past that `complete` is
+   * false and any share computed from it is a LOWER bound.
+   */
+  segmentCombos: {
+    rows: number
+    combos: Array<{
+      values: Partial<Record<(typeof SEGMENT_FIELDS)[number], EventCatalogScalar>>
+      count: number
+    }>
+    complete: boolean
+  }
   flagEvaluations: Array<{ flagKey: string; evaluations: number }>
+  /**
+   * How many days the window REALLY spans (13 whole days + today so far). Rates per day divide by
+   * this, not by 14 — dividing by 14 understated traffic by up to ~7 % (fresh reviewer, PR #169).
+   */
+  observedDays: number
   truncated: boolean
   rowCap: number
   windowDays: number
@@ -89,9 +121,7 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
   // The window is the 14 UTC days the `daily` series draws — today (partial, up to asOf) and the 13
   // before it — so `count14d` always equals the sum of `daily` (fresh reviewer, PR #169: a rolling
   // 14×24h window counted the oldest partial day in the total and in no bucket).
-  const windowStart =
-    Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate()) -
-    (EVENT_CATALOG_WINDOW_DAYS - 1) * 86_400_000
+  const windowStart = catalogWindowStart(asOf)
   const dayKeysInOrder = dayKeys(asOf)
   const dayIndex = new Map(dayKeysInOrder.map((day, index) => [day, index]))
   const parsedRows: ParsedRow[] = []
@@ -114,6 +144,10 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
     }
   >()
   const flagEvaluations = new Map<string, number>()
+  const comboCounts = new Map<
+    string,
+    { values: Partial<Record<(typeof SEGMENT_FIELDS)[number], EventCatalogScalar>>; count: number }
+  >()
   for (const field of SEGMENT_FIELDS) segmentCounts.set(field, { carrying: 0, values: new Map() })
 
   for (const row of parsedRows) {
@@ -149,6 +183,18 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
         subjectsForEvent.add(row.subject_id)
       }
     }
+
+    const combo: Partial<Record<(typeof SEGMENT_FIELDS)[number], EventCatalogScalar>> = {}
+    for (const field of SEGMENT_FIELDS) {
+      const value = row.tags?.[field]
+      if (isScalar(value)) combo[field] = value
+    }
+    const comboKey = JSON.stringify(
+      SEGMENT_FIELDS.map((field) => (field in combo ? [typeof combo[field], combo[field]] : null))
+    )
+    const known = comboCounts.get(comboKey)
+    if (known) known.count += 1
+    else comboCounts.set(comboKey, { values: combo, count: 1 })
 
     for (const field of SEGMENT_FIELDS) {
       const value = row.tags?.[field]
@@ -201,10 +247,19 @@ export function buildEventCatalog(rows: EventCatalogRow[], options: EventCatalog
           .map(({ value, count }) => ({ value, share: count / segment.carrying })),
       }
     }),
+    segmentCombos: {
+      rows: parsedRows.length,
+      combos: [...comboCounts.entries()]
+        .sort(([keyA, a], [keyB, b]) => b.count - a.count || keyA.localeCompare(keyB))
+        .slice(0, SEGMENT_COMBO_CAP)
+        .map(([, combo]) => combo),
+      complete: comboCounts.size <= SEGMENT_COMBO_CAP,
+    },
     flagEvaluations: [...flagEvaluations.entries()]
       .map(([flagKey, evaluations]) => ({ flagKey, evaluations }))
       .sort((a, b) => a.flagKey.localeCompare(b.flagKey)),
     // At exactly the cap we cannot tell "exactly 50,000" from "more", so it reads as "at least".
+    observedDays: (asOfTime - windowStart) / 86_400_000,
     truncated: rows.length >= rowCap,
     rowCap,
     windowDays,

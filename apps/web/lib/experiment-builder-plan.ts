@@ -96,8 +96,10 @@ export type ExperimentPlanContext = {
   /** A saved draft's window, when re-planning a draft; otherwise the window starts `now`. */
   savedWindow?: { startAt: string; endAt: string }
   /** Keys already taken in this project, so a new name never collides. */
-  takenExperimentKeys?: readonly string[]
-  takenFlagKeys?: readonly string[]
+  // REQUIRED (fresh reviewer, PR #169): an omitted list made every name look free, so a second
+  // test on a busy feature re-used the first one's key. A re-save says so through `draft`.
+  takenExperimentKeys: readonly string[]
+  takenFlagKeys: readonly string[]
   /**
    * Re-planning a SAVED draft (Continue, Start, Change the plan): its names are already taken — by
    * itself. Without this a re-save names `…_enabled_2` / `…_copy_test_2` and splits one test into two
@@ -226,8 +228,13 @@ function conditionWords(condition: ExperimentCondition): string {
 
 export function whoWords(answers: Pick<ExperimentBuilderAnswers, 'who' | 'entity'>): string {
   const base = entityPlural(answers.entity)
-  if (answers.who.mode === 'everyone' || answers.who.conditions.length === 0) return `${base} who reach it`
-  return `${base} ${joinWith(answers.who.conditions.map(conditionWords), 'and')}`
+  // Only conditions with a value: an unfinished one fails check 3; it must not print "in  ".
+  const conditions =
+    answers.who.mode === 'everyone'
+      ? []
+      : answers.who.conditions.filter((condition) => condition.values.length > 0)
+  if (conditions.length === 0) return `${base} who reach it`
+  return `${base} ${joinWith(conditions.map(conditionWords), 'and')}`
 }
 
 export function shareWords(percent: number): string {
@@ -371,7 +378,7 @@ function slug(value: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-function unique(base: string, taken: readonly string[], max: number): string {
+function unique(base: string, taken: readonly string[], max: number): string | null {
   const trimmed = base.slice(0, max)
   if (!taken.includes(trimmed)) return trimmed
   for (let n = 2; n < 1000; n += 1) {
@@ -379,18 +386,19 @@ function unique(base: string, taken: readonly string[], max: number): string {
     const candidate = `${base.slice(0, max - suffix.length)}${suffix}`
     if (!taken.includes(candidate)) return candidate
   }
-  return trimmed
+  // Never hand back a taken name (Codex, PR #169): the save would collide with someone else's test.
+  return null
 }
 
-export function newFeatureKey(template: ExperimentTemplateKey, taken: readonly string[] = []): string {
+export function newFeatureKey(template: ExperimentTemplateKey, taken: readonly string[]): string | null {
   return unique(`experiments.${EXPERIMENT_TEMPLATES[template].suffix}_enabled`, taken, 128)
 }
 
 export function experimentKeyFor(
   flagKey: string,
   template: ExperimentTemplateKey,
-  taken: readonly string[] = []
-): string {
+  taken: readonly string[]
+): string | null {
   const short = slug((flagKey.split('.').pop() ?? flagKey).replace(/_enabled$/, '')) || 'feature'
   const base = `${/^[a-z]/.test(short) ? short : `f_${short}`}_${EXPERIMENT_TEMPLATES[template].suffix}`
   return unique(base, taken, 64)
@@ -505,7 +513,10 @@ export function buildExperimentPlan(
   let flagKey: string
   const createsFeature = answers.flagKey === null
   if (createsFeature) {
-    flagKey = context.draft?.flagKey ?? newFeatureKey(answers.template, context.takenFlagKeys)
+    const named = context.draft?.flagKey ?? newFeatureKey(answers.template, context.takenFlagKeys)
+    if (named === null)
+      return { ok: false, errors: ['Too many features already have this name; pick an existing feature.'] }
+    flagKey = named
     variantKeys = names.map((name, index) => {
       const key = slug(name) || `version_${letter(index).toLowerCase()}`
       return /^[a-z]/.test(key) ? key.slice(0, 64) : `v_${key}`.slice(0, 64)
@@ -547,6 +558,7 @@ export function buildExperimentPlan(
   const weights = versionWeights(names.length, answers.split)
   const experimentKey =
     context.draft?.experimentKey ?? experimentKeyFor(flagKey, answers.template, context.takenExperimentKeys)
+  if (experimentKey === null) return { ok: false, errors: ['Too many experiments already have this name.'] }
 
   // ── the experiment's rules (D4) ──
   const clauses = clausesFor(answers)
@@ -578,20 +590,28 @@ export function buildExperimentPlan(
 
   // ── the estimate ──
   const entityRow = context.catalog.entities.find((row) => row.type === answers.entity)
-  const perDay = entityRow ? entityRow.subjects14d / context.catalog.windowDays : 0
+  const perDay =
+    entityRow && context.catalog.observedDays > 0 ? entityRow.subjects14d / context.catalog.observedDays : 0
+  // The JOINT share of recent events meeting every condition, read from the catalog's segment
+  // combinations — never a product of marginals, which invents traffic for tags that never co-occur
+  // (Codex, PR #169). With an incomplete combination table it is a lower bound.
+  const conditions = activeConditions(answers)
+  const { rows: comboRows, combos } = context.catalog.segmentCombos
   const conditionFraction =
     answers.who.mode === 'everyone'
       ? 1
-      : answers.who.conditions.reduce((fraction, condition) => {
-          const segment = context.catalog.segments.find((row) => row.field === condition.field)
-          if (!segment) return 0
-          const share = segment.values
-            .filter((row) =>
-              condition.values.some((value) => typeof value === typeof row.value && value === row.value)
+      : comboRows === 0
+        ? 0
+        : combos
+            .filter((combo) =>
+              conditions.every((condition) =>
+                condition.values.some((value) => {
+                  const actual = combo.values[condition.field]
+                  return typeof actual === typeof value && actual === value
+                })
+              )
             )
-            .reduce((sum, row) => sum + row.share, 0)
-          return fraction * segment.coverage * share
-        }, 1)
+            .reduce((sum, combo) => sum + combo.count, 0) / comboRows
   const inTestPerDay = perDay * conditionFraction * (answers.who.allocation / 100)
   const baseline =
     context.catalog.baselines.find((row) => row.event === answers.metric && row.type === answers.entity)
@@ -804,7 +824,7 @@ function computeChecks(
       status: 'fail',
       step: 1,
       title: 'Another test is using this feature',
-      detail: `${derived.flagKey} is serving ${other} in Production. Decide that one first, or pick another feature.`,
+      detail: `${derived.flagKey} is serving ${other} in Production. Finish that test (decide it, then roll the winner out or turn it off), or pick another feature.`,
       fix: { label: 'Pick another feature', kind: 'step', step: 1 },
     })
   } else if (!context.served?.activeInProduction) {
@@ -984,7 +1004,11 @@ function computeChecks(
       detail: `It needs about ${derived.days} days at your current traffic — longer than the ${WEEK_OPTIONS[WEEK_OPTIONS.length - 1]}-week maximum. Include more people, or look for a bigger change.`,
       fix: { label: 'Change who’s in it', kind: 'step', step: 2 },
     })
-  } else if (derived.savedWindow && remainingDays < derived.days) {
+  } else if (
+    derived.savedWindow &&
+    derived.startAt.getTime() < context.now.getTime() &&
+    remainingDays < derived.days
+  ) {
     checks.push({
       id: 'window',
       status: 'fail',
@@ -1104,6 +1128,12 @@ export function parseExperimentBuilderAnswers(
     if (!CONDITION_FIELDS.has(condition.field as string) || fields.has(condition.field as string))
       return bad('Invalid condition field.')
     fields.add(condition.field as string)
+    if (
+      Array.isArray(condition.values) &&
+      new Set(condition.values.map((value) => `${typeof value}:${String(value)}`)).size !==
+        condition.values.length
+    )
+      return bad('A condition lists the same value twice.')
     if (
       !Array.isArray(condition.values) ||
       condition.values.length > 20 ||
