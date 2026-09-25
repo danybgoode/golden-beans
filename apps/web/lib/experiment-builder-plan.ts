@@ -1034,7 +1034,18 @@ function computeChecks(
   const fitting =
     (WEEK_OPTIONS as readonly number[]).find((weeks) => derived.days !== null && weeks * 7 >= derived.days) ??
     8
-  if (derived.inTestPerDay <= 0 && !derived.estimateExact) {
+  if (derived.savedWindow && derived.endAt.getTime() <= context.now.getTime()) {
+    // A FACT, so it comes before every estimate (fresh reviewer, round 6): a draft whose dates have
+    // passed must be re-dated before it can start, whatever the traffic says.
+    checks.push({
+      id: 'window',
+      status: 'fail',
+      step: 5,
+      title: 'This draft’s dates have run out',
+      detail: `It was planned to end on ${derived.endAt.toISOString().slice(0, 10)}.`,
+      fix: { label: 'Plan it from today', kind: 'replan-from-today' },
+    })
+  } else if (derived.inTestPerDay <= 0 && !derived.estimateExact) {
     // An approximate zero is not evidence that nobody matches — never block Start on it.
     checks.push({
       id: 'window',
@@ -1081,7 +1092,7 @@ function computeChecks(
   ) {
     checks.push({
       id: 'window',
-      status: derived.estimateExact || remainingDays <= 0 ? 'fail' : 'warn',
+      status: derived.estimateExact ? 'fail' : 'warn',
       step: 5,
       title: 'This draft’s dates have run out',
       detail: `It was planned from ${derived.startAt.toISOString().slice(0, 10)}; ${Math.max(0, remainingDays)} days are left and it needs about ${derived.days}.`,

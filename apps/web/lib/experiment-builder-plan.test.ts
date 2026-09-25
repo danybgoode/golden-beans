@@ -904,3 +904,25 @@ test('a TRUNCATED catalog never blocks Start, even for everyone (fresh reviewer 
     'warn'
   )
 })
+
+test('"some" with no conditions is a plan, not a throw (Codex, round 6 probe)', () => {
+  const result = buildExperimentPlan(
+    { ...copyAnswers(), who: { mode: 'some', conditions: [], allocation: 100 } },
+    context()
+  )
+  assert.ok(result.ok)
+  assert.equal(result.plan.checks.find((check) => check.id === 'eligibility')?.status, 'ok')
+})
+
+test('a saved window that has already ENDED fails first, whatever the estimate says (fresh reviewer, round 6)', () => {
+  const savedWindow = { startAt: '2026-08-01T00:00:00.000Z', endAt: '2026-08-15T00:00:00.000Z' } // 2 weeks, over
+  const everyone = { mode: 'everyone' as const, conditions: [], allocation: 100 }
+  // No baseline for this metric among merchants → the estimate branch would have said "can't estimate".
+  const catalog = prototypeCatalog({ baselines: [] })
+  const window = checkOf(
+    { ...copyAnswers(), weeks: 2, who: everyone },
+    context({ savedWindow, catalog })
+  ).window
+  assert.equal(window.status, 'fail')
+  assert.equal(window.fix?.kind, 'replan-from-today')
+})
