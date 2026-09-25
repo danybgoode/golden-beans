@@ -239,7 +239,10 @@ export async function retryServingCommand(
     return { ok: false, error: 'Invalid request.' }
   if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
   const { projectId, userId } = await deps.requireOwnership(slug)
-  const stored = await deps.io.loadDraft(projectId, experimentKey)
+  // The RUNNING version, not the latest: "Change the plan" may have added a draft after it (round 3).
+  const latest = await deps.io.loadDraft(projectId, experimentKey)
+  const running = latest ? await deps.io.runningVersion(projectId, latest.experimentId) : null
+  const stored = running === null ? null : await deps.io.loadDraft(projectId, experimentKey, running)
   if (!stored || stored.status !== 'running' || !stored.flagId || !stored.flagVersionId || !stored.flagKey) {
     return { ok: false, error: 'Only a running experiment can be retried.' }
   }

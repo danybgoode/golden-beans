@@ -545,4 +545,31 @@ test.describe('Start (D7)', () => {
     const serving = await productionVersionOf(client, fx.projectId)
     expect(serving.flag_definition_versions.definition.metadata).toMatchObject({ experiment_version: 2 })
   })
+
+  test('Retry serves the RUNNING version, even after "Change the plan" saved a newer draft', async () => {
+    const fx = await fixture(client)
+    const real = createBuilderIo(client)
+    const failing: BuilderIo = { ...real, activateInProduction: async () => 'failed' as const }
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    expect(await startExperimentCommand(fx.slug, key, deps(client, fx, failing))).toMatchObject({
+      ok: true,
+      serving: false,
+    })
+    const revised = await saveExperimentDraftCommand(
+      fx.slug,
+      answers({ versions: ['Current', 'Other copy'] }),
+      key,
+      deps(client, fx),
+      { revise: true }
+    )
+    expect(revised).toMatchObject({ ok: true, version: 2 })
+    expect((await real.loadBuilderPage(fx.projectId)).notServing).toEqual([key])
+    expect(await retryServingCommand(fx.slug, key, deps(client, fx))).toMatchObject({
+      ok: true,
+      version: 1,
+      serving: true,
+    })
+    expect((await real.loadBuilderPage(fx.projectId)).notServing).toEqual([])
+  })
 })

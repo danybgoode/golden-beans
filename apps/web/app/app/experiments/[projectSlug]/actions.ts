@@ -12,6 +12,7 @@ import { transitionExperimentVersion, type ExperimentTransitionTarget } from '@/
 import { validateExperimentKey } from '@/lib/experiment-definition'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { getSupabaseServiceClient } from '@/lib/supabase'
+import { createBuilderIo } from '@/lib/experiment-builder-io'
 
 function requireGate() {
   if (!isExperimentGovernanceEnabled()) notFound()
@@ -40,13 +41,7 @@ export async function transitionExperimentVersionAction(
   // A builder-made version starts ONLY through the builder's Start, which also serves its split (D7).
   // A bare lifecycle flip would leave it running and not serving (security lens, PR #172).
   if (targetStatus === 'running') {
-    const { data: answers, error } = await getSupabaseServiceClient()
-      .from('experiment_builder_answers')
-      .select('version_id')
-      .eq('project_id', projectId)
-      .eq('version_id', safeVersionId)
-      .maybeSingle()
-    if (error) return { ok: false as const, error: 'The experiment could not be started.' }
+    const answers = await createBuilderIo(getSupabaseServiceClient()).versionAnswers(projectId, safeVersionId)
     if (answers) return { ok: false as const, error: 'Start this experiment from its builder.' }
   }
   const result = await transitionExperimentVersion(

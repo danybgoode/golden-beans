@@ -201,7 +201,11 @@ test('stopped with a blocker says the numbers can’t be trusted — never "not 
   )
   const result = readout(facts, { lifecycle: 'stopped' })
   assert.equal(result.state, 'stopped')
-  assert.match(sentenceText(result.answer), /The numbers can’t be trusted: srm detected\./)
+  assert.match(
+    sentenceText(result.answer),
+    /The numbers can’t be trusted: people were not divided evenly between the groups\.$/
+  )
+  assert.doesNotMatch(sentenceText(result.answer), /srm|_/)
   assert.doesNotMatch(sentenceText(result.answer) + result.verdict.body, /enough people|planned sample/)
   assert.deepEqual(result.verdict.actions, ['invalid', 'iterate'])
 })
@@ -279,4 +283,16 @@ test('three versions: the page leads with the treatment the RECORD names, and be
     'Decided: ship Version C. The decision and its reason are recorded.'
   )
   assert.equal(decided.verdict.title, 'Version C won.')
+})
+
+test('stopped on a SHORT sample is "not enough people", never "can’t be trusted" or invalid', () => {
+  // 4 per version: too few to check the split (srm_not_evaluable) — which clears with more people.
+  const result = readout(exposures(4, 1, 2), { lifecycle: 'stopped' })
+  assert.equal(result.state, 'stopped')
+  assert.match(
+    sentenceText(result.answer),
+    /It stopped at 4% of the planned sample, so the honest call may be inconclusive\.$/
+  )
+  assert.doesNotMatch(sentenceText(result.answer), /can’t be trusted/)
+  assert.deepEqual(result.verdict.actions, ['iterate'])
 })

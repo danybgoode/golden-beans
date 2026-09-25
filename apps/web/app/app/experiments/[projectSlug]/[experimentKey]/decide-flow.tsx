@@ -199,7 +199,7 @@ export function DecideFlow(props: DecideFlowProps) {
     setPending(true)
     try {
       const result = await guarded(() =>
-        undoRolloutAction(props.slug, props.experimentKey, target.previous, target.rollout)
+        undoRolloutAction(props.slug, props.experimentKey, props.version, target.previous, target.rollout)
       )
       setDone(
         result.ok
@@ -297,6 +297,11 @@ export function DecideFlow(props: DecideFlowProps) {
                 onClick={() => open('keep_control')}
               >
                 Keep {control}
+              </Button>
+            ) : null}
+            {props.actions.includes('invalid') ? (
+              <Button variant="primary" onClick={() => open('invalid')}>
+                Mark it invalid
               </Button>
             ) : null}
             {props.actions.includes('iterate') ? (
@@ -428,6 +433,13 @@ export function DecideFlow(props: DecideFlowProps) {
                     </span>
                   </button>
                 </>
+              ) : null}
+              {plan.recordKind === 'correction' && !props.canRollOut && canRollOut(modal.choice.outcome) ? (
+                // A correction never moves the flag by itself (general pass, #172 round 3): say where to.
+                <p className="ds-dialog-note">
+                  Production keeps serving what it serves now. To change that, use the feature&rsquo;s own
+                  page.
+                </p>
               ) : null}
               {error ? (
                 <p className="ds-dialog-note" role="alert">

@@ -107,6 +107,7 @@ export async function rolloutExperimentCommand(
 export async function undoRolloutCommand(
   slug: unknown,
   experimentKey: unknown,
+  version: unknown,
   previousVersionId: unknown,
   rolloutVersionId: unknown,
   deps: BuilderDependencies
@@ -117,11 +118,15 @@ export async function undoRolloutCommand(
     typeof slug !== 'string' ||
     typeof experimentKey !== 'string' ||
     typeof previousVersionId !== 'string' ||
-    typeof rolloutVersionId !== 'string'
+    typeof rolloutVersionId !== 'string' ||
+    typeof version !== 'number' ||
+    !Number.isSafeInteger(version) ||
+    version < 1
   )
     return { ok: false, error: 'Invalid request.' }
   const { projectId, userId } = await deps.requireOwnership(slug)
-  const stored = await deps.io.loadDraft(projectId, experimentKey)
+  // The version that was rolled out — its feature — not the latest (a revise may be bound elsewhere).
+  const stored = await deps.io.loadDraft(projectId, experimentKey, version)
   if (!stored?.flagId || !(await deps.io.flagVersionBelongs(projectId, stored.flagId, previousVersionId)))
     return { ok: false, error: 'Nothing to undo.' }
   // The undo replaces only the rollout it undoes: if anything was activated since, undoing would

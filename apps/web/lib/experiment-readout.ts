@@ -1,5 +1,6 @@
 import type { ExperimentAnalysisResult } from './experiment-analysis'
 import type { ExperimentDefinition } from './experiment-definition'
+import { blockerWords } from './experiment-blocker-words'
 import { eventWords, entityPlural, type SentencePart } from './experiment-builder-plan'
 
 // experiments-for-humans · Story 4.1 (epic README D10) — the decision-first readout, as DATA.
@@ -154,6 +155,11 @@ export function buildReadout(input: ReadoutInput): Readout {
   const plain = (text: string): SentencePart => ({ text, emphasis: false })
   const bold = (text: string): SentencePart => ({ text, emphasis: true })
 
+  // The blockers in words, never their storage codes (Sprint contract #9; general pass, #172 round 3).
+  const blockerSentences = analysis.blockers
+    .map((blocker) => blockerWords(blocker).what)
+    .join(' ')
+    .replace(/^./, (c) => c.toLowerCase())
   const lead: SentencePart[] = lift
     ? [
         bold(
@@ -200,7 +206,9 @@ export function buildReadout(input: ReadoutInput): Readout {
     const ready = analysis.decisionReady
     // A blocker is not a short sample (fresh reviewer, #172 round 2): say the numbers can't be
     // trusted, and let "invalid" be the honest call — before any sentence about the sample.
-    if (exposed > 0 && analysis.blockers.length > 0) {
+    // Only with the sample met, like the running `blocked` state: a short sample raises
+    // `srm_not_evaluable` on its own, and that is "not enough people", never "invalid" (round 3).
+    if (exposed > 0 && analysis.blockers.length > 0 && analysis.sampleStatus === 'met') {
       return {
         ...common,
         state: 'stopped',
@@ -208,7 +216,7 @@ export function buildReadout(input: ReadoutInput): Readout {
           bold('Stopped — nobody new is counted.'),
           plain(' '),
           ...lead,
-          plain(' The numbers can’t be trusted: ' + analysis.blockers.join(', ').replace(/_/g, ' ') + '.'),
+          plain(` The numbers can’t be trusted: ${blockerSentences}`),
         ],
         verdict: {
           label: 'What happens next',
@@ -287,10 +295,7 @@ export function buildReadout(input: ReadoutInput): Readout {
     return {
       ...common,
       state: 'blocked',
-      answer: [
-        ...lead,
-        plain(' The numbers can’t be trusted yet: ' + analysis.blockers.join(', ').replace(/_/g, ' ') + '.'),
-      ],
+      answer: [...lead, plain(` The numbers can’t be trusted yet: ${blockerSentences}`)],
       verdict: {
         label: 'What happens next',
         title: 'Fix what the checks found before calling it.',

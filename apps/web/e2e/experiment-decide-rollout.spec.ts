@@ -88,10 +88,10 @@ async function fixture(client: SupabaseClient): Promise<Fixture> {
   return result
 }
 
-async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition) {
+async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition, flagKey = FLAG_KEY) {
   const { data: version, error } = await client.rpc('create_flag_definition_version', {
     p_project_id: fx.projectId,
-    p_flag_key: FLAG_KEY,
+    p_flag_key: flagKey,
     p_definition: definition,
     p_reason: 'fixture',
     p_actor_user_id: fx.owner,
@@ -295,6 +295,7 @@ test.describe('Decide, then roll out (D8)', () => {
     const undo = await undoRolloutCommand(
       fx.slug,
       key,
+      1,
       rollout.ok ? rollout.previousVersionId : '',
       rollout.ok ? rollout.rolloutVersionId : '',
       deps(client, fx)
@@ -328,7 +329,7 @@ test.describe('Decide, then roll out (D8)', () => {
       variantKey: 'off',
     })
     expect(
-      await undoRolloutCommand(fx.slug, key, crypto.randomUUID(), crypto.randomUUID(), deps(client, fx))
+      await undoRolloutCommand(fx.slug, key, 1, crypto.randomUUID(), crypto.randomUUID(), deps(client, fx))
     ).toMatchObject({
       ok: false,
     })
@@ -353,6 +354,7 @@ test.describe('Decide, then roll out (D8)', () => {
     const undo = await undoRolloutCommand(
       fx.slug,
       key,
+      1,
       rollout.ok ? rollout.previousVersionId : '',
       rollout.ok ? rollout.rolloutVersionId : '',
       deps(client, fx)
@@ -430,5 +432,34 @@ test.describe('Decide, then roll out (D8)', () => {
       ok: true,
       serving: true,
     })
+  })
+
+  test('the undo acts on the ROLLED-OUT version’s feature, even when "Change the plan" moved to another', async () => {
+    const fx = await fixture(client)
+    // A second live feature for the revised plan.
+    await activate(client, fx, SERVED, 'growth.other_feature')
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    const revised = await saveExperimentDraftCommand(
+      fx.slug,
+      answers({ flagKey: 'growth.other_feature' }),
+      key,
+      deps(client, fx),
+      { revise: true }
+    )
+    expect(revised).toMatchObject({ ok: true, version: 2 })
+    await decide(client, fx, key, 'ship_treatment', 1)
+    const rollout = await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))
+    expect(rollout).toMatchObject({ ok: true, serving: true })
+    const undo = await undoRolloutCommand(
+      fx.slug,
+      key,
+      1,
+      rollout.ok ? rollout.previousVersionId : '',
+      rollout.ok ? rollout.rolloutVersionId : '',
+      deps(client, fx)
+    )
+    expect(undo).toEqual({ ok: true })
   })
 })

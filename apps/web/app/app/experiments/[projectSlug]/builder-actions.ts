@@ -65,12 +65,14 @@ export async function rolloutExperimentAction(
 export async function undoRolloutAction(
   slug: unknown,
   experimentKey: unknown,
+  version: unknown,
   previousVersionId: unknown,
   rolloutVersionId: unknown
 ) {
   const result = await undoRolloutCommand(
     slug,
     experimentKey,
+    version,
     previousVersionId,
     rolloutVersionId,
     dependencies()

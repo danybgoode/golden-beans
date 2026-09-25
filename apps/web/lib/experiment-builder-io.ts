@@ -555,13 +555,18 @@ export function createBuilderIo(client: SupabaseClient) {
       const notServing: string[] = []
       for (const experiment of experiments.data ?? []) {
         const draft = await this.loadDraft(projectId, experiment.key as string)
-        if (
-          draft &&
-          draft.status === 'running' &&
-          draft.answers &&
-          draft.flagId &&
-          activeByFlag.get(draft.flagId) !== draft.flagVersionId
-        ) {
+        // The RUNNING version decides the partial state, even with a newer draft beside it (round 3).
+        const runningNumber =
+          draft && draft.status !== 'running'
+            ? await this.runningVersion(projectId, draft.experimentId)
+            : null
+        const live =
+          draft?.status === 'running'
+            ? draft
+            : runningNumber === null
+              ? null
+              : await this.loadDraft(projectId, experiment.key as string, runningNumber)
+        if (live && live.answers && live.flagId && activeByFlag.get(live.flagId) !== live.flagVersionId) {
           notServing.push(experiment.key as string)
         }
         if (draft && draft.status === 'draft' && draft.answers) {
