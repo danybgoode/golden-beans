@@ -116,7 +116,8 @@ export function createBuilderIo(client: SupabaseClient) {
   async function readBase(
     projectId: string,
     flagId: string,
-    flagVersionId: string
+    flagVersionId: string,
+    replacing?: string
   ): Promise<{ outcome: 'ready'; revision: number } | { outcome: ActivationOutcome }> {
     const { data: target, error: targetError } = await client
       .from('flag_definition_versions')
@@ -142,6 +143,13 @@ export function createBuilderIo(client: SupabaseClient) {
       .maybeSingle()
     if (currentError) return { outcome: 'failed' }
     if (current?.version_id === flagVersionId) return { outcome: 'serving' }
+    // A rollout or its undo changes the feature ON PURPOSE, so "same base" cannot be its test: it
+    // replaces exactly the version it was planned against, or nothing (Story 4.2, D8).
+    if (replacing !== undefined) {
+      return current?.version_id === replacing
+        ? { outcome: 'ready', revision: Number(state?.snapshot_version ?? 0) }
+        : { outcome: 'moved' }
+    }
     const served = (
       current as unknown as { flag_definition_versions?: { definition: FlagDefinition } } | null
     )?.flag_definition_versions?.definition
@@ -167,7 +175,7 @@ export function createBuilderIo(client: SupabaseClient) {
     },
 
     /** The LATEST version of an experiment, with its binding and the answers that made it (if any). */
-    async loadDraft(projectId: string, experimentKey: string): Promise<StoredDraft | null> {
+    async loadDraft(projectId: string, experimentKey: string, version?: number): Promise<StoredDraft | null> {
       const { data: registry, error } = await client
         .from('experiment_registries')
         .select('id')
@@ -176,28 +184,31 @@ export function createBuilderIo(client: SupabaseClient) {
         .maybeSingle()
       if (error) throw new Error('could not read the experiment')
       if (!registry) return null
-      const { data: version, error: versionError } = await client
+      // The LATEST version, unless one is named (a roll-out acts on the version it decided, even after
+      // "Change the plan" added a newer draft — general pass, PR #172).
+      const versions = client
         .from('experiment_definition_versions')
         .select('id,version,status,definition')
         .eq('project_id', projectId)
         .eq('experiment_id', registry.id)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const { data: row, error: versionError } =
+        version === undefined
+          ? await versions.order('version', { ascending: false }).limit(1).maybeSingle()
+          : await versions.eq('version', version).maybeSingle()
       if (versionError) throw new Error('could not read the experiment')
-      if (!version) return null
+      if (!row) return null
       const [binding, answers] = await Promise.all([
         client
           .from('experiment_flag_version_bindings')
           .select('flag_id,flag_version_id')
           .eq('project_id', projectId)
-          .eq('experiment_version_id', version.id)
+          .eq('experiment_version_id', row.id)
           .maybeSingle(),
         client
           .from('experiment_builder_answers')
           .select('answers')
           .eq('project_id', projectId)
-          .eq('version_id', version.id)
+          .eq('version_id', row.id)
           .maybeSingle(),
       ])
       if (binding.error || answers.error) throw new Error('could not read the experiment')
@@ -213,10 +224,10 @@ export function createBuilderIo(client: SupabaseClient) {
       }
       return {
         experimentId: registry.id as string,
-        versionId: version.id as string,
-        version: version.version as number,
-        status: version.status as StoredDraft['status'],
-        definition: version.definition as ExperimentDefinition,
+        versionId: row.id as string,
+        version: row.version as number,
+        status: row.status as StoredDraft['status'],
+        definition: row.definition as ExperimentDefinition,
         answers: (answers.data?.answers as ExperimentBuilderAnswers | undefined) ?? null,
         flagKey,
         flagId: (binding.data?.flag_id as string | undefined) ?? null,
@@ -291,9 +302,11 @@ export function createBuilderIo(client: SupabaseClient) {
       flagVersionId: string
       actorUserId: string
       reason: string
+      /** Replace exactly this served version (rollout, undo) instead of checking the base. */
+      replacing?: string
     }): Promise<ActivationOutcome> {
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        const base = await readBase(input.projectId, input.flagId, input.flagVersionId)
+        const base = await readBase(input.projectId, input.flagId, input.flagVersionId, input.replacing)
         if (base.outcome !== 'ready') return base.outcome
         const { data, error } = await client.rpc('set_flag_activation', {
           p_project_id: input.projectId,
@@ -318,6 +331,82 @@ export function createBuilderIo(client: SupabaseClient) {
       return (await readBase(projectId, flagId, flagVersionId)).outcome
     },
 
+    /**
+     * Story 4.1 — does Production serve THIS experiment version's bound flag version? `null` when the
+     * version has no binding (made outside the builder), so the page says nothing rather than guess.
+     */
+    async versionServing(projectId: string, experimentVersionId: string): Promise<boolean | null> {
+      const { data: binding, error } = await client
+        .from('experiment_flag_version_bindings')
+        .select('flag_id,flag_version_id')
+        .eq('project_id', projectId)
+        .eq('experiment_version_id', experimentVersionId)
+        .maybeSingle()
+      if (error) throw new Error('could not read the experiment')
+      if (!binding) return null
+      const { data: active, error: activeError } = await client
+        .from('flag_environment_activations')
+        .select('version_id')
+        .eq('project_id', projectId)
+        .eq('flag_id', binding.flag_id)
+        .eq('environment', 'production')
+        .maybeSingle()
+      if (activeError) throw new Error('could not read the feature')
+      return active?.version_id === binding.flag_version_id
+    },
+
+    /** Story 4.1 — the builder answers that made this version (Plan tab, "Change the plan"), if any. */
+    async versionAnswers(
+      projectId: string,
+      experimentVersionId: string
+    ): Promise<ExperimentBuilderAnswers | null> {
+      const { data, error } = await client
+        .from('experiment_builder_answers')
+        .select('answers')
+        .eq('project_id', projectId)
+        .eq('version_id', experimentVersionId)
+        .maybeSingle()
+      if (error) throw new Error('could not read the experiment')
+      return (data?.answers as ExperimentBuilderAnswers | undefined) ?? null
+    },
+
+    /**
+     * The CURRENT decision on an experiment version — the one record no later record supersedes
+     * (corrections chain by `supersedes_record_id`). `null` when none is recorded.
+     */
+    async currentDecision(
+      projectId: string,
+      versionId: string
+    ): Promise<{ outcome: string; chosenVariantKey: string | null } | null> {
+      const { data, error } = await client
+        .from('experiment_decision_records')
+        .select('id,outcome,chosen_variant_key,supersedes_record_id')
+        .eq('project_id', projectId)
+        .eq('version_id', versionId)
+      if (error) throw new Error('could not read the decision')
+      const rows = data ?? []
+      const superseded = new Set(rows.map((row) => row.supersedes_record_id).filter(Boolean))
+      const current = rows.filter((row) => !superseded.has(row.id))
+      if (current.length !== 1) return null
+      return {
+        outcome: current[0].outcome as string,
+        chosenVariantKey: (current[0].chosen_variant_key as string | null) ?? null,
+      }
+    },
+
+    /** The version number of this experiment that is RUNNING, if any (at most one — a DB index). */
+    async runningVersion(projectId: string, experimentId: string): Promise<number | null> {
+      const { data, error } = await client
+        .from('experiment_definition_versions')
+        .select('version')
+        .eq('project_id', projectId)
+        .eq('experiment_id', experimentId)
+        .eq('status', 'running')
+        .maybeSingle()
+      if (error) throw new Error('could not read the experiment')
+      return (data?.version as number | undefined) ?? null
+    },
+
     /** Is this flag version the one Production serves right now? */
     async servingInProduction(projectId: string, flagId: string, flagVersionId: string): Promise<boolean> {
       const { data } = await client
@@ -328,6 +417,78 @@ export function createBuilderIo(client: SupabaseClient) {
         .eq('environment', 'production')
         .maybeSingle()
       return data?.version_id === flagVersionId
+    },
+
+    /** What Production serves for one flag, by id — the version row and its definition. */
+    async productionVersion(
+      projectId: string,
+      flagId: string
+    ): Promise<{ versionId: string; definition: FlagDefinition; flagKey: string } | null> {
+      const [{ data: active }, { data: registry }] = await Promise.all([
+        client
+          .from('flag_environment_activations')
+          .select('version_id')
+          .eq('project_id', projectId)
+          .eq('flag_id', flagId)
+          .eq('environment', 'production')
+          .maybeSingle(),
+        client
+          .from('flag_registries')
+          .select('key')
+          .eq('project_id', projectId)
+          .eq('id', flagId)
+          .maybeSingle(),
+      ])
+      if (!active?.version_id || !registry) return null
+      const { data: version } = await client
+        .from('flag_definition_versions')
+        .select('id,definition')
+        .eq('project_id', projectId)
+        .eq('flag_id', flagId)
+        .eq('id', active.version_id)
+        .maybeSingle()
+      return version
+        ? {
+            versionId: version.id as string,
+            definition: version.definition as FlagDefinition,
+            flagKey: registry.key as string,
+          }
+        : null
+    },
+
+    /** A new, NOT activated flag version through the product's own RPC. */
+    async createFlagVersion(input: {
+      projectId: string
+      flagKey: string
+      definition: FlagDefinition
+      reason: string
+      actorUserId: string
+    }) {
+      const { data, error } = await client.rpc('create_flag_definition_version', {
+        p_project_id: input.projectId,
+        p_flag_key: input.flagKey,
+        p_definition: input.definition,
+        p_reason: input.reason,
+        p_actor_user_id: input.actorUserId,
+      })
+      const row = data?.[0]
+      if (error || !row) {
+        console.error('[experiment-builder] flag version failed:', error)
+        return null
+      }
+      return { flagId: row.flag_id as string, versionId: row.version_id as string }
+    },
+
+    /** Does this version belong to this flag, in this project? (The undo's only authority.) */
+    async flagVersionBelongs(projectId: string, flagId: string, versionId: string): Promise<boolean> {
+      const { data } = await client
+        .from('flag_definition_versions')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('flag_id', flagId)
+        .eq('id', versionId)
+        .maybeSingle()
+      return Boolean(data)
     },
 
     /**
@@ -394,13 +555,18 @@ export function createBuilderIo(client: SupabaseClient) {
       const notServing: string[] = []
       for (const experiment of experiments.data ?? []) {
         const draft = await this.loadDraft(projectId, experiment.key as string)
-        if (
-          draft &&
-          draft.status === 'running' &&
-          draft.answers &&
-          draft.flagId &&
-          activeByFlag.get(draft.flagId) !== draft.flagVersionId
-        ) {
+        // The RUNNING version decides the partial state, even with a newer draft beside it (round 3).
+        const runningNumber =
+          draft && draft.status !== 'running'
+            ? await this.runningVersion(projectId, draft.experimentId)
+            : null
+        const live =
+          draft?.status === 'running'
+            ? draft
+            : runningNumber === null
+              ? null
+              : await this.loadDraft(projectId, experiment.key as string, runningNumber)
+        if (live && live.answers && live.flagId && activeByFlag.get(live.flagId) !== live.flagVersionId) {
           notServing.push(experiment.key as string)
         }
         if (draft && draft.status === 'draft' && draft.answers) {

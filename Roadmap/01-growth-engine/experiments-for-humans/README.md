@@ -406,12 +406,16 @@ grooming routed it mid-tier; WAYS-OF-WORKING says a `lib/` seam several stories 
 and by the architect), and **Stories 3.2, 3.3 and 4.2** (a migration and writes into a customer's
 Production flags) — never delegated. **Mid tier** (Codex `gpt-5.6-terra`, `scripts/codex-task.mjs
 --tier build`, or a Sonnet subagent when Codex is unavailable) builds **2.1, 3.1, 4.1 and 4.3** against
-this lock, each in its own worktree, and the architect verifies each by re-deriving the tree. Review
+this lock (4.1/4.3: Codex capped mid-run; finished by the architect — sprint-4.md, as built), each in its own worktree, and the architect verifies each by re-deriving the tree. Review
 follows `scripts/review-route.mjs`: two external families that did not build the diff, plus the fresh
 `pr-reviewer` subagent on every HIGH-tier PR (all four sprint PRs are HIGH: S1 migration + SDK, S2 a
 shared seam, S3 a migration + Production writes, S4 Production writes).
 
 ## Found during the build, outside this epic's scope (follow-ups, not fixed here)
+
+- **`IntervalBar` labels collide on a narrow track** (`design-system/charts`, shared primitive). Each label
+  sits at the value it names, so when zero lies near a bound at 360 px, "no difference" overprints the
+  bound's label. Seen on the Sprint 4 results page at 360 px; not fixed in a shared primitive here.
 
 - **`lib/tars-query.ts` and `lib/ab-query.ts` read `events` with no paging.** PostgREST returns at most
   `max_rows` (1,000 on hosted Supabase) per request, so a tenant with more rows than that in a window
@@ -421,6 +425,13 @@ shared seam, S3 a migration + Production writes, S4 Production writes).
 - **`lib/flag-registry.ts` builds `.in('flag_id', ids)` over every flag in a project.** At ~200 flags the
   request URL overflows ("URI too long") and the flags page and CLI reads 500. Reproduced locally on an
   accumulated fixture project (210 flags); production's largest project has 43.
+- **Builder, in-tab stale binding (PR #170 round 5, fresh reviewer; not a regression).** A header Start
+  that *fails*, followed by starting the same draft from its row, leaves the header's in-memory plan
+  bound to a key that is no longer a draft until the page reloads (the restore effect only acts on a
+  non-null read). Save from it is refused server-side ("That experiment has already started."), so
+  nothing is written. Fix: when the restore read is null and `state.continuing` is not a draft, reset.
+- **Builder page reads drafts N+1** (`loadBuilderPage` → `loadDraft` per experiment). Fine at today's
+  counts (≤ 10 experiments per tenant); batch it before a tenant has hundreds.
 
 ## Deploy order (locked)
 

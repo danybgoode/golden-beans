@@ -38,6 +38,7 @@ import {
 } from '@/lib/experiment-builder-state'
 import {
   retryExperimentServingAction,
+  reviseExperimentPlanAction,
   saveExperimentDraftAction,
   startExperimentAction,
 } from './builder-actions'
@@ -113,11 +114,20 @@ export function ExperimentBuilder({
   projectId,
   data,
   continueDraft,
+  revise,
 }: {
   slug: string
   projectId: string
   data: BuilderPageData
   continueDraft?: string | null
+  /** "Change the plan" (Story 4.1): the NEXT version of a started experiment, saved as a draft. */
+  revise?: {
+    experimentKey: string
+    answers: BuilderState['answers']
+    flagKey: string | null
+    /** The latest version's number — the plan previews as the one after it. */
+    version: number
+  }
 }) {
   const router = useRouter()
   const titleId = useId()
@@ -126,10 +136,11 @@ export function ExperimentBuilder({
   const started = useRef(false)
   const initial = useMemo(() => {
     const draft = continueDraft ? data.drafts.find((item) => item.experimentKey === continueDraft) : undefined
+    if (revise) return { step: 6 as const, answers: revise.answers, continuing: revise.experimentKey }
     return draft
       ? { step: 6 as const, answers: draft.answers, continuing: draft.experimentKey }
       : initialBuilderState('copy', contextFor(data, defaultFeatureKey(data)))
-  }, [continueDraft, data])
+  }, [continueDraft, data, revise])
   const [state, setState] = useState<BuilderState | null>(initial)
   const [open, setOpen] = useState(false)
   const [stored, setStored] = useState(false)
@@ -140,18 +151,18 @@ export function ExperimentBuilder({
   const [retryKey, setRetryKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (continueDraft) return
+    if (continueDraft || revise) return
     const restored = readStored(projectId, data)
     if (restored) {
       setState(restored)
       setStored(true)
     }
-  }, [continueDraft, data, projectId])
+  }, [continueDraft, data, projectId, revise])
   useEffect(() => {
     // Only a builder somebody opened is "in progress"; the defaults a page load computes are not.
     // A draft being CONTINUED is already saved; storing it would overwrite a new plan in progress.
-    if (!continueDraft && open && state && writeStored(projectId, state)) setStored(true)
-  }, [continueDraft, open, projectId, state])
+    if (!continueDraft && !revise && open && state && writeStored(projectId, state)) setStored(true)
+  }, [continueDraft, open, projectId, revise, state])
   useEffect(() => {
     const element = dialog.current
     if (!element) return
@@ -173,9 +184,13 @@ export function ExperimentBuilder({
     )
   }
 
-  const draft = state.continuing
-    ? data.drafts.find((item) => item.experimentKey === state.continuing)
-    : undefined
+  // The plan previews exactly what the server will save: a continued draft's next version, or — for
+  // "Change the plan" — the version after the latest, under the same experiment and feature keys.
+  const draft = revise
+    ? { experimentKey: revise.experimentKey, flagKey: revise.flagKey, version: revise.version }
+    : state.continuing
+      ? data.drafts.find((item) => item.experimentKey === state.continuing)
+      : undefined
   const planning = buildExperimentPlan(state.answers, {
     catalog: data.catalog,
     served: contextFor(data, state.answers.flagKey).served,
@@ -228,7 +243,11 @@ export function ExperimentBuilder({
   async function save(closeAfterSave = true): Promise<string | null> {
     const current = state
     if (!current) return null
-    const response = await call(() => saveExperimentDraftAction(slug, current.answers, current.continuing))
+    const response = await call(() =>
+      revise
+        ? reviseExperimentPlanAction(slug, current.answers, revise.experimentKey)
+        : saveExperimentDraftAction(slug, current.answers, current.continuing)
+    )
     if (!response) return null
     if (!response.ok) {
       setError(response.error)
@@ -236,7 +255,7 @@ export function ExperimentBuilder({
       return null
     }
     setNotice(`${response.experimentKey} saved as a draft`)
-    if (closeAfterSave && !continueDraft) {
+    if (closeAfterSave && !continueDraft && !revise) {
       // Saved, it is a row with its own Continue now — the header door goes back to a NEW plan
       // instead of reopening this draft forever (fresh reviewer, #170).
       forgetStored(projectId)
@@ -273,7 +292,7 @@ export function ExperimentBuilder({
       setNotice("Running, but the split isn't serving yet.")
       return
     }
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}?version=${response.version}`)
   }
   async function retry() {
     const key = retryKey
@@ -288,7 +307,7 @@ export function ExperimentBuilder({
       setError('Still not serving. Try again in a moment.')
       return
     }
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}?version=${response.version}`)
   }
   const primary = state.step < 5 ? 'Continue' : state.step === 5 ? 'Review' : 'Start experiment'
   const footer =
@@ -303,7 +322,13 @@ export function ExperimentBuilder({
         className={continueDraft ? 'ds-btn--sm' : undefined}
         onClick={() => change(true)}
       >
-        {continueDraft ? 'Continue' : stored ? 'Continue new experiment' : '+ New experiment'}
+        {revise
+          ? 'Change the plan →'
+          : continueDraft
+            ? 'Continue'
+            : stored
+              ? 'Continue new experiment'
+              : '+ New experiment'}
       </Button>
       {notice ? (
         <p className="ds-visually-hidden" role="status">
@@ -327,10 +352,12 @@ export function ExperimentBuilder({
         <div className="ds-dialog-head">
           <div>
             <p className="ds-dialog-title" id={titleId}>
-              New experiment
+              {revise ? 'Change the plan' : 'New experiment'}
             </p>
             <p className="ds-dialog-sub">
-              Five questions, already answered from the template. Change whatever is different.
+              {revise
+                ? 'This saves a new draft version. The running plan remains immutable.'
+                : 'Five questions, already answered from the template. Change whatever is different.'}
             </p>
             <p className="ds-x-head-key">
               Named for you <span className="ds-mono">{plan?.experimentKey ?? '—'}</span>

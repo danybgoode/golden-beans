@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { listExperimentRegistries } from '@/lib/experiments'
-import { listExperimentFlagBindings } from '@/lib/experiment-flag-bindings'
-import { getFlagRegistryView } from '@/lib/flag-registry'
 import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
 import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-request'
 import { isExperimentBuilderEnabled, isExperimentGovernanceEnabled } from '@/lib/flags'
@@ -16,11 +14,9 @@ import {
   readinessCandidates,
   type ExperimentListInput,
 } from '@/lib/experiment-list-view'
-import { ExperimentManager } from './experiment-manager'
 import { ExperimentRows } from './experiment-rows'
 import { ProductShell } from '@/components/product/ProductShell'
-import { NewThingDialog } from '@/components/product/NewThingDialog'
-import { Answer, PageHead } from '@/design-system/primitives'
+import { Answer, Button, PageHead } from '@/design-system/primitives'
 import { ExperimentBuilder } from './experiment-builder'
 
 // design-system-rails · Sprint 5, Story 5.4 — reference state `ship-experiments`.
@@ -49,10 +45,8 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
   const membership = await requireProjectMembership(projectSlug)
   const canManage = canManageExperiments(membership)
   const builderEnabled = isExperimentBuilderEnabled() && canManage
-  const [experiments, flagRegistry, bindings, builderData] = await Promise.all([
+  const [experiments, builderData] = await Promise.all([
     listExperimentRegistries(membership.projectId),
-    getFlagRegistryView(membership.projectId),
-    listExperimentFlagBindings(membership.projectId),
     builderEnabled
       ? createBuilderIo(getSupabaseServiceClient()).loadBuilderPage(membership.projectId)
       : Promise.resolve(null),
@@ -89,26 +83,19 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
           title="Experiments"
           lede="A change shown to some people and not others, so the difference is the change and not the week."
           actions={
-            // The approved state draws `+ New experiment` here (prototype `:2953`), and its stub
-            // says "the same wizard shape as New feature" — which is the 33rd approved state (D8).
-            // `experiment-manager.tsx` is the only consumer of create/transition/bind, so this is
-            // where those live now.
             builderEnabled && builderData ? (
               <ExperimentBuilder slug={projectSlug} projectId={membership.projectId} data={builderData} />
             ) : (
-              <NewThingDialog
-                label="+ New experiment"
-                title="New experiment"
-                lede="An experiment is a lever with consequences — same shape as a new feature."
-              >
-                <ExperimentManager
-                  slug={projectSlug}
-                  experiments={experiments}
-                  flags={flagRegistry.flags}
-                  bindings={bindings}
-                  canManage={canManageExperiments(membership)}
-                />
-              </NewThingDialog>
+              <span className="ds-x-door-blocked">
+                <Button variant="primary" state="disabled">
+                  + New experiment
+                </Button>
+                <span className="ds-x-hint">
+                  {isExperimentBuilderEnabled()
+                    ? 'A project owner creates experiments.'
+                    : 'Creating experiments is paused'}
+                </span>
+              </span>
             )
           }
         />
