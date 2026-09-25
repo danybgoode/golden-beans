@@ -123,6 +123,7 @@ export function ExperimentBuilder({
   const titleId = useId()
   const dialog = useRef<HTMLDialogElement>(null)
   const reported = useRef(false)
+  const started = useRef(false)
   const initial = useMemo(() => {
     const draft = continueDraft ? data.drafts.find((item) => item.experimentKey === continueDraft) : undefined
     return draft
@@ -194,6 +195,15 @@ export function ExperimentBuilder({
     if (reported.current === next) return
     reported.current = next
     setOpen(next)
+    // A plan that STARTED (even partially) is not a plan in progress: once its dialog closes, the
+    // header door is a new experiment again (fresh reviewer, #170 round 3). Reset on close, so the
+    // notice and Retry stay readable while it is open.
+    if (!next && started.current && !continueDraft) {
+      started.current = false
+      setStored(false)
+      setState(initial)
+      setRetryKey(null)
+    }
   }
   /**
    * Every server action through one door: a rejected request (network, deploy) must not leave the
@@ -246,7 +256,9 @@ export function ExperimentBuilder({
       return
     }
     // It started — even partially, it is no longer a draft to come back to.
+    started.current = true
     forgetStored(projectId)
+    router.refresh()
     if (!response.serving) {
       if (response.notice) {
         setError(response.notice)
