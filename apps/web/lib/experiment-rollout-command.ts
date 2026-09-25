@@ -4,10 +4,11 @@ import { BUILDER_PAUSED, type BuilderDependencies } from './experiment-builder-c
 // experiments-for-humans · Story 4.2 (epic README D8) — "Set ‹version› for everyone in Production".
 //
 // A SEPARATE write from the decision, on purpose: the decision recorder stays structurally unable to
-// touch a flag (it is unchanged by this epic), and this cannot touch the decision record — it never
-// reads or writes `experiment_decision_records`. It runs only after a decision exists, only through
-// `planExperimentRollout` (which refuses to strip any experiment but the one named), and it returns
-// the version it replaced so the page can offer a 10-second undo.
+// touch a flag (it is unchanged by this epic), and this never WRITES the decision record. It READS
+// the current one, and sets exactly the version that record names (ship → its treatment, keep → the
+// control) — enforced here, not trusted from the page. It runs only after a decision exists, only
+// through `planExperimentRollout` (which refuses to strip any experiment but the one named), and it
+// returns the version it replaced so the page can offer a 10-second undo.
 
 export type RolloutResult =
   | {
@@ -35,9 +36,15 @@ export async function rolloutExperimentCommand(
   if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
   const { projectId, userId } = await deps.requireOwnership(slug)
 
-  const stored = await deps.io.loadDraft(projectId, experimentKey)
-  if (!stored || stored.version !== version || !stored.flagId)
-    return { ok: false, error: 'That experiment version is not the latest one.' }
+  // The version that was DECIDED — not necessarily the latest ("Change the plan" may have added a draft).
+  const stored = await deps.io.loadDraft(projectId, experimentKey, version)
+  if (!stored) return { ok: false, error: 'That experiment version doesn’t exist.' }
+  if (!stored.flagId)
+    return {
+      ok: false,
+      error:
+        'This version isn’t bound to a feature, so there is nothing to roll out. Change the feature on its own page.',
+    }
   if (stored.status !== 'decided')
     return { ok: false, error: 'Record the decision first; the rollout follows it.' }
   if (!stored.definition.variants.some((variant) => variant.key === variantKey))

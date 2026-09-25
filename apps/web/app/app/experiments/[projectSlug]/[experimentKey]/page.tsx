@@ -232,7 +232,8 @@ export default async function ExperimentPage({
   }
 
   // A version made outside the builder has no binding, so nothing may claim it is "not serving".
-  const serving = (await io.versionServing(membership.projectId, version.id)) ?? true
+  const binding = await io.versionServing(membership.projectId, version.id)
+  const serving = binding ?? true
   const current = result.decisions.current
   const readout = buildReadout({
     definition: result.experiment.definition,
@@ -247,8 +248,16 @@ export default async function ExperimentPage({
   const tab = scalar(raw.tab) === 'plan' ? 'plan' : 'results'
   // Only an owner may act; a member reads the same page without the controls (the actions would
   // refuse them server-side anyway — a button that can only fail is not drawn).
+  const writable = isExperimentBuilderWritable()
+  // A roll-out is drawn only where the server can do it (general pass, PR #172): the builder can write,
+  // the version is bound to a feature (a JSON-made one is not), and — once decided — its split is still
+  // what Production serves (after a roll-out it is not; the undo is the toast's, not a second button).
+  const canRollOut =
+    writable && binding !== null && (result.experiment.lifecycle !== 'decided' || binding === true)
   const actions = !canManage ? null : readout.verdict.actions.includes('retry-serving') ? (
-    <RetryServing slug={projectSlug} experimentKey={experimentKey} />
+    writable ? (
+      <RetryServing slug={projectSlug} experimentKey={experimentKey} />
+    ) : null
   ) : (
     <DecideFlow
       slug={projectSlug}
@@ -265,7 +274,8 @@ export default async function ExperimentPage({
       currentDecisionId={current?.id ?? null}
       decision={current ? { outcome: current.outcome, chosenVariantKey: current.chosenVariantKey } : null}
       actions={readout.verdict.actions}
-      canRollOut={isExperimentBuilderWritable()}
+      canRollOut={canRollOut}
+      leadTreatmentKey={readout.treatment.key}
     />
   )
 
@@ -605,7 +615,9 @@ function Plan({
                 <li key={record.id}>
                   <b>
                     {record.recordKind === 'correction' ? 'Correction' : 'Decision'}:{' '}
-                    {OUTCOME_WORDS[record.outcome] ?? record.outcome}
+                    {record.outcome === 'ship_treatment' && record.chosenVariantKey
+                      ? `Ship ${names[definition.variants.findIndex((variant) => variant.key === record.chosenVariantKey)] ?? record.chosenVariantKey}`
+                      : (OUTCOME_WORDS[record.outcome] ?? record.outcome)}
                   </b>{' '}
                   — {record.rationale}. <small>{day(record.createdAt)}</small>
                 </li>

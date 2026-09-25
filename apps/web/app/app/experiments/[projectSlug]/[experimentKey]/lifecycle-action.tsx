@@ -17,7 +17,7 @@ const COPY = {
     label: 'Mark invalid',
     verb: 'Mark invalid',
     consequence:
-      "Its evidence is marked untrustworthy for good: it can't be started, stopped or decided again.",
+      "Its evidence is marked untrustworthy for good: it can't be started, stopped or decided again. The feature keeps serving what it serves now.",
   },
   running: {
     label: 'Start this version',
@@ -65,17 +65,20 @@ export function LifecycleAction({
       <Button variant="secondary" className="ds-btn--sm" onClick={() => setOpen(true)}>
         {copy.label}
       </Button>
-      {error ? (
-        <p className="ds-chart-note" role="alert">
-          {error}
-        </p>
-      ) : null}
       <ConfirmDialog
         open={open}
         verb={copy.verb}
         noun="experiment version"
         subject={`v${version}`}
         consequence={copy.consequence}
+        // Inside the dialog that is still open, not behind it (fresh reviewer, #172).
+        details={
+          error ? (
+            <p className="ds-chart-note" role="alert">
+              {error}
+            </p>
+          ) : undefined
+        }
         pending={pending}
         onCancel={() => setOpen(false)}
         onConfirm={() => void run()}

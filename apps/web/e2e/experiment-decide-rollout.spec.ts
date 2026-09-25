@@ -163,10 +163,11 @@ async function decide(
   client: SupabaseClient,
   fx: Fixture,
   experimentKey: string,
-  outcome: 'ship_treatment' | 'keep_control'
+  outcome: 'ship_treatment' | 'keep_control',
+  version?: number
 ) {
   const io = createBuilderIo(client)
-  const draft = await io.loadDraft(fx.projectId, experimentKey)
+  const draft = await io.loadDraft(fx.projectId, experimentKey, version)
   if (!draft) throw new Error('no experiment')
   const stop = await client.rpc('transition_experiment_version', {
     p_project_id: fx.projectId,
@@ -176,7 +177,7 @@ async function decide(
     p_actor_user_id: fx.owner,
   })
   if (stop.error) throw new Error(`stop: ${stop.error.message}`)
-  const stopped = await io.loadDraft(fx.projectId, experimentKey)
+  const stopped = await io.loadDraft(fx.projectId, experimentKey, version)
   const now = new Date().toISOString()
   const analysis = computeExperimentAnalysis({
     experimentKey,
@@ -201,6 +202,44 @@ async function decide(
   })
   if (error) throw new Error(`decide: ${error.message}`)
   return stopped!
+}
+
+/** A correction superseding the current record (the chain the server's decision check must follow). */
+async function correct(client: SupabaseClient, fx: Fixture, experimentKey: string, outcome: 'keep_control') {
+  const io = createBuilderIo(client)
+  const stored = await io.loadDraft(fx.projectId, experimentKey, 1)
+  if (!stored) throw new Error('no experiment')
+  const { data: current } = await client
+    .from('experiment_decision_records')
+    .select('id')
+    .eq('project_id', fx.projectId)
+    .eq('version_id', stored.versionId)
+    .order('ordinal', { ascending: false })
+    .limit(1)
+    .single()
+  const now = new Date().toISOString()
+  const analysis = computeExperimentAnalysis({
+    experimentKey,
+    definitionVersion: 1,
+    definition: stored.definition,
+    lifecycle: { status: 'decided', startedAt: stored.definition.plannedWindow.startAt, endedAt: now },
+    asOf: now,
+    facts: [],
+  })
+  const { error } = await client.rpc('record_experiment_decision', {
+    p_project_id: fx.projectId,
+    p_experiment_id: stored.experimentId,
+    p_version_id: stored.versionId,
+    p_record_kind: 'correction',
+    p_outcome: outcome,
+    p_chosen_variant_key: 'off',
+    p_rationale: 'It’s no worse and simpler to keep',
+    p_analysis_snapshot: prepareExperimentDecisionSnapshot(analysis, now),
+    p_actor_user_id: fx.owner,
+    p_idempotency_key: crypto.randomUUID(),
+    p_supersedes_record_id: current!.id,
+  })
+  if (error) throw new Error(`correct: ${error.message}`)
 }
 
 async function decisionBytes(projectId: string) {
@@ -235,9 +274,11 @@ test.describe('Decide, then roll out (D8)', () => {
     expect(started).toMatchObject({ ok: true, serving: true })
 
     // Before the decision, a rollout is refused and nothing is written.
+    const undecided = await productionVersionOf(client, fx.projectId)
     expect(await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))).toMatchObject({
       ok: false,
     })
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(undecided.version_id)
 
     await decide(client, fx, key, 'ship_treatment')
     const before = await decisionBytes(fx.projectId)
@@ -351,5 +392,43 @@ test.describe('Decide, then roll out (D8)', () => {
     expect(calls).toBe(1)
     expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(theirs!.version_id)
     expect(await decisionBytes(fx.projectId)).toHaveLength(1)
+  })
+
+  test('the server follows the correction chain: ship, corrected to keep, refuses the treatment', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    await decide(client, fx, key, 'ship_treatment')
+    await correct(client, fx, key, 'keep_control')
+    const before = await productionVersionOf(client, fx.projectId)
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))).toEqual({
+      ok: false,
+      error: 'The roll-out must match the recorded decision.',
+    })
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(before.version_id)
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'off', deps(client, fx))).toMatchObject({
+      ok: true,
+    })
+  })
+
+  test('a decided version still rolls out after "Change the plan" saved a newer draft', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    const revised = await saveExperimentDraftCommand(
+      fx.slug,
+      answers({ versions: ['Current', 'Other copy'] }),
+      key,
+      deps(client, fx),
+      { revise: true }
+    )
+    expect(revised).toMatchObject({ ok: true, version: 2 })
+    await decide(client, fx, key, 'ship_treatment', 1)
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))).toMatchObject({
+      ok: true,
+      serving: true,
+    })
   })
 })

@@ -42,6 +42,8 @@ export type DecideFlowProps = {
    * roll-out is drawn or ticked: a button that can only fail is not a button (fresh reviewer, #172).
    */
   canRollOut: boolean
+  /** The treatment the readout leads with — what "Roll out ‹it›" and a fresh "Ship" pre-select. */
+  leadTreatmentKey: string
 }
 
 const UNDO_MS = 10_000
@@ -89,8 +91,17 @@ export function DecideFlow(props: DecideFlowProps) {
 
   function open(outcome: ExperimentDecisionOutcome) {
     setError(null)
+    // A correction starts from what the record SAYS (general pass, #172): re-recording only the reason
+    // must never silently move "ship C" to "ship B".
+    const recorded =
+      props.lifecycle === 'decided' && props.decision?.outcome === outcome
+        ? props.decision.chosenVariantKey
+        : null
     setModal({
-      choice: { outcome, treatmentKey: outcome === 'ship_treatment' ? (treatments[0]?.key ?? null) : null },
+      choice: {
+        outcome,
+        treatmentKey: outcome === 'ship_treatment' ? (recorded ?? props.leadTreatmentKey) : null,
+      },
       reason: defaultReason(outcome),
       // A correction re-records the reason; it never pre-ticks a Production write.
       rollOut: props.canRollOut && props.lifecycle !== 'decided',
@@ -276,8 +287,8 @@ export function DecideFlow(props: DecideFlowProps) {
             {props.actions.includes('rollout') ? (
               <Button variant="primary" onClick={() => open('ship_treatment')}>
                 {props.canRollOut
-                  ? `Roll out ${treatments[0]?.label ?? ''} to everyone`
-                  : `Ship ${treatments[0]?.label ?? ''}`}
+                  ? `Roll out ${label(props.leadTreatmentKey)} to everyone`
+                  : `Ship ${label(props.leadTreatmentKey)}`}
               </Button>
             ) : null}
             {props.actions.includes('keep') ? (

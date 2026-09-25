@@ -11,6 +11,7 @@ import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-quer
 import { transitionExperimentVersion, type ExperimentTransitionTarget } from '@/lib/experiments'
 import { validateExperimentKey } from '@/lib/experiment-definition'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
+import { getSupabaseServiceClient } from '@/lib/supabase'
 
 function requireGate() {
   if (!isExperimentGovernanceEnabled()) notFound()
@@ -35,6 +36,18 @@ export async function transitionExperimentVersionAction(
   const safeVersionId = requireString(versionId, 'version id')
   if (targetStatus !== 'running' && targetStatus !== 'stopped' && targetStatus !== 'invalid') {
     return { ok: false as const, error: 'Invalid lifecycle target.' }
+  }
+  // A builder-made version starts ONLY through the builder's Start, which also serves its split (D7).
+  // A bare lifecycle flip would leave it running and not serving (security lens, PR #172).
+  if (targetStatus === 'running') {
+    const { data: answers, error } = await getSupabaseServiceClient()
+      .from('experiment_builder_answers')
+      .select('version_id')
+      .eq('project_id', projectId)
+      .eq('version_id', safeVersionId)
+      .maybeSingle()
+    if (error) return { ok: false as const, error: 'The experiment could not be started.' }
+    if (answers) return { ok: false as const, error: 'Start this experiment from its builder.' }
   }
   const result = await transitionExperimentVersion(
     projectId,

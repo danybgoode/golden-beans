@@ -295,7 +295,8 @@ test.describe('the decision-first results page (Story 4.1)', () => {
         await expect(answer).toContainText('Decided: ship New copy.')
       }
       if (point !== 'ready') {
-        await expect(verdict.getByRole('button', { name: /Roll out/ })).toHaveCount(0)
+        // Either label — CI runs with the builder gate off, where the ready button says "Ship".
+        await expect(verdict.getByRole('button', { name: /Roll out|Ship / })).toHaveCount(0)
       }
 
       // The Plan tab: the sentence and the read-only plan; "Change the plan" is the builder's, which
@@ -308,7 +309,7 @@ test.describe('the decision-first results page (Story 4.1)', () => {
         process.env.EXPERIMENT_BUILDER_ENABLED === 'true' ? 1 : 0
       )
       await expect(page.locator('main .ds-x-ledger')).toContainText(
-        point === 'ready' ? 'Decision: Ship the new version' : 'No decision has been recorded'
+        point === 'ready' ? 'Decision: Ship New copy' : 'No decision has been recorded'
       )
     }
   })

@@ -193,3 +193,90 @@ test('a decided iterate / inconclusive does not claim the control "stays"', () =
   assert.equal(result.verdict.title, 'No clear answer.')
   assert.deepEqual(result.verdict.actions, [])
 })
+
+test('stopped with a blocker says the numbers can’t be trusted — never "not enough people"', () => {
+  // SRM detected: 200 vs 110 on a 50/50 plan, each above the 100 minimum.
+  const facts = [...exposures(200, 40, 30)].filter(
+    (fact) => !(fact.id.startsWith('x-on-') && Number(fact.id.split('-')[2]) >= 110)
+  )
+  const result = readout(facts, { lifecycle: 'stopped' })
+  assert.equal(result.state, 'stopped')
+  assert.match(sentenceText(result.answer), /The numbers can’t be trusted: srm detected\./)
+  assert.doesNotMatch(sentenceText(result.answer) + result.verdict.body, /enough people|planned sample/)
+  assert.deepEqual(result.verdict.actions, ['invalid', 'iterate'])
+})
+
+test('three versions: the page leads with the treatment the RECORD names, and before that the one ahead', () => {
+  const three: Definition = {
+    ...definition,
+    variants: [
+      { key: 'off', weight: 34, label: 'Current' },
+      { key: 'b', weight: 33, label: 'Version B' },
+      { key: 'c', weight: 33, label: 'Version C' },
+    ],
+  }
+  const facts: Fact[] = []
+  for (const [arm, converted] of [
+    ['off', 30],
+    ['b', 31],
+    ['c', 80],
+  ] as const) {
+    for (let i = 0; i < 150; i += 1) {
+      const id = `${arm}-${i}`
+      facts.push({
+        id: `x-${id}`,
+        event: 'experiment_exposed',
+        featureId: 'copy_test',
+        tags: { variant: arm, experiment_definition_version: 1 },
+        subjectType: 'merchant',
+        subjectId: id,
+        occurredAt: at(i + 1),
+        createdAt: at(i + 1),
+      })
+      if (i < converted)
+        facts.push({
+          id: `c-${id}`,
+          event: 'signup_completed',
+          featureId: null,
+          tags: null,
+          subjectType: 'merchant',
+          subjectId: id,
+          occurredAt: at(i + 2),
+          createdAt: at(i + 2),
+        })
+    }
+  }
+  const build = (
+    lifecycle: 'running' | 'decided',
+    decision: { outcome: string; chosenVariantKey: string | null; rationale: string } | null
+  ) => {
+    const now = '2026-09-10T00:00:00.000Z'
+    const analysis = computeExperimentAnalysis({
+      experimentKey: 'copy_test',
+      definitionVersion: 1,
+      definition: three,
+      lifecycle: { status: lifecycle, startedAt: START, endedAt: null },
+      asOf: now,
+      facts,
+    })
+    return buildReadout({
+      definition: three,
+      analysis,
+      lifecycle,
+      decision,
+      serving: true,
+      now: new Date(now),
+    })
+  }
+  assert.equal(build('running', null).treatment.key, 'c')
+  const decided = build('decided', {
+    outcome: 'ship_treatment',
+    chosenVariantKey: 'c',
+    rationale: 'The main number improved and guardrails held',
+  })
+  assert.equal(
+    sentenceText(decided.answer),
+    'Decided: ship Version C. The decision and its reason are recorded.'
+  )
+  assert.equal(decided.verdict.title, 'Version C won.')
+})

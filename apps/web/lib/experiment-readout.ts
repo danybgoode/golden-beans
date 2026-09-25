@@ -16,7 +16,7 @@ import { eventWords, entityPlural, type SentencePart } from './experiment-builde
 export type ReadoutState =
   'not_serving' | 'waiting' | 'gathering' | 'blocked' | 'ready' | 'stopped' | 'decided'
 
-export type ReadoutAction = 'rollout' | 'keep' | 'iterate' | 'stop' | 'retry-serving'
+export type ReadoutAction = 'rollout' | 'keep' | 'iterate' | 'invalid' | 'stop' | 'retry-serving'
 
 export type Readout = {
   state: ReadoutState
@@ -61,10 +61,21 @@ function signed(percent: number): string {
 export function buildReadout(input: ReadoutInput): Readout {
   const { definition, analysis } = input
   const controlKey = definition.controlVariantKey
-  // Two-version tests are the product's shape; with more, the readout leads with the FIRST treatment
-  // and the Plan tab lists every version.
-  const treatmentKey = definition.variants.find((variant) => variant.key !== controlKey)!.key
   const metricRow = (key: string) => analysis.primaryMetric.variants.find((row) => row.key === key)
+  // Which treatment the page leads with (general pass, PR #172): once decided, the one the RECORD
+  // names; before that, the one furthest ahead in the wanted direction; the first only when no
+  // treatment has a measurable lift yet. A three-version test must never read "B won" over "ship C".
+  const treatments = definition.variants.filter((variant) => variant.key !== controlKey)
+  const wanted = definition.primaryMetric.direction === 'increase' ? 1 : -1
+  const recorded =
+    input.lifecycle === 'decided' && input.decision?.outcome === 'ship_treatment'
+      ? treatments.find((variant) => variant.key === input.decision?.chosenVariantKey)
+      : undefined
+  const measured = treatments
+    .map((variant) => ({ key: variant.key, interval: metricRow(variant.key)?.liftInterval }))
+    .filter((row) => row.interval?.ok)
+    .sort((a, b) => wanted * ((b.interval as { lift: number }).lift - (a.interval as { lift: number }).lift))
+  const treatmentKey = recorded?.key ?? measured[0]?.key ?? treatments[0]!.key
   const controlRow = metricRow(controlKey)
   const treatmentRow = metricRow(treatmentKey)
   const interval = treatmentRow?.liftInterval
@@ -187,18 +198,42 @@ export function buildReadout(input: ReadoutInput): Readout {
   // "live" or "keep it running" — the one thing left to do is record the decision.
   if (input.lifecycle === 'stopped') {
     const ready = analysis.decisionReady
+    // A blocker is not a short sample (fresh reviewer, #172 round 2): say the numbers can't be
+    // trusted, and let "invalid" be the honest call — before any sentence about the sample.
+    if (exposed > 0 && analysis.blockers.length > 0) {
+      return {
+        ...common,
+        state: 'stopped',
+        answer: [
+          bold('Stopped — nobody new is counted.'),
+          plain(' '),
+          ...lead,
+          plain(' The numbers can’t be trusted: ' + analysis.blockers.join(', ').replace(/_/g, ' ') + '.'),
+        ],
+        verdict: {
+          label: 'What happens next',
+          title: 'Record the decision.',
+          body: 'The checks found a problem, so no winner can be called from these numbers.',
+          actions: ['invalid', 'iterate'],
+        },
+      }
+    }
     return {
       ...common,
       state: 'stopped',
       answer: [
         bold('Stopped — nobody new is counted.'),
         plain(' '),
-        ...(exposed === 0 ? [plain('It stopped before anyone was counted.')] : lead),
-        plain(
-          ready
-            ? ' Record the decision.'
-            : ` It stopped at ${Math.round(fraction * 100)}% of the planned sample, so the honest call may be inconclusive.`
-        ),
+        ...(exposed === 0
+          ? [plain('It stopped before anyone was counted.')]
+          : [
+              ...lead,
+              plain(
+                ready
+                  ? ' Record the decision.'
+                  : ` It stopped at ${Math.round(fraction * 100)}% of the planned sample, so the honest call may be inconclusive.`
+              ),
+            ]),
       ],
       verdict: {
         label: 'What happens next',

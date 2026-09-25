@@ -175,7 +175,7 @@ export function createBuilderIo(client: SupabaseClient) {
     },
 
     /** The LATEST version of an experiment, with its binding and the answers that made it (if any). */
-    async loadDraft(projectId: string, experimentKey: string): Promise<StoredDraft | null> {
+    async loadDraft(projectId: string, experimentKey: string, version?: number): Promise<StoredDraft | null> {
       const { data: registry, error } = await client
         .from('experiment_registries')
         .select('id')
@@ -184,28 +184,31 @@ export function createBuilderIo(client: SupabaseClient) {
         .maybeSingle()
       if (error) throw new Error('could not read the experiment')
       if (!registry) return null
-      const { data: version, error: versionError } = await client
+      // The LATEST version, unless one is named (a roll-out acts on the version it decided, even after
+      // "Change the plan" added a newer draft — general pass, PR #172).
+      const versions = client
         .from('experiment_definition_versions')
         .select('id,version,status,definition')
         .eq('project_id', projectId)
         .eq('experiment_id', registry.id)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const { data: row, error: versionError } =
+        version === undefined
+          ? await versions.order('version', { ascending: false }).limit(1).maybeSingle()
+          : await versions.eq('version', version).maybeSingle()
       if (versionError) throw new Error('could not read the experiment')
-      if (!version) return null
+      if (!row) return null
       const [binding, answers] = await Promise.all([
         client
           .from('experiment_flag_version_bindings')
           .select('flag_id,flag_version_id')
           .eq('project_id', projectId)
-          .eq('experiment_version_id', version.id)
+          .eq('experiment_version_id', row.id)
           .maybeSingle(),
         client
           .from('experiment_builder_answers')
           .select('answers')
           .eq('project_id', projectId)
-          .eq('version_id', version.id)
+          .eq('version_id', row.id)
           .maybeSingle(),
       ])
       if (binding.error || answers.error) throw new Error('could not read the experiment')
@@ -221,10 +224,10 @@ export function createBuilderIo(client: SupabaseClient) {
       }
       return {
         experimentId: registry.id as string,
-        versionId: version.id as string,
-        version: version.version as number,
-        status: version.status as StoredDraft['status'],
-        definition: version.definition as ExperimentDefinition,
+        versionId: row.id as string,
+        version: row.version as number,
+        status: row.status as StoredDraft['status'],
+        definition: row.definition as ExperimentDefinition,
         answers: (answers.data?.answers as ExperimentBuilderAnswers | undefined) ?? null,
         flagKey,
         flagId: (binding.data?.flag_id as string | undefined) ?? null,

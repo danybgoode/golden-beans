@@ -92,7 +92,7 @@ way in and it's the human one.
 3. **Cumulative chart: CUT** (the story's named first cut). The lift card says the day-by-day line isn't
    drawn; the number, legend, range and bars stay.
 4. **4.3 capability handoff:** create → builder; bind → Save draft; start → Start (3.3); stop → the
-   verdict card (`DecideFlow`); invalidate → the Plan tab (`invalidate-version.tsx`); decision and
+   verdict card (`DecideFlow`); invalidate → the Plan tab (`lifecycle-action.tsx`); decision and
    corrections → `DecideFlow` (chips; the recorder's `<textarea>` is gone); the ledger → the Plan tab.
    `GovernanceDetail`'s allocation table / freshness read retire with the disclosure (the answer line,
    KPIs and split check carry what a decider needs; the API/MCP still serve the full analysis).
