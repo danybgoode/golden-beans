@@ -400,7 +400,11 @@ export function experimentKeyFor(
   taken: readonly string[]
 ): string | null {
   const short = slug((flagKey.split('.').pop() ?? flagKey).replace(/_enabled$/, '')) || 'feature'
-  const base = `${/^[a-z]/.test(short) ? short : `f_${short}`}_${EXPERIMENT_TEMPLATES[template].suffix}`
+  const suffix = EXPERIMENT_TEMPLATES[template].suffix
+  const named = /^[a-z]/.test(short) ? short : `f_${short}`
+  // A feature created FOR the test is already named after it (`experiments.copy_test_enabled`); do not
+  // say it twice (`copy_test_copy_test`, seen in the rendered look).
+  const base = named === suffix || named.endsWith(`_${suffix}`) ? named : `${named}_${suffix}`
   return unique(base, taken, 64)
 }
 

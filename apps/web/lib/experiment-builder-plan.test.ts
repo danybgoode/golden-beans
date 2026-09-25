@@ -945,3 +945,11 @@ test('a saved window with less than a day left counts as over (fresh reviewer, r
   assert.equal(window.status, 'fail')
   assert.equal(window.fix?.kind, 'replan-from-today')
 })
+
+test("a new feature's experiment is not named after its template twice", () => {
+  const result = buildExperimentPlan({ ...copyAnswers(), flagKey: null }, context({ served: null }))
+  assert.ok(result.ok)
+  assert.equal(result.plan.flagKey, 'experiments.copy_test_enabled')
+  assert.equal(result.plan.experimentKey, 'copy_test')
+})
+
