@@ -159,14 +159,6 @@ async function productionVersionOf(client: SupabaseClient, projectId: string) {
   return data as unknown as { version_id: string; flag_definition_versions: { definition: FlagDefinition } }
 }
 
-async function statusOf(client: SupabaseClient, projectId: string) {
-  const { data } = await client
-    .from('experiment_definition_versions')
-    .select('version,status')
-    .eq('project_id', projectId)
-    .order('version')
-  return data ?? []
-}
 
 async function decide(
   client: SupabaseClient,
