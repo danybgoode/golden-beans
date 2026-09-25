@@ -72,6 +72,17 @@ builder. Those are why the appetite moved.
   changes already says so). Dropped for now; scheduled start is a follow-up seed that rides with the
   scheduler. D7 says what Start does when a saved draft's dates no longer fit.
 
+- **A7 (2026-09-24, the architect — for Daniel to confirm; reversible in one line): check 5 blocks
+  Start only on a COUNT, never on a share.** D6 said every check 5 failure blocks Start. Five review
+  rounds on PR #169 found the same class five ways — an imprecise estimate blocking a valid test (a
+  value cut from the top 20, correlated tags treated as independent, an incomplete combination table,
+  a catalog cut at the row cap, and above all: a condition's share is a share of EVENTS applied to
+  PEOPLE). So check 5's estimate-driven outcomes **fail only when the audience is everyone and the
+  catalog is complete** (the estimate is then a count of subjects); with any condition they **warn**
+  and keep their one-click fix. A saved window whose dates have passed still fails (a fact, not an
+  estimate), and check 3 (tags on recent events) still fails below 10 % coverage as D6 says. The
+  governed analysis is unchanged: an under-powered test still reads "not ready" until it has its sample.
+
 ## Platform-first note
 
 The platform already models all of it: `ExperimentDefinition` (hypothesis, assignment entity,

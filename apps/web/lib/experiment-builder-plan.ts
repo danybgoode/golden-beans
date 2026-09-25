@@ -652,7 +652,13 @@ export function buildExperimentPlan(
   // The JOINT share of recent events meeting every condition, read from the catalog's segment
   // combinations — never a product of marginals, which invents traffic for tags that never co-occur
   // (Codex, PR #169). With an incomplete combination table it is a lower bound.
-  const { fraction: conditionFraction, exact: estimateExact } = audienceShare(answers, context.catalog)
+  const { fraction: conditionFraction, exact: shareExact } = audienceShare(answers, context.catalog)
+  // ⚠️ THE RULE, final form (Codex + fresh reviewer, PR #169 rounds 3–5): an estimate can BLOCK Start
+  // only when it is a count, not a share — everyone who reaches it, on a catalog that was not cut at
+  // the row cap. Any condition makes it a share of events applied to people, and a capped catalog
+  // sees only its newest rows; both can be far off, so every estimate-driven check then only warns.
+  const estimateExact =
+    (answers.who.mode === 'everyone' || activeConditions(answers).length === 0) && !context.catalog.truncated
   // ⚠️ An APPROXIMATION, named (fresh reviewer, round 4): `conditionFraction` is a share of EVENTS,
   // used here as a share of PEOPLE. It is biased when tagged events concentrate among heavy users.
   // The screen says "about"; check 3 (D6) is defined on events, so that check is exact about its own
@@ -728,7 +734,7 @@ export function buildExperimentPlan(
     notes.push(
       `${flagKey} has ${flagBase.rules.length} rule${flagBase.rules.length === 1 ? '' : 's'} of its own. People left out of the test fall through to them, so some may not see ${names[0]}.`
     )
-  if (!estimateExact)
+  if (!shareExact)
     notes.push(
       'The number of people a day is approximate: your events carry more tag combinations than the estimate can hold, so the conditions are treated as independent.'
     )
