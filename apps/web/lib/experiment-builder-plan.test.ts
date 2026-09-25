@@ -740,3 +740,64 @@ test('an exhausted name is refused, never re-used', () => {
   const result = buildExperimentPlan(copyAnswers(), context({ takenExperimentKeys: taken }))
   assert.equal(result.ok, false)
 })
+
+test('an INCOMPLETE combination table never reads a real audience as zero (round 3, PR #169)', async () => {
+  const { buildEventCatalog } = await import('./event-catalog.ts')
+  const asOf = new Date('2026-09-24T15:00:00.000Z')
+  const rows = [
+    ...Array.from({ length: 1000 }, (_, i) => ({
+      event: 'page_viewed',
+      tags: { region: 'US', campaign: `u${i % 500}` },
+      subject_type: 'merchant',
+      subject_id: `us-${i}`,
+      created_at: '2026-09-24T10:00:00.000Z',
+    })),
+    ...Array.from({ length: 600 }, (_, i) => ({
+      event: 'page_viewed',
+      tags: { region: 'MX', campaign: `m${i}` },
+      subject_type: 'merchant',
+      subject_id: `mx-${i}`,
+      created_at: '2026-09-24T10:00:00.000Z',
+    })),
+  ]
+  const real = buildEventCatalog(rows, { asOf, rowCap: 50_000, windowDays: 14 })
+  assert.equal(real.segmentCombos.complete, false)
+  const catalog = { ...prototypeCatalog(), segments: real.segments, segmentCombos: real.segmentCombos }
+
+  // One condition: the exact marginal, 37.5 % of events.
+  const one = buildExperimentPlan(
+    {
+      ...copyAnswers(),
+      weeks: 8,
+      who: { mode: 'some', conditions: [{ field: 'region', values: ['MX'] }], allocation: 100 },
+    },
+    context({ catalog })
+  )
+  assert.ok(one.ok)
+  assert.ok(Math.abs(one.plan.estimate.inTestPerDay / (3912 / 14) - 0.375) < 1e-9)
+  assert.notEqual(one.plan.checks.find((check) => check.id === 'window')?.title, 'Nobody matches who’s in it')
+  assert.equal(
+    one.plan.notes.some((note) => /approximate/.test(note)),
+    false
+  ) // one condition is EXACT
+
+  // Two conditions on an incomplete table: approximate, and at most a WARNING.
+  const two = buildExperimentPlan(
+    {
+      ...copyAnswers(),
+      weeks: 8,
+      who: {
+        mode: 'some',
+        conditions: [
+          { field: 'region', values: ['MX'] },
+          { field: 'campaign', values: ['m1'] },
+        ],
+        allocation: 100,
+      },
+    },
+    context({ catalog })
+  )
+  assert.ok(two.ok)
+  assert.notEqual(two.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+  assert.ok(two.plan.notes.some((note) => /approximate/.test(note)))
+})

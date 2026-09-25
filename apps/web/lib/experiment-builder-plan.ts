@@ -414,6 +414,55 @@ function orderedVariants(definition: FlagDefinition) {
 
 // ── the flag version (D4) ─────────────────────────────────────────────────────────────────────
 
+/**
+ * The share of recent events meeting every condition, and whether that number is EXACT.
+ *
+ * - One condition: its marginal (`coverage × the chosen values' shares`) — exact for the top 20 values.
+ * - Several, with a COMPLETE combination table: the joint share — exact, and it knows when tags never
+ *   arrive together (Codex, PR #169).
+ * - Several, with an INCOMPLETE table (one high-cardinality tag pushes a tenant past the cap): the
+ *   product of marginals, flagged approximate. The table alone would count only the top combinations
+ *   and read a real audience as zero (fresh reviewer + Codex, PR #169, round 3).
+ */
+export function audienceShare(
+  answers: ExperimentBuilderAnswers,
+  catalog: EventCatalog
+): { fraction: number; exact: boolean } {
+  const conditions = activeConditions(answers)
+  if (answers.who.mode === 'everyone' || conditions.length === 0) return { fraction: 1, exact: true }
+  const marginal = (condition: ExperimentCondition) => {
+    const segment = catalog.segments.find((row) => row.field === condition.field)
+    if (!segment) return 0
+    return (
+      segment.coverage *
+      segment.values
+        .filter((row) =>
+          condition.values.some((value) => typeof value === typeof row.value && value === row.value)
+        )
+        .reduce((sum, row) => sum + row.share, 0)
+    )
+  }
+  if (conditions.length === 1) return { fraction: marginal(conditions[0]), exact: true }
+  const { rows, combos, complete } = catalog.segmentCombos
+  if (!complete)
+    return {
+      fraction: conditions.reduce((product, condition) => product * marginal(condition), 1),
+      exact: false,
+    }
+  if (rows === 0) return { fraction: 0, exact: true }
+  const matched = combos
+    .filter((combo) =>
+      conditions.every((condition) =>
+        condition.values.some((value) => {
+          const actual = combo.values[condition.field]
+          return typeof actual === typeof value && actual === value
+        })
+      )
+    )
+    .reduce((sum, combo) => sum + combo.count, 0)
+  return { fraction: matched / rows, exact: true }
+}
+
 function activeConditions(answers: ExperimentBuilderAnswers): ExperimentCondition[] {
   return answers.who.mode === 'everyone'
     ? []
@@ -595,23 +644,7 @@ export function buildExperimentPlan(
   // The JOINT share of recent events meeting every condition, read from the catalog's segment
   // combinations — never a product of marginals, which invents traffic for tags that never co-occur
   // (Codex, PR #169). With an incomplete combination table it is a lower bound.
-  const conditions = activeConditions(answers)
-  const { rows: comboRows, combos } = context.catalog.segmentCombos
-  const conditionFraction =
-    answers.who.mode === 'everyone'
-      ? 1
-      : comboRows === 0
-        ? 0
-        : combos
-            .filter((combo) =>
-              conditions.every((condition) =>
-                condition.values.some((value) => {
-                  const actual = combo.values[condition.field]
-                  return typeof actual === typeof value && actual === value
-                })
-              )
-            )
-            .reduce((sum, combo) => sum + combo.count, 0) / comboRows
+  const { fraction: conditionFraction, exact: estimateExact } = audienceShare(answers, context.catalog)
   const inTestPerDay = perDay * conditionFraction * (answers.who.allocation / 100)
   const baseline =
     context.catalog.baselines.find((row) => row.event === answers.metric && row.type === answers.entity)
@@ -674,6 +707,7 @@ export function buildExperimentPlan(
     days,
     needPerVersion,
     inTestPerDay,
+    estimateExact,
     startAt,
     endAt,
   })
@@ -681,6 +715,10 @@ export function buildExperimentPlan(
   if (!createsFeature && flagBase.rules.length > 0)
     notes.push(
       `${flagKey} has ${flagBase.rules.length} rule${flagBase.rules.length === 1 ? '' : 's'} of its own. People left out of the test fall through to them, so some may not see ${names[0]}.`
+    )
+  if (!estimateExact)
+    notes.push(
+      'The number of people a day is approximate: your events carry more tag combinations than the estimate can hold, so the conditions are treated as independent.'
     )
   if (needPerVersion === null)
     notes.push(
@@ -795,6 +833,7 @@ function computeChecks(
     days: number | null
     needPerVersion: number | null
     inTestPerDay: number
+    estimateExact: boolean
     startAt: Date
     endAt: Date
   }
@@ -977,7 +1016,17 @@ function computeChecks(
   const fitting =
     (WEEK_OPTIONS as readonly number[]).find((weeks) => derived.days !== null && weeks * 7 >= derived.days) ??
     8
-  if (derived.inTestPerDay <= 0) {
+  if (derived.inTestPerDay <= 0 && !derived.estimateExact) {
+    // An approximate zero is not evidence that nobody matches — never block Start on it.
+    checks.push({
+      id: 'window',
+      status: 'warn',
+      step: 2,
+      title: "We can't tell how many people match",
+      detail:
+        'Your events carry too many different tag combinations to count these conditions together, so there is no estimate of how long it needs.',
+    })
+  } else if (derived.inTestPerDay <= 0) {
     checks.push({
       id: 'window',
       status: 'fail',
