@@ -23,6 +23,11 @@ export type BuilderDependencies = {
 }
 
 export const BUILDER_PAUSED = 'Creating experiments is paused.'
+/** Start, when Production's feature changed between the plan and the press. Nothing was written. */
+export const FEATURE_MOVED = 'The feature changed while you were starting. Press Start again.'
+/** Retry, when serving this test's version would undo a change someone made to the feature since. */
+export const RETRY_MOVED =
+  'The feature changed after this test started, so serving it now would undo that change. Stop the test and start it again.'
 
 type Failure = { ok: false; error: string; checks?: ExperimentCheck[] }
 
@@ -38,6 +43,8 @@ export type StartResult =
       weights: number[]
       /** D7's honest partial state: running, but the split is not serving yet. */
       serving: boolean
+      /** Why it is not serving, when the reason is one the owner must act on. */
+      notice?: string
     }
   | Failure
 
@@ -90,7 +97,16 @@ export async function saveExperimentDraftCommand(
     if (typeof continuing !== 'string') return { ok: false, error: 'Invalid draft.' }
     const stored = await deps.io.loadDraft(projectId, continuing)
     if (!stored) return { ok: false, error: 'That draft no longer exists.' }
-    draft = { experimentKey: continuing, flagKey: stored.flagKey, version: stored.version }
+    // Only a DRAFT is continued: re-saving a running or decided key would mint a stray next version
+    // behind a live test (Codex + fresh reviewer, #170). Changing a started plan is its own path.
+    if (stored.status !== 'draft') return { ok: false, error: 'That experiment has already started.' }
+    // Its saved window too, so a Continue that changes nothing is the idempotent no-op it looks like.
+    draft = {
+      experimentKey: continuing,
+      flagKey: stored.flagKey,
+      version: stored.version,
+      window: stored.definition.plannedWindow,
+    }
   }
   const planned = await planFor(deps, projectId, rawAnswers, draft)
   if (!planned.ok) return planned
@@ -127,8 +143,8 @@ export async function startExperimentCommand(
   if (!deps.builderEnabled()) return { ok: false, error: BUILDER_PAUSED }
   if (typeof slug !== 'string' || typeof experimentKey !== 'string')
     return { ok: false, error: 'Invalid request.' }
-  const { projectId, userId } = await deps.requireOwnership(slug)
   if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
+  const { projectId, userId } = await deps.requireOwnership(slug)
 
   const stored = await deps.io.loadDraft(projectId, experimentKey)
   if (!stored || stored.status !== 'draft') return { ok: false, error: 'There is no draft to start.' }
@@ -170,10 +186,18 @@ export async function startExperimentCommand(
   if (!saved.ok) return saved
   const { saved: version } = saved
 
+  // The plan was built from what Production served a moment ago. If that moved, stop HERE — before
+  // the version is running — rather than activate over someone else's change (fresh reviewer, #170).
+  const served = await deps.io.activationBase(projectId, version.flagId, version.flagVersionId)
+  if (served === 'moved') return { ok: false, error: FEATURE_MOVED }
+  if (served === 'failed') return { ok: false, error: 'The experiment could not be started.' }
+
   if (!(await deps.io.transitionToRunning(projectId, version.experimentId, version.versionId, userId))) {
     return { ok: false, error: 'The experiment could not be started.' }
   }
-  const serving = await deps.io.activateInProduction({
+  // The same check again, inside the activation and bound to the snapshot revision: a change that
+  // lands between the two leaves the honest partial state, never a rollback.
+  const outcome = await deps.io.activateInProduction({
     projectId,
     flagId: version.flagId,
     flagVersionId: version.flagVersionId,
@@ -186,7 +210,8 @@ export async function startExperimentCommand(
     version: version.version,
     flagKey: planned.plan.flagKey,
     weights: planned.plan.weights,
-    serving,
+    serving: outcome === 'serving',
+    ...(outcome === 'moved' ? { notice: RETRY_MOVED } : {}),
   }
 }
 
@@ -199,21 +224,23 @@ export async function retryServingCommand(
   if (!deps.builderEnabled()) return { ok: false, error: BUILDER_PAUSED }
   if (typeof slug !== 'string' || typeof experimentKey !== 'string')
     return { ok: false, error: 'Invalid request.' }
-  const { projectId, userId } = await deps.requireOwnership(slug)
   if (!deps.servingEnabled()) return { ok: false, error: 'Flag serving is unavailable in this deployment.' }
+  const { projectId, userId } = await deps.requireOwnership(slug)
   const stored = await deps.io.loadDraft(projectId, experimentKey)
   if (!stored || stored.status !== 'running' || !stored.flagId || !stored.flagVersionId || !stored.flagKey) {
     return { ok: false, error: 'Only a running experiment can be retried.' }
   }
-  const serving =
-    (await deps.io.servingInProduction(projectId, stored.flagId, stored.flagVersionId)) ||
-    (await deps.io.activateInProduction({
-      projectId,
-      flagId: stored.flagId,
-      flagVersionId: stored.flagVersionId,
-      actorUserId: userId,
-      reason: `Retry serving experiment ${experimentKey} v${stored.version}`,
-    }))
+  // Never re-plans: a running version's flag version is fixed. If the feature moved since it was
+  // built, serving it would roll that change back — so Retry refuses and says what to do instead.
+  const outcome = await deps.io.activateInProduction({
+    projectId,
+    flagId: stored.flagId,
+    flagVersionId: stored.flagVersionId,
+    actorUserId: userId,
+    reason: `Retry serving experiment ${experimentKey} v${stored.version}`,
+  })
+  if (outcome === 'moved') return { ok: false, error: RETRY_MOVED }
+  const serving = outcome === 'serving'
   return {
     ok: true,
     experimentKey,

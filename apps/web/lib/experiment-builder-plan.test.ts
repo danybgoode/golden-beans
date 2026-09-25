@@ -952,4 +952,3 @@ test("a new feature's experiment is not named after its template twice", () => {
   assert.equal(result.plan.flagKey, 'experiments.copy_test_enabled')
   assert.equal(result.plan.experimentKey, 'copy_test')
 })
-

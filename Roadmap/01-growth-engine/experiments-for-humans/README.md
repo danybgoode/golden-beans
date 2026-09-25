@@ -289,7 +289,17 @@ it rebuilds the plan server-side from the stored answers against the CURRENT ser
 refuses while any check fails, and if the plan differs from the saved draft (someone changed the
 feature since, or the window needs re-dating) it Saves first — the idempotent function makes that a
 no-op when nothing changed. Activating a flag version built from a stale served definition would
-silently roll back someone else's change; this is what prevents it. **CI:** the push credential cannot
+silently roll back someone else's change; this is what prevents it — **but only up to the save**
+(fresh reviewer, PR #170, Blocking): a change landing after the re-plan still reached activation.
+So the activation itself is guarded (`activateInProduction` → `readBase`, `lib/experiment-builder-io.ts`):
+it reads the snapshot revision FIRST, then what Production serves for the flag, and refuses (`moved`,
+nothing written) unless that is the same feature once each side's experiment is stripped **and** no
+other experiment sits on it; the activation carries that revision, so anything activated after the
+check conflicts (40001) and the check re-runs. Start asks the same question before `running` and
+refuses cleanly; a change that lands between the two leaves the honest partial state. **Retry never
+re-plans** (a running version's flag version is fixed) — it refuses with "stop the test and start it
+again". The partial state is **derived by the page** from Production (`BuilderPageData.notServing`),
+not held by the tab that pressed Start. **CI:** the push credential cannot
 edit `.github/workflows/ci.yml` (no `workflow` scope), so no spec depends on the gate being ON in CI:
 the commands are tested with the gate injected (the `experiment-create-command.ts` pattern), and the
 gate-OFF path is CI's default.

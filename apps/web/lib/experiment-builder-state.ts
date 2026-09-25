@@ -95,7 +95,11 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       // leaving it there would strand it with no way to remove it (agy, PR #170).
       return {
         ...state,
-        answers: { ...a, metric: action.metric, guardrails: a.guardrails.filter((event) => event !== action.metric) },
+        answers: {
+          ...a,
+          metric: action.metric,
+          guardrails: a.guardrails.filter((event) => event !== action.metric),
+        },
       }
     case 'guardrail':
       return {

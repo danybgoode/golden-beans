@@ -85,6 +85,13 @@ function readStored(projectId: string, data: BuilderPageData) {
     return null
   }
 }
+function forgetStored(projectId: string) {
+  try {
+    sessionStorage.removeItem(builderStorageKey(projectId))
+  } catch {
+    // storage unavailable — nothing to clear
+  }
+}
 function writeStored(projectId: string, state: BuilderState) {
   try {
     sessionStorage.setItem(builderStorageKey(projectId), serializeBuilderState(state))
@@ -198,8 +205,16 @@ export function ExperimentBuilder({
       setReturnedChecks(response.checks ?? null)
       return null
     }
-    setState((current) => (current ? { ...current, continuing: response.experimentKey } : current))
     setNotice(`${response.experimentKey} saved as a draft`)
+    if (closeAfterSave && !continueDraft) {
+      // Saved, it is a row with its own Continue now — the header door goes back to a NEW plan
+      // instead of reopening this draft forever (fresh reviewer, #170).
+      forgetStored(projectId)
+      setStored(false)
+      setState(initial)
+    } else {
+      setState((current) => (current ? { ...current, continuing: response.experimentKey } : current))
+    }
     if (closeAfterSave) change(false)
     router.refresh()
     return response.experimentKey
@@ -216,16 +231,16 @@ export function ExperimentBuilder({
       return
     }
     if (!response.serving) {
+      if (response.notice) {
+        setError(response.notice)
+        return
+      }
       setRetryKey(key)
       setNotice("Running, but the split isn't serving yet.")
       return
     }
     setNotice(`${key} started · ${response.flagKey} is splitting ${response.weights.join(' / ')}`)
-    try {
-      sessionStorage.removeItem(builderStorageKey(projectId))
-    } catch {
-      /* successful Production writes must still navigate */
-    }
+    forgetStored(projectId)
     router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
   }
   async function retry() {
@@ -241,11 +256,7 @@ export function ExperimentBuilder({
       setError('Still not serving. Try again in a moment.')
       return
     }
-    try {
-      sessionStorage.removeItem(builderStorageKey(projectId))
-    } catch {
-      // storage unavailable — nothing to clear
-    }
+    forgetStored(projectId)
     router.push(`/app/experiments/${slug}/${encodeURIComponent(retryKey)}`)
   }
   const primary = state.step < 5 ? 'Continue' : state.step === 5 ? 'Review' : 'Start experiment'

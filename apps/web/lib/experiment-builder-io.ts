@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { FlagDefinition } from '@golden-frijoles/sdk'
+import { EXPERIMENT_METADATA_KEYS, type FlagDefinition } from '@golden-frijoles/sdk'
 import { readEventCatalog } from './event-catalog-read'
 import type { ExperimentDefinition } from './experiment-definition'
-import type { ExperimentBuilderAnswers, ServedFeature } from './experiment-builder-plan'
+import { isDeepStrictEqual } from 'node:util'
+import { stripExperiment, type ExperimentBuilderAnswers, type ServedFeature } from './experiment-builder-plan'
 import type { EventCatalog } from './event-catalog'
 
 // experiments-for-humans · Stories 3.2 / 3.3 — the builder's reads and writes, with the Supabase
@@ -43,6 +44,21 @@ export type SavedDraft = {
 
 export type BuilderIo = ReturnType<typeof createBuilderIo>
 
+/** `moved`: Production no longer serves the feature this version was built from — nothing written. */
+export type ActivationOutcome = 'serving' | 'moved' | 'failed'
+
+/**
+ * Is `served` the feature `planned` was built from? Same definition once each is stripped of its
+ * experiment, and no OTHER experiment on it — stripping alone would let a Start overwrite someone
+ * else's running test that happens to sit on the same base.
+ */
+export function sameBase(served: FlagDefinition, planned: FlagDefinition): boolean {
+  const key = EXPERIMENT_METADATA_KEYS.key
+  const servedKey = served.metadata?.[key]
+  if (servedKey !== undefined && servedKey !== planned.metadata?.[key]) return false
+  return isDeepStrictEqual(stripExperiment(served), stripExperiment(planned))
+}
+
 export function createBuilderIo(client: SupabaseClient) {
   async function servedFeature(projectId: string, flagKey: string): Promise<ServedFeature> {
     const { data: registry, error } = await client
@@ -77,6 +93,46 @@ export function createBuilderIo(client: SupabaseClient) {
       definition: version.definition as FlagDefinition,
       activeInProduction: Boolean(active?.version_id),
     }
+  }
+
+  /**
+   * The revision FIRST, then what Production serves for the flag — so an activation carrying that
+   * revision can only succeed if nothing was activated after this read.
+   */
+  async function readBase(
+    projectId: string,
+    flagId: string,
+    flagVersionId: string
+  ): Promise<{ outcome: 'ready'; revision: number } | { outcome: ActivationOutcome }> {
+    const { data: target, error: targetError } = await client
+      .from('flag_definition_versions')
+      .select('definition')
+      .eq('project_id', projectId)
+      .eq('flag_id', flagId)
+      .eq('id', flagVersionId)
+      .maybeSingle()
+    if (targetError || !target) return { outcome: 'failed' }
+    const { data: state, error: stateError } = await client
+      .from('flag_environment_states')
+      .select('snapshot_version')
+      .eq('project_id', projectId)
+      .eq('environment', 'production')
+      .maybeSingle()
+    if (stateError) return { outcome: 'failed' }
+    const { data: current, error: currentError } = await client
+      .from('flag_environment_activations')
+      .select('version_id, flag_definition_versions!inner(definition)')
+      .eq('project_id', projectId)
+      .eq('flag_id', flagId)
+      .eq('environment', 'production')
+      .maybeSingle()
+    if (currentError) return { outcome: 'failed' }
+    if (current?.version_id === flagVersionId) return { outcome: 'serving' }
+    const served = (
+      current as unknown as { flag_definition_versions?: { definition: FlagDefinition } } | null
+    )?.flag_definition_versions?.definition
+    if (!served || !sameBase(served, target.definition as FlagDefinition)) return { outcome: 'moved' }
+    return { outcome: 'ready', revision: Number(state?.snapshot_version ?? 0) }
   }
 
   return {
@@ -208,9 +264,12 @@ export function createBuilderIo(client: SupabaseClient) {
     },
 
     /**
-     * Activate a flag version in PRODUCTION. The snapshot revision is read immediately before, and one
-     * conflict (someone else activated something in between) is retried with a fresh revision — a
-     * second conflict is reported, never looped on.
+     * Activate the experiment's flag version in PRODUCTION — only on top of the feature it was built
+     * from (fresh reviewer, PR #170). The snapshot revision is read FIRST, then what Production serves
+     * for this flag: if that is no longer the base the version was planned on (someone shipped a rule,
+     * or started another test on it), the answer is `moved` and nothing is written — activating would
+     * silently roll their change back. The activation carries that revision, so anything activated
+     * after the check makes it conflict (40001) and the check runs again; three conflicts are `failed`.
      */
     async activateInProduction(input: {
       projectId: string
@@ -218,30 +277,31 @@ export function createBuilderIo(client: SupabaseClient) {
       flagVersionId: string
       actorUserId: string
       reason: string
-    }): Promise<boolean> {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const { data: state } = await client
-          .from('flag_environment_states')
-          .select('snapshot_version')
-          .eq('project_id', input.projectId)
-          .eq('environment', 'production')
-          .maybeSingle()
+    }): Promise<ActivationOutcome> {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const base = await readBase(input.projectId, input.flagId, input.flagVersionId)
+        if (base.outcome !== 'ready') return base.outcome
         const { data, error } = await client.rpc('set_flag_activation', {
           p_project_id: input.projectId,
           p_environment: 'production',
           p_flag_id: input.flagId,
           p_version_id: input.flagVersionId,
-          p_expected_snapshot_version: Number(state?.snapshot_version ?? 0),
+          p_expected_snapshot_version: base.revision,
           p_reason: input.reason,
           p_actor_user_id: input.actorUserId,
         })
-        if (!error && data?.[0]) return true
-        if (error?.code !== 'P0001') {
+        if (!error && data?.[0]) return 'serving'
+        if (error?.code !== '40001') {
           console.error('[experiment-builder] activation failed:', error)
-          return false
+          return 'failed'
         }
       }
-      return false
+      return 'failed'
+    },
+
+    /** The same check, without writing: Start asks it BEFORE making the version running. */
+    async activationBase(projectId: string, flagId: string, flagVersionId: string) {
+      return (await readBase(projectId, flagId, flagVersionId)).outcome
     },
 
     /** Is this flag version the one Production serves right now? */
@@ -315,8 +375,20 @@ export function createBuilderIo(client: SupabaseClient) {
       })
       // Drafts the builder made, newest version per key, so "Continue" reopens them at Review.
       const drafts: BuilderDraft[] = []
+      // D7's partial state, derived HERE from what Production serves — not remembered by the tab
+      // that pressed Start, which is gone after a reload (fresh reviewer, #170).
+      const notServing: string[] = []
       for (const experiment of experiments.data ?? []) {
         const draft = await this.loadDraft(projectId, experiment.key as string)
+        if (
+          draft &&
+          draft.status === 'running' &&
+          draft.answers &&
+          draft.flagId &&
+          activeByFlag.get(draft.flagId) !== draft.flagVersionId
+        ) {
+          notServing.push(experiment.key as string)
+        }
         if (draft && draft.status === 'draft' && draft.answers) {
           drafts.push({
             experimentKey: experiment.key as string,
@@ -330,6 +402,7 @@ export function createBuilderIo(client: SupabaseClient) {
         catalog,
         features,
         drafts,
+        notServing,
         takenExperimentKeys: (experiments.data ?? []).map((row) => row.key as string),
         takenFlagKeys: (registries.data ?? []).map((row) => row.key as string),
       }
@@ -362,6 +435,8 @@ export type BuilderPageData = {
   catalog: EventCatalog
   features: BuilderFeature[]
   drafts: BuilderDraft[]
+  /** Builder experiments that are RUNNING while Production serves some other version of their flag. */
+  notServing: string[]
   takenExperimentKeys: string[]
   takenFlagKeys: string[]
 }
