@@ -89,10 +89,10 @@ async function fixture(client: SupabaseClient): Promise<Fixture> {
   return result
 }
 
-async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition) {
+async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition, flagKey = FLAG_KEY) {
   const { data: version, error } = await client.rpc('create_flag_definition_version', {
     p_project_id: fx.projectId,
-    p_flag_key: FLAG_KEY,
+    p_flag_key: flagKey,
     p_definition: definition,
     p_reason: 'fixture',
     p_actor_user_id: fx.owner,
@@ -429,5 +429,73 @@ test.describe('Start (D7)', () => {
     expect((await startExperimentCommand(fx.slug, 'anything', off)).ok).toBe(false)
     expect((await retryServingCommand(fx.slug, 'anything', off)).ok).toBe(false)
     expect(asked).toBe(false)
+  })
+
+  test('a feature whose rules are stored out of priority order still starts — order is not meaning', async () => {
+    const fx = await fixture(client)
+    const unsorted: FlagDefinition = {
+      ...SERVED,
+      rules: [
+        { priority: 20, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+        { priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'team' }], variantKey: 'off' },
+      ],
+    }
+    await activate(client, fx, unsorted)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx)
+    )
+    expect(started).toMatchObject({ ok: true, serving: true })
+  })
+
+  /** The real client, with `hook` run once just before the FIRST `set_flag_activation` call. */
+  function racingClient(hook: () => Promise<void>) {
+    const calls = { activations: 0 }
+    const proxy = new Proxy(client, {
+      get(target, property) {
+        if (property === 'rpc') {
+          return async (name: string, args: Record<string, unknown>) => {
+            if (name === 'set_flag_activation' && calls.activations++ === 0) await hook()
+            return target.rpc(name, args)
+          }
+        }
+        const value = Reflect.get(target, property)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    }) as SupabaseClient
+    return { proxy, calls }
+  }
+
+  test('another feature activated between the check and the write: a revision conflict, re-checked, then served', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const { proxy, calls } = racingClient(() =>
+      activate(client, fx, SERVED, 'growth.other_feature').then(() => undefined)
+    )
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, createBuilderIo(proxy))
+    )
+    expect(started).toMatchObject({ ok: true, serving: true })
+    expect(calls.activations).toBe(2)
+  })
+
+  test('THIS feature changed between the check and the write: the conflict re-checks to moved — no rollback', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const { proxy, calls } = racingClient(() => activate(client, fx, CHANGED).then(() => undefined))
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, createBuilderIo(proxy))
+    )
+    expect(started).toMatchObject({ ok: true, serving: false, notice: RETRY_MOVED })
+    expect(calls.activations).toBe(1)
+    expect((await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition).toEqual(
+      CHANGED
+    )
   })
 })

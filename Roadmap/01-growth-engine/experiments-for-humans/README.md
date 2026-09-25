@@ -295,11 +295,16 @@ So the activation itself is guarded (`activateInProduction` → `readBase`, `lib
 it reads the snapshot revision FIRST, then what Production serves for the flag, and refuses (`moved`,
 nothing written) unless that is the same feature once each side's experiment is stripped **and** no
 other experiment sits on it; the activation carries that revision, so anything activated after the
-check conflicts (40001) and the check re-runs. Start asks the same question before `running` and
+check conflicts (`P0001` "flag snapshot version conflict" — `20260807160000` replaced 40001) and the check
+re-runs. Rules are compared as a priority-keyed set (evaluation sorts at read time; stored order is
+not meaning). Start asks the same question before `running` and
 refuses cleanly; a change that lands between the two leaves the honest partial state. **Retry never
 re-plans** (a running version's flag version is fixed) — it refuses with "stop the test and start it
 again". The partial state is **derived by the page** from Production (`BuilderPageData.notServing`),
-not held by the tab that pressed Start. **CI:** the push credential cannot
+not held by the tab that pressed Start. **Known, accepted:** two tabs starting two different
+experiments on one feature can both pass the pre-check and both reach `running`; the second then
+refuses to serve (RETRY_MOVED) — honest, but it leaves a running experiment that never served, which
+its owner stops. **CI:** the push credential cannot
 edit `.github/workflows/ci.yml` (no `workflow` scope), so no spec depends on the gate being ON in CI:
 the commands are tested with the gate injected (the `experiment-create-command.ts` pattern), and the
 gate-OFF path is CI's default.

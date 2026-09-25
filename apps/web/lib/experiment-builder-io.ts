@@ -56,7 +56,21 @@ export function sameBase(served: FlagDefinition, planned: FlagDefinition): boole
   const key = EXPERIMENT_METADATA_KEYS.key
   const servedKey = served.metadata?.[key]
   if (servedKey !== undefined && servedKey !== planned.metadata?.[key]) return false
-  return isDeepStrictEqual(stripExperiment(served), stripExperiment(planned))
+  return isDeepStrictEqual(byPriority(stripExperiment(served)), byPriority(stripExperiment(planned)))
+}
+
+/**
+ * Rules as a priority-keyed set: evaluation sorts at read time, so a feature stored `[20, 5]` is the
+ * same feature the planner writes back sorted — comparing arrays would call it "moved" forever
+ * (fresh reviewer, #170 round 2).
+ */
+function byPriority(definition: FlagDefinition): FlagDefinition {
+  return { ...definition, rules: [...definition.rules].sort((a, b) => a.priority - b.priority) }
+}
+
+/** `set_flag_activation`'s stale-revision refusal (`20260807160000_flag_activation_conflict_code.sql`). */
+function isRevisionConflict(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === 'P0001' && /flag snapshot version conflict/.test(error.message ?? '')
 }
 
 export function createBuilderIo(client: SupabaseClient) {
@@ -269,7 +283,7 @@ export function createBuilderIo(client: SupabaseClient) {
      * for this flag: if that is no longer the base the version was planned on (someone shipped a rule,
      * or started another test on it), the answer is `moved` and nothing is written — activating would
      * silently roll their change back. The activation carries that revision, so anything activated
-     * after the check makes it conflict (40001) and the check runs again; three conflicts are `failed`.
+     * after the check makes it conflict (P0001, "flag snapshot version conflict") and the check runs again; three conflicts are `failed`.
      */
     async activateInProduction(input: {
       projectId: string
@@ -291,7 +305,7 @@ export function createBuilderIo(client: SupabaseClient) {
           p_actor_user_id: input.actorUserId,
         })
         if (!error && data?.[0]) return 'serving'
-        if (error?.code !== '40001') {
+        if (!isRevisionConflict(error)) {
           console.error('[experiment-builder] activation failed:', error)
           return 'failed'
         }

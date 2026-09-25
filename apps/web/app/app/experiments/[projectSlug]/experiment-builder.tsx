@@ -77,10 +77,17 @@ function defaultFeatureKey(data: BuilderPageData): string | null {
 
 function readStored(projectId: string, data: BuilderPageData) {
   try {
-    return deserializeBuilderState(
+    const restored = deserializeBuilderState(
       sessionStorage.getItem(builderStorageKey(projectId)),
       contextFor(data, null)
     )
+    // A stored plan bound to a key that is no longer a draft (it started, even partially) can be
+    // neither saved nor started — restoring it would strand the door (fresh reviewer, #170 round 2).
+    if (restored?.continuing && !data.drafts.some((draft) => draft.experimentKey === restored.continuing)) {
+      forgetStored(projectId)
+      return null
+    }
+    return restored
   } catch {
     return null
   }
@@ -188,18 +195,27 @@ export function ExperimentBuilder({
     reported.current = next
     setOpen(next)
   }
-  async function save(closeAfterSave = true): Promise<string | null> {
+  /**
+   * Every server action through one door: a rejected request (network, deploy) must not leave the
+   * dialog pending forever (Codex, #170 round 2).
+   */
+  async function call<T>(action: () => Promise<T>): Promise<T | null> {
     setPending(true)
     setError(null)
-    const current = state
-    if (!current) {
-      setPending(false)
+    try {
+      return await action()
+    } catch {
+      setError('That didn’t reach the server. Nothing changed; try again.')
       return null
+    } finally {
+      setPending(false)
     }
-    const answers = current.answers
-    const continuing = current.continuing
-    const response = await saveExperimentDraftAction(slug, answers, continuing)
-    setPending(false)
+  }
+  async function save(closeAfterSave = true): Promise<string | null> {
+    const current = state
+    if (!current) return null
+    const response = await call(() => saveExperimentDraftAction(slug, current.answers, current.continuing))
+    if (!response) return null
     if (!response.ok) {
       setError(response.error)
       setReturnedChecks(response.checks ?? null)
@@ -222,14 +238,15 @@ export function ExperimentBuilder({
   async function start() {
     const key = await save(false)
     if (!key) return
-    setPending(true)
-    const response = await startExperimentAction(slug, key)
-    setPending(false)
+    const response = await call(() => startExperimentAction(slug, key))
+    if (!response) return
     if (!response.ok) {
       setError(response.error)
       setReturnedChecks(response.checks ?? null)
       return
     }
+    // It started — even partially, it is no longer a draft to come back to.
+    forgetStored(projectId)
     if (!response.serving) {
       if (response.notice) {
         setError(response.notice)
@@ -239,15 +256,13 @@ export function ExperimentBuilder({
       setNotice("Running, but the split isn't serving yet.")
       return
     }
-    setNotice(`${key} started · ${response.flagKey} is splitting ${response.weights.join(' / ')}`)
-    forgetStored(projectId)
     router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
   }
   async function retry() {
-    if (!retryKey) return
-    setPending(true)
-    const response = await retryExperimentServingAction(slug, retryKey)
-    setPending(false)
+    const key = retryKey
+    if (!key) return
+    const response = await call(() => retryExperimentServingAction(slug, key))
+    if (!response) return
     if (!response.ok) {
       setError(response.error)
       return
@@ -256,8 +271,7 @@ export function ExperimentBuilder({
       setError('Still not serving. Try again in a moment.')
       return
     }
-    forgetStored(projectId)
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(retryKey)}`)
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
   }
   const primary = state.step < 5 ? 'Continue' : state.step === 5 ? 'Review' : 'Start experiment'
   const footer =

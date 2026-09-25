@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isExperimentBuilderEnabled, isExperimentGovernanceEnabled, isFlagServingEnabled } from '@/lib/flags'
+import { isExperimentBuilderWritable, isFlagServingEnabled } from '@/lib/flags'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { createBuilderIo } from '@/lib/experiment-builder-io'
 import {
@@ -17,9 +17,7 @@ import {
 
 function dependencies(): BuilderDependencies {
   return {
-    // The builder writes governed experiments: with governance off, the page it lives on is gone and
-    // so are its writes (fresh reviewer, #170).
-    builderEnabled: () => isExperimentGovernanceEnabled() && isExperimentBuilderEnabled(),
+    builderEnabled: isExperimentBuilderWritable,
     servingEnabled: isFlagServingEnabled,
     requireOwnership: requireProjectOwnership,
     io: createBuilderIo(getSupabaseServiceClient()),

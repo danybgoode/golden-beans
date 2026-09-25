@@ -14,11 +14,16 @@ export function RetryServing({ slug, experimentKey }: { slug: string; experiment
   async function retry() {
     setPending(true)
     setError(null)
-    const response = await retryExperimentServingAction(slug, experimentKey)
-    setPending(false)
-    if (!response.ok) setError(response.error)
-    else if (!response.serving) setError('Still not serving. Try again in a moment.')
-    else router.refresh()
+    try {
+      const response = await retryExperimentServingAction(slug, experimentKey)
+      if (!response.ok) setError(response.error)
+      else if (!response.serving) setError('Still not serving. Try again in a moment.')
+      else router.refresh()
+    } catch {
+      setError('That didn’t reach the server. Nothing changed; try again.')
+    } finally {
+      setPending(false)
+    }
   }
   return (
     <>
