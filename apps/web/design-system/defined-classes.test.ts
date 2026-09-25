@@ -40,6 +40,9 @@ const STYLESHEETS = [
   'design-system/tokens.css',
   'app/globals.css',
   'app/console.css',
+  // experiments-for-humans (Story 3.1): the builder's port of the approved prototype's `x-` rules,
+  // imported by `experiment-builder.tsx`.
+  'design-system/experiments.css',
 ]
 
 /** Every `.ts`/`.tsx` under `apps/web`, excluding build output. */

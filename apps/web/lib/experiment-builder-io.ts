@@ -265,10 +265,15 @@ export function createBuilderIo(client: SupabaseClient) {
       const [catalog, registries, activations, experiments] = await Promise.all([
         readEventCatalog(client, projectId),
         client.from('flag_registries').select('id,key').eq('project_id', projectId).order('key'),
-        client.from('flag_environment_activations').select('flag_id,version_id').eq('project_id', projectId).eq('environment', 'production'),
+        client
+          .from('flag_environment_activations')
+          .select('flag_id,version_id')
+          .eq('project_id', projectId)
+          .eq('environment', 'production'),
         client.from('experiment_registries').select('id,key').eq('project_id', projectId),
       ])
-      if (registries.error || activations.error || experiments.error) throw new Error('could not read the project')
+      if (registries.error || activations.error || experiments.error)
+        throw new Error('could not read the project')
       const versions: Array<{ id: string; flag_id: string; version: number; definition: FlagDefinition }> = []
       for (let from = 0; ; from += 1000) {
         const { data, error } = await client
@@ -282,7 +287,9 @@ export function createBuilderIo(client: SupabaseClient) {
         versions.push(...((data ?? []) as typeof versions))
         if ((data ?? []).length < 1000) break
       }
-      const activeByFlag = new Map((activations.data ?? []).map((row) => [row.flag_id as string, row.version_id as string | null]))
+      const activeByFlag = new Map(
+        (activations.data ?? []).map((row) => [row.flag_id as string, row.version_id as string | null])
+      )
       const features: BuilderFeature[] = (registries.data ?? []).flatMap((registry) => {
         const own = versions.filter((version) => version.flag_id === registry.id)
         const activeId = activeByFlag.get(registry.id as string) ?? null
@@ -297,9 +304,12 @@ export function createBuilderIo(client: SupabaseClient) {
             variantKeys: served.definition.variants.map((variant) => variant.key),
             defaultVariantKey: served.definition.defaultVariantKey,
             activeInProduction: activeId !== null,
-            evaluations24h: catalog.flagEvaluations.find((row) => row.flagKey === registry.key)?.evaluations ?? 0,
+            evaluations24h:
+              catalog.flagEvaluations.find((row) => row.flagKey === registry.key)?.evaluations ?? 0,
             runningExperiment:
-              typeof served.definition.metadata?.experiment_key === 'string' ? String(served.definition.metadata.experiment_key) : null,
+              typeof served.definition.metadata?.experiment_key === 'string'
+                ? String(served.definition.metadata.experiment_key)
+                : null,
           },
         ]
       })
@@ -308,7 +318,12 @@ export function createBuilderIo(client: SupabaseClient) {
       for (const experiment of experiments.data ?? []) {
         const draft = await this.loadDraft(projectId, experiment.key as string)
         if (draft && draft.status === 'draft' && draft.answers) {
-          drafts.push({ experimentKey: experiment.key as string, version: draft.version, answers: draft.answers, flagKey: draft.flagKey })
+          drafts.push({
+            experimentKey: experiment.key as string,
+            version: draft.version,
+            answers: draft.answers,
+            flagKey: draft.flagKey,
+          })
         }
       }
       return {
