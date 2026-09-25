@@ -99,6 +99,17 @@ way in and it's the human one.
 5. **"Change the plan"** saves version n+1 through an explicit `revise` path; Start refuses while
    another version of the same experiment runs ("Version N is still running. Stop it before …").
 6. **Rollout/undo** replace exactly the version they planned against (`replacing`), never "same base".
+7. **Review round 1 (fresh reviewer, #172):** a stopped, undecided version has its own readout state
+   (`stopped` — never "live" / "keep it running"; the next step is the decision); with the builder gate
+   off no roll-out is drawn or pre-ticked (the verdict offers "Ship ‹version›", the modal records only);
+   the server ties the roll-out's variant to the CURRENT decision record (ship → its treatment, keep →
+   the control, anything else refused); "Change the plan" is drawn only on started versions; Start
+   lands on `?version=`; a draft the builder did NOT make gets "Start this version" on its Plan tab
+   (production has two: `miyagi`/`scenario_miyagi_readiness_epic_20260729` v1 and
+   `miyagisanchez`/`fundadoras_promise_cta` v2 — the manager was their only way to start).
+8. **External review families:** Codex capped (resets 2026-10-25) and agy's Google sign-in expired; by
+   Daniel's call the general pass and the security lens run as fresh subagents, beside the fresh
+   `pr-reviewer` — recorded as a downgrade (no external family on this PR).
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com

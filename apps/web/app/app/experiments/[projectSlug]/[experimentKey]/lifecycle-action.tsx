@@ -6,28 +6,49 @@ import { Button } from '@/design-system/primitives'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { transitionExperimentVersionAction } from '../actions'
 
-// experiments-for-humans · Story 4.3 — the retired JSON manager's one capability with no other home:
-// marking a version's evidence untrustworthy. It lives on the Plan tab, owner-only, confirmed.
-export function InvalidateVersion({
+// experiments-for-humans · Story 4.3 — the retired JSON manager's lifecycle capabilities that have no
+// other home, on the Plan tab, owner-only, confirmed:
+//   · Invalidate — marking a version's evidence untrustworthy (any draft / running / stopped version).
+//   · Start — a draft the builder did NOT make (a JSON/API draft has no answers, so the builder's Start
+//     refuses it — "start it from its plan"; this is that plan). It only flips the lifecycle, exactly as
+//     the manager did: such a draft was never bound to a flag version by the builder.
+const COPY = {
+  invalid: {
+    label: 'Mark invalid',
+    verb: 'Mark invalid',
+    consequence:
+      "Its evidence is marked untrustworthy for good: it can't be started, stopped or decided again.",
+  },
+  running: {
+    label: 'Start this version',
+    verb: 'Start',
+    consequence: 'It starts counting now. Its plan can no longer be changed.',
+  },
+} as const
+
+export function LifecycleAction({
   slug,
   experimentId,
   versionId,
   version,
+  target,
 }: {
   slug: string
   experimentId: string
   versionId: string
   version: number
+  target: 'invalid' | 'running'
 }) {
+  const copy = COPY[target]
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  async function invalidate() {
+  async function run() {
     setPending(true)
     setError(null)
     try {
-      const result = await transitionExperimentVersionAction(slug, experimentId, versionId, 'invalid')
+      const result = await transitionExperimentVersionAction(slug, experimentId, versionId, target)
       if (!result.ok) setError(result.error)
       else {
         setOpen(false)
@@ -42,7 +63,7 @@ export function InvalidateVersion({
   return (
     <>
       <Button variant="secondary" className="ds-btn--sm" onClick={() => setOpen(true)}>
-        Mark invalid
+        {copy.label}
       </Button>
       {error ? (
         <p className="ds-chart-note" role="alert">
@@ -51,13 +72,13 @@ export function InvalidateVersion({
       ) : null}
       <ConfirmDialog
         open={open}
-        verb="Mark invalid"
+        verb={copy.verb}
         noun="experiment version"
         subject={`v${version}`}
-        consequence="Its evidence is marked untrustworthy for good: it can't be started, stopped or decided again."
+        consequence={copy.consequence}
         pending={pending}
         onCancel={() => setOpen(false)}
-        onConfirm={() => void invalidate()}
+        onConfirm={() => void run()}
       />
     </>
   )

@@ -42,6 +42,17 @@ export async function rolloutExperimentCommand(
     return { ok: false, error: 'Record the decision first; the rollout follows it.' }
   if (!stored.definition.variants.some((variant) => variant.key === variantKey))
     return { ok: false, error: 'That version is not part of this test.' }
+  // The roll-out sets exactly what the RECORD says, enforced here rather than trusted from the page
+  // (fresh reviewer, #172): ship → the chosen treatment, keep → the control, anything else → nothing.
+  const decision = await deps.io.currentDecision(projectId, stored.versionId)
+  const decided =
+    decision?.outcome === 'ship_treatment'
+      ? decision.chosenVariantKey
+      : decision?.outcome === 'keep_control'
+        ? stored.definition.controlVariantKey
+        : null
+  if (decided === null) return { ok: false, error: 'This decision doesn’t set a version for everyone.' }
+  if (decided !== variantKey) return { ok: false, error: 'The roll-out must match the recorded decision.' }
 
   const served = await deps.io.productionVersion(projectId, stored.flagId)
   if (!served) return { ok: false, error: 'The feature is not serving in Production.' }

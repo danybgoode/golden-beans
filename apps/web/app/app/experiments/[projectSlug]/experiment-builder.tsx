@@ -292,7 +292,7 @@ export function ExperimentBuilder({
       setNotice("Running, but the split isn't serving yet.")
       return
     }
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}?version=${response.version}`)
   }
   async function retry() {
     const key = retryKey
@@ -307,7 +307,7 @@ export function ExperimentBuilder({
       setError('Still not serving. Try again in a moment.')
       return
     }
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}?version=${response.version}`)
   }
   const primary = state.step < 5 ? 'Continue' : state.step === 5 ? 'Review' : 'Start experiment'
   const footer =

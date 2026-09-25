@@ -13,7 +13,8 @@ import { eventWords, entityPlural, type SentencePart } from './experiment-builde
 // lift card keeps its number, its legend and the honest "one point a day" empty state; the interval
 // and the who-saw-what bars stay, as the story requires.
 
-export type ReadoutState = 'not_serving' | 'waiting' | 'gathering' | 'blocked' | 'ready' | 'decided'
+export type ReadoutState =
+  'not_serving' | 'waiting' | 'gathering' | 'blocked' | 'ready' | 'stopped' | 'decided'
 
 export type ReadoutAction = 'rollout' | 'keep' | 'iterate' | 'stop' | 'retry-serving'
 
@@ -142,6 +143,16 @@ export function buildReadout(input: ReadoutInput): Readout {
   const plain = (text: string): SentencePart => ({ text, emphasis: false })
   const bold = (text: string): SentencePart => ({ text, emphasis: true })
 
+  const lead: SentencePart[] = lift
+    ? [
+        bold(
+          Math.abs(lift.value) < 0.5
+            ? 'No difference yet'
+            : `${B} is ${lift.value > 0 === wantUp ? 'ahead' : 'behind'}, ${signed(lift.value)}`
+        ),
+        plain(` (range ${signed(lift.low)} to ${signed(lift.high)}). ${guardWords}, ${srmWords}.`),
+      ]
+    : [bold(`No comparison on ${metric} yet`), plain(`. ${guardWords}, ${srmWords}.`)]
   if (input.lifecycle === 'decided' && input.decision) {
     const shipped = input.decision.outcome === 'ship_treatment'
     return {
@@ -155,12 +166,51 @@ export function buildReadout(input: ReadoutInput): Readout {
       ],
       verdict: {
         label: 'Decision',
-        title: shipped ? `${B} won.` : `${A} stays.`,
+        title: shipped
+          ? `${B} won.`
+          : input.decision.outcome === 'keep_control'
+            ? `${A} stays.`
+            : input.decision.outcome === 'iterate'
+              ? 'Change it and run again.'
+              : input.decision.outcome === 'invalid'
+                ? 'The result was marked invalid.'
+                : 'No clear answer.',
         body: `${input.decision.rationale}.`,
         actions:
           input.decision.outcome === 'ship_treatment' || input.decision.outcome === 'keep_control'
             ? ['rollout']
             : [],
+      },
+    }
+  }
+  // Stopped, not yet decided (fresh reviewer, PR #172): nobody new is counted, so nothing here may say
+  // "live" or "keep it running" — the one thing left to do is record the decision.
+  if (input.lifecycle === 'stopped') {
+    const ready = analysis.decisionReady
+    return {
+      ...common,
+      state: 'stopped',
+      answer: [
+        bold('Stopped — nobody new is counted.'),
+        plain(' '),
+        ...(exposed === 0 ? [plain('It stopped before anyone was counted.')] : lead),
+        plain(
+          ready
+            ? ' Record the decision.'
+            : ` It stopped at ${Math.round(fraction * 100)}% of the planned sample, so the honest call may be inconclusive.`
+        ),
+      ],
+      verdict: {
+        label: 'What happens next',
+        title: 'Record the decision.',
+        body: ready
+          ? favourable
+            ? `${B} came out ahead with enough people to trust it.`
+            : unfavourable
+              ? `${B} came out worse with enough people to trust it.`
+              : 'There were enough people, and no real difference showed up.'
+          : 'There weren’t enough people to trust a winner; say what you learned.',
+        actions: ready ? (favourable ? ['rollout', 'keep'] : ['keep', 'iterate']) : ['iterate'],
       },
     }
   }
@@ -198,16 +248,6 @@ export function buildReadout(input: ReadoutInput): Readout {
       },
     }
   }
-  const lead: SentencePart[] = lift
-    ? [
-        bold(
-          Math.abs(lift.value) < 0.5
-            ? 'No difference yet'
-            : `${B} is ${lift.value > 0 === wantUp ? 'ahead' : 'behind'}, ${signed(lift.value)}`
-        ),
-        plain(` (range ${signed(lift.low)} to ${signed(lift.high)}). ${guardWords}, ${srmWords}.`),
-      ]
-    : [bold(`No comparison on ${metric} yet`), plain(`. ${guardWords}, ${srmWords}.`)]
   if (analysis.blockers.length > 0 && analysis.sampleStatus === 'met') {
     return {
       ...common,

@@ -274,6 +274,18 @@ test.describe('Decide, then roll out (D8)', () => {
     expect(await rolloutExperimentCommand(fx.slug, key, 1, 'nope', deps(client, fx))).toMatchObject({
       ok: false,
     })
+    // The record says KEEP: rolling out the treatment is refused by the server, whatever the page sends.
+    const before = await productionVersionOf(client, fx.projectId)
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))).toEqual({
+      ok: false,
+      error: 'The roll-out must match the recorded decision.',
+    })
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(before.version_id)
+    // …and the control, which it does name, goes through.
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'off', deps(client, fx))).toMatchObject({
+      ok: true,
+      variantKey: 'off',
+    })
     expect(
       await undoRolloutCommand(fx.slug, key, crypto.randomUUID(), crypto.randomUUID(), deps(client, fx))
     ).toMatchObject({

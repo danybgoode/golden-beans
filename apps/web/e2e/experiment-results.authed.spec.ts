@@ -232,13 +232,32 @@ test.describe('the decision-first results page (Story 4.1)', () => {
       } else if (point === 'gathering') {
         await expect(answer).toContainText('of the planned sample, so don’t call it yet.')
         await expect(verdict).toContainText('Keep it running')
+        // Stop, then the page must stop saying "live" (fresh reviewer, #172): the next step is the decision.
+        await verdict.getByRole('button', { name: 'Stop experiment' }).click()
+        await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Stop', exact: true }).click()
+        await expect(answer).toContainText('Stopped — nobody new is counted.')
+        await expect(verdict).toContainText('Record the decision.')
+        await expect(verdict.getByRole('button', { name: 'Record the decision' })).toBeVisible()
+        await expect(page.locator('main .ds-page-head')).toContainText('Stopped')
       } else {
         await expect(answer).toContainText('so you can call it.')
         await expect(verdict).toContainText('New copy is winning. Roll it out?')
-        await expect(verdict.getByRole('button', { name: 'Roll out New copy to everyone' })).toBeVisible()
+        await expect(
+          verdict.getByRole('button', {
+            name:
+              process.env.EXPERIMENT_BUILDER_ENABLED === 'true'
+                ? 'Roll out New copy to everyone'
+                : 'Ship New copy',
+          })
+        ).toBeVisible()
 
         // Story 4.2 — decide in chips, then the roll-out as its own write. The modal has no free text.
-        await verdict.getByRole('button', { name: 'Roll out New copy to everyone' }).click()
+        // With the builder gate off (CI's default — the roll-out's kill switch) no roll-out is drawn
+        // at all: the verdict offers "Ship", and the modal records only (fresh reviewer, #172).
+        const builder = process.env.EXPERIMENT_BUILDER_ENABLED === 'true'
+        await verdict
+          .getByRole('button', { name: builder ? 'Roll out New copy to everyone' : 'Ship New copy' })
+          .click()
         const modal = page.locator('dialog.ds-x-decide')
         await expect(modal).toBeVisible()
         await expect(modal.locator('textarea, input')).toHaveCount(0)
@@ -249,23 +268,28 @@ test.describe('the decision-first results page (Story 4.1)', () => {
         await expect(
           modal.getByRole('button', { name: 'The main number improved and guardrails held' })
         ).toHaveAttribute('aria-pressed', 'true')
-        await modal.getByRole('button', { name: 'Record and roll out' }).click()
+        await expect(modal.getByText('Set New copy for everyone in Production')).toHaveCount(builder ? 1 : 0)
+        await modal.getByRole('button', { name: builder ? 'Record and roll out' : 'Record decision' }).click()
         const toast = page.locator('.ds-toast')
-        if (process.env.EXPERIMENT_BUILDER_ENABLED === 'true') {
+        const servedDefault = async () =>
+          (
+            await sql<{ default_variant: string }>(
+              `select v.definition->>'defaultVariantKey' as default_variant
+               from flag_environment_activations a join flag_definition_versions v on v.id = a.version_id
+               where a.project_id = $1 and a.environment = 'production'`,
+              [fx.projectId]
+            )
+          )[0].default_variant
+        if (builder) {
           await expect(toast).toContainText('Decision recorded. New copy is on for everyone in Production.')
-          const [served] = await sql<{ default_variant: string }>(
-            `select v.definition->>'defaultVariantKey' as default_variant
-             from flag_environment_activations a join flag_definition_versions v on v.id = a.version_id
-             where a.project_id = $1 and a.environment = 'production'`,
-            [fx.projectId]
-          )
-          expect(served.default_variant).toBe('on')
+          expect(await servedDefault()).toBe('on')
           await toast.getByRole('button', { name: 'Undo' }).click()
           await expect(toast).toContainText('Undone.')
+          expect(await servedDefault()).toBe('off')
         } else {
-          // The builder gate (CI's default) is the roll-out's kill switch: the decision still records,
-          // and the page says plainly that the flag did not move.
-          await expect(toast).toContainText('Decision recorded. The roll-out didn’t happen')
+          await expect(toast).toContainText('Decision recorded')
+          expect(await servedDefault()).toBe('off')
+          await expect(page.getByRole('button', { name: /for everyone in Production/ })).toHaveCount(0)
         }
         await expect(page.locator('main .ds-page-head')).toContainText('Decided')
         await expect(answer).toContainText('Decided: ship New copy.')

@@ -37,6 +37,11 @@ export type DecideFlowProps = {
   /** The decided outcome and chosen variant, when decided (for the roll-out after a decision). */
   decision: { outcome: string; chosenVariantKey: string | null } | null
   actions: ReadoutAction[]
+  /**
+   * Can this deployment roll out (the builder gate — the roll-out's kill switch)? When it cannot, no
+   * roll-out is drawn or ticked: a button that can only fail is not a button (fresh reviewer, #172).
+   */
+  canRollOut: boolean
 }
 
 const UNDO_MS = 10_000
@@ -87,7 +92,8 @@ export function DecideFlow(props: DecideFlowProps) {
     setModal({
       choice: { outcome, treatmentKey: outcome === 'ship_treatment' ? (treatments[0]?.key ?? null) : null },
       reason: defaultReason(outcome),
-      rollOut: true,
+      // A correction re-records the reason; it never pre-ticks a Production write.
+      rollOut: props.canRollOut && props.lifecycle !== 'decided',
       idempotencyKey: crypto.randomUUID(),
     })
   }
@@ -251,7 +257,7 @@ export function DecideFlow(props: DecideFlowProps) {
       <div className="ds-x-acts">
         {props.lifecycle === 'decided' ? (
           <>
-            {props.actions.includes('rollout') && decidedRollout ? (
+            {props.actions.includes('rollout') && decidedRollout && props.canRollOut ? (
               <Button variant="primary" onClick={() => setConfirm('rollout')}>
                 Set {label(decidedRollout)} for everyone in Production
               </Button>
@@ -269,7 +275,9 @@ export function DecideFlow(props: DecideFlowProps) {
           <>
             {props.actions.includes('rollout') ? (
               <Button variant="primary" onClick={() => open('ship_treatment')}>
-                Roll out {treatments[0]?.label ?? ''} to everyone
+                {props.canRollOut
+                  ? `Roll out ${treatments[0]?.label ?? ''} to everyone`
+                  : `Ship ${treatments[0]?.label ?? ''}`}
               </Button>
             ) : null}
             {props.actions.includes('keep') ? (
@@ -393,7 +401,7 @@ export function DecideFlow(props: DecideFlowProps) {
                   </button>
                 ))}
               </div>
-              {canRollOut(modal.choice.outcome) ? (
+              {props.canRollOut && canRollOut(modal.choice.outcome) ? (
                 <>
                   <p className="ds-x-label">And then</p>
                   <button

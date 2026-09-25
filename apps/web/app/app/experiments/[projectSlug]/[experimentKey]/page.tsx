@@ -21,7 +21,7 @@ import { Answer, Crumb, Crumbs, PageHead, Pill, Tab } from '@/design-system/prim
 import { ExperimentBuilder } from '../experiment-builder'
 import { RetryServing } from '../retry-serving'
 import { DecideFlow } from './decide-flow'
-import { InvalidateVersion } from './invalidate-version'
+import { LifecycleAction } from './lifecycle-action'
 
 // experiments-for-humans · Story 4.1 (epic README D10) — the decision-first experiment page, on the
 // approved states `experiment-results` (gathering), `experiment-results-ready` and
@@ -133,21 +133,32 @@ export default async function ExperimentPage({
   ])
   const base = `/app/experiments/${encodeURIComponent(projectSlug)}/${encodeURIComponent(experimentKey)}?version=${version.version}`
 
-  // Invalidate — the retired manager's last capability without another home (Story 4.3).
-  const invalidate =
-    canManage &&
-    (version.status === 'draft' || version.status === 'running' || version.status === 'stopped') ? (
-      <InvalidateVersion
-        slug={projectSlug}
-        experimentId={experiment.id}
-        versionId={version.id}
-        version={version.version}
-      />
-    ) : null
+  // The retired manager's lifecycle capabilities without another home (Story 4.3): Invalidate, and
+  // Start for a draft the builder did not make (it has no answers, so the builder cannot start it).
+  const lifecycle = {
+    slug: projectSlug,
+    experimentId: experiment.id,
+    versionId: version.id,
+    version: version.version,
+  }
+  const invalidate = canManage ? (
+    <>
+      {version.status === 'draft' && answers === null ? (
+        <LifecycleAction {...lifecycle} target="running" />
+      ) : null}
+      {version.status === 'draft' || version.status === 'running' || version.status === 'stopped' ? (
+        <LifecycleAction {...lifecycle} target="invalid" />
+      ) : null}
+    </>
+  ) : null
   // "Change the plan": the NEXT version, pre-filled from this one, opened at Review — only from the
   // latest version, only once it has started, only when the builder made it (its answers exist).
   const change =
-    builderData && answers && latest && latest.version === version.version && version.status !== 'draft' ? (
+    builderData &&
+    answers &&
+    latest &&
+    latest.version === version.version &&
+    (version.status === 'running' || version.status === 'stopped' || version.status === 'decided') ? (
       <ExperimentBuilder
         slug={projectSlug}
         projectId={membership.projectId}
@@ -172,7 +183,7 @@ export default async function ExperimentPage({
         <Answer>
           {version.status === 'draft' ? (
             <>
-              <b>Not started.</b> Nothing is counted until the plan is started from the builder.
+              <b>Not started.</b> Nothing is counted until this version is started.
             </>
           ) : (
             <>
@@ -254,6 +265,7 @@ export default async function ExperimentPage({
       currentDecisionId={current?.id ?? null}
       decision={current ? { outcome: current.outcome, chosenVariantKey: current.chosenVariantKey } : null}
       actions={readout.verdict.actions}
+      canRollOut={isExperimentBuilderWritable()}
     />
   )
 
@@ -263,14 +275,24 @@ export default async function ExperimentPage({
       experimentKey={experimentKey}
       hypothesis={version.definition.hypothesis}
       pill={
-        <Pill state={readout.state === 'ready' || readout.state === 'decided' ? 'on' : 'never'}>
+        <Pill
+          state={
+            readout.state === 'ready' || readout.state === 'decided'
+              ? 'on'
+              : readout.state === 'stopped'
+                ? 'off'
+                : 'never'
+          }
+        >
           {readout.state === 'decided'
             ? 'Decided'
-            : readout.state === 'ready'
-              ? 'Ready to decide'
-              : readout.state === 'not_serving'
-                ? 'Not serving'
-                : 'Still gathering'}
+            : readout.state === 'stopped'
+              ? 'Stopped'
+              : readout.state === 'ready'
+                ? 'Ready to decide'
+                : readout.state === 'not_serving'
+                  ? 'Not serving'
+                  : 'Still gathering'}
         </Pill>
       }
     >

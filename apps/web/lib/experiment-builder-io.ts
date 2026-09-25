@@ -367,6 +367,30 @@ export function createBuilderIo(client: SupabaseClient) {
       return (data?.answers as ExperimentBuilderAnswers | undefined) ?? null
     },
 
+    /**
+     * The CURRENT decision on an experiment version — the one record no later record supersedes
+     * (corrections chain by `supersedes_record_id`). `null` when none is recorded.
+     */
+    async currentDecision(
+      projectId: string,
+      versionId: string
+    ): Promise<{ outcome: string; chosenVariantKey: string | null } | null> {
+      const { data, error } = await client
+        .from('experiment_decision_records')
+        .select('id,outcome,chosen_variant_key,supersedes_record_id')
+        .eq('project_id', projectId)
+        .eq('version_id', versionId)
+      if (error) throw new Error('could not read the decision')
+      const rows = data ?? []
+      const superseded = new Set(rows.map((row) => row.supersedes_record_id).filter(Boolean))
+      const current = rows.filter((row) => !superseded.has(row.id))
+      if (current.length !== 1) return null
+      return {
+        outcome: current[0].outcome as string,
+        chosenVariantKey: (current[0].chosen_variant_key as string | null) ?? null,
+      }
+    },
+
     /** The version number of this experiment that is RUNNING, if any (at most one — a DB index). */
     async runningVersion(projectId: string, experimentId: string): Promise<number | null> {
       const { data, error } = await client

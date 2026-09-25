@@ -163,3 +163,33 @@ test('decided: the answer names the decision; the roll-out stays available as it
   )
   assert.deepEqual(result.verdict.actions, ['rollout'])
 })
+
+test('stopped, undecided: never "live" or "keep it running" — the next step is the decision', () => {
+  const gathering = readout(exposures(40, 10, 16), { lifecycle: 'stopped' })
+  assert.equal(gathering.state, 'stopped')
+  assert.match(
+    sentenceText(gathering.answer),
+    /^Stopped — nobody new is counted\. .* It stopped at 40% of the planned sample/
+  )
+  assert.doesNotMatch(sentenceText(gathering.answer), /live|keep it running|don’t call it yet/i)
+  assert.equal(gathering.verdict.title, 'Record the decision.')
+  assert.equal(gathering.verdict.actions.includes('stop'), false)
+  assert.equal(gathering.verdict.actions.includes('rollout'), false)
+  const empty = readout([], { lifecycle: 'stopped' })
+  assert.equal(sentenceText(empty.answer).includes('Results start tomorrow'), false)
+  const winning = readout(exposures(150, 30, 75), { lifecycle: 'stopped' })
+  assert.deepEqual(winning.verdict.actions, ['rollout', 'keep'])
+})
+
+test('a decided iterate / inconclusive does not claim the control "stays"', () => {
+  const result = readout(exposures(150, 30, 31), {
+    lifecycle: 'decided',
+    decision: {
+      outcome: 'inconclusive',
+      chosenVariantKey: null,
+      rationale: 'Something outside the test decided it',
+    },
+  })
+  assert.equal(result.verdict.title, 'No clear answer.')
+  assert.deepEqual(result.verdict.actions, [])
+})
