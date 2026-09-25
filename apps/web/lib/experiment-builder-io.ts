@@ -255,5 +255,98 @@ export function createBuilderIo(client: SupabaseClient) {
         .maybeSingle()
       return data?.version_id === flagVersionId
     },
+
+    /**
+     * Everything the builder dialog needs, read once on the server (Story 3.1). Flag versions are read
+     * in pages — PostgREST answers at most 1,000 rows a request — and reduced to the version each
+     * feature SERVES in Production (or its newest, marked inactive).
+     */
+    async loadBuilderPage(projectId: string): Promise<BuilderPageData> {
+      const [catalog, registries, activations, experiments] = await Promise.all([
+        readEventCatalog(client, projectId),
+        client.from('flag_registries').select('id,key').eq('project_id', projectId).order('key'),
+        client.from('flag_environment_activations').select('flag_id,version_id').eq('project_id', projectId).eq('environment', 'production'),
+        client.from('experiment_registries').select('id,key').eq('project_id', projectId),
+      ])
+      if (registries.error || activations.error || experiments.error) throw new Error('could not read the project')
+      const versions: Array<{ id: string; flag_id: string; version: number; definition: FlagDefinition }> = []
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await client
+          .from('flag_definition_versions')
+          .select('id,flag_id,version,definition')
+          .eq('project_id', projectId)
+          .order('version', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, from + 999)
+        if (error) throw new Error('could not read the features')
+        versions.push(...((data ?? []) as typeof versions))
+        if ((data ?? []).length < 1000) break
+      }
+      const activeByFlag = new Map((activations.data ?? []).map((row) => [row.flag_id as string, row.version_id as string | null]))
+      const features: BuilderFeature[] = (registries.data ?? []).flatMap((registry) => {
+        const own = versions.filter((version) => version.flag_id === registry.id)
+        const activeId = activeByFlag.get(registry.id as string) ?? null
+        const served = (activeId ? own.find((version) => version.id === activeId) : undefined) ?? own[0]
+        if (!served) return []
+        return [
+          {
+            flagKey: registry.key as string,
+            definition: served.definition,
+            description: served.definition.description,
+            valueType: served.definition.valueType,
+            variantKeys: served.definition.variants.map((variant) => variant.key),
+            defaultVariantKey: served.definition.defaultVariantKey,
+            activeInProduction: activeId !== null,
+            evaluations24h: catalog.flagEvaluations.find((row) => row.flagKey === registry.key)?.evaluations ?? 0,
+            runningExperiment:
+              typeof served.definition.metadata?.experiment_key === 'string' ? String(served.definition.metadata.experiment_key) : null,
+          },
+        ]
+      })
+      // Drafts the builder made, newest version per key, so "Continue" reopens them at Review.
+      const drafts: BuilderDraft[] = []
+      for (const experiment of experiments.data ?? []) {
+        const draft = await this.loadDraft(projectId, experiment.key as string)
+        if (draft && draft.status === 'draft' && draft.answers) {
+          drafts.push({ experimentKey: experiment.key as string, version: draft.version, answers: draft.answers, flagKey: draft.flagKey })
+        }
+      }
+      return {
+        catalog,
+        features,
+        drafts,
+        takenExperimentKeys: (experiments.data ?? []).map((row) => row.key as string),
+        takenFlagKeys: (registries.data ?? []).map((row) => row.key as string),
+      }
+    },
   }
+}
+
+export type BuilderFeature = {
+  flagKey: string
+  /** The definition Production serves (or the newest) — the planner builds the flag version from it. */
+  definition: FlagDefinition
+  description: string
+  valueType: FlagDefinition['valueType']
+  variantKeys: string[]
+  defaultVariantKey: string
+  activeInProduction: boolean
+  evaluations24h: number
+  /** The experiment the served version names, if any (check 1 fails on a different one). */
+  runningExperiment: string | null
+}
+
+export type BuilderDraft = {
+  experimentKey: string
+  version: number
+  answers: ExperimentBuilderAnswers
+  flagKey: string | null
+}
+
+export type BuilderPageData = {
+  catalog: EventCatalog
+  features: BuilderFeature[]
+  drafts: BuilderDraft[]
+  takenExperimentKeys: string[]
+  takenFlagKeys: string[]
 }
