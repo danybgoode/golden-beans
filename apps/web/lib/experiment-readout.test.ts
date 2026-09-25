@@ -308,3 +308,76 @@ test('a REAL blocker on a short sample is still named — stopped offers invalid
   const running = readout(facts)
   assert.equal(running.state, 'blocked')
 })
+
+test('a guardrail harmed by ANY treatment blocks the roll-out, even when the lead is the winner', () => {
+  const three: Definition = {
+    ...definition,
+    variants: [
+      { key: 'off', weight: 34, label: 'Current' },
+      { key: 'b', weight: 33, label: 'Version B' },
+      { key: 'c', weight: 33, label: 'Version C' },
+    ],
+    guardrailMetrics: [{ event: 'refund_requested', direction: 'decrease' }],
+  }
+  const facts: Fact[] = []
+  for (const [arm, converted, refunded] of [
+    ['off', 30, 5],
+    ['b', 80, 5],
+    ['c', 31, 90],
+  ] as const) {
+    for (let i = 0; i < 150; i += 1) {
+      const id = `${arm}-${i}`
+      const base = { subjectType: 'merchant', subjectId: id }
+      facts.push({
+        id: `x-${id}`,
+        event: 'experiment_exposed',
+        featureId: 'copy_test',
+        tags: { variant: arm, experiment_definition_version: 1 },
+        ...base,
+        occurredAt: at(i + 1),
+        createdAt: at(i + 1),
+      })
+      if (i < converted)
+        facts.push({
+          id: `c-${id}`,
+          event: 'signup_completed',
+          featureId: null,
+          tags: null,
+          ...base,
+          occurredAt: at(i + 2),
+          createdAt: at(i + 2),
+        })
+      if (i < refunded)
+        facts.push({
+          id: `r-${id}`,
+          event: 'refund_requested',
+          featureId: null,
+          tags: null,
+          ...base,
+          occurredAt: at(i + 3),
+          createdAt: at(i + 3),
+        })
+    }
+  }
+  const now = '2026-09-10T00:00:00.000Z'
+  const analysis = computeExperimentAnalysis({
+    experimentKey: 'copy_test',
+    definitionVersion: 1,
+    definition: three,
+    lifecycle: { status: 'running', startedAt: START, endedAt: null },
+    asOf: now,
+    facts,
+  })
+  const result = buildReadout({
+    definition: three,
+    analysis,
+    lifecycle: 'running',
+    decision: null,
+    serving: true,
+    now: new Date(now),
+  })
+  assert.equal(result.treatment.key, 'b')
+  assert.equal(result.guardrails[0].status, 'worse')
+  assert.equal(result.verdict.actions.includes('rollout'), false)
+  assert.equal(result.verdict.title, 'Version B is ahead, but a guardrail moved the wrong way.')
+})

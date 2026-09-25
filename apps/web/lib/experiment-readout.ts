@@ -109,23 +109,24 @@ export function buildReadout(input: ReadoutInput): Readout {
   const unfavourable = lift ? (wantUp ? lift.high < 0 : lift.low > 0) : false
   const guardrails = analysis.guardrailMetrics.map((guard) => {
     const row = guard.variants.find((variant) => variant.key === treatmentKey)
+    // Worse if ANY treatment harmed it, not only the one the page leads with — the owner can ship
+    // any of them (Codex, #172 round 6). The delta shown stays the lead's.
+    const harmed = guard.variants.some(
+      (variant) => variant.key !== controlKey && variant.directionalStatus === 'unfavorable'
+    )
     const delta =
       row?.liftFromControl === null || row?.liftFromControl === undefined ? null : row.liftFromControl * 100
     return {
       event: guard.event,
       label: eventWords(guard.event),
       delta,
-      status:
-        row?.directionalStatus === 'unfavorable'
-          ? ('worse' as const)
-          : delta === null
-            ? ('unknown' as const)
-            : ('fine' as const),
+      status: harmed ? ('worse' as const) : delta === null ? ('unknown' as const) : ('fine' as const),
     }
   })
-  const guardWords = guardrails.some((guard) => guard.status === 'worse')
-    ? 'A guardrail moved the wrong way'
-    : 'Guardrails fine'
+  const guardHeld = !guardrails.some((guard) => guard.status === 'worse')
+  // A roll-out is offered only for a win that cost nothing the owner said must hold.
+  const canShip = favourable && guardHeld
+  const guardWords = !guardHeld ? 'A guardrail moved the wrong way' : 'Guardrails fine'
   const srm = analysis.diagnostics.srm.status
   const srmWords =
     srm === 'clear'
@@ -253,13 +254,15 @@ export function buildReadout(input: ReadoutInput): Readout {
         label: 'What happens next',
         title: 'Record the decision.',
         body: ready
-          ? favourable
-            ? `${B} came out ahead with enough people to trust it.`
-            : unfavourable
-              ? `${B} came out worse with enough people to trust it.`
-              : 'There were enough people, and no real difference showed up.'
+          ? favourable && !guardHeld
+            ? `${B} came out ahead, but a guardrail moved the wrong way; weigh the cost before shipping it.`
+            : favourable
+              ? `${B} came out ahead with enough people to trust it.`
+              : unfavourable
+                ? `${B} came out worse with enough people to trust it.`
+                : 'There were enough people, and no real difference showed up.'
           : 'There weren’t enough people to trust a winner; say what you learned.',
-        actions: ready ? (favourable ? ['rollout', 'keep'] : ['keep', 'iterate']) : ['iterate'],
+        actions: ready ? (canShip ? ['rollout', 'keep'] : ['keep', 'iterate']) : ['iterate'],
       },
     }
   }
@@ -337,30 +340,39 @@ export function buildReadout(input: ReadoutInput): Readout {
     answer: [
       ...lead,
       plain(
-        favourable
+        canShip
           ? ' The whole range is on the right side of zero, so you can call it.'
-          : ' The range still includes no difference, so the honest call is that it didn’t move.'
+          : favourable
+            ? ' The main number moved the right way, but a guardrail didn’t, so weigh the cost before calling it.'
+            : ' The range still includes no difference, so the honest call is that it didn’t move.'
       ),
     ],
-    verdict: favourable
+    verdict: canShip
       ? {
           label: 'Ready',
           title: `${B} is winning. Roll it out?`,
           body: `${metric.replace(/^./, (c) => c.toUpperCase())} moved the way you wanted and the split checks out.`,
           actions: ['rollout', 'keep'],
         }
-      : unfavourable
+      : favourable
         ? {
             label: 'Ready',
-            title: `${B} is worse. Keep ${A}.`,
-            body: 'There were enough people to see a change, and it went the wrong way.',
+            title: `${B} is ahead, but a guardrail moved the wrong way.`,
+            body: 'Look at what it cost before deciding. Rolling it out isn’t offered while a guardrail is worse.',
             actions: ['keep', 'iterate'],
           }
-        : {
-            label: 'Ready',
-            title: `No real difference. Keep ${A}?`,
-            body: 'There were enough people to see the change you planned for, and it didn’t show up.',
-            actions: ['keep', 'iterate'],
-          },
+        : unfavourable
+          ? {
+              label: 'Ready',
+              title: `${B} is worse. Keep ${A}.`,
+              body: 'There were enough people to see a change, and it went the wrong way.',
+              actions: ['keep', 'iterate'],
+            }
+          : {
+              label: 'Ready',
+              title: `No real difference. Keep ${A}?`,
+              body: 'There were enough people to see the change you planned for, and it didn’t show up.',
+              actions: ['keep', 'iterate'],
+            },
   }
 }

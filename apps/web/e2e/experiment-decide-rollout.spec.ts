@@ -462,4 +462,23 @@ test.describe('Decide, then roll out (D8)', () => {
     )
     expect(undo).toEqual({ ok: true })
   })
+
+  test('a feature edit after the decision — even one that keeps the experiment metadata — blocks the roll-out', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    await startExperimentCommand(fx.slug, key, deps(client, fx))
+    await decide(client, fx, key, 'ship_treatment')
+    // Someone re-saves the served definition verbatim (metadata and all) as a NEW version.
+    const current = await productionVersionOf(client, fx.projectId)
+    const theirs = await activate(client, fx, {
+      ...current.flag_definition_versions.definition,
+      description: 'edited in the console',
+    })
+    expect(await rolloutExperimentCommand(fx.slug, key, 1, 'on', deps(client, fx))).toEqual({
+      ok: false,
+      error: 'Production no longer serves this test’s version of the feature, so nothing was changed.',
+    })
+    expect((await productionVersionOf(client, fx.projectId)).version_id).toBe(theirs.version_id)
+  })
 })

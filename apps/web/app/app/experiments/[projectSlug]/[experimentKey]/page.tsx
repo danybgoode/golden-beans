@@ -135,8 +135,9 @@ export default async function ExperimentPage({
   // request passed `parseExperimentAnalysisRequest` above; URLSearchParams re-encodes every value.
   const query = new URLSearchParams({ version: String(version.version) })
   for (const key of ['asOf', 'segmentField', 'segmentValue'] as const) {
-    const value = scalar(raw[key])?.trim()
-    if (value) query.set(key, value)
+    // Exactly the value the parser validated — untrimmed, and kept when empty (round 6).
+    const value = scalar(raw[key])
+    if (value !== undefined) query.set(key, value)
   }
   const base = `/app/experiments/${encodeURIComponent(projectSlug)}/${encodeURIComponent(experimentKey)}?${query}`
 

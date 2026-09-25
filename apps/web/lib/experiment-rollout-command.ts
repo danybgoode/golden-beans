@@ -63,6 +63,13 @@ export async function rolloutExperimentCommand(
 
   const served = await deps.io.productionVersion(projectId, stored.flagId)
   if (!served) return { ok: false, error: 'The feature is not serving in Production.' }
+  // Only over THIS test's own flag version (Codex, #172 round 6): if anything replaced it — even an
+  // edit that kept the experiment's metadata — a roll-out would override that later change.
+  if (served.versionId !== stored.flagVersionId)
+    return {
+      ok: false,
+      error: 'Production no longer serves this test’s version of the feature, so nothing was changed.',
+    }
   const plan = planExperimentRollout(served.definition, variantKey, { experimentKey, version })
   if (!plan.ok) return { ok: false, error: plan.errors[0] ?? 'Nothing was changed.' }
 
