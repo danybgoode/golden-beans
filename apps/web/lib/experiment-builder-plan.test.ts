@@ -30,6 +30,7 @@ type ResolveHook = (
 
 const {
   EXPERIMENT_RULE_PRIORITIES,
+  parseExperimentBuilderAnswers,
   buildExperimentPlan,
   planExperimentRollout,
   resolveTemplateDefaults,
@@ -325,7 +326,10 @@ test('D8: stripping the experiment returns the served definition exactly; the ro
   )
   assert.ok(result.ok)
   assert.deepEqual(stripExperiment(result.plan.flagDefinition), served)
-  const rollout = planExperimentRollout(result.plan.flagDefinition, 'on')
+  const rollout = planExperimentRollout(result.plan.flagDefinition, 'on', {
+    experimentKey: result.plan.experimentKey,
+    version: 1,
+  })
   assert.ok(rollout.ok)
   assert.equal(rollout.plan.definition.defaultVariantKey, 'on')
   assert.deepEqual(rollout.plan.definition.rules, served.rules)
@@ -462,4 +466,160 @@ test('check 2 never says "all 0 guardrails" when the only guardrail is the metri
     checkOf({ ...copyAnswers(), guardrails: ['application.completed'] }).metrics.detail,
     'application.completed.'
   )
+})
+
+// ── fresh reviewer, PR #169 — each finding, and each mutation that used to survive ──────────────
+
+test('D8: the rollout refuses to strip an experiment other than the one it was asked to', () => {
+  const result = buildExperimentPlan(copyAnswers(), context())
+  assert.ok(result.ok)
+  for (const expected of [
+    { experimentKey: 'someone_else', version: 1 },
+    { experimentKey: result.plan.experimentKey, version: 2 },
+  ]) {
+    const refused = planExperimentRollout(result.plan.flagDefinition, 'on', expected)
+    assert.equal(refused.ok, false, JSON.stringify(expected))
+  }
+})
+
+test('check 1 fails when the feature is already serving a DIFFERENT experiment', () => {
+  const running = buildExperimentPlan(copyAnswers(), context())
+  assert.ok(running.ok)
+  const other = checkOf(
+    { ...copyAnswers(), template: 'pricing' },
+    context({ served: { ...context().served, definition: running.plan.flagDefinition } })
+  ).feature
+  assert.equal(other.status, 'fail')
+  assert.match(other.detail, /serving founding_merchants_copy_test/)
+})
+
+test('re-planning a saved draft keeps its names even when they are taken (by itself)', () => {
+  const result = buildExperimentPlan(
+    { ...copyAnswers(), flagKey: null },
+    context({
+      served: null,
+      takenExperimentKeys: ['copy_test_copy_test'],
+      takenFlagKeys: ['experiments.copy_test_enabled'],
+      draft: { experimentKey: 'copy_test_copy_test', flagKey: 'experiments.copy_test_enabled' },
+    })
+  )
+  assert.ok(result.ok)
+  assert.equal(result.plan.experimentKey, 'copy_test_copy_test')
+  assert.equal(result.plan.flagKey, 'experiments.copy_test_enabled')
+})
+
+test('check 5 on a saved draft: changing the run length re-plans the window, so the offered fix clears itself', () => {
+  const savedWindow = { startAt: '2026-09-25T00:00:00.000Z', endAt: '2026-10-09T00:00:00.000Z' } // 2 weeks
+  const short = checkOf({ ...copyAnswers(), weeks: 2 }, context({ savedWindow })).window
+  assert.equal(short.status, 'fail')
+  assert.ok(short.fix?.kind === 'set-weeks' || short.fix?.kind === 'replan-from-today')
+  const weeks = short.fix?.kind === 'set-weeks' ? short.fix.weeks : 6
+  assert.equal(checkOf({ ...copyAnswers(), weeks }, context({ savedWindow })).window.status, 'ok')
+})
+
+test('check 5 never offers a run length that cannot fit (more than 8 weeks needed)', () => {
+  const thin = prototypeCatalog({ entities: [{ type: 'merchant', subjects14d: 60 }] })
+  const window = checkOf({ ...copyAnswers(), weeks: 8 }, context({ catalog: thin })).window
+  assert.equal(window.status, 'fail')
+  assert.equal(window.fix?.kind, 'step')
+})
+
+test('an empty condition is a failing CHECK (Save still works), not a plan error', () => {
+  const base = copyAnswers()
+  const result = buildExperimentPlan(
+    {
+      ...base,
+      who: {
+        mode: 'some',
+        conditions: [...base.who.conditions, { field: 'plan', values: [] }],
+        allocation: 100,
+      },
+    },
+    context()
+  )
+  assert.ok(result.ok, JSON.stringify(!result.ok && result.errors))
+  const eligibility = result.plan.checks.find((check) => check.id === 'eligibility')!
+  assert.equal(eligibility.status, 'fail')
+  assert.match(eligibility.title, /no value picked/)
+  assert.deepEqual(result.plan.definition.eligibility.tags, { region: 'MX' })
+})
+
+test('the answers parser refuses what the planner must never see', () => {
+  const good = copyAnswers()
+  assert.equal(parseExperimentBuilderAnswers(good).ok, true)
+  for (const bad of [
+    { ...good, template: 'toString' },
+    { ...good, why: 'nope' },
+    { ...good, why: 'constructor' },
+    { ...good, versions: ['A', 42] },
+    { ...good, who: undefined },
+    { ...good, mde: 1e-200 },
+    { ...good, extra: true },
+    {
+      ...good,
+      who: {
+        mode: 'some',
+        conditions: [
+          { field: 'region', values: ['MX'] },
+          { field: 'region', values: ['US'] },
+        ],
+        allocation: 100,
+      },
+    },
+  ]) {
+    assert.equal(parseExperimentBuilderAnswers(bad).ok, false, JSON.stringify(bad).slice(0, 120))
+    assert.equal(buildExperimentPlan(bad as Answers, context()).ok, false)
+  }
+})
+
+test('boundaries the old fixtures never touched: coverage exactly 90% is fine; a served rule at priority 0 strips back to 0', () => {
+  const at90 = prototypeCatalog({
+    segments: prototypeCatalog().segments.map((segment) =>
+      segment.field === 'plan' ? { ...segment, coverage: 0.9 } : segment
+    ),
+  })
+  assert.equal(
+    checkOf(
+      {
+        ...copyAnswers(),
+        weeks: 8,
+        who: { mode: 'some', conditions: [{ field: 'plan', values: ['free'] }], allocation: 100 },
+      },
+      context({ catalog: at90 })
+    ).eligibility.status,
+    'ok'
+  )
+  const served: FlagDefinition = { ...SERVED, rules: [{ priority: 0, clauses: [], variantKey: 'on' }] }
+  const result = buildExperimentPlan(
+    copyAnswers(),
+    context({ served: { ...context().served, definition: served } })
+  )
+  assert.ok(result.ok)
+  assert.deepEqual(stripExperiment(result.plan.flagDefinition), served)
+})
+
+test('metadata: 13 existing entries leave room for the three; 14 are refused, never truncated', () => {
+  const entries = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`k${i}`, i]))
+  const fits = buildExperimentPlan(
+    copyAnswers(),
+    context({ served: { ...context().served, definition: { ...SERVED, metadata: entries(13) } } })
+  )
+  assert.ok(fits.ok)
+  const full = buildExperimentPlan(
+    copyAnswers(),
+    context({ served: { ...context().served, definition: { ...SERVED, metadata: entries(14) } } })
+  )
+  assert.equal(full.ok, false)
+})
+
+test('a served rule too high to move below the test is refused', () => {
+  const served: FlagDefinition = { ...SERVED, rules: [{ priority: 995_000, clauses: [], variantKey: 'on' }] }
+  const result = buildExperimentPlan(
+    copyAnswers(),
+    context({ served: { ...context().served, definition: served } })
+  )
+  // The flag parser would refuse it too (priority > 1,000,000); the planner's own refusal exists to
+  // say WHY in words a product person can act on, so the words are what is asserted.
+  assert.equal(result.ok, false)
+  assert.match(!result.ok ? result.errors[0] : '', /priority too high/)
 })

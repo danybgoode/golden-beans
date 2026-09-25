@@ -98,6 +98,12 @@ export type ExperimentPlanContext = {
   /** Keys already taken in this project, so a new name never collides. */
   takenExperimentKeys?: readonly string[]
   takenFlagKeys?: readonly string[]
+  /**
+   * Re-planning a SAVED draft (Continue, Start, Change the plan): its names are already taken — by
+   * itself. Without this a re-save names `…_enabled_2` / `…_copy_test_2` and splits one test into two
+   * (fresh reviewer, PR #169).
+   */
+  draft?: { experimentKey: string; flagKey: string }
 }
 
 export type CheckStatus = 'ok' | 'warn' | 'fail'
@@ -400,9 +406,17 @@ function orderedVariants(definition: FlagDefinition) {
 
 // ── the flag version (D4) ─────────────────────────────────────────────────────────────────────
 
+function activeConditions(answers: ExperimentBuilderAnswers): ExperimentCondition[] {
+  return answers.who.mode === 'everyone'
+    ? []
+    : answers.who.conditions.filter((condition) => condition.values.length > 0)
+}
+
 function clausesFor(answers: ExperimentBuilderAnswers): FlagClause[] {
   if (answers.who.mode === 'everyone') return []
-  return answers.who.conditions.map((condition) =>
+  // A condition with no value picked is a CHECK failure (D6 check 3), not a plan error: Save draft must
+  // still work, and the flag parser would refuse an empty `one_of` (fresh reviewer, PR #169).
+  return activeConditions(answers).map((condition) =>
     condition.values.length === 1
       ? { field: condition.field, operator: 'equals' as const, value: condition.values[0] }
       : { field: condition.field, operator: 'one_of' as const, values: [...condition.values] }
@@ -435,8 +449,30 @@ export function stripExperiment(definition: FlagDefinition): FlagDefinition {
   return { ...rest, rules, ...(Object.keys(metadata).length > 0 ? { metadata } : {}) }
 }
 
-/** D8 — "Set ‹version› for everyone in Production": `planFlagSet` on the stripped definition. */
-export function planExperimentRollout(served: FlagDefinition, variantKey: string): FlagPlanResult {
+/**
+ * D8 — "Set ‹version› for everyone in Production": `planFlagSet` on the stripped definition.
+ *
+ * ⚠️ It names the experiment it expects to be stripping and REFUSES any other (fresh reviewer, PR
+ * #169): the served version can change between the page loading and the press, and a Production
+ * write must never remove a different experiment's split.
+ */
+export function planExperimentRollout(
+  served: FlagDefinition,
+  variantKey: string,
+  expected: { experimentKey: string; version: number }
+): FlagPlanResult {
+  const metadata = served.metadata ?? {}
+  if (
+    metadata[EXPERIMENT_METADATA_KEYS.key] !== expected.experimentKey ||
+    metadata[EXPERIMENT_METADATA_KEYS.version] !== expected.version
+  ) {
+    return {
+      ok: false,
+      errors: [
+        `Production is no longer serving ${expected.experimentKey} v${expected.version}; nothing was changed.`,
+      ],
+    }
+  }
   return planFlagSet({ current: stripExperiment(served), variantKey, environments: ['production'] })
 }
 
@@ -446,9 +482,12 @@ export function buildExperimentPlan(
   answers: ExperimentBuilderAnswers,
   context: ExperimentPlanContext
 ): ExperimentPlanResult {
+  // The planner validates its own input: it is a shared seam, and "the caller already checked" is how
+  // `template: 'toString'` became a flag key (fresh reviewer, PR #169).
+  const checked = parseExperimentBuilderAnswers(answers)
+  if (!checked.ok) return { ok: false, errors: [checked.error] }
   const errors: string[] = []
   const spec = EXPERIMENT_TEMPLATES[answers.template]
-  if (!spec) return { ok: false, errors: ['Unknown template.'] }
 
   // ── versions and their flag values ──
   const served = context.served
@@ -466,7 +505,7 @@ export function buildExperimentPlan(
   let flagKey: string
   const createsFeature = answers.flagKey === null
   if (createsFeature) {
-    flagKey = newFeatureKey(answers.template, context.takenFlagKeys)
+    flagKey = context.draft?.flagKey ?? newFeatureKey(answers.template, context.takenFlagKeys)
     variantKeys = names.map((name, index) => {
       const key = slug(name) || `version_${letter(index).toLowerCase()}`
       return /^[a-z]/.test(key) ? key.slice(0, 64) : `v_${key}`.slice(0, 64)
@@ -506,7 +545,8 @@ export function buildExperimentPlan(
   if (errors.length > 0) return { ok: false, errors }
 
   const weights = versionWeights(names.length, answers.split)
-  const experimentKey = experimentKeyFor(flagKey, answers.template, context.takenExperimentKeys)
+  const experimentKey =
+    context.draft?.experimentKey ?? experimentKeyFor(flagKey, answers.template, context.takenExperimentKeys)
 
   // ── the experiment's rules (D4) ──
   const clauses = clausesFor(answers)
@@ -562,16 +602,25 @@ export function buildExperimentPlan(
   const recommendedWeeks = days === null ? 4 : Math.max(2, Math.ceil(days / 7))
 
   // ── the window ──
-  const startAt = context.savedWindow ? new Date(context.savedWindow.startAt) : startOfMinute(context.now)
-  const endAt = context.savedWindow
-    ? new Date(context.savedWindow.endAt)
+  // A saved window is kept only while it still IS the plan: once the run length changes, the draft is
+  // a different plan and gets a window from now — otherwise check 5's "Run it for N weeks" could never
+  // clear itself on a saved draft (fresh reviewer, PR #169).
+  const saved = context.savedWindow
+  const savedWindow =
+    saved &&
+    new Date(saved.endAt).getTime() - new Date(saved.startAt).getTime() === answers.weeks * 7 * DAY_MS
+      ? saved
+      : undefined
+  const startAt = savedWindow ? new Date(savedWindow.startAt) : startOfMinute(context.now)
+  const endAt = savedWindow
+    ? new Date(savedWindow.endAt)
     : new Date(startAt.getTime() + answers.weeks * 7 * DAY_MS)
 
   // ── the definition ──
   const tags = Object.fromEntries(
     answers.who.mode === 'everyone'
       ? []
-      : answers.who.conditions.map((condition) => [
+      : activeConditions(answers).map((condition) => [
           condition.field,
           condition.values.length === 1 ? condition.values[0] : [...condition.values],
         ])
@@ -581,7 +630,7 @@ export function buildExperimentPlan(
     hypothesis,
     assignmentEntityType: answers.entity,
     eligibility: {
-      description: `${answers.who.allocation}% of ${whoWords(answers)}`.slice(0, 500),
+      description: truncate(`${answers.who.allocation}% of ${whoWords(answers)}`, 500),
       ...(Object.keys(tags).length > 0 ? { tags } : {}),
     },
     variants: variantKeys.map((key, index) => ({ key, weight: weights[index], label: names[index] })),
@@ -597,6 +646,8 @@ export function buildExperimentPlan(
   if (!definitionParsed.ok) return { ok: false, errors: definitionParsed.errors }
 
   const checks = computeChecks(answers, context, {
+    experimentKey,
+    savedWindow: savedWindow !== undefined,
     flagKey,
     createsFeature,
     weights,
@@ -635,6 +686,11 @@ export function buildExperimentPlan(
   }
 }
 
+/** By code point — `.slice` on UTF-16 can leave a lone surrogate that jsonb refuses. */
+function truncate(value: string, max: number): string {
+  return Array.from(value).slice(0, max).join('')
+}
+
 function startOfMinute(date: Date): Date {
   return new Date(Math.floor(date.getTime() / 60_000) * 60_000)
 }
@@ -642,8 +698,8 @@ function startOfMinute(date: Date): Date {
 function hypothesisText(answers: ExperimentBuilderAnswers, names: string[]): string {
   const guarded = EXPERIMENT_TEMPLATES[answers.template].guarded
   const verb = guarded ? "won't lower" : answers.direction === 'increase' ? 'will raise' : 'will lower'
-  return `We believe showing ${names[1]} to ${whoWords(answers)} ${verb} ${eventWords(answers.metric)} because ${EXPERIMENT_REASONS[answers.why]}.`.slice(
-    0,
+  return truncate(
+    `We believe showing ${names[1]} to ${whoWords(answers)} ${verb} ${eventWords(answers.metric)} because ${EXPERIMENT_REASONS[answers.why]}.`,
     500
   )
 }
@@ -711,6 +767,8 @@ function computeChecks(
   answers: ExperimentBuilderAnswers,
   context: ExperimentPlanContext,
   derived: {
+    experimentKey: string
+    savedWindow: boolean
     flagKey: string
     createsFeature: boolean
     weights: number[]
@@ -733,6 +791,21 @@ function computeChecks(
       title: 'The feature has no code behind it yet',
       detail: `${derived.flagKey} is created with this test, but nothing in Production checks it. Save a draft now and start once the code ships.`,
       fix: { label: 'Pick an existing feature', kind: 'step', step: 1 },
+    })
+  } else if (
+    typeof context.served?.definition.metadata?.[EXPERIMENT_METADATA_KEYS.key] === 'string' &&
+    context.served.definition.metadata[EXPERIMENT_METADATA_KEYS.key] !== derived.experimentKey
+  ) {
+    // Planning on the stripped definition would silently take the OTHER test's split out of
+    // Production at Start (fresh reviewer, PR #169). One test per feature at a time.
+    const other = String(context.served.definition.metadata[EXPERIMENT_METADATA_KEYS.key])
+    checks.push({
+      id: 'feature',
+      status: 'fail',
+      step: 1,
+      title: 'Another test is using this feature',
+      detail: `${derived.flagKey} is serving ${other} in Production. Decide that one first, or pick another feature.`,
+      fix: { label: 'Pick another feature', kind: 'step', step: 1 },
     })
   } else if (!context.served?.activeInProduction) {
     checks.push({
@@ -876,7 +949,7 @@ function computeChecks(
   // A fresh plan runs its FULL planned length (its window starts at the minute boundary before `now`,
   // so measuring from `now` would lose a day to rounding — agy, PR #169). A saved draft's window is
   // already running down, so it is measured from now.
-  const remainingDays = context.savedWindow
+  const remainingDays = derived.savedWindow
     ? Math.floor(
         (derived.endAt.getTime() - Math.max(context.now.getTime(), derived.startAt.getTime())) / DAY_MS
       )
@@ -901,11 +974,17 @@ function computeChecks(
       title: "We can't estimate how long it needs",
       detail: `${eventWords(answers.metric)} has no baseline among ${entityPlural(answers.entity)} yet, so there's no number of days to check the plan against.`,
     })
-  } else if (
-    context.savedWindow &&
-    derived.startAt.getTime() < context.now.getTime() &&
-    remainingDays < derived.days
-  ) {
+  } else if (derived.days > WEEK_OPTIONS[WEEK_OPTIONS.length - 1] * 7) {
+    // No run length on offer fits, so "Run it for 8 weeks" would be a fix that cannot fix anything.
+    checks.push({
+      id: 'window',
+      status: 'fail',
+      step: 2,
+      title: 'Not enough people for any run length',
+      detail: `It needs about ${derived.days} days at your current traffic — longer than the ${WEEK_OPTIONS[WEEK_OPTIONS.length - 1]}-week maximum. Include more people, or look for a bigger change.`,
+      fix: { label: 'Change who’s in it', kind: 'step', step: 2 },
+    })
+  } else if (derived.savedWindow && remainingDays < derived.days) {
     checks.push({
       id: 'window',
       status: 'fail',
@@ -942,4 +1021,99 @@ function computeChecks(
     detail: `Every day we check that people are divided ${derived.weights.join(' / ')} and alert you if they drift (p < 0.01).`,
   })
   return checks
+}
+
+// ── the browser's answers, checked before the planner sees them (D7) ───────────────────────────
+
+const REASON_KEYS = new Set(Object.keys(EXPERIMENT_REASONS))
+const TEMPLATE_KEYS = new Set(Object.keys(EXPERIMENT_TEMPLATES))
+const CONDITION_FIELDS = new Set<string>(['region', 'channel', 'plan', 'source', 'campaign'])
+const ANSWER_KEYS = [
+  'template',
+  'flagKey',
+  'why',
+  'direction',
+  'metric',
+  'guardrails',
+  'breakdowns',
+  'mde',
+  'who',
+  'entity',
+  'versions',
+  'split',
+  'weeks',
+]
+
+function plainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/**
+ * The ONLY way a server action turns browser input into answers. Closed shape, bounded sizes, known
+ * keys — anything else is refused, never coerced (CODE-QUALITY #7). The planner then applies the
+ * product rules; this only guarantees it is handed the type it declares.
+ */
+export function parseExperimentBuilderAnswers(
+  input: unknown
+): { ok: true; answers: ExperimentBuilderAnswers } | { ok: false; error: string } {
+  const bad = (error: string) => ({ ok: false as const, error })
+  if (!plainObject(input)) return bad('Answers must be an object.')
+  if (Object.keys(input).some((key) => !ANSWER_KEYS.includes(key)))
+    return bad('Answers carry an unknown field.')
+  const text = (value: unknown, max: number) =>
+    typeof value === 'string' && value.length > 0 && value.length <= max
+  const int = (value: unknown, min: number, max: number) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
+  if (!TEMPLATE_KEYS.has(input.template as string)) return bad('Unknown template.')
+  if (input.flagKey !== null && !text(input.flagKey, 128)) return bad('Invalid feature.')
+  if (!REASON_KEYS.has(input.why as string)) return bad('Unknown reason.')
+  if (input.direction !== 'increase' && input.direction !== 'decrease') return bad('Invalid direction.')
+  if (!text(input.metric, 128)) return bad('Invalid metric.')
+  if (
+    !Array.isArray(input.guardrails) ||
+    input.guardrails.length > 10 ||
+    !input.guardrails.every((event) => text(event, 128))
+  )
+    return bad('Invalid guardrails.')
+  if (
+    !Array.isArray(input.breakdowns) ||
+    input.breakdowns.length > 5 ||
+    !input.breakdowns.every((field) => CONDITION_FIELDS.has(field as string))
+  )
+    return bad('Invalid breakdowns.')
+  if (!int(input.mde, 1, 100) || !int(input.split, 1, 99) || !int(input.weeks, 1, 8))
+    return bad('Invalid numbers.')
+  if (!text(input.entity, 64)) return bad('Invalid entity.')
+  if (
+    !Array.isArray(input.versions) ||
+    input.versions.length < 2 ||
+    input.versions.length > MAX_EXPERIMENT_VERSIONS ||
+    !input.versions.every((name) => text(name, 80))
+  )
+    return bad('Invalid versions.')
+  const who = input.who
+  if (!plainObject(who) || (who.mode !== 'everyone' && who.mode !== 'some') || !int(who.allocation, 1, 100))
+    return bad('Invalid audience.')
+  if (Object.keys(who).some((key) => !['mode', 'conditions', 'allocation'].includes(key)))
+    return bad('Invalid audience.')
+  if (!Array.isArray(who.conditions) || who.conditions.length > 5) return bad('Invalid conditions.')
+  const fields = new Set<string>()
+  for (const condition of who.conditions) {
+    if (!plainObject(condition) || Object.keys(condition).some((key) => key !== 'field' && key !== 'values'))
+      return bad('Invalid condition.')
+    if (!CONDITION_FIELDS.has(condition.field as string) || fields.has(condition.field as string))
+      return bad('Invalid condition field.')
+    fields.add(condition.field as string)
+    if (
+      !Array.isArray(condition.values) ||
+      condition.values.length > 20 ||
+      !condition.values.every(
+        (value) =>
+          (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+          predicateValueAllowed(value)
+      )
+    )
+      return bad('Invalid condition values.')
+  }
+  return { ok: true, answers: input as unknown as ExperimentBuilderAnswers }
 }
