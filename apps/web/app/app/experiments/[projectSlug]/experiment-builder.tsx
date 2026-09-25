@@ -203,6 +203,10 @@ export function ExperimentBuilder({
       setStored(false)
       setState(initial)
       setRetryKey(null)
+      // …and nothing said about that plan follows it (fresh reviewer, #170 round 4).
+      setError(null)
+      setReturnedChecks(null)
+      setNotice(null)
     }
   }
   /**
@@ -257,7 +261,8 @@ export function ExperimentBuilder({
     }
     // It started — even partially, it is no longer a draft to come back to.
     started.current = true
-    forgetStored(projectId)
+    // Only the header's plan lives in storage; a row's Start must not delete it.
+    if (!continueDraft) forgetStored(projectId)
     router.refresh()
     if (!response.serving) {
       if (response.notice) {
