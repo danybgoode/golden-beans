@@ -328,6 +328,45 @@ export function createBuilderIo(client: SupabaseClient) {
       return (await readBase(projectId, flagId, flagVersionId)).outcome
     },
 
+    /**
+     * Story 4.1 — does Production serve THIS experiment version's bound flag version? `null` when the
+     * version has no binding (made outside the builder), so the page says nothing rather than guess.
+     */
+    async versionServing(projectId: string, experimentVersionId: string): Promise<boolean | null> {
+      const { data: binding, error } = await client
+        .from('experiment_flag_version_bindings')
+        .select('flag_id,flag_version_id')
+        .eq('project_id', projectId)
+        .eq('experiment_version_id', experimentVersionId)
+        .maybeSingle()
+      if (error) throw new Error('could not read the experiment')
+      if (!binding) return null
+      const { data: active, error: activeError } = await client
+        .from('flag_environment_activations')
+        .select('version_id')
+        .eq('project_id', projectId)
+        .eq('flag_id', binding.flag_id)
+        .eq('environment', 'production')
+        .maybeSingle()
+      if (activeError) throw new Error('could not read the feature')
+      return active?.version_id === binding.flag_version_id
+    },
+
+    /** Story 4.1 — the builder answers that made this version (Plan tab, "Change the plan"), if any. */
+    async versionAnswers(
+      projectId: string,
+      experimentVersionId: string
+    ): Promise<ExperimentBuilderAnswers | null> {
+      const { data, error } = await client
+        .from('experiment_builder_answers')
+        .select('answers')
+        .eq('project_id', projectId)
+        .eq('version_id', experimentVersionId)
+        .maybeSingle()
+      if (error) throw new Error('could not read the experiment')
+      return (data?.answers as ExperimentBuilderAnswers | undefined) ?? null
+    },
+
     /** The version number of this experiment that is RUNNING, if any (at most one — a DB index). */
     async runningVersion(projectId: string, experimentId: string): Promise<number | null> {
       const { data, error } = await client
