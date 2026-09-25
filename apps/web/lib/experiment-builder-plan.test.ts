@@ -904,3 +904,44 @@ test('a TRUNCATED catalog never blocks Start, even for everyone (fresh reviewer 
     'warn'
   )
 })
+
+test('"some" with no conditions is a plan, not a throw (Codex, round 6 probe)', () => {
+  const result = buildExperimentPlan(
+    { ...copyAnswers(), who: { mode: 'some', conditions: [], allocation: 100 } },
+    context()
+  )
+  assert.ok(result.ok)
+  assert.equal(result.plan.checks.find((check) => check.id === 'eligibility')?.status, 'ok')
+})
+
+test('a saved window that has already ENDED fails first, whatever the estimate says (fresh reviewer, round 6)', () => {
+  const savedWindow = { startAt: '2026-08-01T00:00:00.000Z', endAt: '2026-08-15T00:00:00.000Z' } // 2 weeks, over
+  const everyone = { mode: 'everyone' as const, conditions: [], allocation: 100 }
+  // No baseline for this metric among merchants → the estimate branch would have said "can't estimate".
+  const catalog = prototypeCatalog({ baselines: [] })
+  const window = checkOf(
+    { ...copyAnswers(), weeks: 2, who: everyone },
+    context({ savedWindow, catalog })
+  ).window
+  assert.equal(window.status, 'fail')
+  assert.equal(window.fix?.kind, 'replan-from-today')
+})
+
+test('a need above the contract cap is recorded at the cap AND said out loud (Codex, round 7)', () => {
+  // referral.sent: a 0.8 % baseline, so a 1 % change needs ~20 million per version.
+  const result = buildExperimentPlan({ ...copyAnswers(), metric: 'referral.sent', mde: 1 }, context())
+  assert.ok(result.ok)
+  assert.ok(result.plan.estimate.needPerVersion! > 1_000_000)
+  assert.equal(result.plan.definition.minimumSamplePerVariant, 1_000_000)
+  assert.ok(result.plan.notes.some((note) => /more than a plan can declare/.test(note)))
+})
+
+test('a saved window with less than a day left counts as over (fresh reviewer, round 7)', () => {
+  const savedWindow = { startAt: '2026-09-10T15:30:00.000Z', endAt: '2026-09-24T15:30:00.000Z' } // 30 minutes left
+  const window = checkOf(
+    { ...copyAnswers(), weeks: 2 },
+    context({ savedWindow, catalog: prototypeCatalog({ baselines: [] }) })
+  ).window
+  assert.equal(window.status, 'fail')
+  assert.equal(window.fix?.kind, 'replan-from-today')
+})

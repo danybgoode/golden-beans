@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 2: Event catalog and the planner
 
-**Status:** 🟦 In review · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
+**Status:** ✅ shipped 2026-09-25 — PR #169, squash `bf62913`; 8 review rounds (last two clean from both layers); amendment A7 recorded for Daniel · **Wave 1** · branch `feat/experiments-for-humans-s2` (stacked on S1)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
