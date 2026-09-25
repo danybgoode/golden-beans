@@ -19,6 +19,7 @@ import {
   isJourneyProjectionsEnabled,
   isExperimentGovernanceEnabled,
   isExperimentBuilderEnabled,
+  isExperimentBuilderWritable,
   isReportSharesEnabled,
   isJourneyMcpToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
@@ -341,4 +342,16 @@ test('flags are read fresh per call, not captured once at module load', () => {
     process.env.SIGNUP_ENABLED = 'false'
     assert.equal(isSignupEnabled(), false)
   })
+})
+
+test('builder writes need BOTH governance and the builder gate', () => {
+  for (const governance of [undefined, 'true']) {
+    for (const builder of [undefined, 'true']) {
+      withEnv('EXPERIMENT_GOVERNANCE_ENABLED', governance, () => {
+        withEnv('EXPERIMENT_BUILDER_ENABLED', builder, () => {
+          assert.equal(isExperimentBuilderWritable(), governance === 'true' && builder === 'true')
+        })
+      })
+    }
+  }
 })

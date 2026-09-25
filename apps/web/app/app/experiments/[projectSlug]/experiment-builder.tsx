@@ -11,6 +11,7 @@ import {
   eventWords,
   metricCandidates,
   predicateValueAllowed,
+  versionWeights,
   whoWords,
   type ExperimentCheck,
   type ExperimentPlan,
@@ -76,12 +77,26 @@ function defaultFeatureKey(data: BuilderPageData): string | null {
 
 function readStored(projectId: string, data: BuilderPageData) {
   try {
-    return deserializeBuilderState(
+    const restored = deserializeBuilderState(
       sessionStorage.getItem(builderStorageKey(projectId)),
       contextFor(data, null)
     )
+    // A stored plan bound to a key that is no longer a draft (it started, even partially) can be
+    // neither saved nor started — restoring it would strand the door (fresh reviewer, #170 round 2).
+    if (restored?.continuing && !data.drafts.some((draft) => draft.experimentKey === restored.continuing)) {
+      forgetStored(projectId)
+      return null
+    }
+    return restored
   } catch {
     return null
+  }
+}
+function forgetStored(projectId: string) {
+  try {
+    sessionStorage.removeItem(builderStorageKey(projectId))
+  } catch {
+    // storage unavailable — nothing to clear
   }
 }
 function writeStored(projectId: string, state: BuilderState) {
@@ -108,6 +123,7 @@ export function ExperimentBuilder({
   const titleId = useId()
   const dialog = useRef<HTMLDialogElement>(null)
   const reported = useRef(false)
+  const started = useRef(false)
   const initial = useMemo(() => {
     const draft = continueDraft ? data.drafts.find((item) => item.experimentKey === continueDraft) : undefined
     return draft
@@ -133,8 +149,9 @@ export function ExperimentBuilder({
   }, [continueDraft, data, projectId])
   useEffect(() => {
     // Only a builder somebody opened is "in progress"; the defaults a page load computes are not.
-    if (open && state && writeStored(projectId, state)) setStored(true)
-  }, [open, projectId, state])
+    // A draft being CONTINUED is already saved; storing it would overwrite a new plan in progress.
+    if (!continueDraft && open && state && writeStored(projectId, state)) setStored(true)
+  }, [continueDraft, open, projectId, state])
   useEffect(() => {
     const element = dialog.current
     if (!element) return
@@ -178,26 +195,56 @@ export function ExperimentBuilder({
     if (reported.current === next) return
     reported.current = next
     setOpen(next)
+    // A plan that STARTED (even partially) is not a plan in progress: once its dialog closes, the
+    // header door is a new experiment again (fresh reviewer, #170 round 3). Reset on close, so the
+    // notice and Retry stay readable while it is open.
+    if (!next && started.current && !continueDraft) {
+      started.current = false
+      setStored(false)
+      setState(initial)
+      setRetryKey(null)
+      // …and nothing said about that plan follows it (fresh reviewer, #170 round 4).
+      setError(null)
+      setReturnedChecks(null)
+      setNotice(null)
+    }
   }
-  async function save(closeAfterSave = true): Promise<string | null> {
+  /**
+   * Every server action through one door: a rejected request (network, deploy) must not leave the
+   * dialog pending forever (Codex, #170 round 2).
+   */
+  async function call<T>(action: () => Promise<T>): Promise<T | null> {
     setPending(true)
     setError(null)
-    const current = state
-    if (!current) {
-      setPending(false)
+    try {
+      return await action()
+    } catch {
+      setError('That didn’t reach the server. Nothing changed; try again.')
       return null
+    } finally {
+      setPending(false)
     }
-    const answers = current.answers
-    const continuing = current.continuing
-    const response = await saveExperimentDraftAction(slug, answers, continuing)
-    setPending(false)
+  }
+  async function save(closeAfterSave = true): Promise<string | null> {
+    const current = state
+    if (!current) return null
+    const response = await call(() => saveExperimentDraftAction(slug, current.answers, current.continuing))
+    if (!response) return null
     if (!response.ok) {
       setError(response.error)
       setReturnedChecks(response.checks ?? null)
       return null
     }
-    setState((current) => (current ? { ...current, continuing: response.experimentKey } : current))
     setNotice(`${response.experimentKey} saved as a draft`)
+    if (closeAfterSave && !continueDraft) {
+      // Saved, it is a row with its own Continue now — the header door goes back to a NEW plan
+      // instead of reopening this draft forever (fresh reviewer, #170).
+      forgetStored(projectId)
+      setStored(false)
+      setState(initial)
+    } else {
+      setState((current) => (current ? { ...current, continuing: response.experimentKey } : current))
+    }
     if (closeAfterSave) change(false)
     router.refresh()
     return response.experimentKey
@@ -205,37 +252,43 @@ export function ExperimentBuilder({
   async function start() {
     const key = await save(false)
     if (!key) return
-    setPending(true)
-    const response = await startExperimentAction(slug, key)
-    setPending(false)
+    const response = await call(() => startExperimentAction(slug, key))
+    if (!response) return
     if (!response.ok) {
       setError(response.error)
       setReturnedChecks(response.checks ?? null)
       return
     }
+    // It started — even partially, it is no longer a draft to come back to.
+    started.current = true
+    // Only the header's plan lives in storage; a row's Start must not delete it.
+    if (!continueDraft) forgetStored(projectId)
+    router.refresh()
     if (!response.serving) {
+      if (response.notice) {
+        setError(response.notice)
+        return
+      }
       setRetryKey(key)
       setNotice("Running, but the split isn't serving yet.")
       return
     }
-    setNotice(`${key} started · ${response.flagKey} is splitting ${response.weights.join(' / ')}`)
-    try {
-      sessionStorage.removeItem(builderStorageKey(projectId))
-    } catch {
-      /* successful Production writes must still navigate */
-    }
     router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
   }
   async function retry() {
-    if (!retryKey) return
-    setPending(true)
-    const response = await retryExperimentServingAction(slug, retryKey)
-    setPending(false)
+    const key = retryKey
+    if (!key) return
+    const response = await call(() => retryExperimentServingAction(slug, key))
+    if (!response) return
     if (!response.ok) {
       setError(response.error)
       return
     }
-    router.push(`/app/experiments/${slug}/${encodeURIComponent(retryKey)}`)
+    if (!response.serving) {
+      setError('Still not serving. Try again in a moment.')
+      return
+    }
+    router.push(`/app/experiments/${slug}/${encodeURIComponent(key)}`)
   }
   const primary = state.step < 5 ? 'Continue' : state.step === 5 ? 'Review' : 'Start experiment'
   const footer =
@@ -654,10 +707,8 @@ function Who({
   )
 }
 function See({ state, dispatch }: { state: BuilderState; dispatch: (action: BuilderAction) => void }) {
-  const weights =
-    state.answers.versions.length === 2
-      ? [100 - state.answers.split, state.answers.split]
-      : state.answers.versions.map(() => 'equal')
+  // The planner's own split — never a second formula (and never "equal%": agy, PR #170).
+  const weights = versionWeights(state.answers.versions.length, state.answers.split)
   return (
     <>
       <h3>What they see</h3>
@@ -1008,7 +1059,7 @@ function Review({
         <div>
           <div className="ds-x-mini-vers">
             {state.answers.versions.map((version, index) => (
-              <div key={version}>
+              <div key={`${version}-${index}`}>
                 <span className={`ds-x-tag ${index ? 'ds-treat' : 'ds-control'}`}>
                   {index ? `Version ${String.fromCharCode(65 + index)}` : 'Control'}
                 </span>
@@ -1031,7 +1082,7 @@ function Review({
         </div>
         <div>
           <p className="ds-label">
-            Before it starts · {plan.checks.filter((check) => check.status !== 'fail').length} of 6 pass
+            Before it starts · {plan.checks.length - plan.failing} of {plan.checks.length} pass
           </p>
           <CheckList checks={plan.checks} dispatch={dispatch} />
           <p className="ds-x-hint">
@@ -1115,7 +1166,9 @@ function PlanPanel({ plan, weeks }: { plan: ExperimentPlan | null; weeks: number
             </div>
           </div>
           <p className="ds-x-checksum">
-            <b>{plan.checks.filter((check) => check.status === 'ok').length} of 6 checks pass</b>
+            <b>
+              {plan.checks.length - plan.failing} of {plan.checks.length} checks pass
+            </b>
           </p>
         </>
       ) : (

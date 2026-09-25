@@ -16,15 +16,23 @@ test.describe('experiment builder', () => {
         .getByRole('button')
         .filter({ hasText: /What & why|Who's in it|What they see|How you'll know|How long|Review/ })
     ).toHaveCount(6)
-    await expect(dialog.locator('textarea')).toHaveCount(0)
-    await expect(dialog.locator('input:not([type=range])')).toHaveCount(0)
-    await expect(dialog.locator('details')).toHaveCount(0)
-    for (const label of ['Continue', 'Continue', 'Continue', 'Continue', 'Review'])
+    // D10 on EVERY step, not just the first: no text box, no free input, nothing folded away.
+    const zeroInputs = async () => {
+      await expect(dialog.locator('textarea')).toHaveCount(0)
+      await expect(dialog.locator('input:not([type=range])')).toHaveCount(0)
+      await expect(dialog.locator('details')).toHaveCount(0)
+    }
+    await zeroInputs()
+    for (const label of ['Continue', 'Continue', 'Continue', 'Continue', 'Review']) {
       await dialog.getByRole('button', { name: label, exact: true }).click()
+      await zeroInputs()
+    }
     await expect(dialog.locator('.ds-x-big-sentence')).toBeVisible()
     await expect(dialog.locator('.ds-x-check')).toHaveCount(6)
     await dialog.getByRole('button', { name: 'Save draft', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('saved as a draft')
     await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible()
+    // Saved, the plan is a row — the header door is a NEW experiment again, not this draft forever.
+    await expect(page.getByRole('button', { name: '+ New experiment', exact: true })).toBeVisible()
   })
 })

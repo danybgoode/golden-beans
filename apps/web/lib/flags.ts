@@ -72,6 +72,12 @@ export function isExperimentBuilderEnabled(): boolean {
   return process.env.EXPERIMENT_BUILDER_ENABLED === 'true'
 }
 
+// The builder's WRITES need both gates: they write governed experiments, so with governance off the
+// page they live on is gone and so are they (fresh reviewer, PR #170).
+export function isExperimentBuilderWritable(): boolean {
+  return isExperimentGovernanceEnabled() && isExperimentBuilderEnabled()
+}
+
 // pod-report · Sprint 3, Story 3.1 — the share-link enablement gate. Sixth flag, same polarity and
 // same dark-by-default contract as its siblings (epic README, "Kill-switch"): born unset/OFF,
 // flipped deliberately at Story 3.3.

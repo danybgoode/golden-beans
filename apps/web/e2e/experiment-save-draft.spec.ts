@@ -245,7 +245,11 @@ test.describe('save_experiment_draft (D7)', () => {
       p_actor_user_id: owner,
     })
     expect(error).not.toBeNull()
-    expect(`${error?.code} ${error?.message}`).toMatch(/42501.*function|PGRST202/)
+    // A FUNCTION-level denial — not "function not found" (PGRST202), which would also pass if the
+    // function were missing, and not an RLS error, which would mean EXECUTE leaked and the body ran.
+    expect(`${error?.code} ${error?.message}`).toMatch(
+      /^42501 permission denied for function save_experiment_draft/
+    )
 
     // The application's role may read the answers and do nothing else to them.
     const update = await client

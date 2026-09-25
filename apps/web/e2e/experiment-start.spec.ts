@@ -2,9 +2,11 @@ import { expect, test } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client as PgClient } from 'pg'
 import type { FlagDefinition } from '@golden-frijoles/sdk'
-import { createBuilderIo, type BuilderIo } from '@/lib/experiment-builder-io'
+import { createBuilderIo, sameBase, type BuilderIo } from '@/lib/experiment-builder-io'
 import {
   BUILDER_PAUSED,
+  FEATURE_MOVED,
+  RETRY_MOVED,
   retryServingCommand,
   saveExperimentDraftCommand,
   startExperimentCommand,
@@ -87,10 +89,10 @@ async function fixture(client: SupabaseClient): Promise<Fixture> {
   return result
 }
 
-async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition) {
+async function activate(client: SupabaseClient, fx: Fixture, definition: FlagDefinition, flagKey = FLAG_KEY) {
   const { data: version, error } = await client.rpc('create_flag_definition_version', {
     p_project_id: fx.projectId,
-    p_flag_key: FLAG_KEY,
+    p_flag_key: flagKey,
     p_definition: definition,
     p_reason: 'fixture',
     p_actor_user_id: fx.owner,
@@ -138,14 +140,21 @@ function deps(
   client: SupabaseClient,
   fx: Fixture,
   io: BuilderIo = createBuilderIo(client),
-  enabled = true
+  enabled = true,
+  servingEnabled = true
 ): BuilderDependencies {
   return {
     builderEnabled: () => enabled,
-    servingEnabled: () => true,
+    servingEnabled: () => servingEnabled,
     requireOwnership: async () => ({ projectId: fx.projectId, userId: fx.owner }),
     io,
   }
+}
+
+/** Someone ships a rule on the feature — the change Start and Retry must never roll back. */
+const CHANGED: FlagDefinition = {
+  ...SERVED,
+  rules: [{ priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' }],
 }
 
 async function productionVersionOf(client: SupabaseClient, projectId: string) {
@@ -207,7 +216,7 @@ test.describe('Start (D7)', () => {
   test('a forced activation failure leaves it RUNNING and not serving; the retry serves it', async () => {
     const fx = await fixture(client)
     const real = createBuilderIo(client)
-    const failing: BuilderIo = { ...real, activateInProduction: async () => false }
+    const failing: BuilderIo = { ...real, activateInProduction: async () => 'failed' as const }
     const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
     const key = saved.ok ? saved.experimentKey : ''
     const started = await startExperimentCommand(fx.slug, key, deps(client, fx, failing))
@@ -218,8 +227,12 @@ test.describe('Start (D7)', () => {
         ?.experiment_key
     ).toBeUndefined()
 
+    // The page derives the partial state from Production — a reload still shows it.
+    expect((await real.loadBuilderPage(fx.projectId)).notServing).toEqual([key])
+
     const retried = await retryServingCommand(fx.slug, key, deps(client, fx))
     expect(retried).toMatchObject({ ok: true, serving: true })
+    expect((await real.loadBuilderPage(fx.projectId)).notServing).toEqual([])
     expect(
       (await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition.metadata
         ?.experiment_key
@@ -263,12 +276,7 @@ test.describe('Start (D7)', () => {
     const fx = await fixture(client)
     const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
     // Someone ships a rule on the feature after the draft was saved.
-    const changed: FlagDefinition = {
-      ...SERVED,
-      rules: [
-        { priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
-      ],
-    }
+    const changed = CHANGED
     await activate(client, fx, changed)
     const started = await startExperimentCommand(
       fx.slug,
@@ -282,5 +290,212 @@ test.describe('Start (D7)', () => {
     ])
     const serving = await productionVersionOf(client, fx.projectId)
     expect(stripExperiment(serving.flag_definition_versions.definition)).toEqual(changed)
+  })
+
+  test('a change that lands between the plan and Start stops Start BEFORE running — nothing moves', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const real = createBuilderIo(client)
+    // The change lands after Start re-planned and saved, before it asks what Production serves.
+    const racing: BuilderIo = {
+      ...real,
+      saveDraft: async (input) => {
+        const result = await real.saveDraft(input)
+        await activate(client, fx, CHANGED)
+        return result
+      },
+    }
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, racing)
+    )
+    expect(started).toEqual({ ok: false, error: FEATURE_MOVED })
+    expect(await statusOf(client, fx.projectId)).toEqual([{ version: 1, status: 'draft' }])
+    expect((await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition).toEqual(
+      CHANGED
+    )
+  })
+
+  test('a change that lands after running leaves the partial state — never a rollback — and Retry refuses', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    const real = createBuilderIo(client)
+    const racing: BuilderIo = {
+      ...real,
+      activateInProduction: async (input) => {
+        await activate(client, fx, CHANGED)
+        return real.activateInProduction(input)
+      },
+    }
+    const started = await startExperimentCommand(fx.slug, key, deps(client, fx, racing))
+    expect(started).toMatchObject({ ok: true, serving: false, notice: RETRY_MOVED })
+    expect(await statusOf(client, fx.projectId)).toEqual([{ version: 1, status: 'running' }])
+    expect((await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition).toEqual(
+      CHANGED
+    )
+
+    expect(await retryServingCommand(fx.slug, key, deps(client, fx))).toEqual({
+      ok: false,
+      error: RETRY_MOVED,
+    })
+    expect((await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition).toEqual(
+      CHANGED
+    )
+  })
+
+  test('another test on the same base is a moved feature, not a match', () => {
+    const planned = { ...SERVED, metadata: { ...SERVED.metadata, experiment_key: 'mine' } }
+    expect(sameBase(SERVED, planned)).toBe(true)
+    expect(sameBase({ ...SERVED, metadata: { ...SERVED.metadata, experiment_key: 'theirs' } }, planned)).toBe(
+      false
+    )
+    expect(sameBase(CHANGED, planned)).toBe(false)
+  })
+
+  test('a transition failure stops Start before anything is served', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    let activated = false
+    const real = createBuilderIo(client)
+    const io: BuilderIo = {
+      ...real,
+      transitionToRunning: async () => false,
+      activateInProduction: async (input) => {
+        activated = true
+        return real.activateInProduction(input)
+      },
+    }
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, io)
+    )
+    expect(started.ok).toBe(false)
+    expect(activated).toBe(false)
+    expect(
+      (await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition.metadata
+        ?.experiment_key
+    ).toBeUndefined()
+  })
+
+  test('a started experiment is neither started again nor continued as a draft', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    expect(await startExperimentCommand(fx.slug, key, deps(client, fx))).toMatchObject({ ok: true })
+    expect(await startExperimentCommand(fx.slug, key, deps(client, fx))).toMatchObject({ ok: false })
+    expect(
+      await saveExperimentDraftCommand(
+        fx.slug,
+        answers({ versions: ['Current', 'Other copy'] }),
+        key,
+        deps(client, fx)
+      )
+    ).toEqual({ ok: false, error: 'That experiment has already started.' })
+    expect(await statusOf(client, fx.projectId)).toEqual([{ version: 1, status: 'running' }])
+  })
+
+  test('Continue with nothing changed is a no-op; a changed answer is the next version', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const key = saved.ok ? saved.experimentKey : ''
+    expect(await saveExperimentDraftCommand(fx.slug, answers(), key, deps(client, fx))).toMatchObject({
+      ok: true,
+      version: 1,
+      created: false,
+    })
+    expect(
+      await saveExperimentDraftCommand(
+        fx.slug,
+        answers({ versions: ['Current', 'Other copy'] }),
+        key,
+        deps(client, fx)
+      )
+    ).toMatchObject({ ok: true, version: 2, created: true })
+  })
+
+  test('the serving gate refuses before ownership is even asked', async () => {
+    const fx = await fixture(client)
+    let asked = false
+    const off: BuilderDependencies = {
+      ...deps(client, fx, createBuilderIo(client), true, false),
+      requireOwnership: async () => {
+        asked = true
+        return { projectId: fx.projectId, userId: fx.owner }
+      },
+    }
+    expect((await startExperimentCommand(fx.slug, 'anything', off)).ok).toBe(false)
+    expect((await retryServingCommand(fx.slug, 'anything', off)).ok).toBe(false)
+    expect(asked).toBe(false)
+  })
+
+  test('a feature whose rules are stored out of priority order still starts — order is not meaning', async () => {
+    const fx = await fixture(client)
+    const unsorted: FlagDefinition = {
+      ...SERVED,
+      rules: [
+        { priority: 20, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+        { priority: 5, clauses: [{ field: 'plan', operator: 'equals', value: 'team' }], variantKey: 'off' },
+      ],
+    }
+    await activate(client, fx, unsorted)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx)
+    )
+    expect(started).toMatchObject({ ok: true, serving: true })
+  })
+
+  /** The real client, with `hook` run once just before the FIRST `set_flag_activation` call. */
+  function racingClient(hook: () => Promise<void>) {
+    const calls = { activations: 0 }
+    const proxy = new Proxy(client, {
+      get(target, property) {
+        if (property === 'rpc') {
+          return async (name: string, args: Record<string, unknown>) => {
+            if (name === 'set_flag_activation' && calls.activations++ === 0) await hook()
+            return target.rpc(name, args)
+          }
+        }
+        const value = Reflect.get(target, property)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    }) as SupabaseClient
+    return { proxy, calls }
+  }
+
+  test('another feature activated between the check and the write: a revision conflict, re-checked, then served', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const { proxy, calls } = racingClient(() =>
+      activate(client, fx, SERVED, 'growth.other_feature').then(() => undefined)
+    )
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, createBuilderIo(proxy))
+    )
+    expect(started).toMatchObject({ ok: true, serving: true })
+    expect(calls.activations).toBe(2)
+  })
+
+  test('THIS feature changed between the check and the write: the conflict re-checks to moved — no rollback', async () => {
+    const fx = await fixture(client)
+    const saved = await saveExperimentDraftCommand(fx.slug, answers(), null, deps(client, fx))
+    const { proxy, calls } = racingClient(() => activate(client, fx, CHANGED).then(() => undefined))
+    const started = await startExperimentCommand(
+      fx.slug,
+      saved.ok ? saved.experimentKey : '',
+      deps(client, fx, createBuilderIo(proxy))
+    )
+    expect(started).toMatchObject({ ok: true, serving: false, notice: RETRY_MOVED })
+    expect(calls.activations).toBe(1)
+    expect((await productionVersionOf(client, fx.projectId)).flag_definition_versions.definition).toEqual(
+      CHANGED
+    )
   })
 })

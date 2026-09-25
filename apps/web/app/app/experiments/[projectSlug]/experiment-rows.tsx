@@ -2,6 +2,7 @@ import type { ExperimentListRow, ExperimentRowState } from '@/lib/experiment-lis
 import { Col, ListCard, ListHead, Row, RowMain, RowState, Tag, TableEmpty } from '@/design-system/primitives'
 import type { BuilderPageData } from '@/lib/experiment-builder-io'
 import { ExperimentBuilder } from './experiment-builder'
+import { RetryServing } from './retry-serving'
 
 // design-system-rails · Sprint 5, Story 5.4 — the Experiments list, reference state
 // `ship-experiments`.
@@ -109,6 +110,11 @@ export function ExperimentRows({
                   approved design means by "same row, same state pill, same version words". Showing
                   the draft as the row's state would hide a running experiment behind an unstarted
                   plan, which is exactly what it did before this. */}
+              {builderData?.notServing.includes(row.key) ? (
+                <span className="ds-state-detail">
+                  <Tag tone="unclassified">Running, but the split isn&rsquo;t serving</Tag>
+                </span>
+              ) : null}
               {row.waitingDraftVersion === null ? null : (
                 <span className="ds-state-detail">
                   <Tag tone="unclassified">Draft v{row.waitingDraftVersion} waiting</Tag>
@@ -126,6 +132,9 @@ export function ExperimentRows({
                   data={builderData}
                   continueDraft={row.key}
                 />
+              ) : null}
+              {builderEnabled && builderData?.notServing.includes(row.key) ? (
+                <RetryServing slug={slug} experimentKey={row.key} />
               ) : null}
               <a
                 className="ds-btn ds-btn--secondary ds-btn--sm"
