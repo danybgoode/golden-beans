@@ -79,19 +79,30 @@ Production and the experiment is running.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green; one rendered look at 360px and 1360px.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-Env: local authed rail with `EXPERIMENT_BUILDER_ENABLED=true` first (previews cannot reach Supabase — D13), then production once the gate flips at 4.3.
+Env: production · https://goldenfrijoles.com, signed in as the `miyagisanchez` owner. The builder is
+behind `EXPERIMENT_BUILDER_ENABLED`, which Sprint 4 (Story 4.3) turns on in Production; until then
+steps 1–2 check that nothing moved, and steps 3–8 are run after the flip. Previews cannot run this
+(no Supabase on previews — D13).
 
 1. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez and click "+ New experiment".
-   → The builder opens on "What are you changing, and why?" with "Copy or button" selected and the side panel reading "≈ N days at your traffic".
-2. Click "Pricing page".
-   → Every step changes: a toast says the template was applied to all five steps.
-3. Click "Continue" four times, then "Review".
-   → One sentence describes the plan, and the checks list shows how many pass.
-4. On "Who's in it", add a Campaign condition, then return to Review.
-   → The eligibility check fails with "Remove the campaign condition →", and "Start experiment" is disabled.
-5. Click that fix, then "Save draft".
-   → The list shows the experiment as Draft with a "Continue" button.
-6. (**production flag write, owed to Daniel by name**) Click "Continue" → "Start experiment".
-   → "It's live. Results start tomorrow." The feature's page shows the new version serving in Production.
+   → Gate off: the dialog is exactly the old one (the key box and the Definition JSON).
+2. Close it without saving.
+   → Nothing was created: the list still shows `founding-message-v2` and `fundadoras_promise_cta`.
+3. (after 4.3) Click "+ New experiment".
+   → The builder opens on "What are you changing, and why?" with "Copy or button" selected, and the
+   side panel shows the plan sentence and a day estimate (or "—" if your events can't support one yet).
+4. Click "Pricing page".
+   → A toast says the template was applied to all five steps, and the sentence changes.
+5. Click "Continue" four times, then "Review".
+   → One sentence describes the plan and the list shows six checks, each passing, warning or failing,
+   with a fix button on the ones that can be fixed in one click.
+6. Click "Save draft".
+   → A toast "‹key› saved as a draft"; the list shows the experiment as Draft with "Continue".
+7. Click "Continue" on that row.
+   → The builder reopens at Review with the same answers.
+8. (**production flag write, owed to Daniel by name**) If every check passes, click "Start experiment".
+   → A toast "‹key› started · ‹feature› is splitting 50 / 50", then the experiment's page; on the
+   feature's page, Production now serves the experiment's version. If the page instead says "Running,
+   but the split isn't serving yet", click Retry.
 
 If any step fails, note the step number + what you saw — that's the bug report.
