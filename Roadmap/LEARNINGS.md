@@ -1198,6 +1198,23 @@ one-liner + why + date shape.
   script, and write the spec that fails BEFORE the work starts.** The gate that caught it was red at
   `2889px in a 960px viewport` on day one. *(2026-08-28, console-ia-overhaul A20/A22.)*
 
+- **Fix a shared seam at EVERY caller, in the same commit.** (2026-09-25, `experiments-for-humans`
+  #172.) A round fixed the roll-out to load the *named* experiment version instead of the latest; undo
+  and retry called the same loader and kept the latest — a "Change the plan" draft broke both, found a
+  round later. When a finding is about a shared function's contract, `git grep` its callers before
+  calling it fixed.
+- **Scope a fix to the finding's CAUSE, and pin it with the case the over-broad fix would fail.**
+  (2026-09-25, `experiments-for-humans` #172.) Twice a fix over-corrected — a short-sample gate that
+  hid *every* blocker, a guardrail harmed by one arm pinned on another — and each cost a review round.
+  The regression test for the finding passes under both the right and the over-broad fix; the case
+  that tells them apart is the one to write.
+- **Content equality is not a safe precondition for overwriting shared state; name the version you
+  replace, and let the server insist.** (2026-09-25, `experiments-for-humans`.) "Same definition once
+  stripped" was right for Start and wrong for roll-out/undo, which change the feature on purpose.
+  Every Production activation now reads the revision first, then requires Production to serve an
+  exact version id, and re-checks on a revision conflict — and the page's "can roll out" is the same
+  comparison, so a button is never drawn for a write the server will refuse.
+
 ## Permissions & guardrails (ways-of-work-lean-pass, 2026-09-17)
 
 - **A deny rule matches command TEXT, and patching rules one at a time cannot close a rule CLASS.** A

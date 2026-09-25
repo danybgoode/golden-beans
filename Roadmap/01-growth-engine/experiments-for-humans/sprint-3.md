@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 3: The builder
 
-**Status:** ✅ shipped (PR #170, `e05d677`, 2026-09-25; migration applied to prod before merge; builder dark until 4.3) · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
+**Status:** ✅ shipped (danybgoode/golden-beans#170, `e05d677`, 2026-09-25; migration applied to prod before merge; builder dark until 4.3) · **Wave 2 (bet placed by the kickoff — A2)** · branch `feat/experiments-for-humans-s3` (stacked on S2)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
@@ -86,8 +86,9 @@ Production and the experiment is running.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com, signed in as the `miyagisanchez` owner. The builder is
-behind `EXPERIMENT_BUILDER_ENABLED`, which Sprint 4 (Story 4.3) turns on in Production; until then
-steps 1–2 check that nothing moved, and steps 3–8 are run after the flip. Previews cannot run this
+behind `EXPERIMENT_BUILDER_ENABLED`, which Sprint 4 (Story 4.3) turned ON in Production on 2026-09-25
+(verified by opening the builder on the live page). Steps 1–2 described the pre-flip state and are now
+superseded — start at step 3. Previews cannot run this
 (no Supabase on previews — D13).
 
 1. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez and click "+ New experiment".

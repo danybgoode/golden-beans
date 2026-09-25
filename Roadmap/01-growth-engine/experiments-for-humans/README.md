@@ -1,5 +1,5 @@
 ---
-status: in-progress # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: experiments-for-humans
 build_order: 29      # integer position in the ONE global build sequence (carried from the seed; audit wave A)
 title: "Experiments for humans — a guided five-question flow replaces the JSON textarea"
@@ -413,6 +413,10 @@ shared seam, S3 a migration + Production writes, S4 Production writes).
 
 ## Found during the build, outside this epic's scope (follow-ups, not fixed here)
 
+- **Readout wording, 3+-version tests (PR #172 round 8, fresh reviewer — nits).** Harming arms join as
+  "C and D and E" (use a list join); "Guardrails fine for ‹B›" is said while ‹B›'s own guardrail is
+  still unknown (very early, no measurable lift yet); the decide dialog shows no guardrail warning
+  when an owner ships a non-lead arm that harmed one (it is named on the page, not in the dialog).
 - **`IntervalBar` labels collide on a narrow track** (`design-system/charts`, shared primitive). Each label
   sits at the value it names, so when zero lies near a bound at 360 px, "no difference" overprints the
   bound's label. Seen on the Sprint 4 results page at 360 px; not fixed in a shared primitive here.

@@ -1,12 +1,12 @@
 # Experiments for humans — Sprint 1: Widen the contract
 
-**Status:** ✅ shipped 2026-09-24 — PR #167, squash `7f81540`, production deploy succeeded; migration applied + D1 probes live (PR comment). Owed to Daniel: SDK 0.6.0 publish; the migration's `schema_migrations` row · **Wave 1** · branch `feat/experiments-for-humans` · strongest tier, never delegated
+**Status:** ✅ shipped 2026-09-24 — danybgoode/golden-beans#167, squash `7f81540`, production deploy succeeded; migration applied + D1 probes live (PR comment). Owed to Daniel: SDK 0.6.0 publish; the migration's `schema_migrations` row · **Wave 1** · branch `feat/experiments-for-humans` · strongest tier, never delegated
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them. Builder: the architect (never delegated).
 
 - **1.1 → D12.** Copy `approved-prototype.html` byte-for-byte to `apps/web/design-system/`; hash
-  `0f7c5be3c9c316e4`. `APPROVED.md` gets a 6th batch row and an approval line. `approved-states.mjs`
+  SHA-256 prefix `sha256-0f7c5be3c9c316e4`. `APPROVED.md` gets a 6th batch row and an approval line. `approved-states.mjs`
   learns a per-state `source` (default `console-prototype.html`); the five new states evaluate inside
   the new file (`wizard-new-experiment` = boot at step 1, `wizard-new-experiment-review` = `#review`,
   `experiment-results` = `#results` at day 3 (gathering), `experiment-results-ready` = day ≥ planned,
