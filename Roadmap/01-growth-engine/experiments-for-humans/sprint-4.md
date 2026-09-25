@@ -1,6 +1,6 @@
 # Experiments for humans — Sprint 4: Decision-first readout, decide, retire the JSON box
 
-**Status:** ⬜ not started · **Wave 2** · branch `feat/experiments-for-humans-s4` (stacked on S3)
+**Status:** 🟦 In review · **Wave 2** · branch `feat/experiments-for-humans-s4` (stacked on S3)
 
 ## Build contract (locked by the architect before the builder started)
 Cite the README's D-numbers; do not restate them.
@@ -67,10 +67,38 @@ way in and it's the human one.
 **Risk:** low
 
 ## Sprint QA
-- **api spec(s):** `e2e/experiment-results-readout.spec.ts` (4.1, on the named fixture),
-  `e2e/experiment-decide-rollout.spec.ts` (4.2), the retirement guard (4.3).
+
+- **spec(s):** `e2e/experiment-results.authed.spec.ts` (4.1 + 4.2's browser flow — see deviation 2),
+  `e2e/experiment-decide-rollout.spec.ts` (4.2 commands, incl. the two race specs),
+  `e2e/experiment-start.spec.ts` ("Change the plan" as n+1), `lib/experiment-decide-plan.test.ts`
+  (4.2's write order), `lib/experiment-retirement.test.ts` (4.3 guard, mutation-checked).
 - **browser smoke owed:** **yes, to Daniel.** The rollout writes a customer's Production flag.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green; one rendered look.
+
+## As built — deviations and notes (the architect, 2026-09-25)
+1. **Routing:** 4.1 and 4.3 were delegated to Codex (`--tier build`); it hit its usage cap after
+   ~9 minutes (resets 2026-10-25) and left a partial tree. The architect re-derived it and **rewrote the
+   detail page**: the delegate's version dropped the legacy `?metricEvent=` comparison (which by contract
+   does not read the governance gate), the `asOf`/segment parameters, the resource-limit and
+   unavailable pages, made drafts 404, and drew the decide controls for non-owners. Kept from the
+   delegate: the ported `experiments.css` block, the manager deletion, the list page's blocked door,
+   the retirement guard, the revise prop (fixed to preview the NEXT version's key).
+2. **4.1's spec is `experiment-results.authed.spec.ts`, not an api spec:** the governed analysis read is
+   `server-only`, so an api spec could only re-assert the pure readout (`experiment-readout.test.ts`
+   does). The authed spec seeds its own project through the builder commands, makes the fixture user
+   its owner, and opens the real page at waiting / gathering / ready; at ready it records the decision
+   through the chip modal and — builder gate on — rolls out and undoes (off, as in CI: the decision
+   records and the page says the roll-out didn't happen). Mutation: skipping `decisionReady` fails it.
+3. **Cumulative chart: CUT** (the story's named first cut). The lift card says the day-by-day line isn't
+   drawn; the number, legend, range and bars stay.
+4. **4.3 capability handoff:** create → builder; bind → Save draft; start → Start (3.3); stop → the
+   verdict card (`DecideFlow`); invalidate → the Plan tab (`invalidate-version.tsx`); decision and
+   corrections → `DecideFlow` (chips; the recorder's `<textarea>` is gone); the ledger → the Plan tab.
+   `GovernanceDetail`'s allocation table / freshness read retire with the disclosure (the answer line,
+   KPIs and split check carry what a decider needs; the API/MCP still serve the full analysis).
+5. **"Change the plan"** saves version n+1 through an explicit `revise` path; Start refuses while
+   another version of the same experiment runs ("Version N is still running. Stop it before …").
+6. **Rollout/undo** replace exactly the version they planned against (`replacing`), never "same base".
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com
@@ -81,7 +109,11 @@ Env: production · https://goldenfrijoles.com
    → The first line says what's happening and what to do next, in one sentence.
 3. Click the "Plan" tab.
    → The plan reads as one sentence plus a short list, and "Change the plan →" is offered.
-4. (**production flag write, owed to Daniel by name**) When the verdict card offers it, click "Roll out ‹version› to everyone" and confirm.
-   → Toast "Decision recorded. ‹version› is on for everyone in Production." The page shows "Decided". The feature's page shows it serving 100%.
+4. (**production flag write, owed to Daniel by name**) When the verdict card offers it, click "Roll out ‹version› to everyone".
+   → A modal: outcome "Ship ‹version›" and reason "The main number improved and guardrails held" are
+   picked, "Set ‹version› for everyone in Production" is ticked. Click "Record and roll out".
+   → Toast "Decision recorded. ‹version› is on for everyone in Production." with Undo for 10 seconds.
+   The page shows "Decided"; the feature's page shows Production serving that version to everyone.
+5. On the Plan tab, the Decisions list shows the record with its reason.
 
 If any step fails, note the step number + what you saw — that's the bug report.

@@ -1,4 +1,255 @@
 /* experiments-for-humans — product port of reference-experiments.css; tokens only. */
+.ds .ds-x-ptabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ds .ds-x-ptabs .ds-tab {
+  padding: 9px 12px;
+}
+.ds .ds-x-res-top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (min-width: 980px) {
+  .ds .ds-x-res-top {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+.ds .ds-x-card,
+.ds .ds-x-kpi,
+.ds .ds-x-verdict {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.ds .ds-x-card {
+  padding: 20px;
+}
+.ds .ds-x-lift {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ds .ds-x-number {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ds .ds-x-number[data-tone='up'] {
+  color: var(--green);
+}
+.ds .ds-x-key,
+.ds .ds-x-kpi p,
+.ds .ds-x-kpi small,
+.ds .ds-x-verdict-body,
+.ds .ds-x-progress-cap {
+  color: var(--dim);
+  font-size: 12.5px;
+}
+.ds .ds-x-legend {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.ds .ds-x-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--roast-2);
+  font-size: 12px;
+}
+.ds .ds-x-legend i {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--dim-2);
+}
+.ds .ds-x-legend i[data-series='treatment'] {
+  background: var(--blue);
+}
+.ds .ds-x-empty-chart {
+  margin: 14px 0 0;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r);
+  color: var(--dim);
+  font-size: 13px;
+  text-align: center;
+}
+.ds .ds-x-empty-chart b {
+  display: block;
+  color: var(--crema);
+  margin-bottom: 4px;
+}
+.ds .ds-x-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+.ds .ds-x-verdict--ready {
+  border-color: var(--green-deep);
+  background: linear-gradient(160deg, var(--card-2), var(--card) 60%);
+}
+.ds .ds-x-verdict h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.ds .ds-x-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+.ds .ds-x-progress {
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--roast-2);
+}
+.ds .ds-x-progress i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+}
+.ds .ds-x-progress-cap {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim-2);
+}
+.ds .ds-x-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.ds .ds-x-kpi {
+  padding: 14px 15px;
+}
+.ds .ds-x-kpi p {
+  margin: 0;
+}
+.ds .ds-x-kpi strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+}
+.ds .ds-x-kpi small {
+  display: block;
+  margin-top: 3px;
+  color: var(--dim-2);
+}
+.ds .ds-x-two {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+@media (min-width: 900px) {
+  .ds .ds-x-two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.ds .ds-x-split {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  color: var(--dim);
+  font-size: 13px;
+}
+.ds .ds-x-big-sentence {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  color: var(--dim);
+  line-height: 1.75;
+}
+.ds .ds-x-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.ds .ds-x-plan-list {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+}
+.ds .ds-x-plan-list div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.35fr) 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ds .ds-x-plan-list div:last-child {
+  border-bottom: 0;
+}
+.ds .ds-x-plan-list dt {
+  color: var(--dim);
+  font-size: 12px;
+}
+.ds .ds-x-plan-list dd {
+  margin: 0;
+}
+.ds .ds-x-plan-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ds .ds-x-ledger {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+}
+.ds .ds-x-ledger ol {
+  margin-bottom: 0;
+}
+.ds .ds-x-back-results {
+  color: var(--gold);
+}
+.ds .ds-x-acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ds .ds-x-decide {
+  max-width: 560px;
+}
+.ds .ds-toast-act {
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 600;
+}
 .ds .ds-x-head-key {
   display: flex;
   gap: 8px;

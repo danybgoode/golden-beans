@@ -408,9 +408,8 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     frame: 'console',
     seam: 'product-shell',
     surface: null,
-    // Plus `experiment-blocked`. ⚠️ Neither is reachable on `miyagisanchez` — both its experiments
-    // are `decided` (D10). The populated states are asserted on the specimen and the local fixture.
-    referenceState: 'experiment-ready',
+    // The decision-first results states share this route and its tabbed structure.
+    referenceState: 'experiment-results',
     rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,

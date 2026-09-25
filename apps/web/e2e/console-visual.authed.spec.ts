@@ -779,7 +779,10 @@ test('every route claiming the design system renders from it', async ({ page }) 
             // that calendar, and it is genuinely the first thing on the page a reader is there for.
             // Added rather than worked around: the alternative was dressing the aside items up as
             // `.ds-card`s to satisfy a selector list, which is a page changed to fit its test.
-            'main .ds-talkslot'
+            'main .ds-talkslot, ' +
+            // experiments-for-humans Sprint 4 — the approved `experiment-results*` states lead with
+            // `results-top` (the lift card beside the verdict); it IS the first content on that page.
+            'main .ds-x-res-top'
         )
         return first ? Math.round(first.getBoundingClientRect().top) : null
       })(),
@@ -1622,6 +1625,17 @@ test('every approved “+ New …” opens the wizard shape, and no surface answ
         `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
           `    · the approved head action "${action}" resolves to ${await trigger.count()} buttons`
       )
+      continue
+    }
+
+    // experiments-for-humans D9 — a door whose gate is OFF is drawn BLOCKED with its reason beside it
+    // ("never silently gone"), and a disabled button cannot open anything. That is the approved
+    // off-state, so it is asserted as such — the reason must be visible — instead of clicked.
+    if (await trigger.isDisabled()) {
+      const reason = trigger.locator('xpath=..').locator('.ds-x-hint')
+      expect
+        .soft(await reason.count(), `[${row.route}] "${action}" is disabled with no visible reason beside it`)
+        .toBe(1)
       continue
     }
 

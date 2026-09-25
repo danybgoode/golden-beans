@@ -7,16 +7,10 @@ import {
   prepareExperimentDecisionSnapshot,
 } from '@/lib/experiment-decision-contract'
 import { recordExperimentDecision } from '@/lib/experiment-decision-query'
-import { createExperimentVersionAfterGate } from '@/lib/experiment-create-command'
 import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
-import {
-  createExperimentVersion,
-  transitionExperimentVersion,
-  type ExperimentTransitionTarget,
-} from '@/lib/experiments'
+import { transitionExperimentVersion, type ExperimentTransitionTarget } from '@/lib/experiments'
 import { validateExperimentKey } from '@/lib/experiment-definition'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
-import { bindExperimentFlagVersion } from '@/lib/experiment-flag-bindings'
 
 function requireGate() {
   if (!isExperimentGovernanceEnabled()) notFound()
@@ -25,20 +19,6 @@ function requireGate() {
 function requireString(value: unknown, field: string): string {
   if (typeof value !== 'string') throw new Error(`Invalid ${field}`)
   return value
-}
-
-export async function createExperimentVersionAction(
-  slug: unknown,
-  experimentKey: unknown,
-  definitionJson: unknown
-) {
-  requireGate()
-  const command = await createExperimentVersionAfterGate(slug, experimentKey, definitionJson, {
-    requireOwnership: requireProjectOwnership,
-    createVersion: createExperimentVersion,
-  })
-  if (command.result.ok) revalidatePath(`/app/experiments/${command.slug}`)
-  return command.result
 }
 
 export async function transitionExperimentVersionAction(
@@ -63,38 +43,6 @@ export async function transitionExperimentVersionAction(
     targetStatus as ExperimentTransitionTarget,
     userId
   )
-  if (result.ok) revalidatePath(`/app/experiments/${safeSlug}`)
-  return result
-}
-
-export async function bindExperimentFlagVersionAction(
-  slug: unknown,
-  experimentId: unknown,
-  experimentVersionId: unknown,
-  flagId: unknown,
-  flagVersionId: unknown
-) {
-  requireGate()
-  const safeSlug = requireString(slug, 'project')
-  // Ownership comes before opaque identifiers so a foreign-project attempt never becomes a
-  // registry-discovery oracle.
-  const { projectId, userId } = await requireProjectOwnership(safeSlug)
-  if (
-    typeof experimentId !== 'string' ||
-    typeof experimentVersionId !== 'string' ||
-    typeof flagId !== 'string' ||
-    typeof flagVersionId !== 'string'
-  ) {
-    return { ok: false as const, error: 'Invalid experiment flag binding command.' }
-  }
-  const result = await bindExperimentFlagVersion({
-    projectId,
-    experimentId,
-    experimentVersionId,
-    flagId,
-    flagVersionId,
-    actorUserId: userId,
-  })
   if (result.ok) revalidatePath(`/app/experiments/${safeSlug}`)
   return result
 }
