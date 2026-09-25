@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   buildEventCatalog,
+  catalogWindowStart,
   EVENT_CATALOG_ROW_CAP,
   EVENT_CATALOG_WINDOW_DAYS,
   type EventCatalog,
@@ -28,7 +29,8 @@ export async function readEventCatalog(
   projectId: string,
   asOf: Date = new Date()
 ): Promise<EventCatalog> {
-  const windowStart = new Date(asOf.getTime() - EVENT_CATALOG_WINDOW_DAYS * 86_400_000)
+  // The SAME start the aggregation counts from, so no row fetched against the cap is then discarded.
+  const windowStart = new Date(catalogWindowStart(asOf))
   const rows: EventCatalogRow[] = []
   // Ordered by (created_at, id) so a page boundary cannot fall between two equally-timed rows and
   // either repeat or drop one — `created_at` alone is not unique.

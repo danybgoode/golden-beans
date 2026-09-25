@@ -61,6 +61,39 @@ const PROTOTYPE_EVENTS: Array<[string, number, number, number]> = [
   ['referral.sent', 96, 0.8, 0],
 ]
 
+function prototypeCombos(): Catalog['segmentCombos'] {
+  const region: Array<[string | null, number]> = [
+    ['MX', 0.98 * 0.91],
+    ['US', 0.98 * 0.05],
+    ['CO', 0.98 * 0.03],
+    ['AR', 0.98 * 0.01],
+    [null, 0.02],
+  ]
+  const channel: Array<[string | null, number]> = [
+    ['web', 0.72],
+    ['app', 0.21],
+    ['whatsapp', 0.07],
+  ]
+  const plan: Array<[string | null, number]> = [
+    ['free', 0.64 * 0.81],
+    ['founding', 0.64 * 0.12],
+    ['pro', 0.64 * 0.07],
+    [null, 0.36],
+  ]
+  const combos: Catalog['segmentCombos']['combos'] = []
+  for (const [r, pr] of region)
+    for (const [c, pc] of channel)
+      for (const [p, pp] of plan) {
+        const count = Math.round(10_000 * pr * pc * pp)
+        if (count === 0) continue
+        combos.push({
+          values: { ...(r ? { region: r } : {}), ...(c ? { channel: c } : {}), ...(p ? { plan: p } : {}) },
+          count,
+        })
+      }
+  return { rows: combos.reduce((sum, combo) => sum + combo.count, 0), combos, complete: true }
+}
+
 function prototypeCatalog(overrides: Partial<Catalog> = {}): Catalog {
   return {
     events: PROTOTYPE_EVENTS.map(([event, count14d, , count24h]) => ({
@@ -124,6 +157,10 @@ function prototypeCatalog(overrides: Partial<Catalog> = {}): Catalog {
         ],
       },
     ],
+    // The prototype only draws MARGINALS; its example tenant is modelled as region × channel × plan
+    // arriving independently (10,000 rows) — the one assumption the planner itself no longer makes.
+    segmentCombos: prototypeCombos(),
+    observedDays: 14,
     flagEvaluations: [{ flagKey: 'growth.founding_merchants_enabled', evaluations: 3180 }],
     truncated: false,
     rowCap: 50000,
@@ -150,6 +187,8 @@ const context = (overrides: Record<string, unknown> = {}) => ({
   served: { flagKey: 'growth.founding_merchants_enabled', definition: SERVED, activeInProduction: true },
   now: NOW,
   nextVersion: 1,
+  takenExperimentKeys: [] as string[],
+  takenFlagKeys: [] as string[],
   ...overrides,
 })
 
@@ -439,8 +478,10 @@ test('check 5 on a fresh plan counts the FULL planned length: needing exactly 14
   const probe = buildExperimentPlan(answers, context())
   assert.ok(probe.ok)
   // Traffic tuned so the estimate lands on exactly 14 days, at a `now` with seconds on the clock.
-  const perDay = probe.plan.estimate.needPerVersion! / 14 / 0.5 / (0.98 * 0.91)
-  const catalog = prototypeCatalog({ entities: [{ type: 'merchant', subjects14d: perDay * 14 }] })
+  // In-test share per merchant seen, as the planner computes it, then just enough merchants for 14 days.
+  const inTestPerSubject = probe.plan.estimate.inTestPerDay / 3912
+  const subjects = (probe.plan.estimate.needPerVersion! / 14 / 0.5 / inTestPerSubject) * 1.000001
+  const catalog = prototypeCatalog({ entities: [{ type: 'merchant', subjects14d: subjects }] })
   const result = buildExperimentPlan(answers, context({ catalog, now: new Date('2026-09-24T15:00:37.500Z') }))
   assert.ok(result.ok)
   assert.equal(result.plan.estimate.days, 14)
@@ -622,4 +663,141 @@ test('a served rule too high to move below the test is refused', () => {
   // say WHY in words a product person can act on, so the words are what is asserted.
   assert.equal(result.ok, false)
   assert.match(!result.ok ? result.errors[0] : '', /priority too high/)
+})
+
+// ── round 2 (Codex + fresh reviewer, PR #169) ──────────────────────────────────────────────────
+test('two conditions use the JOINT share: tags that never arrive together mean nobody is in the test', () => {
+  const catalog = prototypeCatalog({
+    segmentCombos: {
+      rows: 1000,
+      complete: true,
+      combos: [
+        { values: { region: 'MX', plan: 'pro' }, count: 600 },
+        { values: { region: 'US', plan: 'free' }, count: 400 },
+      ],
+    },
+  })
+  const who = {
+    mode: 'some' as const,
+    conditions: [
+      { field: 'region' as const, values: ['MX'] },
+      { field: 'plan' as const, values: ['free'] },
+    ],
+    allocation: 100,
+  }
+  const result = buildExperimentPlan({ ...copyAnswers(), who }, context({ catalog }))
+  assert.ok(result.ok)
+  assert.equal(result.plan.estimate.inTestPerDay, 0) // the product of marginals would have said 0.6 × 0.4
+  assert.equal(result.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+})
+
+test('a saved draft that has NOT started yet but is too short is offered more weeks, not "dates have run out"', () => {
+  const savedWindow = { startAt: '2026-09-25T00:00:00.000Z', endAt: '2026-10-09T00:00:00.000Z' }
+  const window = checkOf({ ...copyAnswers(), weeks: 2 }, context({ savedWindow })).window
+  assert.equal(window.fix?.kind, 'set-weeks')
+  assert.doesNotMatch(window.title, /run out/)
+})
+
+test('traffic per day divides by the days the window really spans', () => {
+  const full = buildExperimentPlan(copyAnswers(), context())
+  const partial = buildExperimentPlan(
+    copyAnswers(),
+    context({ catalog: prototypeCatalog({ observedDays: 13.5 }) })
+  )
+  assert.ok(full.ok && partial.ok)
+  assert.ok(Math.abs(partial.plan.estimate.inTestPerDay / full.plan.estimate.inTestPerDay - 14 / 13.5) < 1e-9)
+})
+
+test('the sentence never prints an unfinished condition, and a repeated value is refused', () => {
+  const base = copyAnswers()
+  const result = buildExperimentPlan(
+    {
+      ...base,
+      who: {
+        mode: 'some',
+        conditions: [...base.who.conditions, { field: 'plan', values: [] }],
+        allocation: 100,
+      },
+    },
+    context()
+  )
+  assert.ok(result.ok)
+  assert.doesNotMatch(sentenceText(result.plan.sentence), /on the {2}plan|  /)
+  assert.equal(
+    parseExperimentBuilderAnswers({
+      ...base,
+      who: { mode: 'some', conditions: [{ field: 'region', values: ['MX', 'MX'] }], allocation: 100 },
+    }).ok,
+    false
+  )
+})
+
+test('an exhausted name is refused, never re-used', () => {
+  const taken = [
+    'founding_merchants_copy_test',
+    ...Array.from({ length: 998 }, (_, i) => `founding_merchants_copy_test_${i + 2}`),
+  ]
+  const result = buildExperimentPlan(copyAnswers(), context({ takenExperimentKeys: taken }))
+  assert.equal(result.ok, false)
+})
+
+test('an INCOMPLETE combination table never reads a real audience as zero (round 3, PR #169)', async () => {
+  const { buildEventCatalog } = await import('./event-catalog.ts')
+  const asOf = new Date('2026-09-24T15:00:00.000Z')
+  const rows = [
+    ...Array.from({ length: 1000 }, (_, i) => ({
+      event: 'page_viewed',
+      tags: { region: 'US', campaign: `u${i % 500}` },
+      subject_type: 'merchant',
+      subject_id: `us-${i}`,
+      created_at: '2026-09-24T10:00:00.000Z',
+    })),
+    ...Array.from({ length: 600 }, (_, i) => ({
+      event: 'page_viewed',
+      tags: { region: 'MX', campaign: `m${i}` },
+      subject_type: 'merchant',
+      subject_id: `mx-${i}`,
+      created_at: '2026-09-24T10:00:00.000Z',
+    })),
+  ]
+  const real = buildEventCatalog(rows, { asOf, rowCap: 50_000, windowDays: 14 })
+  assert.equal(real.segmentCombos.complete, false)
+  const catalog = { ...prototypeCatalog(), segments: real.segments, segmentCombos: real.segmentCombos }
+
+  // One condition: the exact marginal, 37.5 % of events.
+  const one = buildExperimentPlan(
+    {
+      ...copyAnswers(),
+      weeks: 8,
+      who: { mode: 'some', conditions: [{ field: 'region', values: ['MX'] }], allocation: 100 },
+    },
+    context({ catalog })
+  )
+  assert.ok(one.ok)
+  assert.ok(Math.abs(one.plan.estimate.inTestPerDay / (3912 / 14) - 0.375) < 1e-9)
+  assert.notEqual(one.plan.checks.find((check) => check.id === 'window')?.title, 'Nobody matches who’s in it')
+  assert.equal(
+    one.plan.notes.some((note) => /approximate/.test(note)),
+    false
+  ) // one condition is EXACT
+
+  // Two conditions on an incomplete table: approximate, and at most a WARNING.
+  const two = buildExperimentPlan(
+    {
+      ...copyAnswers(),
+      weeks: 8,
+      who: {
+        mode: 'some',
+        conditions: [
+          { field: 'region', values: ['MX'] },
+          { field: 'campaign', values: ['m1'] },
+        ],
+        allocation: 100,
+      },
+    },
+    context({ catalog })
+  )
+  assert.ok(two.ok)
+  assert.notEqual(two.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+  assert.ok(two.plan.notes.some((note) => /approximate/.test(note)))
 })
