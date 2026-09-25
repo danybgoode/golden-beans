@@ -20,7 +20,13 @@ export function catalogWindowStart(asOf: Date): number {
   )
 }
 
-const RESERVED_EVENTS = new Set(['experiment_exposed', 'flag_evaluated', '$error', 'scenario_executed'])
+/** The engine's own telemetry: counted, never offered — or accepted — as a metric. */
+export const RESERVED_EVENTS: ReadonlySet<string> = new Set([
+  'experiment_exposed',
+  'flag_evaluated',
+  '$error',
+  'scenario_executed',
+])
 
 const SEGMENT_FIELDS = ['source', 'channel', 'campaign', 'plan', 'region'] as const
 

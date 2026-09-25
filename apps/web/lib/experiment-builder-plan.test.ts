@@ -801,3 +801,88 @@ test('an INCOMPLETE combination table never reads a real audience as zero (round
   assert.notEqual(two.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
   assert.ok(two.plan.notes.some((note) => /approximate/.test(note)))
 })
+
+// ── round 4 (Codex + fresh reviewer, PR #169): an approximate estimate never blocks Start ────────
+test('a chosen value cut from the top 20 is approximate, and can only warn', async () => {
+  const { buildEventCatalog } = await import('./event-catalog.ts')
+  const rows = Array.from({ length: 25 }, (_, r) =>
+    Array.from({ length: r === 24 ? 39 : 40 }, (_, i) => ({
+      event: 'page_viewed',
+      tags: { region: `r${String(r).padStart(2, '0')}` },
+      subject_type: 'merchant',
+      subject_id: `m${r}-${i}`,
+      created_at: '2026-09-24T10:00:00.000Z',
+    }))
+  ).flat()
+  const real = buildEventCatalog(rows, {
+    asOf: new Date('2026-09-24T15:00:00.000Z'),
+    rowCap: 50_000,
+    windowDays: 14,
+  })
+  const catalog = { ...prototypeCatalog(), segments: real.segments, segmentCombos: real.segmentCombos }
+  const result = buildExperimentPlan(
+    {
+      ...copyAnswers(),
+      weeks: 8,
+      who: { mode: 'some', conditions: [{ field: 'region', values: ['r24'] }], allocation: 100 },
+    },
+    context({ catalog })
+  )
+  assert.ok(result.ok)
+  assert.equal(result.plan.checks.find((check) => check.id === 'window')?.status, 'warn')
+  assert.equal(result.plan.failing, 0)
+})
+
+test('an approximate (independence) estimate that says "too long" warns instead of blocking', () => {
+  const catalog = prototypeCatalog({ segmentCombos: { ...prototypeCombos(), complete: false } })
+  const who = {
+    mode: 'some' as const,
+    conditions: [
+      { field: 'region' as const, values: ['MX'] },
+      { field: 'plan' as const, values: ['pro'] },
+    ],
+    allocation: 100,
+  }
+  const result = buildExperimentPlan({ ...copyAnswers(), weeks: 2, who }, context({ catalog }))
+  assert.ok(result.ok)
+  const window = result.plan.checks.find((check) => check.id === 'window')!
+  assert.equal(window.status, 'warn')
+  assert.ok(window.fix) // the fix is still offered
+  // …and the SAME plan on a complete table is exact, so it does block.
+  const exact = buildExperimentPlan({ ...copyAnswers(), weeks: 2, who }, context())
+  assert.ok(exact.ok)
+  assert.equal(exact.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+})
+
+test("the engine's own telemetry is never a metric or a guardrail", () => {
+  for (const event of ['flag_evaluated', 'experiment_exposed', '$error', 'scenario_executed']) {
+    assert.equal(parseExperimentBuilderAnswers({ ...copyAnswers(), metric: event }).ok, false, event)
+    assert.equal(parseExperimentBuilderAnswers({ ...copyAnswers(), guardrails: [event] }).ok, false, event)
+  }
+})
+
+test('the "ends before it has enough people" branch also only warns on an approximate estimate', () => {
+  const who = {
+    mode: 'some' as const,
+    conditions: [
+      { field: 'region' as const, values: ['MX'] },
+      { field: 'channel' as const, values: ['web'] },
+    ],
+    allocation: 100,
+  }
+  const approx = buildExperimentPlan(
+    { ...copyAnswers(), weeks: 2, who },
+    context({ catalog: prototypeCatalog({ segmentCombos: { ...prototypeCombos(), complete: false } }) })
+  )
+  assert.ok(approx.ok)
+  assert.ok(
+    approx.plan.estimate.days! > 14 && approx.plan.estimate.days! <= 56,
+    String(approx.plan.estimate.days)
+  )
+  const window = approx.plan.checks.find((check) => check.id === 'window')!
+  assert.equal(window.title, 'The test ends before it has enough people')
+  assert.equal(window.status, 'warn')
+  const exact = buildExperimentPlan({ ...copyAnswers(), weeks: 2, who }, context())
+  assert.ok(exact.ok)
+  assert.equal(exact.plan.checks.find((check) => check.id === 'window')?.status, 'fail')
+})

@@ -20,7 +20,7 @@ import {
   type FlagRule,
   type FlagScalar,
 } from '@golden-frijoles/sdk'
-import type { EventCatalog } from './event-catalog'
+import { RESERVED_EVENTS, type EventCatalog } from './event-catalog'
 import {
   MAX_EXPERIMENT_PREDICATE_STRING_LENGTH,
   MAX_EXPERIMENT_SAMPLE_PER_VARIANT,
@@ -442,7 +442,15 @@ export function audienceShare(
         .reduce((sum, row) => sum + row.share, 0)
     )
   }
-  if (conditions.length === 1) return { fraction: marginal(conditions[0]), exact: true }
+  if (conditions.length === 1) {
+    // Exact only if every chosen value is in the listed top values, or the list is not truncated —
+    // a value cut from the top 20 would otherwise count as zero (fresh reviewer + Codex, round 4).
+    const segment = catalog.segments.find((row) => row.field === conditions[0].field)
+    const listed = (value: FlagScalar) =>
+      segment?.values.some((row) => typeof row.value === typeof value && row.value === value) === true
+    const exact = segment !== undefined && (segment.values.length < 20 || conditions[0].values.every(listed))
+    return { fraction: marginal(conditions[0]), exact }
+  }
   const { rows, combos, complete } = catalog.segmentCombos
   if (!complete)
     return {
@@ -645,6 +653,10 @@ export function buildExperimentPlan(
   // combinations — never a product of marginals, which invents traffic for tags that never co-occur
   // (Codex, PR #169). With an incomplete combination table it is a lower bound.
   const { fraction: conditionFraction, exact: estimateExact } = audienceShare(answers, context.catalog)
+  // ⚠️ An APPROXIMATION, named (fresh reviewer, round 4): `conditionFraction` is a share of EVENTS,
+  // used here as a share of PEOPLE. It is biased when tagged events concentrate among heavy users.
+  // The screen says "about"; check 3 (D6) is defined on events, so that check is exact about its own
+  // claim, and the estimate is only ever as good as this line.
   const inTestPerDay = perDay * conditionFraction * (answers.who.allocation / 100)
   const baseline =
     context.catalog.baselines.find((row) => row.event === answers.metric && row.type === answers.entity)
@@ -1045,9 +1057,12 @@ function computeChecks(
     })
   } else if (derived.days > WEEK_OPTIONS[WEEK_OPTIONS.length - 1] * 7) {
     // No run length on offer fits, so "Run it for 8 weeks" would be a fix that cannot fix anything.
+    // ⚠️ THE RULE (after three review rounds found three instances of one class — an imprecise
+    // estimate blocking Start): check 5 FAILS only on an EXACT estimate. An approximate one warns and
+    // keeps its fix. A window whose dates have already passed is a fact, not an estimate, and fails.
     checks.push({
       id: 'window',
-      status: 'fail',
+      status: derived.estimateExact ? 'fail' : 'warn',
       step: 2,
       title: 'Not enough people for any run length',
       detail: `It needs about ${derived.days} days at your current traffic — longer than the ${WEEK_OPTIONS[WEEK_OPTIONS.length - 1]}-week maximum. Include more people, or look for a bigger change.`,
@@ -1060,7 +1075,7 @@ function computeChecks(
   ) {
     checks.push({
       id: 'window',
-      status: 'fail',
+      status: derived.estimateExact || remainingDays <= 0 ? 'fail' : 'warn',
       step: 5,
       title: 'This draft’s dates have run out',
       detail: `It was planned from ${derived.startAt.toISOString().slice(0, 10)}; ${Math.max(0, remainingDays)} days are left and it needs about ${derived.days}.`,
@@ -1069,7 +1084,7 @@ function computeChecks(
   } else if (remainingDays < derived.days) {
     checks.push({
       id: 'window',
-      status: 'fail',
+      status: derived.estimateExact ? 'fail' : 'warn',
       step: 5,
       title: 'The test ends before it has enough people',
       detail: `${answers.weeks} week${answers.weeks === 1 ? '' : 's'} planned, but it needs about ${derived.days} days at your current traffic.`,
@@ -1141,11 +1156,11 @@ export function parseExperimentBuilderAnswers(
   if (input.flagKey !== null && !text(input.flagKey, 128)) return bad('Invalid feature.')
   if (!REASON_KEYS.has(input.why as string)) return bad('Unknown reason.')
   if (input.direction !== 'increase' && input.direction !== 'decrease') return bad('Invalid direction.')
-  if (!text(input.metric, 128)) return bad('Invalid metric.')
+  if (!text(input.metric, 128) || RESERVED_EVENTS.has(input.metric as string)) return bad('Invalid metric.')
   if (
     !Array.isArray(input.guardrails) ||
     input.guardrails.length > 10 ||
-    !input.guardrails.every((event) => text(event, 128))
+    !input.guardrails.every((event) => text(event, 128) && !RESERVED_EVENTS.has(event as string))
   )
     return bad('Invalid guardrails.')
   if (
