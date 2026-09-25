@@ -18,6 +18,7 @@ import {
   isDestinationDeliveryEnabled,
   isJourneyProjectionsEnabled,
   isExperimentGovernanceEnabled,
+  isExperimentBuilderEnabled,
   isReportSharesEnabled,
   isJourneyMcpToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
@@ -55,6 +56,7 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['DESTINATION_DELIVERY_ENABLED', isDestinationDeliveryEnabled],
   ['JOURNEY_PROJECTIONS_ENABLED', isJourneyProjectionsEnabled],
   ['EXPERIMENT_GOVERNANCE_ENABLED', isExperimentGovernanceEnabled],
+  ['EXPERIMENT_BUILDER_ENABLED', isExperimentBuilderEnabled],
   // ⚠️ NOT added by the epic that built it — added 2026-08-27 by console-ia-overhaul Story 1.1,
   // because the exhaustiveness test below went red on its FIRST run and named this flag. It had
   // been reading `process.env.REPORT_SHARES_ENABLED` since pod-report S3 while inheriting NONE of

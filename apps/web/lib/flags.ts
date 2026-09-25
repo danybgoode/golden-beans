@@ -63,6 +63,15 @@ export function isExperimentGovernanceEnabled(): boolean {
   return process.env.EXPERIMENT_GOVERNANCE_ENABLED === 'true'
 }
 
+// experiments-for-humans (epic README D9, A5) — the guided experiment builder: the "+ New experiment"
+// dialog's builder content and every builder server action (save, start, retry). Enablement polarity,
+// born OFF in every Vercel environment on 2026-09-24; kept as the kill-switch after the JSON authoring
+// path retires (off ⇒ the door is drawn blocked with its reason, never hidden). Like every gate here,
+// a change reaches running functions only with a new Git-tracked deployment.
+export function isExperimentBuilderEnabled(): boolean {
+  return process.env.EXPERIMENT_BUILDER_ENABLED === 'true'
+}
+
 // pod-report · Sprint 3, Story 3.1 — the share-link enablement gate. Sixth flag, same polarity and
 // same dark-by-default contract as its siblings (epic README, "Kill-switch"): born unset/OFF,
 // flipped deliberately at Story 3.3.
