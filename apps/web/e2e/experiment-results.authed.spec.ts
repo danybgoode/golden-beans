@@ -227,6 +227,16 @@ test.describe('the decision-first results page (Story 4.1)', () => {
 
       if (point === 'waiting') {
         await expect(answer).toContainText('It’s live. Results start tomorrow.')
+        // The tabs keep the snapshot the reader chose (Codex, #172 round 5).
+        const asOf = new Date().toISOString()
+        await page.goto(
+          `/app/experiments/${fx.slug}/${experiment.key}?version=1&asOf=${encodeURIComponent(asOf)}`
+        )
+        await expect(page.getByRole('tab', { name: 'Plan' })).toHaveAttribute(
+          'href',
+          new RegExp(`asOf=${encodeURIComponent(asOf).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
+        )
+        await page.goto(`/app/experiments/${fx.slug}/${experiment.key}?version=1`)
         await expect(verdict).toContainText('Let it run. Nothing to decide yet.')
         await expect(verdict.getByRole('button', { name: 'Stop experiment' })).toBeVisible()
       } else if (point === 'gathering') {

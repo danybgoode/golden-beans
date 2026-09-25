@@ -131,7 +131,14 @@ export default async function ExperimentPage({
       ? io.loadBuilderPage(membership.projectId)
       : Promise.resolve(null),
   ])
-  const base = `/app/experiments/${encodeURIComponent(projectSlug)}/${encodeURIComponent(experimentKey)}?version=${version.version}`
+  // The tabs keep the snapshot and segment the reader chose (Codex, #172 round 5) — only once the
+  // request passed `parseExperimentAnalysisRequest` above; URLSearchParams re-encodes every value.
+  const query = new URLSearchParams({ version: String(version.version) })
+  for (const key of ['asOf', 'segmentField', 'segmentValue'] as const) {
+    const value = scalar(raw[key])?.trim()
+    if (value) query.set(key, value)
+  }
+  const base = `/app/experiments/${encodeURIComponent(projectSlug)}/${encodeURIComponent(experimentKey)}?${query}`
 
   // The retired manager's lifecycle capabilities without another home (Story 4.3): Invalidate, and
   // Start for a draft the builder did not make (it has no answers, so the builder cannot start it).
