@@ -50,7 +50,11 @@ export async function project(client: SupabaseClient, owner: string): Promise<Fi
     .select('id')
     .single()
   if (error || !data) throw new Error(`project fixture: ${error?.message}`)
-  await client.from('project_members').insert({ project_id: data.id, user_id: owner, role: 'owner' })
+  const membership = await client
+    .from('project_members')
+    .insert({ project_id: data.id, user_id: owner, role: 'owner' })
+  // Fail HERE, not later as a baffling 404 in the browser (Codex, #174).
+  if (membership.error) throw new Error(`membership fixture: ${membership.error.message}`)
   const { data: version, error: flagError } = await client.rpc('create_flag_definition_version', {
     p_project_id: data.id,
     p_flag_key: FLAG_KEY,
