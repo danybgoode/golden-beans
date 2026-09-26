@@ -1,7 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { Client as PgClient } from 'pg'
-import type { FlagDefinition } from '@golden-frijoles/sdk'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createBuilderIo } from '@/lib/experiment-builder-io'
 import {
   saveExperimentDraftCommand,
@@ -10,11 +8,8 @@ import {
 } from '@/lib/experiment-builder-command'
 import type { ExperimentBuilderAnswers } from '@/lib/experiment-builder-plan'
 import { readTenantRecord } from './helpers/authed-fixture'
-import {
-  cleanupExperimentProjects,
-  requireLocalSupabaseApiUrl,
-  requireTestDatabaseUrl,
-} from './helpers/test-db-cleanup'
+import { cleanupExperimentProjects } from './helpers/test-db-cleanup'
+import { FLAG_KEY, db, project as ownedProject, sql, type Fixture } from './helpers/experiment-owner-project'
 
 // experiments-for-humans · Story 4.1 (epic README D10) — the decision-first page, RENDERED, at the
 // three points the readout exists to tell apart: waiting, gathering, ready.
@@ -28,77 +23,12 @@ import {
 // an api spec could only assert the pure readout — which `lib/experiment-readout.test.ts` already
 // does. What this adds is that the PAGE says it: the answer line, the verdict and its actions.
 
-const FLAG_KEY = 'growth.results_copy'
-const SERVED: FlagDefinition = {
-  valueType: 'boolean',
-  description: 'Results fixture feature',
-  defaultVariantKey: 'off',
-  variants: [
-    { key: 'off', value: false },
-    { key: 'on', value: true },
-  ],
-  rules: [],
-}
-
-type Fixture = { projectId: string; slug: string; owner: string }
 const created: string[] = []
 
-function db(): SupabaseClient {
-  requireTestDatabaseUrl()
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY must be set')
-  return createClient(requireLocalSupabaseApiUrl(), key, { auth: { persistSession: false } })
-}
-
-async function sql<T = unknown>(text: string, values: unknown[] = []): Promise<T[]> {
-  const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
-  await pg.connect()
-  try {
-    return (await pg.query(text, values)).rows as T[]
-  } finally {
-    await pg.end()
-  }
-}
-
 async function project(client: SupabaseClient, owner: string): Promise<Fixture> {
-  const slug = `results-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const { data, error } = await client
-    .from('projects')
-    .insert({ slug, api_key_hash: `h-${crypto.randomUUID()}` })
-    .select('id')
-    .single()
-  if (error || !data) throw new Error(`project fixture: ${error?.message}`)
-  created.push(data.id as string)
-  await client.from('project_members').insert({ project_id: data.id, user_id: owner, role: 'owner' })
-  const { data: version, error: flagError } = await client.rpc('create_flag_definition_version', {
-    p_project_id: data.id,
-    p_flag_key: FLAG_KEY,
-    p_definition: SERVED,
-    p_reason: 'fixture',
-    p_actor_user_id: owner,
-  })
-  if (flagError) throw new Error(`flag fixture: ${flagError.message}`)
-  const activation = await client.rpc('set_flag_activation', {
-    p_project_id: data.id,
-    p_environment: 'production',
-    p_flag_id: version[0].flag_id,
-    p_version_id: version[0].version_id,
-    p_expected_snapshot_version: 0,
-    p_reason: 'fixture',
-    p_actor_user_id: owner,
-  })
-  if (activation.error) throw new Error(`activation fixture: ${activation.error.message}`)
-  // Traffic the catalog can plan from: 2,000 merchants seen, 500 signed up, in the last few hours.
-  await sql(
-    `insert into events (project_id, user_id, event, context_version, subject_type, subject_id, created_at)
-     select $1::uuid, 'u' || n, 'page_viewed', 1, 'merchant', 'm' || n, now() - ((n % 300) || ' minutes')::interval
-     from generate_series(1, 2000) n
-     union all
-     select $1::uuid, 'u' || n, 'signup_completed', 1, 'merchant', 'm' || n, now() - ((n % 300) || ' minutes')::interval
-     from generate_series(1, 500) n`,
-    [data.id]
-  )
-  return { projectId: data.id as string, slug, owner }
+  const fx = await ownedProject(client, owner)
+  created.push(fx.projectId)
+  return fx
 }
 
 function deps(client: SupabaseClient, fx: Fixture): BuilderDependencies {
@@ -154,6 +84,17 @@ async function traffic(
   const eligibility = experiment.definition.eligibility as { tags?: Record<string, string> }
   const tags = { ...(eligibility.tags ?? {}), experiment_definition_version: experiment.version }
   const from = new Date(Math.max(Date.parse(window.startAt), Date.parse(experiment.started_at)))
+  // The seeded span runs from `from` to the database's `now() - 50ms`. Right after Start that can be
+  // NEGATIVE — conversions would then land before their exposures and count for nothing. Wait until
+  // the database clock is safely past the start (a real flake in a full authed run, 2026-09-26).
+  for (let tries = 0; tries < 50; tries += 1) {
+    const [clock] = await sql<{ ready: boolean }>(
+      `select now() > $1::timestamptz + interval '250 milliseconds' as ready`,
+      [from.toISOString()]
+    )
+    if (clock.ready) break
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
   await sql(
     `with arms(variant, converted) as (values ('off', $5::int), ('on', $6::int)),
           span as (select $3::timestamptz as t0, now() - interval '50 milliseconds' as t1)
