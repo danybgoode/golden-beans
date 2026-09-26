@@ -4680,6 +4680,15 @@
   position: relative;
 }
 
+/* ⚠️ The switcher is a FLEX ITEM, and a flex item's default `min-width: auto` is its content's
+   min-content width — so the summary's `max-width: 42vw` + ellipsis above could never engage, and an
+   owner of more than one project with a long slug pushed the header 40px past a 360px screen (found
+   when the experiments-for-humans results spec added projects to the authed fixture user, 2026-09-26;
+   `mobile-heuristics.authed.spec.ts` caught it). `min-width: 0` lets it shrink to the clamp. */
+.ds .ds-shell-switcher {
+  min-width: 0;
+}
+
 .ds .ds-shell-switcher summary,
 .ds .ds-shell-account summary {
   cursor: pointer;
