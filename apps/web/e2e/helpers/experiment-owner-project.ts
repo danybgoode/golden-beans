@@ -1,7 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client as PgClient } from 'pg'
 import type { FlagDefinition } from '@golden-frijoles/sdk'
-import { requireLocalSupabaseApiUrl, requireTestDatabaseUrl } from './test-db-cleanup'
+import {
+  cleanupExperimentProjects,
+  requireLocalSupabaseApiUrl,
+  requireTestDatabaseUrl,
+} from './test-db-cleanup'
 
 // experiments-for-humans — a project of its OWN for an authed experiment spec, with the signed-in
 // fixture user as its owner, one live feature and enough traffic for the planner.
@@ -50,13 +54,24 @@ export async function project(client: SupabaseClient, owner: string): Promise<Fi
     .select('id')
     .single()
   if (error || !data) throw new Error(`project fixture: ${error?.message}`)
+  // From here on the row exists: a failure below removes it rather than leak it (Codex, #174).
+  try {
+    await provision(client, data.id as string, owner)
+  } catch (setupError) {
+    await cleanupExperimentProjects([data.id as string])
+    throw setupError
+  }
+  return { projectId: data.id as string, slug, owner }
+}
+
+async function provision(client: SupabaseClient, projectId: string, owner: string): Promise<void> {
   const membership = await client
     .from('project_members')
-    .insert({ project_id: data.id, user_id: owner, role: 'owner' })
+    .insert({ project_id: projectId, user_id: owner, role: 'owner' })
   // Fail HERE, not later as a baffling 404 in the browser (Codex, #174).
   if (membership.error) throw new Error(`membership fixture: ${membership.error.message}`)
   const { data: version, error: flagError } = await client.rpc('create_flag_definition_version', {
-    p_project_id: data.id,
+    p_project_id: projectId,
     p_flag_key: FLAG_KEY,
     p_definition: SERVED,
     p_reason: 'fixture',
@@ -64,7 +79,7 @@ export async function project(client: SupabaseClient, owner: string): Promise<Fi
   })
   if (flagError) throw new Error(`flag fixture: ${flagError.message}`)
   const activation = await client.rpc('set_flag_activation', {
-    p_project_id: data.id,
+    p_project_id: projectId,
     p_environment: 'production',
     p_flag_id: version[0].flag_id,
     p_version_id: version[0].version_id,
@@ -81,7 +96,6 @@ export async function project(client: SupabaseClient, owner: string): Promise<Fi
      union all
      select $1::uuid, 'u' || n, 'signup_completed', 1, 'merchant', 'm' || n, now() - ((n % 300) || ' minutes')::interval
      from generate_series(1, 500) n`,
-    [data.id]
+    [projectId]
   )
-  return { projectId: data.id as string, slug, owner }
 }
