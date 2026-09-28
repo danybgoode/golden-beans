@@ -56,7 +56,7 @@
 - [The build view — a machine-readable frontmatter contract, rendered in the CLI as a Claude Mod](../../09-platform-infra/build-visualization-claude-mods/README.md) — 09 Platform Infra · 13/13 stories · risk: Low · wave-2026-09-16-plugin
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (24)
+## ⬜ Funnel — seeds not yet scaffolded (25)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
@@ -78,6 +78,7 @@
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — Raw · Chore · unranked
 - [Review rail — one implementation, and a doctor the template actually ships](seeds/review-rail-one-implementation.md) — Raw · Chore · unranked
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — Raw · Chore · unranked
+- [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — Raw · Feature · appetite S · unranked
 - [This repo lints its template scripts the way its consumers do](seeds/foundation-lint-gate.md) — Raw · Chore · unranked
 - [Analytics visualization — the charting-dependency decision (spike), then the layer](seeds/analytics-visualization-layer.md) — Ready · Spike · appetite S · wave-2026-08-08
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
@@ -95,4 +96,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 37 · seeds in funnel: 24 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 37 · seeds in funnel: 25 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
