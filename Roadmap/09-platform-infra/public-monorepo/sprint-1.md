@@ -49,6 +49,9 @@ stories:
 **Acceptance:** AGENTS.md's layout and routing table name `skills/` and the mirror rule. *Scope disproved at build (2026-09-28):* the three `/Users/cosmo/dobby/golden-beans` hits are **quotations**: a retro note, a handoff doc, and a labelled fixture's text (byte-identical to the template's copy, so it must not be edited). No tool resolves them, so they stay as they are.
 **Risk:** high
 
+> **Merge with a merge commit, not a squash** (D1): `gh pr merge <n> --merge`. Then check that
+> `git subtree split --prefix=skills origin/main` = `80d050a`. The skills repo is frozen until S2.3.
+
 ## Sprint QA
 - Both CIs green on the PR (this repo's full gate + the new skills-ci on the split). A mutation check plants a failing skills test and sees skills-ci go red. No browser smoke.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` green, plus the skills checks from S1.2 on.

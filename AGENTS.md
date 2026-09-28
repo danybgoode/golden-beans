@@ -31,6 +31,8 @@ golden-beans/
 ├── packages/sdk/        ← @golden-frijoles/sdk — createGrowthEngineClient (the ONLY app→engine path)
 ├── skills/             ← the plugin, kit and spawn template (was dobby-foundation), MIRRORED byte-for-byte to
 │                          golden-frijoles/skills — an edit here is a plugin release (skills/RELEASING.md)
+│                          (never commit to golden-frijoles/skills directly; a PR adding skills/ history merges
+│                          with a merge commit, never a squash — public-monorepo D1)
 ├── scripts/             ← CLI tooling (cross-review, seed-*, build-order, sync-* from Miyagi)
 └── Roadmap/             ← product source of truth (poster, ways-of-working, learnings, epics)
 ```
