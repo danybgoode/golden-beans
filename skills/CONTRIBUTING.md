@@ -8,4 +8,4 @@ pushed here as a fast-forward (`git subtree split --prefix=skills`), and a versi
 - **Issues and pull requests:** open them in `danybgoode/golden-frijoles`.
 - **Don't commit here directly.** A ruleset lets only the mirror's deploy key update `main` (a repo admin can bypass it
   in an emergency). A direct commit would make every later mirror push fail as non-fast-forward, blocking releases
-  until it's merged back into golden-beans with `git subtree pull` (no `--squash`).
+  until it's merged back into `danybgoode/golden-frijoles` with `git subtree pull` (no `--squash`).
