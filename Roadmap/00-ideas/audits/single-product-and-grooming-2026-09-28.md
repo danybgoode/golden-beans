@@ -102,6 +102,10 @@ runners are free today; the announced $0.002/min platform fee is postponed, not 
 | 44 | [`compiled-prompts`](../seeds/compiled-prompts.md) | Feature · L · low | 38, 39 |
 | 45 | [`sketch-specs`](../seeds/sketch-specs.md) | Feature · L · low | 41 |
 
+> **Renumbered by `one-roadmap` (2026-09-28).** The numbers above are this audit's dated record. The plugin repo's
+> epics were placed into the ship history, so the seeds now run 43–52 in the same order, with
+> `review-rail-one-implementation` at 46 and `think-skills` at 53. Seed frontmatter is the source of truth.
+
 `think-skills` stays in dobby-foundation's funnel until `one-roadmap` moves it; it becomes intent-match's
 "is it worth doing?" route. Items 37 and 38 are small and independent; 39 is the one to deep-groom first, because every
 later item's file paths depend on it.

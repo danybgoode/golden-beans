@@ -9,7 +9,7 @@ appetite: L
 underwritten_by: null
 risk: high
 epic: "01-growth-engine/experiments-for-humans"
-build_order: 29
+build_order: 35
 updated: 2026-09-24
 ---
 

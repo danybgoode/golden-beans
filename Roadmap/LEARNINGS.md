@@ -91,7 +91,9 @@ one-liner + why + date shape.
 - **A squash-merged sprint branch is a dead end — start the next sprint on a FRESH branch off `main`.**
   A squash-merged PR's individual commits aren't on `main` (only the one squash commit is), so
   continuing that branch for the next sprint re-introduces a messy duplicate diff and can't
-  fast-forward. Branch clean off `origin/main` for each new sprint.
+  fast-forward. Branch clean off `origin/main` for each new sprint. **Corollary: when a PR is STACKED on the
+  one you're merging, merge the base with a merge commit, not a squash.** The stacked branch keeps its ancestry,
+  retargets to `main` with only its own diff, and needs no rebase. *(golden-frijoles-plugin, 2026-09-23)*
 - **To verify "is the prior sprint serving?", reason off `origin/main` — never the working tree — and
   read PR *state*, not branch commits.** Local app checkouts routinely sit on *other* agents'
   branches, so on-disk files lie about `main`, and a squash-merged sprint's individual commits
@@ -1592,3 +1594,217 @@ one-liner + why + date shape.
   be blurred by rendering, and a `toEqual` between the builder's preview and the stored version
   states the round-trip claim directly. Then mutation-check it — dropping the `× 100` must turn it
   red, and here it does.
+
+
+---
+
+## From the plugin repo (moved 2026-09-28)
+*`golden-frijoles/skills` (formerly dobby-foundation) kept its own LEARNINGS until [`one-roadmap`](09-platform-infra/one-roadmap/README.md) moved its Roadmap here. These are its entries that were not already in this file, verbatim under their original section headings. Merging them into the sections above is `doc-hygiene`'s job.*
+
+### Tooling gotchas
+
+- **Every spec that builds a git fixture must clear `GIT_DIR` and friends.** git exports them into hooks,
+  from a linked worktree they point at the real repo, and they override `cwd`. So a fixture's `git init` /
+  `config` / `commit` rewrites the real repository: `core.bare=true`, identity `t <t@t>`, junk commits on
+  `main`. It happened three times (2026-09-09, -16, -23), each time sealed in one file only.
+  `template/scripts/git-fixtures-sealed.test.mjs` now fails the class. *(2026-09-23)*
+- **Never put markdown in a double-quoted shell string.** The backticks in `node -e "…`codex login`…"` are
+  command substitution: they started an OAuth flow and logged a CLI out. Put data scripts in files
+  (heredoc with a quoted delimiter). *(2026-09-23)*
+
+### Permissions & guardrails (ways-of-work-lean-pass, 2026-09-16)
+
+- **A deny rule is text matching, and a per-rule patch cannot close a rule CLASS.** A leading assignment
+  whose value contains an expansion (`PATH=/x:$PATH vercel deploy --prod`) was observed LIVE to escape a bare
+  rule. Patching the four rules someone had probed left `vercel --yes --prod`, `rm -fr`, `supabase db reset`,
+  `git push origin +main`, `git -C <path> push --force` and `npx supabase --debug db push` matching nothing —
+  found one at a time across four review rounds. Generate the spellings from a list the contract checks
+  (`CRITICAL_COMMANDS` → bare + `*=*` + `env *`), so a bare-only rule fails CI instead of waiting for a reader.
+- **The same escape applies to `ask`, where it is WORSE.** An escaped deny is a gap; an escaped ask is a
+  silent downgrade from "a human decides" to "the classifier decides". Carry ask rules in all three spellings
+  too, and treat a deny that swallows an ask as a finding — a refusal cannot be approved once.
+- **`*=*` matches an `=` ANYWHERE, not an assignment prefix.** `Bash(*=* vercel*)` hard-refused
+  `grep -rn --include=*.json vercel .` — ordinary reading. Keep prefixed rules per dangerous SUBCOMMAND and
+  pin the safe negations in a `MUST_NOT_DENY` list; a guard that rejects correct output gets bypassed.
+- **`Write(<path>)` permission rules are INERT** — Claude Code checks only `Edit(<path>)` for file tools, and
+  a nested `claude -p` refuses to start while one is present. `Edit` covers Write, Edit and NotebookEdit.
+- **An ALLOW skips the classifier, so it must be read as "runs with no second look".** `Bash(node scripts/*)`
+  pre-approved a script that writes production secrets through a REST call, while the `ask` rules guarded only
+  the CLI path nobody used — one door guarded out of several. Deny the dangerous invocations by name.
+- **Project-level `defaultMode: "auto"` is ignored AND masks the user default.** Auto mode is a user setting;
+  a config guard should fail on the wrong-scope setting, not only on the missing one.
+- **Say where the line is.** The deny list matches command text, so it is not a sandbox: wrappers (`nice`,
+  `timeout`, `sudo`) and `/bin/rm` are out of scope by design. Write that boundary into the file, or the next
+  reviewer re-finds it as a bug.
+
+### Shared rails across repos (plugin-audit-and-extraction, 2026-09-18)
+
+- **"Byte-identical" is a claim until a byte-compare runs.** Compare every template script against every
+  consumer (`cmp` in a loop) before claiming one implementation per rail, and put every surviving
+  difference in the consumer's own docs with a reason. The epic's walkthrough claimed it and was wrong on
+  eight rails. The review finding that prompted the compare was itself a live bug: a callee's newly
+  required flag that a caller never passed.
+- **Replacing a file with the shared copy? Run the consumer's OLD tests against the NEW code.** The shared
+  copy can be weaker than the local one it replaces. A consumer's stricter prose guard was silently undone
+  that way, and the tests that pinned it were deleted as "superseded". `git show origin/main:<test>` into a
+  temp file, run it, and read every failure.
+- **A review that skips "copies" cannot see a regression against the file the copy replaced.** Review the
+  consumer's adoption against the consumer's previous version too, not only against the template.
+- **"Could not look" is its own exit code, never the failure one.** A watchdog's missing, unloadable or
+  empty assertion file exited 1 through an unhandled rejection, which a routine reads as "production is
+  broken". Load inputs in a function that returns `{ok, error}`, and `.catch` `main()` into the
+  could-not-look state. The same three-answer rule decides a *check's* severity: **configuration**
+  (absent, rejected — true until a person acts) fails; **weather** (unreachable, timed out, a 404 from
+  a switched-off surface) warns and exits 0; collapsing them is how a check starts failing builds for
+  someone else's outage.
+
+### Guards, and depending on someone else's service (golden-flags-by-default, 2026-09-19)
+
+- **A guard that makes N files agree says nothing about whether they are RIGHT.** A parity check
+  welded one command into five surfaces, and the command did not exist — `gf flags ls` takes no
+  `--env`, so it exited 1 before reaching auth, and the output it told readers to look for was
+  another tool's vocabulary. Every surface agreed, perfectly, about something untrue, and the build
+  was one `--help` away from catching it. **Presence is not execution: if a doc tells someone to run
+  a command, the check runs it.** A `--exec` mode that accepts "the parser took it, then asked for a
+  credential" and rejects "unknown flag" is cheap, and it skips rather than failing when the tool is
+  not installed.
+- **Making a check EXECUTE makes it capable of whatever it checks — pay for that deliberately.**
+  Replacing a grep with a real invocation is usually right, and the first version of one such check
+  ran two write verbs (create-and-activate-in-production, kill-in-production) while inheriting the
+  ambient credential: a documentation parity check, one `gf login` away from mutating a live
+  catalog. The answer is not care. **Construct the harmless state** (a scrubbed env — blank token,
+  `XDG_CONFIG_HOME` *and* `HOME` at an empty temp dir) **and then ASSERT it** — require the
+  "refused for want of a credential" outcome, so a future failure of the isolation is loud instead
+  of a silent pass. Prove it with a negative control that shows the credential IS found without the
+  scrub.
+- **A guard with no test is a guard nobody has seen fire, and a linter run is a guard.** ESLint pointed at files
+  outside its configured paths lints nothing and prints nothing. That silent run once read as clean over 13
+  orphaned bindings. Plant a violation (an unused variable) beside the files and require it to be reported.
+  *(2026-09-23)*
+- **A guard with no test is a guard nobody has seen fire.** `check-plugin-leaks.mjs` ran green over a
+  real leak every day for months: "CI was green" cannot distinguish a working guard from a pattern that
+  matches nothing. Give every guard fixtures that assert it **fires**, *and* fixtures that assert it does
+  **not** fire on the thing it must permit.
+- **A mechanism does not have to be named after a project to be that project's.** A portability sweep for
+  project names could never catch `lib/flags.ts` / `DEFAULT_FLAGS`. Generic filenames are how one
+  consumer's architecture ships to everyone — and when a new rule surfaces incidental matches, **rewrite
+  them rather than allowlisting them**; an ALLOW entry preserves residue behind a plausible reason.
+- **Verify a dependency's runtime claim by EXECUTING it, not by reading it.** Running a published package
+  inside a `node:vm` context carrying only the target runtime's globals answered "is this Edge-safe" in
+  two halves — the API surface is, the *lifecycle* is not — where reading the source would have given only
+  the first, which is precisely the half that gets a seam planned that cannot work. Ship the reproduction
+  beside the claim so it can be re-checked instead of going quietly stale.
+- **Refuse the flag that blurs a fail-soft promise.** A `--strict` that turns "the provider is unreachable"
+  into a failure will be in someone's CI file within the week, and the promise is then gone with nobody
+  having decided to give it up. Not adding it is the enforcement.
+- **A "harmless default" handed to someone else's API is not harmless — read what the callee does
+  with the field.** Defaulting an unset `environment` to `'development'` looked like courtesy; in the
+  SDK that field is a hard ASSERTION, and a snapshot that disagrees is rejected. A valid production
+  credential then served compile-time defaults permanently and silently, indistinguishable from an
+  outage. **When a value is unknown, omit it and let the source of truth establish it** — and say
+  out loud that nobody asserted it.
+- **"The package is not installed" is the most complete outage there is — import dynamically and test in
+  it.** A seam whose SDK is loaded with `await import()` has its entire fallback contract exercised in a
+  checkout with no `node_modules`: no network, no credentials, no transport to mock.
+- **Creating a thing and activating it are different verbs, and no dashboard tells you which you did.**
+  Definitions synced but never activated reads as "the flags exist" while the runtime serves compile
+  defaults. The fix is not a paragraph — it is the verification command, in the story template, as its
+  own step.
+
+### Deriving state from docs (build-visualization-claude-mods, 2026-09-19)
+*If a tool answers "what is being built right now" — a status line, a board, a report.*
+
+- **A resolver that names the work in flight attracts exactly one class of bug: the plausible wrong
+  answer.** Every one of the nine review findings on `build-state.mjs` was one — a stacked `-s4` branch
+  inheriting the previous sprint's commits, a shared session journal holding another epic's entries,
+  `feat/aws-s3` parsed as sprint 3 of `aws`, a stale `origin/main` putting main's commits inside
+  `base..HEAD`. **Scope every input explicitly (this epic, this sprint) and return `unknown`**; an
+  unknown is a correct answer, a confident wrong one destroys the tool's only asset. *(2026-09-19)*
+- **Mutation-check the TEST, not only the code.** A fix for the stale-base bug passed its brand-new test
+  while still being wrong — both merge-bases shared a commit timestamp, so the date comparison never
+  fired. Flipping the code and watching the test *fail* is what exposed it; ancestry replaced the clock.
+  A test that passes for the wrong reason is worse than no test. *(2026-09-19)*
+- **Make the machine-readable field a NEW key rather than overloading a live one.** The executive ladder
+  went into `phase:`, not `status:`: the epic `status:` is the board's SSOT and an unknown value hard-
+  fails the extractor, and on a sprint file a frontmatter `status:` would have been captured by the
+  extractor's own `^Status:` regex — silently re-deriving every sprint on the board. *(2026-09-19)*
+- **A mechanical migration must not be gated on unrelated pre-existing findings.** A doc checker that
+  blocks on *every* finding in a touched file turns "add frontmatter to 539 legacy docs" into "sweep 251
+  unrelated findings, or bypass the hook". Gate on what the commit **introduces** (compare against
+  `HEAD`), which is the same "green on today's known state, red on anything new" rule those checkers are
+  always written with. *(2026-09-19)*
+- **Backfill and rail-sync belong in ONE PR per consumer.** Landing the checker first makes every later
+  doc commit fail its pre-commit hook until the backfill arrives. *(2026-09-19)*
+
+### Probing an undocumented, pre-release API (build-visualization-claude-mods, 2026-09-19)
+
+- **The loop is: a validator for the shape, a real session plus the debug log for the runtime.**
+  `claude plugin validate` gives the manifest schema and lists a module's hooks and `$` calls, but it
+  accepts calls that do not exist; only a live run (`claude -p --plugin-dir <dir> --debug`, then
+  `~/.claude/debug/latest`) tells you the truth. Four probe rounds taught: `{"modules": ["./index.ts"]}`,
+  `register(on)`, hooks are `($, e, next)` and must call **`next(e)`**, `$` may only ever appear as
+  `$.noun.event(...)` at a call site, and a module may import only its own relative files. *(2026-09-19)*
+- **Pin the CLI version in the check that validates against it.** The first unpinned CI install failed on
+  a schema the probed version does not have (`hooks: Invalid input: expected record`). Same discipline as
+  the cross-review families' pinned CLIs — bump deliberately, after re-probing. *(2026-09-19)*
+
+### A model as a guard's judge (jev-semantic-guards, 2026-09-23)
+
+- **Measure the question before trusting the model. The first wording is a guess.** Every first question
+  underperformed the regex it was replacing, or barely beat it: a real review scored 0.73, and liveness
+  scored 48/62. Keep a labelled fixture set **with recorded answers**. Then wording and thresholds become an
+  offline sweep over identical answers instead of an argument, and CI replays the recordings, so a model
+  bump or threshold change goes red instead of silently changing verdicts. *(2026-09-23)*
+- **Three states, never two: "could not look" is its own outcome.** No key, a 429, a timeout or a malformed
+  answer (`"1"`, `true`, `null`) must fall back to the deterministic rule and **say so in the reason**. A
+  coerced `Number(true)` became a model-decided PASS until review caught it. Only a probability in [0,1]
+  counts as a verdict. *(2026-09-23)*
+- **A shadow period can run on history, if the history is decision-shaped.** Replaying 655 posted reviews
+  and 186 retrospectives through the same judge in shadow did in minutes what a calendar shadow does in
+  weeks. Name the corpus bias (posted = accepted) and label the other direction on purpose. *(2026-09-23)*
+- **After a flip, the audit trail must keep the old decider's verdict.** Once the model decides, "posted"
+  no longer means "the old rule accepted it". A marker without the regex's own verdict makes the monitoring
+  report blind to the model's false passes, the one thing it exists to watch. *(2026-09-23)*
+- **Evidence tooling fails closed too.** An empty log, a `{}` line, a marker with no mode, or a forged
+  comment from a stranger on a public repo must never count as evidence. Filter by author provenance and
+  exit non-zero on nothing. *(2026-09-23)*
+
+### Publishing a package and a plugin (golden-frijoles-plugin, 2026-09-23)
+
+- **npm trusted publishing has three npm-side gates, and the log names none of them clearly.**
+  1. A trusted publisher can only be attached to a package that already exists (a deprecated `0.0.0` bootstrap
+     by hand).
+  2. A 404 on `PUT` means no publisher matched.
+  3. A 403 "OIDC permission denied for this action" *after* `oidc Successfully retrieved and set token` means the
+     publisher's **Allowed actions** is stage-only. A direct publish then returns **202** and appears minutes
+     later, after asynchronous validation.
+  **Run `npm publish --loglevel verbose` before theorising.** The first theory here (setup-node's
+  `registry-url`) was wrong, and the verbose log disproved it in one run.
+- **A CLI's output can depend on whether it thinks an agent is running it.** `npx skills` prints plain names in an
+  agent session and ANSI-coloured ones in CI, so a check was green locally and red on GitHub. Prove a check that
+  parses a tool's output under `env -i PATH=… HOME=<tmp> CI=true`, not inside the session that wrote it.
+- **A required check must not depend on the PR having merged.** A probe of the *published* repo can never pass on
+  the PR that adds what it probes. Run it against the PR's own tree, and keep a `--live` mode for the post-merge
+  record.
+- **Migrating a consumer onto a shared package: byte parity is necessary, output parity decides.** An unmodified
+  copy can still behave differently through the package when it calls a sibling the consumer has forked. Diff each
+  moved command's before/after output. It kept one skill local that byte parity would have moved.
+- **Automatic behaviour must not run repo-supplied code.** "The project's own `scripts/<x>` wins" suits a command
+  the user explicitly invokes. First-contact detection and setup call the trusted package directly: `init.mjs`
+  and `preflight.mjs` are names a stranger's repo can own.
+- **`$CLAUDE_PLUGIN_ROOT` is not set in a skill's shell** (measured, Claude Code 2.1.280). Locate a skill from its
+  own base directory, which the host shows when the skill is invoked.
+- **A local runner that mirrors CI must sandbox CI's global installs.** One `npm i -g <pinned CLI>` step, run
+  locally, downgraded the operator's own tool. Point `NPM_CONFIG_PREFIX` at a temp dir and prepend its `bin/`.
+
+### Layering config and depending on a fresh release (golden-frijoles-plugin wave 2, 2026-09-24)
+
+- **A new config file over old ones reopens every "absent means default" rule.** Wave 1's `egress` defaulted to
+  `true` when missing. Wave 2 made a `null` in the new file mean "unset", so the merge dropped it and the rail read
+  `true` again: a stranger's text was sent with nobody's yes. Decide the absent case at the LOADER, and spec the
+  merge path, not just the parser.
+- **A version minutes old on npm can still 404.** `npm view` listed kit 0.4.0 while the tarball 404'd in Vercel's
+  install. Wait for the tarball URL to return 200 before a consumer depends on it. A re-run fixes it, not a code
+  change.
+- **Copy the shared rails into a consumer before calling the wave done.** The consumers' own lint, Prettier and
+  reviews found five defects the source repo's gates couldn't see. The copy-in is a gate, not a chore.

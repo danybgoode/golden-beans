@@ -1,7 +1,7 @@
 ---
 status: shipped # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: experiments-for-humans
-build_order: 29      # integer position in the ONE global build sequence (carried from the seed; audit wave A)
+build_order: 35      # integer position in the ONE global build sequence (carried from the seed; audit wave A)
 title: "Experiments for humans — a guided five-question flow replaces the JSON textarea"
 area: 01-growth-engine
 risk: high
