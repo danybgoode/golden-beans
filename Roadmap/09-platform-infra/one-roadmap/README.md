@@ -55,10 +55,5 @@ Docs only, with nothing deployed. The golden-beans PR merges first. The dobby-fo
 - [x] Product poster (`Roadmap/README.md`) updated
 - [x] Team memory + `MEMORY.md` index updated
 - [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [x] ~~n/a~~ — no flag (low-risk docs chore) · **Kill-switch (only if one was planned at grooming — Stage 6b):** the flag slice shipped, the flag
-      exists **in Golden Frijoles, in every env**, with the stated polarity, **and is ACTIVATED there** —
-      `gf flags get <key>` must not print `—` in its PRODUCTION row. Creating a definition is not
-      turning it on, and a flag that is synced but never activated serves compile-time defaults while
-      every dashboard says it exists. *Verify-only — not a new gate; whether a high-risk epic needs one
-      is decided at grooming, not here.*
+- [x] **Kill-switch:** N/A. No flag was planned at grooming (a low-risk, docs-only chore).
 - [x] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
