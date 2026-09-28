@@ -1,7 +1,7 @@
 ---
 title: "Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures"
 slug: jev-reanchor-thresholds
-status: ready
+status: shipped   # spike decided 2026-09-28: clean negative, see ## Decision
 area: "09"
 type: spike
 priority: "single-product-wave-A"
@@ -75,3 +75,64 @@ It is the cheapest proof of the "DSPy compiles, the kit runs" pattern that `comp
 > 5. **End with a written decision in this seed:** *adopt* (one-line `jev.config.json` PR per rail, product owner's
 >    OK first) or *clean negative*, plus what it means for `compiled-prompts` / `semantic-lint` / `intent-match`,
 >    which lean on the "DSPy compiles, the kit runs" pattern.
+
+## Result (run 2026-09-28, offline, 240 recorded fixtures, `jev-1.13.0`, DSPy 3.4.0)
+
+**Method.** Instead of porting the judges to Python, the harness drove the **real Node judges**
+(`loadRails()` + `replayAsk()` from `scripts/jev-eval.mjs`) to derive, per fixture, the one number each threshold
+acts on:
+- **review:** Jev's `noul` plus the regex verdict;
+- **prose:** per family, the highest *eligible* `noul`. The evidence gates and `liveFlags` are already applied.
+
+That reduction was checked against the judges on a grid of thresholds: **1,363 checks, 0 mismatches**. ReAnchor then
+fitted a `dspy.Predict` with `Noul` outputs. It was backed by a replay subclass of `dspy.experimental.TypeSafe` that
+serves the recorded probability, so there was **no egress, no key and no cost**. As a no-DSPy control, a plain
+exhaustive grid refit ran on the same folds.
+
+| Rail | Hand thresholds (all 240) | ReAnchor fit (all) | Grid fit (all) | **Held-out, 5-fold: hand · ReAnchor · grid** |
+|---|---|---|---|---|
+| review (77) | 98.7% · 1 wrong · not-real precision 1.00, recall 0.94 | **kept 0.85 / 0.30** (no candidate beat them) | 0.85 / 0.30 | **76 · 76 · 74** correct |
+| prose (163, exact code set) | 86.5% · 22 wrong | **kept 0.80** for all four families (fold check refused 2 train-only gains) | 0.765 → 87.7% on train | **141 · 141 · 137** correct |
+
+- **Review:** the thresholds are already at the optimum. The one miss (`corpus-b-trail`, label not-real, `noul` 0.89,
+  regex also wrong) is Jev being confidently wrong. No threshold fixes it.
+- **Prose:** almost all the error is `flag-state-claim`: 13 misses from 0.33 to 0.79 and 6 false alarms from 0.80 to
+  0.96. **The two distributions overlap, so no single cut separates them.** A naive refit to 0.765 gains 2 on the
+  data it was fitted on and **loses 4 held out**. ReAnchor's fold check caught exactly that overfit and kept 0.80.
+- **Brier** can't be compared: ReAnchor never changes the probabilities, so it's identical by construction.
+
+**Sharp edges in the experimental API** (for `compiled-prompts`, `semantic-lint`, `intent-match`):
+1. `ReAnchor`, `Noul` and `TypeSafe` import only from `dspy.experimental`. They aren't at the top level.
+2. A `Noul` output **requires** `OutputField(desc=...)`, which is the question sent to Jev. The question text then
+   lives in two places (the kit's JS and the DSPy signature) unless the compiled artifact becomes the single source.
+3. `ReAnchor` refuses by default without a response cache (`require_cache=True`). A replay client needs
+   `require_cache=False`.
+4. **One cut per field.** The review rail's three-way band (pass / regex / fail) had to be two `Noul` fields over the
+   same probability plus a custom metric. The rail's inclusive `≤` needed a `nextafter` shim against ReAnchor's `≥`.
+5. **Aggregation and evidence gates live outside DSPy.** Prose fitting was only faithful because the judge reduces to
+   "max eligible noul ≥ t", and that reduction was verified against the Node judge. A rule with no such reduction
+   can't be fitted this way.
+6. ReAnchor fits **per field**, but `jev.config.json` has one shared `prose.thresholds.claim`. Per-family thresholds
+   would be a schema change (code), not a one-line config PR.
+7. Its normal evidence pass is **live** (one Jev call per example). Our recorded fixtures make it free. Keep that
+   property.
+
+## Decision (2026-09-28)
+
+**Clean negative: keep the hand thresholds** (review 0.85 / 0.30, prose 0.80). No `jev.config.json` PR and no
+production change. The hand numbers are already optimal for this data, and no refit beats them on held-out folds.
+
+**What it means for the pattern "DSPy compiles, the kit runs":** it **works**. It runs offline from recorded answers
+and writes plain numbers the zero-dependency kit already reads. The part worth keeping is ReAnchor's **fold check**:
+it refused the overfit a hand-rolled grid would have shipped. But **the bottleneck is the question and the data, not
+the threshold**:
+- `flag-state-claim`'s overlap is a question-wording or evidence problem. That's `compiled-prompts`' territory (improve
+  the question), not ReAnchor's.
+- 240 labels can't move a threshold with confidence. Grow the labelled set from the logged decisions
+  (`.jev/decisions.jsonl`) before any refit.
+- `semantic-lint` and `intent-match` should design each judge's rule as **one statistic per Noul/Score** (or a
+  verified reduction) from day one, or they won't be fittable.
+
+**Re-run this spike when** the fixtures roughly double, or on a Jev model bump (after `jev-eval --live` re-records).
+The harness is ~200 lines: a Node extractor plus a Python ReAnchor script. It was deliberately **not committed**,
+because it would land as `optimize/` under E5 when `compiled-prompts` starts.
