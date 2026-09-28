@@ -3,7 +3,7 @@ epic: public-monorepo
 sprint: 2
 title: "S2 The mirror cut-over"
 risk: high
-phase: Locking architecture
+phase: Building
 stories_total: 4
 stories:
   - id: S2.1
@@ -37,7 +37,7 @@ stories:
 ---
 # One public monorepo — Sprint 2: S2 The mirror cut-over
 
-**Status:** ⬜ not started
+**Status:** 🚧 building
 
 ## Stories
 
