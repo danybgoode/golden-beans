@@ -8,7 +8,11 @@
 # Off switch: the repo variable MIRROR_ENABLED. Anything but 'true' skips every push to main — no revert needed.
 # A manual dispatch to a scratch branch (a dry run) still runs while it's off.
 # Never forced: a non-fast-forward (someone committed to the mirror directly) FAILS here, loudly, instead of
-# overwriting it. The fix is to bring that commit into skills/ here, never `--force`.
+# overwriting it. The fix is `git subtree pull --prefix=skills <skills repo> main` (NOT --squash), merged here with a
+# merge commit (D1) — never `--force`.
+#
+# The key lives in the `skills-mirror` Environment, whose deployment-branch policy is `main` only: a run from any other
+# ref — a dispatch from a feature branch, or a branch-local edit of this file — cannot read it (pr-reviewer, #181).
 name: Skills mirror
 
 on:
@@ -28,20 +32,25 @@ permissions:
 
 concurrency:
   group: skills-mirror
-  cancel-in-progress: false # a queued push must still land, in order
+  cancel-in-progress: false # never abort a push mid-flight; a newer pending run supersedes an older pending one,
+  # which is safe because the newest split contains every older one
 
 jobs:
   mirror:
     # Production (main) needs the switch ON. A manual dispatch to any OTHER branch is a dry run and may run while it's
     # off, so the dry run can prove the key and the split before anything reaches main (codex, #181).
     if: >-
-      vars.MIRROR_ENABLED == 'true' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.target != 'main')
+      github.ref == 'refs/heads/main' && (
+        vars.MIRROR_ENABLED == 'true' ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.target != 'main')
+      )
     runs-on: ubuntu-latest
+    environment: skills-mirror
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # the split needs full history
+          persist-credentials: false
 
       - name: Split skills/
         id: split
@@ -59,9 +68,13 @@ jobs:
         run: |
           case "$TARGET" in ''|*[!A-Za-z0-9._/-]*|*..*|/*|*/|refs/*) echo "::error::invalid target branch" >&2; exit 1 ;; esac
           if [ "$TARGET" = main ] && [ "$ENABLED" != true ]; then echo "::error::main needs MIRROR_ENABLED=true" >&2; exit 1; fi
+          case "$SHA" in [0-9a-f]*) [ ${#SHA} -eq 40 ] || { echo "::error::bad split sha" >&2; exit 1; } ;; *) echo "::error::bad split sha" >&2; exit 1 ;; esac
           keyfile="$RUNNER_TEMP/mirror_key"
+          hosts="$RUNNER_TEMP/known_hosts"
+          trap 'rm -f "$keyfile"' EXIT
           ( umask 077 && printf '%s\n' "$KEY" > "$keyfile" )
-          export GIT_SSH_COMMAND="ssh -i $keyfile -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          # GitHub's published ed25519 host key (gh api meta), pinned rather than trusted on first use.
+          echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$hosts"
+          export GIT_SSH_COMMAND="ssh -i $keyfile -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts -o StrictHostKeyChecking=yes"
           git push git@github.com:golden-frijoles/skills.git "$SHA:refs/heads/$TARGET"
-          rm -f "$keyfile"
           echo "mirrored $SHA → golden-frijoles/skills@$TARGET"

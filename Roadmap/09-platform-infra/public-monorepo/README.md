@@ -59,8 +59,10 @@ agy as the external family and the security lens on S1/S2 (workflow paths).
   plugin release (check-release). The only files S1 touches outside `skills/` are `.prettierignore`,
   `eslint.config.mjs`, `.github/workflows/skills-ci.yml`, the three absolute-path files, and AGENTS.md. The
   skills-ci job must run on `git subtree split --prefix=skills` output, never from the prefix.
-- **S2:** cite D1, D2. The mirror job only ever fast-forwards the skills repo (`git push` without `--force`), is gated
-  by `vars.MIRROR_ENABLED == 'true'`, and uses a deploy key scoped to that one repo. **The deploy key is a new
+- **S2:** cite D1, D2. The mirror job only ever fast-forwards the skills repo (`git push` without `--force`) and runs
+  only from `main`. Pushes to the mirror's `main` need `vars.MIRROR_ENABLED == 'true'`, while a dispatch to a scratch branch
+  (the dry run) may run with it off. The deploy key is scoped to that one repo and held in the `skills-mirror` Environment
+  (deployment branches: `main` only). The skills ruleset lists `DeployKey` as a bypass actor. **The deploy key is a new
   production credential and needs Daniel's named OK before it's minted.** The live cut-over is a real patch release,
   proven by an isolated-home install.
 - **S3:** cite D7. Scan output is dispositioned without printing any secret value. **Nothing moves to `internal`
