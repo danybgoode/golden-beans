@@ -1215,6 +1215,14 @@ one-liner + why + date shape.
   exact version id, and re-checks on a revision conflict — and the page's "can roll out" is the same
   comparison, so a button is never drawn for a write the server will refuse.
 
+- **Flip CI's gate the same day Production's flips — a gate left OFF in CI hides every defect behind
+  it, including ones that are not the gate's.** (2026-09-26, `experiments-for-humans`, #174.) The
+  builder ran dark in CI for the whole epic (the push credential lacked the `workflow` scope), so its
+  authed specs skipped. The first builder-ON run in CI's exact env found a shell bug that predates the epic
+  (a flex item's `min-width: auto` defeating its own ellipsis at 360px for multi-project owners) and a
+  spec writing into the shared authed tenant a sibling spec asserts on. Pushing a workflow change
+  needs `gh auth refresh -s workflow` and `git -c credential.helper='!gh auth git-credential' push`.
+
 ## Permissions & guardrails (ways-of-work-lean-pass, 2026-09-17)
 
 - **A deny rule matches command TEXT, and patching rules one at a time cannot close a rule CLASS.** A
