@@ -65,7 +65,8 @@ stories:
 > - The org had deploy keys **disabled**. Daniel approved enabling them (`deploy_keys_enabled_for_repositories=true`).
 >   Key `golden-beans mirror (public-monorepo S2)` is read-write on `golden-frijoles/skills` only, and its private half
 >   exists only in the `SKILLS_MIRROR_KEY` secret here.
-> - `MIRROR_ENABLED=false` until S2.2.
+> - `MIRROR_ENABLED=false` until S2.3. The S2.2 dry run is a dispatch to `mirror-test`, which the job allows while
+>   the switch is off. Only pushes to `main` need it on.
 > - `workflow_dispatch` runs only once the workflow is on `main`, so the dry run (S2.2) comes right after this PR merges.
 
 ## Sprint QA
