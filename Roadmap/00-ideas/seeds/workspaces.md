@@ -9,7 +9,7 @@ appetite: L
 underwritten_by: null
 risk: high
 epic: null
-build_order: 32
+build_order: 38
 updated: 2026-09-23
 ---
 
