@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Locking architecture # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building     # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: public-monorepo
 title: "One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo"
@@ -47,6 +47,26 @@ Nothing here touches the engine's data (rule #1 n/a). **Rules in play:** #4, mer
 - `skills/.github/workflows/{ci,release}.yml`, `scripts/check-release.mjs` (skills), and the isolated-home install recipe (golden-frijoles-plugin S5).
 - The review rail (`scripts/review-route.mjs`, both lenses: CI and release paths trigger the security lens).
 - `gh api repos/<o>/<r>/deployments` for the deploy proof.
+
+
+## Routing
+The architect (Claude Opus 5.5) builds all four sprints. The work is shared infra (CI, release, repo identity) rather
+than mechanical code over a locked contract, so there's no faster-model split. Review is per the router, with codex or
+agy as the external family and the security lens on S1/S2 (workflow paths).
+
+## Build contracts (locked by the architect before the builder started)
+- **S1:** cite D1, D3, D4, D5. The `skills/` bytes are imported **unchanged**, and any edit inside `skills/` is a
+  plugin release (check-release). The only files S1 touches outside `skills/` are `.prettierignore`,
+  `eslint.config.mjs`, `.github/workflows/skills-ci.yml`, the three absolute-path files, and AGENTS.md. The
+  skills-ci job must run on `git subtree split --prefix=skills` output, never from the prefix.
+- **S2:** cite D1, D2. The mirror job only ever fast-forwards the skills repo (`git push` without `--force`), is gated
+  by `vars.MIRROR_ENABLED == 'true'`, and uses a deploy key scoped to that one repo. **The deploy key is a new
+  production credential and needs Daniel's named OK before it's minted.** The live cut-over is a real patch release,
+  proven by an isolated-home install.
+- **S3:** cite D7. Scan output is dispositioned without printing any secret value. **Nothing moves to `internal`
+  before Daniel approves the file list.** Creating the private repo is a new IAM surface, asked with the key.
+- **S4:** cite D6. **S4.1 is not merged before the lawyer's OK.** The rename is a GitHub setting, and it's proven by a
+  merge deploy (`gh api …/deployments`), never by a CLI deploy.
 
 ## Scope — stories
 | Sprint | Story | Risk |
