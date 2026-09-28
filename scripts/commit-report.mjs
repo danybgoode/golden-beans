@@ -517,7 +517,7 @@ function main() {
     if (!guardPassed) {
       die('the prose guard rejected this draft — refusing to auto-post an unsupported claim.');
     }
-    const url = `https://github.com/danybgoode/golden-beans/commit/${fullSha}`;
+    const url = `https://github.com/danybgoode/golden-frijoles/commit/${fullSha}`;
     const report = checkpoint ?? {
       version: 1,
       sha: fullSha,

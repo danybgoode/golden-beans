@@ -3,7 +3,7 @@ epic: public-monorepo
 sprint: 4
 title: "S4 Licences and identity"
 risk: high
-phase: Locking architecture
+phase: Building
 stories_total: 4
 stories:
   - id: S4.1
@@ -19,7 +19,7 @@ stories:
     i_want: "the repo named for the product"
     so_that: "one name everywhere (Decision 1 → B: no org transfer, because Vercel Hobby)"
     risk: high
-    status: planned
+    status: done
   - id: S4.3
     title: "A merge still deploys"
     as_a: "the product owner"
@@ -37,7 +37,7 @@ stories:
 ---
 # One public monorepo — Sprint 4: S4 Licences and identity
 
-**Status:** ⬜ not started
+**Status:** 🚧 building: S4.1 is held (draft #184, awaiting the lawyer).
 
 ## Stories
 
@@ -46,7 +46,7 @@ stories:
 **Acceptance:** `skills/` keeps Apache-2.0 + NOTICE. `packages/cli` and `packages/sdk` get Apache-2.0 (`license` field + LICENSE). `apps/web` and `supabase/` get FSL-1.1-ALv2. A root LICENSE maps the folders. **This is held unmerged until Daniel confirms the lawyer's OK.**
 **Risk:** high
 
-### Story 4.2 — Rename in place to danybgoode/golden-frijoles
+### Story 4.2 — Rename in place to danybgoode/golden-frijoles ✅ renamed 2026-09-28 with `gh repo rename`; the old URL redirects. Vercel `link.repoId` 1299999527 = the repo id, so the link survives the rename (proven by S4.3). References updated: `reporting.config.json`, `commit-report.mjs`, both `epic-dod.exemptions.json`, and the skills README/CONTRIBUTING/fill-ins/Roadmap pointers. Historical Roadmap mentions (97 files), test fixtures and labelled Jev data are left as they are, since redirects cover them.
 **As the product owner**, **I want** the repo named for the product, **so that** one name everywhere (Decision 1 → B: no org transfer, because Vercel Hobby).
 **Acceptance:** The repo is renamed on GitHub, and the old URL redirects. Every hard-coded `danybgoode/golden-beans` in scripts and docs is updated. Vercel's Git connection is verified or reconnected in the dashboard (**no CLI deploy**).
 **Risk:** high
