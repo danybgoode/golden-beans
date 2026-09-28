@@ -3,7 +3,7 @@ epic: public-monorepo
 sprint: 2
 title: "S2 The mirror cut-over"
 risk: high
-phase: Building
+phase: Shipped
 stories_total: 4
 stories:
   - id: S2.1
@@ -26,18 +26,18 @@ stories:
     i_want: "the first release made through the mirror to install cleanly"
     so_that: "the move is proven, not assumed"
     risk: high
-    status: planned
+    status: done
   - id: S2.4
     title: "The skills repo becomes a mirror"
     as_a: "the product owner"
     i_want: "golden-frijoles/skills writable only by the mirror"
     so_that: "two writable homes can't fork again"
     risk: high
-    status: planned
+    status: done
 ---
 # One public monorepo — Sprint 2: S2 The mirror cut-over
 
-**Status:** 🚧 building
+**Status:** ✅ shipped 2026-09-28: #181 (`0932c7c`), #182 (`96acda7`). Mirror run 36484988706 pushed `226730a` to skills `main`, and skills Release run 36485015496 published `@golden-frijoles/kit@0.5.3` **with provenance** and tagged `v0.5.3`.
 
 ## Stories
 
@@ -51,12 +51,12 @@ stories:
 **Acceptance:** A `workflow_dispatch` with `target=mirror-test` pushes the split. `git diff golden-frijoles/skills main mirror-test` is empty, or holds exactly the monorepo's skills changes. The branch is then deleted.
 **Risk:** high
 
-### Story 2.3 — Go live with a real release
+### Story 2.3 — Go live with a real release ✅ `96acda7`: isolated `HOME` → marketplace install = plugin 0.5.3, `npx skills add` installs all skills, `npx @golden-frijoles/kit@0.5.3 --list` runs
 **As a stranger**, **I want** the first release made through the mirror to install cleanly, **so that** the move is proven, not assumed.
 **Acceptance:** A patch bump in `skills/` merges here. The mirror pushes it, and the skills repo's own `release.yml` publishes `@golden-frijoles/kit` with provenance and tags `v<version>`. The install prompt run in an isolated home installs that version.
 **Risk:** high
 
-### Story 2.4 — The skills repo becomes a mirror
+### Story 2.4 — The skills repo becomes a mirror ✅ ruleset `main: mirror-only` (DeployKey + admin-emergency bypass); README/CONTRIBUTING; `~/dobby/dobby-foundation` → `~/dobby/archive/` (clean at `80d050a`)
 **As the product owner**, **I want** golden-frijoles/skills writable only by the mirror, **so that** two writable homes can't fork again.
 **Acceptance:** Branch protection on skills `main` allows only the deploy key. The skills README and CONTRIBUTING send PRs to this repo. `~/dobby/dobby-foundation` is archived locally (moved to `~/dobby/archive/`, since it's already clean and pushed).
 **Risk:** high

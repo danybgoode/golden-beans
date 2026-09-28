@@ -37,6 +37,10 @@ golden-beans/
 └── Roadmap/             ← product source of truth (poster, ways-of-working, learnings, epics)
 ```
 
+**Business-sensitive docs** (a client's own plans or contracts, commercial or spin-out strategy, audits naming
+customers) do **not** go in this public repo: they live in the private `golden-frijoles/internal`, and a pointer is
+left here (public-monorepo D7).
+
 **Workflow (gitflow)**: work on a **feature branch** (`feat/<epic-slug>`), commit per story, open a
 **PR**, and **merge to `main`** when verified + approved. Merging to `main` is the deploy — Vercel's
 GitHub integration auto-deploys `main` to production on every merge, no manual step. **Never run
