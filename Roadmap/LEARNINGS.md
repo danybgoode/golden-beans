@@ -1597,6 +1597,12 @@ one-liner + why + date shape.
 
 
 ---
+- **Dedupe merged docs by content, not by the heading or bold lead.** When `one-roadmap` merged two LEARNINGS files,
+  a lead-only match counted an entry as a duplicate even though one repo had grown it a corollary, so the extension
+  was silently lost. Compare the whole entry, and keep the longer one. *(one-roadmap, 2026-09-28)*
+- **`git stash` + `git stash pop` puts staged deletions back as unstaged.** A commit made afterwards silently leaves
+  out every `git rm`. After any stash round trip, re-stage with `git add -u <path>` and read `git show --stat`
+  before pushing. *(one-roadmap, 2026-09-28)*
 
 ## From the plugin repo (moved 2026-09-28)
 *`golden-frijoles/skills` (formerly dobby-foundation) kept its own LEARNINGS until [`one-roadmap`](09-platform-infra/one-roadmap/README.md) moved its Roadmap here. These are its entries that were not already in this file, verbatim under their original section headings. Merging them into the sections above is `doc-hygiene`'s job.*

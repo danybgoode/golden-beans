@@ -343,6 +343,9 @@ independently shippable slice of value.
   — **shipped 2026-07-28** (PR #51); Slack uses a channel-scoped Incoming Webhook and plain-text
   response handling, while the local report checkpoint advances only after every configured channel
   accepts the reviewed prose.
+- ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
+  here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
+  2026-09-28** (golden-beans #177, skills #56).
 - **The plugin, the kit and the template** (moved from `golden-frijoles/skills`' own Roadmap by
   [`one-roadmap`](09-platform-infra/one-roadmap/README.md), 2026-09-28):
   - ✅ **Plugin marketplace**: `golden-frijoles@golden-frijoles` from `golden-frijoles/skills` (Apache-2.0), installed via `.claude/settings.json` or `claude plugin install`; Cowork `.skill` archives built reproducibly by `scripts/pack-skills.mjs`.
@@ -359,6 +362,10 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-28**: `one-roadmap` **shipped**. Golden Frijoles has one planning home. The plugin repo's 6 epics, 12 seeds,
+  3 audits, 3 bets and 45 new LEARNINGS entries moved here, and the board reads 28–54 as one ship history. In the same
+  PR, the `jev-reanchor-thresholds` spike closed as a clean negative: DSPy ReAnchor, run offline on the recorded
+  fixtures, keeps the hand Jev thresholds, and its fold check refused the overfit a naive refit would have shipped.
 - **2026-09-25** — `experiments-for-humans` **shipped & live** (PRs #167, #169, #170, #172): the
   JSON textarea is gone; an experiment is five answered questions, and its page says what to do next.
   The lock caught two design errors before any code (adjacent FNV priorities collided; a saved draft
