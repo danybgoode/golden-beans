@@ -257,6 +257,5 @@ skill fails as a stale entry, which is what proves the debt was paid rather than
 
 This repository is a **read-only mirror**. The plugin, kit and template are developed in
 [`danybgoode/golden-beans`](https://github.com/danybgoode/golden-beans) under `skills/`, and each merge there is published
-here automatically. Please open issues and pull requests there. A commit made directly here would be refused by the
-next mirror push. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
+here automatically. Please open issues and pull requests there. A commit made directly here would block the next
+mirror push until it's merged back into golden-beans. See [CONTRIBUTING.md](CONTRIBUTING.md).

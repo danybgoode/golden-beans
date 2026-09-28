@@ -6,5 +6,6 @@ pushed here as a fast-forward (`git subtree split --prefix=skills`), and a versi
 (see [RELEASING.md](RELEASING.md)).
 
 - **Issues and pull requests:** open them in `danybgoode/golden-beans`.
-- **Don't commit here directly.** Only the mirror's deploy key can push to `main`, and a direct commit would make the
-  next mirror push non-fast-forward.
+- **Don't commit here directly.** A ruleset lets only the mirror's deploy key update `main` (a repo admin can bypass it
+  in an emergency). A direct commit would make every later mirror push fail as non-fast-forward, blocking releases
+  until it's merged back into golden-beans with `git subtree pull` (no `--squash`).
