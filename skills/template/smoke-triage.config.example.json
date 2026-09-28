@@ -1,0 +1,9 @@
+{
+  "$comment": "TEMPLATE FILL-IN — copy to smoke-triage.config.json and COMMIT it. The merge gate for the nightly smoke-triage routine (scripts/smoke-triage-scope.mjs). REQUIRED, and deliberately without defaults: with no valid policy the gate answers UNDECIDABLE and the routine keeps its fix as a draft PR. testSurface = the ONLY paths the routine may merge by itself (an allow-list; everything else is app code). assertionCalls = every assertion function your specs call, including your own helpers — a deleted call to an unlisted helper would go unnoticed.",
+  "testSurface": [
+    { "prefix": "e2e/", "why": "the Playwright specs and their helpers — the smoke itself" },
+    { "exact": "playwright.config.ts", "why": "projects, timeouts, workers — how the smoke runs" },
+    { "exact": ".github/workflows/browser-smoke.yml", "why": "the nightly detector workflow" }
+  ],
+  "assertionCalls": ["expect"]
+}

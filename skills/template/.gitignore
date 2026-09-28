@@ -1,0 +1,8 @@
+# Spawned-project defaults — extend, do not replace.
+.DS_Store
+node_modules/
+.env*.local
+# Jev decision log (jev-semantic-guards D3) — local evidence, may quote private text
+.jev/
+# Local overlay for reporting.config.json (a chat id in a public repo) — see scripts/lib/reporting-config.mjs
+reporting.config.local.json

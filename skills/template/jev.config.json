@@ -1,0 +1,22 @@
+{
+  "$comment": "TEMPLATE FILL-IN — Jev semantic guards (jev-semantic-guards). rails.<review|prose>.mode: off | shadow | jev is the kill-switch: one reviewed line. jev (the default since 2026-09-23) = Jev decides the semantic question; the regex decides only when Jev cannot look (no key, 429, timeout) or is unsure. egress: true | false | null (golden-frijoles-plugin D12, S5.4). null is this template's default: nothing is sent to TypeSafe until you say yes — the first run that would use Jev asks once (GF-NEEDS-SETTING jev.egress) and falls back to the regex guards meanwhile. false is the same fallback, permanently, with no further ask. No TYPESAFE_API_KEY behaves the same way regardless of egress. off = the regex-only guards. shadow = the regex decides and Jev is logged; it REQUIRES shadowExpires (≤21 days out) and CI fails once it passes. Thresholds are MEASURED (sprint-5.md): review real ≥ 0.85 / not-real ≤ 0.3, prose claim ≥ 0.8. Bump model or thresholds only after `node scripts/jev-eval.mjs --live`.",
+  "model": "jev-1.13.0",
+  "egress": null,
+  "rails": {
+    "review": {
+      "mode": "jev",
+      "thresholds": {
+        "real": 0.85,
+        "notReal": 0.3
+      },
+      "shadowExpires": null
+    },
+    "prose": {
+      "mode": "jev",
+      "thresholds": {
+        "claim": 0.8
+      },
+      "shadowExpires": null
+    }
+  }
+}

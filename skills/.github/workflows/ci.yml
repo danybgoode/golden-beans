@@ -1,0 +1,324 @@
+name: CI
+
+# This repo had NO CI until the harness-portability fast-follow. It ships a plugin and a spawn
+# template to every consuming project, so a bad merge here propagates silently — "it's only docs"
+# is exactly how the origin-project residue survived for months.
+#
+# Deliberately minimal and zero-dependency: no install step, no lockfile, no package.json. Every
+# check below runs straight from `node`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Daily, for the Jev shadow rot guard: expiry is a date, not a diff (jev-semantic-guards D8).
+  schedule:
+    - cron: '17 13 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build-order's extractor derives dates from git history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The grep-to-zero guard against origin-project residue. Fails on a new leak, and also on a
+      # stale allowlist entry — see the header of the script for the reasoning.
+      - name: Plugin leak guard
+        run: node scripts/check-plugin-leaks.mjs
+
+      # D4: a version bump IS the release. Only meaningful on a PR (it diffs against the base branch),
+      # and needs the real merge base, not the shallow single commit `pull_request` checks out by
+      # default — `fetch-depth: 0` above already gives us that. On push (a merge to main, or the
+      # schedule) there is no base to diff against, so this step only runs for `pull_request`.
+      - name: Release version bump (PRs only)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/check-release.mjs --base "origin/$BASE_REF"
+
+      # Every skill declares the repo-local scripts it wraps (`requires_scripts:` in its SKILL.md
+      # frontmatter); this asserts template/scripts/ actually supplies them. Before it existed the
+      # contract lived only in prose, and EIGHT of ten skills shipped with no script anywhere — not
+      # in template/, not in any consuming project. An undeclared skill fails too: silence is
+      # exactly what let that survive.
+      #
+      # The KNOWN_ABSENT ledger is EMPTY since plugin-audit-and-extraction S1 paid the debt, and the
+      # check now also walks each declared script's import closure: an absent import (a partial port)
+      # or an undeclared one (an understated declaration) fails. A NEW missing script, an undeclared
+      # skill, or a ledger entry whose debt was quietly paid all fail.
+      # Do not make this green by deleting declarations or padding KNOWN_ABSENT.
+      - name: Skill script contract
+        run: node scripts/check-skill-scripts.mjs
+
+      # golden-frijoles-plugin S4.2: every template rail reads its config through lib/config.mjs, so a user's
+      # golden-frijoles.config.json reaches it. A rail that goes back to reading its legacy file directly fails here.
+      - name: Rails read config through the one loader
+        run: node scripts/check-config-reads.mjs
+
+      # @golden-frijoles/kit is BUILT from the skills' declared closure, never committed (golden-frijoles-plugin
+      # D1). Build it the way release.yml will, assert the built package holds every declared file and whole
+      # import closures, and dry-run the publish so the package shape cannot rot between releases. The dry run
+      # needs no credential and uploads nothing.
+      - name: Kit builds from the closure, is whole, and packs
+        run: |
+          node scripts/build-kit.mjs
+          node scripts/check-skill-scripts.mjs --kit
+          # `npm pack --dry-run`, not `publish --dry-run`: npm >= 11 exits 1 on a dry-run publish over an existing
+          # version, which would turn every non-bumping PR red once a release is out (fresh review of #45).
+          ( cd kit && npm pack --dry-run )
+
+      # The advertised skill list is GENERATED from plugins/golden-frijoles/skills/ into marketplace.json
+      # (twice), plugin.json and the README. It used to be hand-kept in all four and they disagreed.
+      - name: Skill adverts are generated, not hand-kept
+        run: node scripts/render-skill-adverts.mjs --check
+
+      # The groom generators' own unit tests. Both kickoff generators are covered — the per-sprint
+      # one (the exception path) and the epic-mode one (the default).
+        # Files named explicitly, not a directory: `node --test <dir>` resolves the path as a MODULE
+        # on Node 22 and dies with MODULE_NOT_FOUND — a red step that looks like a real test failure.
+      - name: groom generator tests
+        run: |
+          node --test \
+            plugins/golden-frijoles/skills/groom/emit-kickoff.test.mjs \
+            plugins/golden-frijoles/skills/groom/emit-epic-kickoff.test.mjs \
+            plugins/golden-frijoles/skills/groom/scaffold-epic.test.mjs
+
+      # ── The build view mod (build-visualization-claude-mods S4) ─────────────────────────────
+      # Its pure half: the cache decision and the status text. The hook file itself is four calls on `$`
+      # and is covered by `claude plugin validate` below, which reads the module statically.
+      - name: build view mod — the pure half
+        run: node --test plugins/golden-frijoles/hooks/build-view.test.mjs
+
+      # `claude plugin validate` needs NO API key, and it is the only thing that checks the hook module
+      # against the real function-hooks contract: a malformed hooks.json, an unknown event name, or a `$`
+      # used any way other than `$.noun.event(...)` all fail it. Written the way this repo's doctrine
+      # says to treat a network install (see the gf step below): an install that cannot happen SKIPS
+      # loudly rather than redding the run, because a broken npm is not a broken plugin.
+      - name: Claude plugin validate — the mod's hooks registration
+        run: |
+          # PINNED, like the cross-review families' CLIs: this is a pre-release hook API, and the only real
+          # check on index.ts. An unpinned install can validate against a contract nobody probed — and it
+          # already bit this step once: the version CI installed required a `hooks` key that 2.1.278 does
+          # not. Bump the pin deliberately, after re-running the probe sessions in the sprint doc.
+          if npm i -g @anthropic-ai/claude-code@2.1.278 --no-audit --no-fund; then
+            CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude plugin validate plugins/golden-frijoles
+          else
+            echo "::warning::could not install @anthropic-ai/claude-code — plugin validate was SKIPPED, not passed."
+          fi
+
+      # The Golden Frijoles onboarding text is ONE surface across four shipped files plus the
+      # canonical module they all come from. Prose drifts silently; three copies of
+      # `npx @golden-frijoles/cli init` agree right up until one of them is edited.
+      - name: Golden onboarding surfaces agree
+        run: node scripts/check-onboarding-parity.mjs
+
+      # ── Presence is not execution ────────────────────────────────────────────────────────────
+      # The check above proves every surface says the SAME thing. It cannot prove the thing is
+      # TRUE — and the first version of this epic welded `gf flags ls --env production` into five
+      # files, a command that exits 1 with a usage error because `gf flags ls` takes no `--env`.
+      # Every surface agreed, perfectly, about something the CLI cannot do.
+      #
+      # So this step installs the REAL published CLI and runs each advertised command, asserting
+      # the CLI parsed it (`unauthorized` is a pass — the parser accepted it and then asked for a
+      # credential; `invalid` is the failure). It is the only step here that touches the network,
+      # so it is written the way this repo's own doctrine says to: an install that cannot happen
+      # SKIPS rather than failing. A red check because npm was having a bad day is precisely the
+      # dependency `preflight.mjs` refuses to be.
+      # S3.4 also weighs the INSTALL PROMPT itself into --exec: `npx skills --list` and the two
+      # `claude plugin …` commands. Both binaries are installed here (best-effort, one not gating the
+      # other) so the script's own internal skip logic — never the shell — decides what ran; each
+      # missing binary prints its own `::warning::` rather than silently skipping the whole step.
+      - name: Advertised gf commands actually exist
+        run: |
+          npm i -g @golden-frijoles/cli --no-audit --no-fund \
+            || echo "::warning::could not install @golden-frijoles/cli — the gf probes were SKIPPED, not passed."
+          npm i -g @anthropic-ai/claude-code@2.1.278 --no-audit --no-fund \
+            || echo "::warning::could not install @anthropic-ai/claude-code — the claude-plugin probe was SKIPPED, not passed."
+          node scripts/check-onboarding-parity.mjs --exec
+
+      # The repo-tooling scripts. check-plugin-leaks.test.mjs fires the guard's own rules against
+      # FIXTURES: until golden-flags-by-default S1.3 this guard had no test at all, and its
+      # behaviour was only ever observed as "CI was green" — the one observation that cannot tell a
+      # working guard from a broken pattern. The leak that produced that epic sat here for months.
+      - name: harness tooling tests
+        run: |
+          node --test \
+            scripts/check-skill-scripts.test.mjs \
+            scripts/render-skill-adverts.test.mjs \
+            scripts/pack-skills.test.mjs \
+            scripts/check-plugin-leaks.test.mjs \
+            scripts/check-release.test.mjs \
+            scripts/build-kit.test.mjs \
+            scripts/kit-tarball.test.mjs \
+            scripts/kit-bin.test.mjs \
+            scripts/check-config-reads.test.mjs \
+            scripts/check-onboarding-parity.test.mjs
+
+      # The Cowork install path. Cowork does NOT read a project's .claude/settings.json, so the
+      # only way `groom` — which is written FOR Cowork — reaches it is a .skill archive. The zip
+      # writer is hand-rolled (zero deps), so it is verified with a REAL unzip rather than the
+      # reader we wrote ourselves, and asserted reproducible.
+      - name: Cowork .skill packaging
+        run: |
+          node scripts/pack-skills.mjs --out /tmp/skills-a
+          node scripts/pack-skills.mjs --out /tmp/skills-b
+          test -f /tmp/skills-a/groom.skill
+          unzip -t /tmp/skills-a/groom.skill
+          unzip -l /tmp/skills-a/groom.skill | grep -q 'groom/SKILL.md'
+          for f in /tmp/skills-a/*.skill; do
+            cmp "$f" "/tmp/skills-b/$(basename "$f")" \
+              || { echo "pack-skills is not reproducible: $f" >&2; exit 1; }
+          done
+          echo "packaging: archives valid and byte-identical across runs."
+
+      # Every template/scripts test — the reviewer routing policy, the ported reporting family, live-smoke,
+      # the Roadmap extractor. A bash glob ARRAY, not a directory: `node --test <dir>` resolves a directory
+      # as a module on Node 22 and dies with MODULE_NOT_FOUND, which reads like a genuine failure. The
+      # array expands to explicit files, so a new port's tests run without anyone adding a line here —
+      # the hand-kept list this replaced is the same failure shape as the hand-kept skill adverts.
+      - name: template script tests
+        run: |
+          shopt -s nullglob
+          files=(template/scripts/*.test.mjs template/scripts/lib/*.test.mjs)
+          test "${#files[@]}" -gt 0 || { echo "no template script tests found — the glob is wrong" >&2; exit 1; }
+          node --test "${files[@]}"
+
+      # Jev semantic guards (jev-semantic-guards D8): the template's labelled fixtures replay clean through
+      # the committed judges (recorded answers, no network), and no rail of template/jev.config.json has sat
+      # in `shadow` past its `shadowExpires` — the rot guard that stops shadow becoming permanent.
+      - name: jev — eval replay + shadow expiry
+        run: node template/scripts/jev-eval.mjs
+
+      # The template's example app ships the flag seam wired (golden-flags-by-default S1.6). These
+      # tests run with NO node_modules and no credentials, which is the point: the epic's DoD says
+      # "a Golden outage does not break a build or a test run — proven by a test, not asserted", and
+      # a package that is not installed at all is the most complete outage there is.
+      - name: example-app flag seam — the fail-soft contract
+        run: node --test template/apps/example-app/flags.test.mjs
+
+      # The Notion sync is OPT-IN (template/optional/notion/). It imports ./roadmap-extract.mjs, so it can
+      # only run once copied next to it — which is exactly what its README tells a project to do. Do that
+      # in a temp dir and exercise the two modes that need no Notion credentials.
+      - name: optional Notion sync runs from where a project would copy it
+        run: |
+          work="$(mktemp -d)"
+          mkdir -p "$work/scripts/lib" "$work/Roadmap"
+          cp template/scripts/roadmap-extract.mjs template/optional/notion/roadmap-to-notion.mjs "$work/scripts/"
+          cp template/scripts/lib/project-root.mjs "$work/scripts/lib/" # the extractor resolves the project through it
+          test "$(PR_ACTION=opened PR_DRAFT=true node "$work/scripts/roadmap-to-notion.mjs" --lifecycle)" = "In progress"
+          test "$(PR_ACTION=closed PR_DRAFT=false node "$work/scripts/roadmap-to-notion.mjs" --lifecycle)" = "clear"
+          ( cd "$work" && node scripts/roadmap-to-notion.mjs --pr some-epic --dry --status "In review" > /dev/null )
+          echo "optional Notion sync: loads beside the extractor, --lifecycle and --pr --dry work."
+
+      # The template's committed permission rules must satisfy their own contract (cited deny/ask
+      # rules, verb-class allow list, no project-level auto mode). Run from template/ so the script
+      # resolves template/.claude as its repo — exactly what a spawned project gets.
+      - name: template permissions contract
+        run: node template/scripts/permissions-smoke.mjs
+
+      # This repo's own Roadmap/ board is generated by COPIES of the template's generator. A copy that
+      # drifts from the template is the fork problem this repo exists to prevent — in itself.
+      # WAYS-OF-WORKING is GENERATED — in the template (what new projects copy) and in this repo's own
+      # Roadmap/, from the same source. A hand edit to either rendered file, or a source change without a
+      # re-render, fails here; the renderer copy and the vendored template must match the template's.
+      - name: WAYS-OF-WORKING rendered files match their sources
+        run: |
+          node template/scripts/render-ways-of-working.mjs --check
+          cmp scripts/render-ways-of-working.mjs template/scripts/render-ways-of-working.mjs
+          cmp scripts/epic-dod.mjs template/scripts/epic-dod.mjs
+          cmp Roadmap/WAYS-OF-WORKING.template.md template/Roadmap/WAYS-OF-WORKING.template.md
+          node scripts/render-ways-of-working.mjs --check
+          # The budget counts HAND-WRITTEN lines: the generated kit:start…kit:end run rule is identical in every skill.
+          test "$(sed '/kit:start/,/kit:end/d' plugins/golden-frijoles/skills/groom/SKILL.md | wc -l)" -le 220 \
+            || { echo "groom SKILL.md is over its 220-line budget — move reference material to references/" >&2; exit 1; }
+
+      - name: foundation board generator is the template's, and the board is fresh
+        run: |
+          cmp scripts/build-order.mjs template/scripts/build-order.mjs
+          cmp scripts/roadmap-extract.mjs template/scripts/roadmap-extract.mjs
+          cmp scripts/lib/roadmap-status-buckets.mjs template/scripts/lib/roadmap-status-buckets.mjs
+          node scripts/build-order.mjs --check
+
+      # This repo's own epic docs carry the machine-readable frontmatter contract
+      # (build-visualization-claude-mods) and are held to it by the template's checker — the same bytes
+      # every consumer runs. A contract that isn't checked drifts, and this is the repo that defines it.
+      - name: foundation docs hold the frontmatter contract
+        run: |
+          cmp scripts/doc-format.mjs template/scripts/doc-format.mjs
+          cmp scripts/lib/roadmap-contract.mjs template/scripts/lib/roadmap-contract.mjs
+          node scripts/doc-format.mjs --check
+          # …and the build view resolves against them here too (the same resolver bytes as the template).
+          cmp scripts/build-state.mjs template/scripts/build-state.mjs
+          cmp scripts/lib/session-journal.mjs template/scripts/lib/session-journal.mjs
+          node scripts/build-state.mjs --json --offline > /dev/null
+
+      # The scaffolder renders three templates into every new epic in every consuming project. A
+      # broken placeholder here is invisible until someone scaffolds an epic, so render one and
+      # assert nothing was left unsubstituted.
+      #
+      # NOTE: this step previously asserted the output landed at `plugins/golden-frijoles/Roadmap/...`
+      # — i.e. it encoded the very bug it should have caught. The scaffolder resolved its target repo
+      # relative to its own package, so installed as a marketplace plugin it wrote the epic into the
+      # plugin CACHE and exited green. It now resolves the ACTIVE repo from --repo-root (default cwd),
+      # so the smoke runs in a temp dir and asserts the epic lands THERE.
+      - name: Scaffolder smoke
+        run: |
+          work="$(mktemp -d)"
+          mkdir -p "$work/Roadmap"
+          ( cd "$work" && node "$GITHUB_WORKSPACE/plugins/golden-frijoles/skills/groom/scaffold-epic.mjs" \
+              --slug ci-smoke --area 09 --macro 09-platform-infra \
+              --title "CI smoke" --risk low --type chore --sprints "S1 one;S2 two" )
+          out="$work/Roadmap/09-platform-infra/ci-smoke"
+          test -f "$out/README.md"
+          test -f "$out/sprint-1.md"
+          test -f "$out/sprint-2.md"
+          test -f "$out/RETROSPECTIVE.md"
+          if grep -rn '{{' "$out"; then
+            echo "scaffolder left unsubstituted placeholders (above)" >&2
+            exit 1
+          fi
+          # Nothing may be written back into the plugin package — that regression is the whole point.
+          if [ -d plugins/golden-frijoles/Roadmap ]; then
+            echo "scaffolder wrote into the plugin package instead of the active repo" >&2
+            exit 1
+          fi
+          echo "scaffolder smoke: 4 files rendered into the active repo, no unsubstituted placeholders."
+
+          # Both kickoff generators must render against that freshly-scaffolded epic. A generator
+          # that dies on its own scaffolder's output is the failure this catches.
+          ( cd "$work" && node "$GITHUB_WORKSPACE/plugins/golden-frijoles/skills/groom/emit-epic-kickoff.mjs" \
+              --epic ci-smoke > epic-kickoff.txt )
+          ( cd "$work" && node "$GITHUB_WORKSPACE/plugins/golden-frijoles/skills/groom/emit-kickoff.mjs" \
+              --epic ci-smoke --sprint 1 > sprint-kickoff.txt )
+          for f in "$work/epic-kickoff.txt" "$work/sprint-kickoff.txt"; do
+            test -s "$f" || { echo "empty kickoff: $f" >&2; exit 1; }
+            if grep -n '{{' "$f"; then
+              echo "kickoff generator left unsubstituted placeholders: $f" >&2
+              exit 1
+            fi
+          done
+          # The process contract the generated prompt must always carry.
+          grep -q 'review-route.mjs' "$work/epic-kickoff.txt"
+          grep -q 'security lens' "$work/epic-kickoff.txt"
+          grep -q 'Done means shipped' "$work/epic-kickoff.txt"
+          echo "kickoff generators: both rendered, contract lines present."
+
+          # The producer validates its own templates (plugin-audit-and-extraction S2.4): the docs the
+          # scaffolder just wrote must pass the template's doc-format checker, run the way a spawned
+          # project runs it. The real flow writes the seed first, so the smoke does too.
+          mkdir -p "$work/scripts/lib" "$work/Roadmap/00-ideas/seeds"
+          printf -- '---\nstatus: ready\nepic: 09-platform-infra/ci-smoke\n---\n# CI smoke\n' > "$work/Roadmap/00-ideas/seeds/ci-smoke.md"
+          cp template/scripts/doc-format.mjs template/scripts/roadmap-extract.mjs template/scripts/doc-format.enforced.json "$work/scripts/"
+          cp template/scripts/lib/roadmap-contract.mjs template/scripts/lib/project-root.mjs "$work/scripts/lib/"
+          ( cd "$work" && node scripts/doc-format.mjs --check )
+          echo "doc-format: the scaffolder's own output is clean."
+          rm -rf "$work"

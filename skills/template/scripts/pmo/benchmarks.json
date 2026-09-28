@@ -1,0 +1,77 @@
+{
+  "schema": "pmo-benchmarks-v1",
+  "generatedAt": "2026-07-13",
+  "framing": "Differential, not a controlled experiment. DORA/Four Keys thresholds are used only for comparable delivery signals; throughput and doc-ops remain internal PMO signals.",
+  "figures": {
+    "deploysPerWeekDailyThreshold": {
+      "label": "Daily deployment-frequency threshold",
+      "value": 3,
+      "unit": "deployment days per week",
+      "direction": "higher_is_better",
+      "source": {
+        "title": "Four Keys Metrics - Deployment Frequency",
+        "publisher": "DORA / Four Keys",
+        "url": "https://github.com/dora-team/fourkeys/blob/main/METRICS.md#deployment-frequency",
+        "publishedDate": "2024-01-23",
+        "accessedDate": "2026-07-13",
+        "note": "Daily bucket: median number of days per week with deployments is >= 3."
+      }
+    },
+    "prCycleMedianHoursOneDayThreshold": {
+      "label": "One-day lead-time threshold",
+      "value": 24,
+      "unit": "hours",
+      "direction": "lower_is_better",
+      "source": {
+        "title": "Four Keys Metrics - Lead Time for Changes",
+        "publisher": "DORA / Four Keys",
+        "url": "https://github.com/dora-team/fourkeys/blob/main/METRICS.md#lead-time-for-changes",
+        "publishedDate": "2024-01-23",
+        "accessedDate": "2026-07-13",
+        "note": "One-day bucket: median lead time to change < 24 * 60 minutes. PMO uses this as a proxy comparator for PR open-to-merge cycle time, not as an identical metric."
+      }
+    },
+    "epicLeadMedianDaysOneWeekThreshold": {
+      "label": "One-week lead-time threshold",
+      "value": 7,
+      "unit": "days",
+      "direction": "lower_is_better",
+      "source": {
+        "title": "Four Keys Metrics - Lead Time for Changes",
+        "publisher": "DORA / Four Keys",
+        "url": "https://github.com/dora-team/fourkeys/blob/main/METRICS.md#lead-time-for-changes",
+        "publishedDate": "2024-01-23",
+        "accessedDate": "2026-07-13",
+        "note": "One-week bucket: median lead time to change < 168 * 60 minutes. PMO uses this as a coarse comparator for epic scaffold-to-shipped lead time."
+      }
+    },
+    "changeFailureRateMaxPercent": {
+      "label": "Top change-failure-rate bucket",
+      "value": 15,
+      "unit": "percent",
+      "direction": "lower_is_better",
+      "source": {
+        "title": "Four Keys Metrics - Change Failure Rate",
+        "publisher": "DORA / Four Keys",
+        "url": "https://github.com/dora-team/fourkeys/blob/main/METRICS.md#change-failure-rate",
+        "publishedDate": "2024-01-23",
+        "accessedDate": "2026-07-13",
+        "note": "Top bucket is 0-15% failures per deployments."
+      }
+    },
+    "restoreTimeHoursOneDayThreshold": {
+      "label": "One-day time-to-restore threshold",
+      "value": 24,
+      "unit": "hours",
+      "direction": "lower_is_better",
+      "source": {
+        "title": "Four Keys Metrics - Time to Restore Services",
+        "publisher": "DORA / Four Keys",
+        "url": "https://github.com/dora-team/fourkeys/blob/main/METRICS.md#time-to-restore-services",
+        "publishedDate": "2024-01-23",
+        "accessedDate": "2026-07-13",
+        "note": "One-day bucket: median time to resolve < 24 hours. Included for future incident reporting; Sprint 2 templates do not yet render MTTR."
+      }
+    }
+  }
+}

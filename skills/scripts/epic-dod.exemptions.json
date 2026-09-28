@@ -1,0 +1,12 @@
+{
+  "_about": "epic-dod.mjs config for dobby-foundation. `aliases` map how sprint docs name a repo to owner/repo. `bareRefsRepo` is null on purpose: this repo's epics cite the consuming projects too, so a bare #N is ambiguous (`#143` here vs golden-beans#143) and epic-dod IGNORES the knob whenever the alias map names a second repo — cite owner/repo#N or a full PR link. `exemptions` excuse ONE derived item on ONE epic, with a reason; an exemption on an item that now passes is STALE and fails.",
+  "bareRefsRepo": null,
+  "aliases": {
+    "dobby-foundation": "golden-frijoles/skills",
+    "golden-frijoles": "golden-frijoles/skills",
+    "golden-beans": "danybgoode/golden-beans",
+    "medusa-bonsai": "danybgoode/miyagi-product-management",
+    "miyagi-product-management": "danybgoode/miyagi-product-management"
+  },
+  "exemptions": []
+}

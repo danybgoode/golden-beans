@@ -1,0 +1,14 @@
+{
+  "$comment": "TEMPLATE FILL-IN — copy to live-smoke.config.json at the repo root, fill it, commit it. Read by scripts/live-smoke.mjs. The first env is the default --env. Role flows are optional; each names the env var holding that role's TEST identity. Secrets never go here — only the NAMES of the env vars that hold them.",
+  "appDir": "apps/example-app",
+  "envs": {
+    "local": "http://localhost:3000"
+  },
+  "flows": {},
+  "auth": {
+    "requiredEnv": [],
+    "forbidKeyPattern": "_live_",
+    "unsupportedEnvs": ["prod"]
+  },
+  "previewBypassEnv": "VERCEL_AUTOMATION_BYPASS_SECRET"
+}

@@ -1,0 +1,54 @@
+# dobby-foundation's own paragraphs in Roadmap/WAYS-OF-WORKING.md — rendered from the SAME template this
+# repo ships (template/Roadmap/WAYS-OF-WORKING.template.md, copied byte-identically; CI cmp's the pair),
+# which is the dogfooding S1.1 asked for.
+
+product_owner: "the product owner"
+
+operating_posture: ""
+
+design_is_scope: "Reference end-states are inspiration, never signed-off scope."
+
+deploy_rail: |
+  **Deploy rail.** This repo has no runtime deploy: merging to `main` publishes the `golden-frijoles` plugin
+  (every consuming project pulls it on its next session) and the spawn template (copied once by new
+  projects). So "done means shipped" here is **merged to `main` with CI green**, plus — when a change is
+  meant to reach consuming projects' own copies (the byte-identical shared scripts, the vendored
+  WAYS-OF-WORKING template) — the matching PRs landed in those repos too.
+
+review_scope_note: "**Here `reviewScope` is `every-pr`** — this repo changes the process every project imports."
+
+security_floor: "**A deterministic floor runs underneath:** GitHub secret scanning with push protection (enabled 2026-09-16). This repo ships no app code, so CodeQL does not apply."
+
+kill_switch_dod: ""
+
+language_policy: "- **Language.** Everything here is written in **English**; there is no user-facing app copy."
+
+project_sections: |
+  ## Planning lives in golden-beans (since 2026-09-28)
+
+  - **This repo has no Roadmap of its own any more.** Epics, seeds, audits, bets and LEARNINGS for the plugin,
+    the kit and the template live in
+    [`danybgoode/golden-beans` → `Roadmap/`](https://github.com/danybgoode/golden-beans/tree/main/Roadmap)
+    (`09-platform-infra/`), moved there by `one-roadmap`. Where this document says `Roadmap/LEARNINGS.md`,
+    `Roadmap/00-ideas/` or `Roadmap/bets/`, read **that** repo's. Don't groom, scaffold or promote learnings here:
+    `Roadmap/` in this repo keeps only the template sources CI renders and checks.
+
+  ## Portability — this repo's own rules
+
+  - **No origin-project residue in anything a consumer receives.** `node scripts/check-plugin-leaks.mjs`
+    fails on a project name, a personal name or dead tooling in `plugins/`, `template/` or the manifest;
+    a deliberate match goes in its ALLOW list with a reason.
+  - **Every skill's scripts exist.** `node scripts/check-skill-scripts.mjs` fails on a new missing script,
+    an undeclared skill, or a ledger entry whose debt was quietly paid.
+  - **Shared scripts are byte-identical across repos.** `review-guard`, `review-route`, `permissions-smoke`,
+    `epic-dod` and `render-ways-of-working` are copied, not forked; write them in the consuming projects'
+    prettier style so the copies can stay identical.
+  - **`.skill` archives are reproducible** (`node scripts/pack-skills.mjs`): rebuilding without a source
+    change is a no-op.
+
+tooling_table: |
+  | Tool | Used for |
+  |------|----------|
+  | **git / gh** | Branches, pull requests, merges; `gh api` for repo settings such as secret scanning |
+  | **node** | Every check in this repo — no install step, no package.json, zero dependencies |
+  | **codex / agy / vibe / claude** | The external review families, routed by `review-route.mjs` in a consuming project's checkout |

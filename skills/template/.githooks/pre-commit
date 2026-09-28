@@ -1,0 +1,56 @@
+#!/bin/sh
+# Local-first pre-commit gate — BLOCKING, budgeted at UNDER 2 SECONDS.
+#
+# Auto-enabled: the root package.json's "prepare" script runs `git config core.hooksPath .githooks` on
+# every `npm install` / `npm ci`, so a fresh clone gets the hooks with no step anyone has to remember.
+#
+# ── Read .githooks/README.md before adding anything here ────────────────────────────────────────
+# The budget is the rule: pre-commit < 2s (staged files only) · pre-push < 30s (cheap whole-repo) ·
+# CI unbounded (everything). Cost decides the stage, not importance.
+#
+# This hook deliberately does NOT run:
+#   • full-corpus checks (a walk of every doc/file in the repo) → pre-push or CI
+#   • the test suite                                            → pre-push
+#   • integration tests (`*.itest.mjs`)                         → CI
+#
+# That is not an oversight, it is the design. An earlier version of this template ran a full-corpus
+# `build-order --check` plus the entire `scripts/` test suite here. In the project it was copied
+# into, that grew to **119.7 seconds per commit** — of which ~119s was one corpus walk repeated
+# eight times and ~0.6s was the actual tests. See README.md for the full worked example.
+#
+# Bypass with `git commit --no-verify` if you genuinely need to.
+
+changed=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found — skipping local guards (CI still applies)." >&2
+  exit 0
+fi
+
+fail=0
+
+# ── Staged Roadmap docs: format against the groom templates (scripts/doc-format.mjs) ───────────────
+# Path-scoped by construction: `--files` checks ONLY the docs you staged, never the ~whole corpus —
+# the full-tree `--check` is a CI job. scripts/pre-commit-hook.test.mjs times this against the 2s budget.
+staged_docs=$(echo "$changed" | grep -E '^Roadmap/.*\.md$' || true)
+if [ -n "$staged_docs" ] && [ -f scripts/doc-format.mjs ]; then
+  # shellcheck disable=SC2086 # deliberate word-splitting: one argv entry per path
+  if ! node scripts/doc-format.mjs --check --files $staged_docs; then
+    echo "pre-commit: doc-format found findings in the docs you staged (above)." >&2
+    echo "            Fix by hand, or 'node scripts/doc-format.mjs --fix' for the mechanical rules." >&2
+    fail=1
+  fi
+fi
+
+# ── TEMPLATE FILL-IN: more staged-file checks ─────────────────────────────────────────────────────
+# Add checks that take the specific staged paths as arguments, the same shape as above. If a checker
+# of yours has no path-scoped mode, that is the thing to add — not a reason to run its whole-repo mode
+# here. Fast formatters/linters that accept paths (prettier --check, eslint, a design-token guard) are
+# good candidates, as long as you pass them the staged paths rather than the whole tree.
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit: one or more checks failed. Fix and re-stage, or 'git commit --no-verify' to bypass." >&2
+  exit 1
+fi
+
+exit 0

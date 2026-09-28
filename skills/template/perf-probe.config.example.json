@@ -1,0 +1,7 @@
+{
+  "$comment": "TEMPLATE FILL-IN — copy to perf-probe.config.json. scripts/perf-probe.mjs measures the RAW compressed transfer of these pages (node:https, not fetch, so byte counts are what crossed the wire). Pick real, live pages; mark one real image variant with \"image\": true if you serve an image route.",
+  "baseUrl": "https://example.com",
+  "targets": [
+    { "id": "home", "label": "home (signed-out)", "path": "/" }
+  ]
+}

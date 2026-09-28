@@ -1,0 +1,19 @@
+{
+  "$comment": "TEMPLATE FILL-IN — copy to reporting.config.json at the repo root, fill it, COMMIT it. Read by scripts/standup.mjs, scripts/weekly-recap.mjs and scripts/pmo-report.mjs via scripts/lib/reporting-config.mjs. Nothing here is a secret: the bot token stays in TELEGRAM_BOT_TOKEN. In a PUBLIC repo, put the chat id in a gitignored reporting.config.local.json instead (merged over this file). Only `repos` is required; every other section is OFF when absent, never defaulted.",
+  "repos": ["your-org/your-app", "your-org/your-api"],
+  "deployRepos": [
+    { "label": "Frontend", "repo": "your-org/your-app" },
+    { "label": "Backend", "repo": "your-org/your-api" }
+  ],
+  "telegram": {
+    "chatId": "-1000000000000",
+    "chatIds": {}
+  },
+  "smoke": { "repo": "your-org/your-app", "workflow": "browser-smoke.yml" },
+  "stalePreviewAgeDays": 7,
+  "vercelProject": "your-vercel-project",
+  "prose": {
+    "extraBannedToolNames": []
+  },
+  "artifacts": {}
+}

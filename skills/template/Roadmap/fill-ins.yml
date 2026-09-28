@@ -1,0 +1,30 @@
+# This project's own paragraphs in Roadmap/WAYS-OF-WORKING.md. Everything every project shares lives in
+# WAYS-OF-WORKING.template.md; this file is the difference. `node scripts/render-ways-of-working.mjs`
+# writes the rendered file and CI checks it with --check.
+#
+# Format: `key: |` block scalars and `key: "one-liners"`. A missing key is a hard error (a silently empty
+# slot would delete a paragraph); so is a key the template no longer asks for.
+
+product_owner: "the product owner"
+
+# Optional: a posture that overrides the defaults below it. Empty here; a project that has one (a
+# pre-launch platform with no users, say) writes it as a block and the renderer drops the blank line.
+operating_posture: ""
+
+design_is_scope: "Reference end-states are inspiration, never signed-off scope."
+
+deploy_rail: "**TEMPLATE FILL-IN — your deploy rail:** whether a branch gets a preview and how the gate reaches it, what merging to `main` builds, and — if there is no per-branch preview — who does the post-merge browser half."
+
+review_scope_note: ""
+
+security_floor: "**A deterministic floor runs underneath, free and without an LLM:** GitHub secret scanning with push protection, and CodeQL default setup on any repo with app code. The lens finds logic flaws; the scanners find known patterns and leaked credentials."
+
+kill_switch_dod: ""
+
+# Optional: whole sections only this project has (a prose rail, a QA harness, doc conventions). They render
+# just before Tooling. Empty here.
+project_sections: ""
+
+language_policy: "- **Language.** Docs, comments and PR descriptions are in **English**. **TEMPLATE FILL-IN:** if your user-facing copy has its own policy (a default plus a bilingual allow-list), state it here and in `AGENTS.md`."
+
+tooling_table: "**TEMPLATE FILL-IN:** list this project's authenticated CLI access and what each is used for — at minimum **git/gh** (branches, PRs, merges) and **node/npm** (typecheck, lint, build, dev server), plus your deploy, database and container CLIs."
