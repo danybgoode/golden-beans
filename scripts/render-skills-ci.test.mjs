@@ -36,7 +36,11 @@ test('a source without the setup-node step is refused', () => {
 });
 
 test('every other spelling of the checkout in a carried step is refused too', () => {
-  for (const spelling of ['node "${GITHUB_WORKSPACE}/x.mjs"', 'node ${{ github.workspace }}/x.mjs', 'git diff "origin/${BASE_REF}"']) {
+  for (const spelling of [
+    'node "${GITHUB_WORKSPACE}/x.mjs"',
+    'node ${{ github.workspace }}/x.mjs',
+    'git diff "origin/${BASE_REF}"',
+  ]) {
     const extra = real + `\n      - name: new\n        run: ${spelling}\n`;
     assert.throws(() => render(extra), /unrewritten checkout reference/, spelling);
   }

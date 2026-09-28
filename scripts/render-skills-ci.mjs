@@ -111,7 +111,9 @@ export function render(source) {
   for (const { from, to, count } of REWRITES) {
     const seen = body.split(from).length - 1;
     if (seen !== count)
-      throw new Error(`${SOURCE}: expected ${count} × ${JSON.stringify(from)}, found ${seen} — update REWRITES`);
+      throw new Error(
+        `${SOURCE}: expected ${count} × ${JSON.stringify(from)}, found ${seen} — update REWRITES`
+      );
     body = body.split(from).join(to);
   }
   // Any spelling that names the checkout — `$X`, `${X}`, a `${{ github.workspace }}` expression, or a base ref — is
