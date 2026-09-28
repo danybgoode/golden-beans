@@ -3,7 +3,7 @@ epic: public-monorepo
 sprint: 1
 title: "S1 One repo, nothing published differently"
 risk: high
-phase: Locking architecture
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -12,39 +12,39 @@ stories:
     i_want: "dobby-foundation's full history under skills/ in this repo"
     so_that: "a rail change is one PR, and the split still reproduces golden-frijoles/skills byte for byte"
     risk: high
-    status: planned
+    status: done
   - id: S1.2
     title: "Skills CI gates monorepo PRs, run on the split"
     as_a: "a maintainer"
     i_want: "a PR touching skills/ gated by the same checks the mirror runs"
     so_that: "nothing reaches the mirror that its own CI would reject"
     risk: high
-    status: planned
+    status: done
   - id: S1.3
     title: "The docs that describe the layout (absolute paths: disproved)"
     as_a: "an agent starting a session"
     i_want: "AGENTS.md and the repo layout to say skills/ exists and what it is"
     so_that: "nobody edits the mirror or the copies by mistake"
     risk: high
-    status: planned
+    status: done
 ---
 # One public monorepo — Sprint 1: S1 One repo, nothing published differently
 
-**Status:** ⬜ not started
+**Status:** ✅ shipped 2026-09-28: #180, merged with a merge commit `9080704`. `git subtree split --prefix=skills origin/main` = `80d050a` ✓
 
 ## Stories
 
-### Story 1.1 — Subtree-merge dobby-foundation into skills/, with history
+### Story 1.1 — Subtree-merge dobby-foundation into skills/, with history ✅ `9080704`
 **As a maintainer**, **I want** dobby-foundation's full history under skills/ in this repo, **so that** a rail change is one PR, and the split still reproduces golden-frijoles/skills byte for byte.
 **Acceptance:** `git subtree add --prefix=skills` (not squashed). `git subtree split --prefix=skills` equals the skills repo's `main` SHA (proven at the lock: `80d050a` = `80d050a`). Root eslint and prettier ignore `skills/`, because it keeps its own gates. This repo's CI is green.
 **Risk:** high
 
-### Story 1.2 — Skills CI gates monorepo PRs, run on the split
+### Story 1.2 — Skills CI gates monorepo PRs, run on the split ✅ `9080704`
 **As a maintainer**, **I want** a PR touching skills/ gated by the same checks the mirror runs, **so that** nothing reaches the mirror that its own CI would reject.
 **Acceptance:** A root `skills-ci.yml` (PRs with `skills/**` changes) splits the prefix into a temporary worktree and runs `skills/.github/workflows/ci.yml`'s steps there, so git-reading scripts see mirror-relative paths. A sync check fails if the two step lists drift. A planted failure in `skills/` turns the job red.
 **Risk:** high
 
-### Story 1.3 — Absolute paths and the docs that describe the layout
+### Story 1.3 — Absolute paths and the docs that describe the layout ✅ `9080704`
 **As an agent starting a session**, **I want** AGENTS.md and the repo layout to say skills/ exists and what it is, **so that** nobody edits the mirror or the copies by mistake.
 **Acceptance:** AGENTS.md's layout and routing table name `skills/` and the mirror rule. *Scope disproved at build (2026-09-28):* the three `/Users/cosmo/dobby/golden-beans` hits are **quotations**: a retro note, a handoff doc, and a labelled fixture's text (byte-identical to the template's copy, so it must not be edited). No tool resolves them, so they stay as they are.
 **Risk:** high

@@ -3,7 +3,7 @@ epic: public-monorepo
 sprint: 2
 title: "S2 The mirror cut-over"
 risk: high
-phase: Locking architecture
+phase: Building
 stories_total: 4
 stories:
   - id: S2.1
@@ -37,7 +37,7 @@ stories:
 ---
 # One public monorepo — Sprint 2: S2 The mirror cut-over
 
-**Status:** ⬜ not started
+**Status:** 🚧 building
 
 ## Stories
 
@@ -48,7 +48,7 @@ stories:
 
 ### Story 2.2 — Dry run to a branch
 **As the product owner**, **I want** the first mirror push to land on a throwaway branch, **so that** a wrong split can't reach main.
-**Acceptance:** With `MIRROR_TARGET=mirror-test`, a run pushes the split. `git diff golden-frijoles/skills main mirror-test` is empty, or holds exactly the monorepo's skills changes. The branch is then deleted.
+**Acceptance:** A `workflow_dispatch` with `target=mirror-test` pushes the split. `git diff golden-frijoles/skills main mirror-test` is empty, or holds exactly the monorepo's skills changes. The branch is then deleted.
 **Risk:** high
 
 ### Story 2.3 — Go live with a real release
@@ -60,6 +60,17 @@ stories:
 **As the product owner**, **I want** golden-frijoles/skills writable only by the mirror, **so that** two writable homes can't fork again.
 **Acceptance:** Branch protection on skills `main` allows only the deploy key. The skills README and CONTRIBUTING send PRs to this repo. `~/dobby/dobby-foundation` is archived locally (moved to `~/dobby/archive/`, since it's already clean and pushed).
 **Risk:** high
+
+> **Build notes (2026-09-28).**
+> - The org had deploy keys **disabled**. Daniel approved enabling them (`deploy_keys_enabled_for_repositories=true`).
+>   Key `golden-beans mirror (public-monorepo S2)` is read-write on `golden-frijoles/skills` only, and its private half
+>   exists only in the `SKILLS_MIRROR_KEY` secret here.
+> - After the #181 review, the key was **rotated into the `skills-mirror` Environment** (deployment branches: `main` only),
+>   the repo-level secret and first key were deleted, and skills ruleset 23893033 gained a `DeployKey` bypass (the approved
+>   S2.4 protection, done early so S2.3's push isn't rejected).
+> - `MIRROR_ENABLED=false` until S2.3. The S2.2 dry run is a dispatch to `mirror-test`, which the job allows while
+>   the switch is off. Only pushes to `main` need it on.
+> - `workflow_dispatch` runs only once the workflow is on `main`, so the dry run (S2.2) comes right after this PR merges.
 
 ## Sprint QA
 - The isolated-home install of the mirrored release is the gate (golden-frijoles-plugin S5's recipe). Browser smoke: none. **Owed to Daniel:** step 3 of the walkthrough (install in a scratch repo).
