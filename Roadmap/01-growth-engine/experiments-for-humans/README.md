@@ -66,7 +66,9 @@ builder. Those are why the appetite moved.
   `EXPERIMENT_BUILDER_ENABLED` is kept as D9 describes despite the 2026-08-31 "no flags" preference,
   because it guards writes into a customer's Production flags. It was created `false` in all three
   environments of the **`golden-beans`** Vercel project (not `golden-beans-demo`) on 2026-09-24,
-  verified by pulling Production (`"false"`). Nothing about it is owed to Daniel.
+  verified by pulling Production (`"false"`). Nothing about it is owed to Daniel. **Flipped to `true` in
+  Production on 2026-09-25, before the S4 merge (whose deploy carried it), verified by opening the builder
+  on goldenfrijoles.com; CI runs it ON since 2026-09-26 (danybgoode/golden-beans#174).**
 - **A6 (2026-09-24, Daniel, at the lock): step 5 offers one start, "When I press Start".** The
   approved "Monday 28 Sep, 9:00" chip needs a scheduler the product does not have (Ship › Scheduled
   changes already says so). Dropped for now; scheduled start is a follow-up seed that rides with the
@@ -197,6 +199,7 @@ nothing — the LEARNINGS "silent zero" class, the fifth time.
    breakdown reads empty, because `computeCore` joins eligibility and segments on the EXPOSURE's tags.
 5. SDK **0.6.0** (minor: additive only). Publishing is Daniel's npm 2FA step, owed before an app
    can adopt it; nothing in `apps/web` imports a published SDK, so the app side does not wait on it.
+   **Published by Daniel on 2026-09-26** (`npm view @golden-frijoles/sdk version` → `0.6.0`).
 **Every arm gets its own rule** — a correction to the grooming D4, which gave control a rule only when
 allocation < 100%. Under A an in-test control person must resolve through an experiment rule or they
 emit no exposure; control falling through to the default would leave the control arm empty.
@@ -448,19 +451,19 @@ shared seam, S3 a migration + Production writes, S4 Production writes).
 4. **S4:** the decide/rollout flow merges dark; then Production flips to `true` (env + a commit to
    `main`), verified by opening the dialog on goldenfrijoles.com, then 4.3's retirement merges.
 5. Daniel's production smokes: Start (S3 step 6) and the rollout (S4 step 4) write a customer's
-   Production flag — owed to Daniel by name.
+   Production flag — owed to Daniel by name. **Done by Daniel, 2026-09-26.**
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — D9):** `EXPERIMENT_BUILDER_ENABLED` exists in every Vercel
+- [x] All sprints merged to `main` + smoke-tested (gaps stated)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch (planned at grooming — D9):** `EXPERIMENT_BUILDER_ENABLED` exists in every Vercel
       env with enablement polarity (born `false`), is `true` in Production after 4.3, and switching it
       off draws "+ New experiment" as blocked with its reason. *Verify-only.*
-- [ ] The migration from 1.2 is applied in production (not only written), and the approved design
+- [x] The migration from 1.2 is applied in production (not only written), and the approved design
       states are hash-pinned in `APPROVED.md`
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)

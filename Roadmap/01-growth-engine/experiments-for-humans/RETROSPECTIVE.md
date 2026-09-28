@@ -44,15 +44,29 @@ ON, and the JSON authoring box is gone.
 - **A delegate that runs out of quota mid-task leaves a plausible, partial tree.** Codex's S4 page
   compiled and looked right, and had dropped a legacy route, the error pages and drafts, and drawn
   owner controls for members. The architect re-derived it rather than finishing it.
+- **A gate kept OFF in CI hides everything behind it — including defects that are not the gate's.**
+  CI ran the builder dark for the whole epic, so the builder's authed specs skipped there. The first
+  builder-ON run found a shell overflow bug that predates the epic and a spec polluting a shared
+  tenant. Match CI's gate state to Production's the day Production flips.
 - **Reviewers that saw truncated diffs filed false Blocking findings** (agy on 0 whole files; Codex
   without `lib/flags.ts`). Each was answered from the file, not argued from the review.
 
 ## Gaps / follow-ups
-- **Owed to Daniel:** publish `@golden-frijoles/sdk@0.6.0` (npm 2FA); record migrations
-  `20260925100000` and `20260926100000` in `supabase_migrations.schema_migrations` (or `supabase db
-  push` from `apps/web`); the production walkthroughs (Sprint 3 step 8 — Start; Sprint 4 step 4 —
-  roll-out); confirm amendment A7; add `EXPERIMENT_BUILDER_ENABLED` to `ci.yml` (needs a
-  `workflow`-scoped push) so CI runs the builder-on paths the local runs cover.
+- **Resolved after close (2026-09-26):**
+  - `@golden-frijoles/sdk@0.6.0` **published** by Daniel (npm shows `0.6.0`).
+  - Both migrations **recorded**: `supabase db push` re-ran `20260925100000`, which is idempotent (a
+    `CREATE OR REPLACE FUNCTION` plus a `REVOKE`), then stopped on the hand-applied `20260926100000`
+    ("already exists", rolled back). `supabase migration repair --status applied 20260926100000`
+    recorded it without running it. `migration list` now shows both on both sides.
+  - The **production walkthroughs** (Sprint 3 step 8 — Start; Sprint 4 step 4 — roll-out) were
+    **done by Daniel**.
+  - **CI runs the builder ON** (danybgoode/golden-beans#174, `d1bd878`), matching Production. Turning
+    it on exposed three things the gate-off CI could not: a real shell bug (the project switcher's
+    flex `min-width: auto` defeated its ellipsis and overflowed a 360px screen for any owner of 2+
+    projects), a builder spec saving into the shared authed tenant another spec asserts on, and a
+    time-seeding race in the results spec. All three are fixed there.
+- **Still open:** amendment **A7** (check 5 blocks Start only on a count) is recorded for Daniel to
+  confirm. It is reversible in one line, and the shipped behaviour is A7's.
 - **Deferred by design:** the cumulative chart (4.1's named first cut); screenshot upload (A4); a
   scheduled start date (A6).
 - **Recorded follow-ups** (README, "Found during the build"): unpaged tars/ab reads; the flag-registry
