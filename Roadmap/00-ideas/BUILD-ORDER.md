@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-25 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-28 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -49,7 +49,7 @@
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
-## ⬜ Funnel — seeds not yet scaffolded (10)
+## ⬜ Funnel — seeds not yet scaffolded (19)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Verify spike: TLA+/Quint on the event outbox and Lean on the flag evaluator, dogfooded on Golden Frijoles](seeds/verify-spike.md) — Raw · Spike · appetite S · audit-wave-B
@@ -58,6 +58,15 @@
 - [Portfolio view: every product in a workspace on the Consider · Operate · Exit loop](seeds/portfolio-view.md) — Raw · Feature · appetite M · audit-wave-C
 - [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
+- [One public monorepo with per-folder licences, a private docs repo, and a lean install mirror](seeds/public-monorepo.md) — Raw · Feature · appetite M · single-product-wave-A
+- [One Roadmap: the plugin's epics and seeds move into this repo](seeds/one-roadmap.md) — Raw · Chore · appetite S · single-product-wave-A
+- [Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures](seeds/jev-reanchor-thresholds.md) — Raw · Spike · appetite S · single-product-wave-A
+- [Distribute what we use: review rail, Jev and notify setup, schedulers, build view](seeds/distribute-what-we-use.md) — Raw · Feature · appetite M · single-product-wave-B
+- [Intent match: a score for how well the agent understood the ask, with routed follow-ups](seeds/intent-match.md) — Raw · Feature · appetite M · single-product-wave-B
+- [Semantic lint: Jev judges what deterministic checks select](seeds/semantic-lint.md) — Raw · Feature · appetite S · single-product-wave-B
+- [Session budget: replace 'one deep ask per run' with a measured line](seeds/session-budget.md) — Raw · Chore · appetite S · single-product-wave-B
+- [Compiled prompts: the kickoff and build/QA prompts assembled from measured parts](seeds/compiled-prompts.md) — Raw · Feature · appetite L · single-product-wave-C
+- [Sketch specs: approved specs render the wireframe and become the build contract](seeds/sketch-specs.md) — Raw · Feature · appetite L · single-product-wave-C
 - [Analytics visualization — the charting-dependency decision (spike), then the layer](seeds/analytics-visualization-layer.md) — Ready · Spike · appetite S · wave-2026-08-08
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
@@ -74,4 +83,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 30 · seeds in funnel: 10 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 30 · seeds in funnel: 19 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
