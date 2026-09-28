@@ -22,9 +22,9 @@ The first scan found 23 findings; the widened scan found 36 + 2, all disposition
 
 | Rule | Where | Count | Disposition |
 |---|---|---|---|
-| generic-api-key | `scripts/lib/config.test.mjs`, `skills/template/scripts/lib/config.test.mjs` | 6 | **Test input.** A made-up `sk-live-…`-shaped token that the config secret guard must refuse, plus a redaction-test value. |
+| generic-api-key | `scripts/lib/config.test.mjs`, `template/scripts/lib/config.test.mjs` (pre-subtree path) | 6 | **Test input.** A made-up `sk-live-…`-shaped token that the config secret guard must refuse, plus a redaction-test value. |
 | generic-api-key | `apps/web/e2e/helpers/authed-fixture.ts` | 3 | **E2E fixture names** (`gb.e2e…` / `gb_e2e…` flag and scenario keys for the locally seeded project). Not credentials. |
-| generic-api-key | `apps/web/e2e/{destinations,delivery-payload,webhook-signature}.spec.ts`, `apps/web/lib/webhook-signature.test.ts` | 6 | **Test webhook signing secrets** (`whsec_test…`), used only against the local server in CI. |
+| generic-api-key | `apps/web/e2e/{destinations,delivery-payload,webhook-signature}.spec.ts`, `apps/web/lib/webhook-signature.test.ts` | 6 | **Test webhook signing secrets** (`whsec_test…`, `whsec_stub_secret…`, `whsec_exempt_probe…` constants), used only against the local server in CI. |
 | generic-api-key | `apps/web/lib/flag-list-view.test.ts`, `scenario-impact-request.test.ts`, `e2e/_fixtures/tiendas-fundadoras-experiment.ts` | 4 | **Fixture identifiers** (flag keys, an idempotency UUID, an experiment key). |
 | jwt, stripe-access-token | `apps/web/lib/signal-scrub.test.ts`, `packages/sdk/src/scrub.test.ts` | 3 | **Scrubber test inputs.** Fake JWT and `sk_live_…` strings the error scrubbers must redact. |
 | curl-auth-header | `Roadmap/01-growth-engine/growth-engine-v1/sprint-4.md:116` | 1 | **Named local test key** (`local-test-key-do-not-use-in-prod`) against `localhost:3002`. |
