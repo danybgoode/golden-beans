@@ -10,17 +10,16 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
-- [One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 0/4 stories · risk: Low · single-product-wave-A
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (33)
+## ✅ Shipped (34)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -49,6 +48,7 @@
 - [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 18/18 stories · risk: High
 - [The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL](../../02-commercial/agentic-pm-public-surface/README.md) — 02 Commercial · 12/12 stories · risk: Low · wave-2026-08-20
 - [✅ Epic: Golden Frijoles by default — a spawned project already carries the flag provider](../../09-platform-infra/golden-flags-by-default/README.md) — 09 Platform Infra · 6/6 stories · risk: High · wave-2026-09-16-plugin
+- [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Jev semantic guards — review-guard and prose-guard decide with Jev, not regex](../../09-platform-infra/jev-semantic-guards/README.md) — 09 Platform Infra · 15/15 stories · risk: High · wave-2026-09-19
@@ -83,7 +83,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -93,7 +93,6 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
-| One Roadmap — the plugin's epics, seeds, bets and learnings move here | In progress | Shipped |
 
 ---
-_Epics: 37 · seeds in funnel: 24 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 37 · seeds in funnel: 24 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
