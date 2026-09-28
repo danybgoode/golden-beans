@@ -1603,6 +1603,15 @@ one-liner + why + date shape.
 - **`git stash` + `git stash pop` puts staged deletions back as unstaged.** A commit made afterwards silently leaves
   out every `git rm`. After any stash round trip, re-stage with `git add -u <path>` and read `git show --stat`
   before pushing. *(one-roadmap, 2026-09-28)*
+- **Never squash-merge a PR whose history is the deliverable**, such as a `git subtree add`. A squash flattens the merge to
+  one parent, `git subtree split` then roots a brand-new history, and the mirror can never fast-forward again. State
+  "merge commit" in the PR and check the split SHA after the merge. *(public-monorepo, 2026-09-28)*
+- **Check the hosting plan before moving a repo into an org.** Vercel Hobby can't connect an org-owned repo, so a
+  transfer would have silently stopped "merge = deploy". A rename in the same account keeps the link, because Vercel
+  tracks the `repoId`. *(public-monorepo, 2026-09-28)*
+- **Never filter `git push` output down to the success lines.** A pre-push hook refused the push, the filter hid the
+  refusal, and a PR comment cited a SHA that never reached GitHub. Check `git status -sb` for `[ahead N]` after every
+  push. *(public-monorepo, 2026-09-28)*
 
 ## From the plugin repo (moved 2026-09-28)
 *`golden-frijoles/skills` (formerly dobby-foundation) kept its own LEARNINGS until [`one-roadmap`](09-platform-infra/one-roadmap/README.md) moved its Roadmap here. These are its entries that were not already in this file, verbatim under their original section headings. Merging them into the sections above is `doc-hygiene`'s job.*

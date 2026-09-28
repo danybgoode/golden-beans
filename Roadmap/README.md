@@ -343,6 +343,11 @@ independently shippable slice of value.
   — **shipped 2026-07-28** (PR #51); Slack uses a channel-scoped Incoming Webhook and plain-text
   response handling, while the local report checkpoint advances only after every configured channel
   accepts the reviewed prose.
+- 🚧 [One public monorepo](09-platform-infra/public-monorepo/README.md): the plugin, kit and template live in
+  `skills/` (with history), and `golden-frijoles/skills` is a fast-forward mirror whose own release workflow still
+  publishes the kit. Release 0.5.3 went out that way. The repo is now `danybgoode/golden-frijoles`, and sensitive docs
+  live in the private `golden-frijoles/internal`. **Shipped 2026-09-28 except** the licences (held for the lawyer, #184)
+  and the local folder move (owed).
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -362,6 +367,9 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-28**: `public-monorepo` S1–S4.3 **shipped**: one repo (`danybgoode/golden-frijoles`) with `skills/` mirrored
+  byte-for-byte to `golden-frijoles/skills`. The first release through the mirror (kit 0.5.3, with provenance) installed
+  cleanly on all three channels. Both repos' full history across every GitHub ref was secret-scanned: 0 live secrets.
 - **2026-09-28**: `one-roadmap` **shipped**. Golden Frijoles has one planning home. The plugin repo's 6 epics, 12 seeds,
   3 audits, 3 bets and 45 new LEARNINGS entries moved here, and the board reads 28–54 as one ship history. In the same
   PR, the `jev-reanchor-thresholds` spike closed as a clean negative: DSPy ReAnchor, run offline on the recorded

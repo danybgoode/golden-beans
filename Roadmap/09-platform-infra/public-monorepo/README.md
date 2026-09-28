@@ -1,6 +1,6 @@
 ---
 status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building     # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+phase: Verifying    # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: public-monorepo
 title: "One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo"
@@ -83,16 +83,11 @@ S1 → S2 → S3 → S4, with stacked branches. Nothing changes for strangers un
 
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
 - [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (only if one was planned at grooming — Stage 6b):** the flag slice shipped, the flag
-      exists **in Golden Frijoles, in every env**, with the stated polarity, **and is ACTIVATED there** —
-      `gf flags get <key>` must not print `—` in its PRODUCTION row. Creating a definition is not
-      turning it on, and a flag that is synced but never activated serves compile-time defaults while
-      every dashboard says it exists. *Verify-only — not a new gate; whether a high-risk epic needs one
-      is decided at grooming, not here.*
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch:** N/A. There's no Golden Frijoles flag, because a repo move isn't a runtime behaviour. The mirror's off switch is the `MIRROR_ENABLED` repo variable (Stage 6b).
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
