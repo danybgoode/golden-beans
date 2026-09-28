@@ -229,6 +229,15 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
 - Commit messages end with the `Co-Authored-By: Claude` trailer.
 - **Language.** Everything here is written in **English**; there is no user-facing app copy.
 
+## Planning lives in golden-beans (since 2026-09-28)
+
+- **This repo has no Roadmap of its own any more.** Epics, seeds, audits, bets and LEARNINGS for the plugin,
+  the kit and the template live in
+  [`danybgoode/golden-beans` → `Roadmap/`](https://github.com/danybgoode/golden-beans/tree/main/Roadmap)
+  (`09-platform-infra/`), moved there by `one-roadmap`. Where this document says `Roadmap/LEARNINGS.md`,
+  `Roadmap/00-ideas/` or `Roadmap/bets/`, read **that** repo's. Don't groom, scaffold or promote learnings here:
+  `Roadmap/` in this repo keeps only the template sources CI renders and checks.
+
 ## Portability — this repo's own rules
 
 - **No origin-project residue in anything a consumer receives.** `node scripts/check-plugin-leaks.mjs`
