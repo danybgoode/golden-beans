@@ -28,11 +28,11 @@ jobs:
       run:
         working-directory: ${{ github.workspace }}/../skills-mirror
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the split needs full history
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
 
