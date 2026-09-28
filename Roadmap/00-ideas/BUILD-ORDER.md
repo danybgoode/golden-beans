@@ -68,7 +68,7 @@
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
 - [One public monorepo with per-folder licences, a private docs repo, and a lean install mirror](seeds/public-monorepo.md) — Raw · Feature · appetite M · single-product-wave-A
-- [Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures](seeds/jev-reanchor-thresholds.md) — Raw · Spike · appetite S · single-product-wave-A
+- [Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures](seeds/jev-reanchor-thresholds.md) — Ready · Spike · appetite S · single-product-wave-A
 - [Distribute what we use: review rail, Jev and notify setup, schedulers, build view](seeds/distribute-what-we-use.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Intent match: a score for how well the agent understood the ask, with routed follow-ups](seeds/intent-match.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Semantic lint: Jev judges what deterministic checks select](seeds/semantic-lint.md) — Raw · Feature · appetite S · single-product-wave-B
@@ -84,7 +84,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -94,6 +94,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
+| One Roadmap — the plugin's epics, seeds, bets and learnings move here | In progress | Shipped |
 
 ---
-_Epics: 37 · seeds in funnel: 25 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 37 · seeds in funnel: 25 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

@@ -91,7 +91,9 @@ one-liner + why + date shape.
 - **A squash-merged sprint branch is a dead end — start the next sprint on a FRESH branch off `main`.**
   A squash-merged PR's individual commits aren't on `main` (only the one squash commit is), so
   continuing that branch for the next sprint re-introduces a messy duplicate diff and can't
-  fast-forward. Branch clean off `origin/main` for each new sprint.
+  fast-forward. Branch clean off `origin/main` for each new sprint. **Corollary: when a PR is STACKED on the
+  one you're merging, merge the base with a merge commit, not a squash.** The stacked branch keeps its ancestry,
+  retargets to `main` with only its own diff, and needs no rebase. *(golden-frijoles-plugin, 2026-09-23)*
 - **To verify "is the prior sprint serving?", reason off `origin/main` — never the working tree — and
   read PR *state*, not branch commits.** Local app checkouts routinely sit on *other* agents'
   branches, so on-disk files lie about `main`, and a squash-merged sprint's individual commits
@@ -1710,6 +1712,7 @@ one-liner + why + date shape.
   own step.
 
 ### Deriving state from docs (build-visualization-claude-mods, 2026-09-19)
+*If a tool answers "what is being built right now" — a status line, a board, a report.*
 
 - **A resolver that names the work in flight attracts exactly one class of bug: the plausible wrong
   answer.** Every one of the nine review findings on `build-state.mjs` was one — a stacked `-s4` branch

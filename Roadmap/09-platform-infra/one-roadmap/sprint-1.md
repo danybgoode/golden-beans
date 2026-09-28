@@ -61,7 +61,7 @@ every link to them is updated, and no relative link in a moved file is broken.
 read, **so that** a past retro reaches me.
 **Acceptance:** dobby-foundation's 45 LEARNINGS entries that were not already here are appended verbatim under
 "From the plugin repo". The poster's 09 section lists the 6 epics. `node scripts/build-order.mjs --check` and
-`node scripts/doc-format.mjs --check` pass.
+`node scripts/doc-format.mjs --check` report no new drift.
 **Risk:** low
 
 ### Story 1.4 — dobby-foundation pointer and worktree prune

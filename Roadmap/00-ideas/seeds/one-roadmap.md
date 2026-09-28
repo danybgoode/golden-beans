@@ -37,14 +37,14 @@ that** one generated board answers "what's next?" for the whole product.
 - **Three filenames collide:** `bets/README.md`, `bets/wave-2026-09-16.md` (two different bets from the same day) and
   `00-ideas/audits/frontmatter-backfill-2026-09-19.md` (one backfill per repo).
 - **LEARNINGS is not mostly duplicated.** The seed guessed that most entries had been promoted to both files. In fact,
-  about **44 of dobby-foundation's 75 bold-led entries are not in this file**. That is 8 of its 11 sections.
+  **45 of dobby-foundation's 75 bold-led entries are not in this file**. That is 8 of its 11 sections.
 - **dobby-foundation's CI reads its Roadmap.** `build-order.mjs --check`, `doc-format.mjs --check`,
   `build-state.mjs --offline` and `render-ways-of-working.mjs --check` all run against `Roadmap/`. That answers the
   seed's open question: **CI keeps checking; the move must leave it green.** `WAYS-OF-WORKING{,.template}.md`,
   `fill-ins.yml`, `SESSION-KICKOFFS.md` and `00-ideas/README.md` are **template sources**, not planning, so they stay.
 - **Worktrees:** `golden-beans-gfp`, `-gfp-s3` and `medusa-bonsai-gfp` are clean. **`golden-beans-gfp-s2` has 1
   uncommitted file.**
-- dobby-foundation's `verify-module` (audit-wave-D, L) overlaps with this repo's `verify-spike` (31). It moves as-is;
+- dobby-foundation's `verify-module` (audit-wave-D, L) overlaps with this repo's `verify-spike` (now 37). It moves as-is;
   the overlap is flagged for the portfolio pass, not resolved here.
 
 ## Scope (in)
@@ -74,8 +74,8 @@ that** one generated board answers "what's next?" for the whole product.
    `null`. **The existing 7/16 duplicates are out of scope** because they are older history; they are logged in the
    retro. The audit's §3 table keeps its old numbers as a dated record, with a one-line "renumbered by one-roadmap"
    note.
-3. **LEARNINGS:** add dobby-foundation's 44 unique entries as one section, "From the plugin repo (moved
-   2026-09-28)". The 31 duplicates are dropped and the text is otherwise verbatim. Rewriting or re-sectioning is
+3. **LEARNINGS:** add dobby-foundation's 45 unique entries as one section, "From the plugin repo (moved
+   2026-09-28)". The 30 duplicates are dropped and the text is otherwise verbatim. Rewriting or re-sectioning is
    `doc-hygiene`'s job, not this chore's.
 4. **Poster:** add the 6 plugin epics under `### 09 · Platform & Infra` in `Roadmap/README.md`. Each gets one line,
    taken from dobby-foundation's poster.
@@ -98,7 +98,7 @@ that** one generated board answers "what's next?" for the whole product.
 
 - `Roadmap/00-ideas/BUILD-ORDER.md` here lists the 6 plugin epics (5 ✅ shipped, 1 🏗️ building) and dobby-foundation's
   seeds in the funnel. Numbers 28–54 are unique.
-- `node scripts/build-order.mjs --check` and `node scripts/doc-format.mjs --check` pass in **both** repos. The
+- `node scripts/build-order.mjs --check` and `node scripts/doc-format.mjs --check` report no new drift in **both** repos. The
   dobby-foundation PR's CI is green.
 - dobby-foundation `Roadmap/` has no epics, seeds, bets or LEARNINGS, and its README points here.
 - No broken relative links in moved files (scripted check over the moved paths).
