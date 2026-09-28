@@ -61,6 +61,13 @@ stories:
 **Acceptance:** Branch protection on skills `main` allows only the deploy key. The skills README and CONTRIBUTING send PRs to this repo. `~/dobby/dobby-foundation` is archived locally (moved to `~/dobby/archive/`, since it's already clean and pushed).
 **Risk:** high
 
+> **Build notes (2026-09-28).**
+> - The org had deploy keys **disabled**. Daniel approved enabling them (`deploy_keys_enabled_for_repositories=true`).
+>   Key `golden-beans mirror (public-monorepo S2)` is read-write on `golden-frijoles/skills` only, and its private half
+>   exists only in the `SKILLS_MIRROR_KEY` secret here.
+> - `MIRROR_ENABLED=false` until S2.2.
+> - `workflow_dispatch` runs only once the workflow is on `main`, so the dry run (S2.2) comes right after this PR merges.
+
 ## Sprint QA
 - The isolated-home install of the mirrored release is the gate (golden-frijoles-plugin S5's recipe). Browser smoke: none. **Owed to Daniel:** step 3 of the walkthrough (install in a scratch repo).
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` green, plus the skills checks from S1.2 on.

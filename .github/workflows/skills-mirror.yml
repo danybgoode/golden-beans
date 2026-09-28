@@ -1,0 +1,60 @@
+# Publish skills/ to golden-frijoles/skills — the lean install mirror (public-monorepo S2, D1/D2).
+#
+# The mirror is `git subtree split --prefix=skills`: byte-for-byte the tree the skills repo holds, with its own
+# commit history, so every push is a FAST-FORWARD and every existing tag stays valid. The skills repo keeps its
+# own ci.yml and release.yml, so npm trusted publishing (bound to that repo + release.yml), provenance and tags
+# are unchanged — a version bump that lands there is released there.
+#
+# Off switch: the repo variable MIRROR_ENABLED. Anything but 'true' skips the job — no revert needed.
+# Never forced: a non-fast-forward (someone committed to the mirror directly) FAILS here, loudly, instead of
+# overwriting it. The fix is to bring that commit into skills/ here, never `--force`.
+name: Skills mirror
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Branch on golden-frijoles/skills to push to (use a scratch branch for a dry run)'
+        required: true
+        default: 'main'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skills-mirror
+  cancel-in-progress: false # a queued push must still land, in order
+
+jobs:
+  mirror:
+    if: vars.MIRROR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the split needs full history
+
+      - name: Split skills/
+        id: split
+        run: |
+          sha=$(git subtree split --prefix=skills HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "split: $sha"
+
+      - name: Push to golden-frijoles/skills (fast-forward only)
+        env:
+          KEY: ${{ secrets.SKILLS_MIRROR_KEY }}
+          TARGET: ${{ github.event.inputs.target || 'main' }}
+          SHA: ${{ steps.split.outputs.sha }}
+        run: |
+          case "$TARGET" in ''|*[!A-Za-z0-9._/-]*) echo "::error::invalid target branch" >&2; exit 1 ;; esac
+          keyfile="$RUNNER_TEMP/mirror_key"
+          ( umask 077 && printf '%s\n' "$KEY" > "$keyfile" )
+          export GIT_SSH_COMMAND="ssh -i $keyfile -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git push git@github.com:golden-frijoles/skills.git "$SHA:refs/heads/$TARGET"
+          rm -f "$keyfile"
+          echo "mirrored $SHA → golden-frijoles/skills@$TARGET"
