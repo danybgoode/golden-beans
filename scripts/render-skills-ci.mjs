@@ -114,7 +114,9 @@ export function render(source) {
       throw new Error(`${SOURCE}: expected ${count} × ${JSON.stringify(from)}, found ${seen} — update REWRITES`);
     body = body.split(from).join(to);
   }
-  const stray = body.match(/\$GITHUB_WORKSPACE|origin\/\$BASE_REF/);
+  // Any spelling that names the checkout — `$X`, `${X}`, a `${{ github.workspace }}` expression, or a base ref — is
+  // refused in the carried steps: only the header may name the monorepo checkout (codex, #180).
+  const stray = body.match(/GITHUB_WORKSPACE|github\.workspace|origin\/\$\{?BASE_REF/);
   if (stray) throw new Error(`${SOURCE}: an unrewritten checkout reference remains (${stray[0]})`);
   return HEADER + body;
 }
