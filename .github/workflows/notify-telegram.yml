@@ -44,7 +44,7 @@
 # shape exists because miyagi's rail needed it. golden-beans doesn't, for two reasons:
 #
 #   1. Vercel's GitHub integration ALREADY writes GitHub Deployments + statuses for this repo
-#      (`gh api repos/danybgoode/golden-beans/deployments` — creator `vercel[bot]`, environment
+#      (`gh api repos/danybgoode/golden-frijoles/deployments` — creator `vercel[bot]`, environment
 #      `Production`, terminal `state: success`). That is the same fact the poll would go fetch,
 #      delivered as a push instead of a pull. AGENTS rule #4 already treats it as the source of
 #      truth for "which SHA is actually live".
