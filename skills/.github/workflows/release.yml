@@ -1,0 +1,149 @@
+name: Release
+
+# D5: a version bump merged to `main` publishes, and CI creates the tag — nobody pushes one by hand.
+# Consumers and strangers with no pinned `ref` track `main`, so the version on `main` is already live
+# the instant the merge lands; a tag pushed BEFORE a squash-merge can't point at the commit that ships.
+#
+# Two jobs, least privilege each. `publish` holds `id-token: write` (npm trusted publishing: OIDC, provenance,
+# no stored token) and read-only contents; `release` holds `contents: write` and runs only after the kit is
+# confirmed on npm. The tag is the record that a release happened, so it must not exist until the thing it
+# records does. Re-running either job is safe: each step checks what already exists before acting.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Two pushes close together must not race `gh release create` for the same tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Trusted publishing needs npm >= 11.5.1 (npm docs). Node 24 bundles npm 11; the explicit upgrade and the
+      # printed version make that a checked fact, not an assumption (the first run started on npm 10.9.2).
+      #
+      # No `registry-url`: npm's default registry is npmjs.org. (It was removed while chasing a 403 and turned out
+      # NOT to be the cause. The verbose log showed the OIDC exchange succeeding either way.)
+      #
+      # What the first publish actually needed, learned on run 35933854829 (2026-09-23):
+      #   404 on PUT                               → no trusted publisher matched (npm-side settings)
+      #   403 "OIDC permission denied for this action", AFTER `oidc Successfully retrieved and set token`
+      #                                            → the trusted publisher's "Allowed actions" was stage-only
+      #   PUT 202, then "not visible after 60s"    → npm validates a publish asynchronously; the wait below
+      #                                              is minutes, not seconds
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install -g npm@^11.5.1 --no-audit --no-fund && npm --version
+
+      - name: Release is consistent before anything is published
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            node scripts/check-release.mjs --against-tags --base "$BEFORE"
+          else
+            node scripts/check-release.mjs --against-tags
+          fi
+
+      - name: Publish @golden-frijoles/kit@<version> (only if this version is not on npm yet)
+        # No NODE_AUTH_TOKEN anywhere: without `registry-url` no .npmrc interpolates one, and the OIDC exchange is
+        # the only credential this job has (codex on #46: even an empty one is one thing more to reason about).
+        run: |
+          version="$(node scripts/check-release.mjs --print-version)"
+          if [ ! -f kit/package.json ]; then
+            echo "publish: no kit/ in this tree, so there is nothing to publish."
+            exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/v${version}" >/dev/null; then
+            echo "publish: v${version} is already released (this push did not bump). Nothing to publish."
+            exit 0
+          fi
+          # Only a 404 means "not on npm yet". Any other failure (5xx, timeout, rate limit) is could-not-look,
+          # and publishing over an existing version is refused anyway. Fail loudly and let a re-run decide.
+          if view="$(npm view "@golden-frijoles/kit@${version}" version 2>&1)"; then
+            echo "publish: @golden-frijoles/kit@${version} is already on npm (a re-run). Nothing to publish."
+            exit 0
+          elif ! printf '%s' "$view" | grep -q 'E404'; then
+            echo "::error::could not look: npm view failed without a 404, so it is unknown whether ${version} is published."
+            printf '%s\n' "$view"
+            exit 1
+          fi
+          node scripts/build-kit.mjs
+          node scripts/check-skill-scripts.mjs --kit
+          # --loglevel verbose: the log then says whether the OIDC exchange ran and why it failed (fresh review, #46).
+          ( cd kit && npm publish --provenance --access public --loglevel verbose )
+          # npm answers a publish with 202 and validates it asynchronously: the first one took several minutes to
+          # appear. Confirm before the tag job records a release. A timeout here is safe: a re-run finds the
+          # version on npm, skips the publish and tags it.
+          for i in $(seq 1 45); do
+            if npm view "@golden-frijoles/kit@${version}" version >/dev/null 2>&1; then
+              echo "publish: @golden-frijoles/kit@${version} is live."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::published (202), but @golden-frijoles/kit@${version} is not visible on npm after 15 min. Re-run this job once it appears: it will skip the publish and tag the release."
+          exit 1
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the tag + GitHub Release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full tag history to know whether v<version> already exists
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The print modes below skip every consistency check, so run the full check first: plugin.json,
+      # the newest CHANGELOG heading (and kit/package.json once it exists) agree, and the version is not
+      # below a release that already exists. A direct push to main must not cut an inconsistent release.
+      - name: Release is consistent (plugin.json = CHANGELOG, not below the newest tag, bumped if shipped)
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # `before` is all zeros on a branch's first push; there is no base to compare then.
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            node scripts/check-release.mjs --against-tags --base "$BEFORE"
+          else
+            node scripts/check-release.mjs --against-tags
+          fi
+
+      - name: Read the version plugin.json ships
+        id: version
+        run: echo "version=$(node scripts/check-release.mjs --print-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Tag + GitHub Release (only if v<version> doesn't exist yet)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag="v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "release: ${tag} already exists — this push did not bump the version. Nothing to do."
+            exit 0
+          fi
+          node scripts/check-release.mjs --print-section > /tmp/release-notes.md
+          gh release create "${tag}" \
+            --title "${tag}" \
+            --notes-file /tmp/release-notes.md \
+            --target "${GITHUB_SHA}"
+          echo "release: created ${tag} at ${GITHUB_SHA}."

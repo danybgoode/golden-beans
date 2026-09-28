@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Local Claude Code state — personal permissions, never shared
+.claude/settings.local.json
+
+# Per-skill config written at runtime (holds chat ids / destinations; the
+# committed artifact is config.example.json, never config.json)
+plugins/**/skills/**/config.json
+
+# Dependencies / logs (this repo ships no build, but the template it distributes does)
+node_modules/
+npm-debug.log*
+*.log
+
+# Built .skill archives (scripts/pack-skills.mjs) — regenerate, never commit.
+dist/
+
+# Local secrets (TYPESAFE_API_KEY etc.) — never commit
+.env*.local
+
+# Jev decision log (jev-semantic-guards D3)
+.jev/
+
+# references folder
+references/

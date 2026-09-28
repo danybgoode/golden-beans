@@ -1,0 +1,74 @@
+// scaffold-epic.test.mjs — the scaffolder's output is held to the frontmatter contract
+// (build-visualization-claude-mods S1). The contract module lives in the template's scripts/lib/,
+// which a plugin cannot import at runtime; this test (repo-local, not shipped behaviour) is what
+// keeps the two in step, alongside CI's doc-format run over a freshly scaffolded epic.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  EPIC_FIELDS,
+  SPRINT_FIELDS,
+  STORY_FIELDS,
+  parseDocFrontmatter,
+  validateEpicFrontmatter,
+  validateSprintFrontmatter,
+} from '../../../../template/scripts/lib/roadmap-contract.mjs';
+
+const SCAFFOLD = join(dirname(fileURLToPath(import.meta.url)), 'scaffold-epic.mjs');
+
+function scaffold(extra = []) {
+  const root = mkdtempSync(join(tmpdir(), 'scaffold-'));
+  mkdirSync(join(root, 'Roadmap'));
+  execFileSync(
+    'node',
+    [SCAFFOLD, '--slug', 'tmp-check', '--area', '09', '--macro', '09-platform-infra', '--title', 'Tmp: "check" # x', ...extra],
+    { cwd: root, stdio: 'pipe' }
+  );
+  return { root, dir: join(root, 'Roadmap', '09-platform-infra', 'tmp-check') };
+}
+
+test('the epic README is born with every contract field, valid, with true totals', () => {
+  const { root, dir } = scaffold(['--risk', 'low', '--type', 'chore', '--sprints', 'One: first;Two;Three']);
+  try {
+    const parsed = parseDocFrontmatter(readFileSync(join(dir, 'README.md'), 'utf8'));
+    assert.equal(parsed.error, null);
+    for (const key of ['status', 'slug', 'build_order', ...EPIC_FIELDS]) assert.ok(key in parsed.data, key);
+    assert.equal(parsed.data.title, 'Tmp: "check" # x');
+    assert.equal(parsed.data.area, '09-platform-infra');
+    assert.equal(parsed.data.type, 'chore');
+    assert.equal(parsed.data.phase, 'Shaping');
+    assert.deepEqual(validateEpicFrontmatter(parsed, { sprintCount: 3, storyCount: 3 }), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('every sprint-N.md is born with frontmatter and a parser-owned per-story block', () => {
+  const { root, dir } = scaffold(['--risk', 'high', '--sprints', 'One;Two: second']);
+  try {
+    for (const n of [1, 2]) {
+      const parsed = parseDocFrontmatter(readFileSync(join(dir, `sprint-${n}.md`), 'utf8'));
+      for (const key of SPRINT_FIELDS) assert.ok(key in parsed.data, `sprint-${n}: ${key}`);
+      assert.equal(parsed.data.sprint, n);
+      assert.equal(parsed.data.risk, 'high');
+      const [story] = parsed.data.stories;
+      for (const key of STORY_FIELDS) assert.ok(key in story, `sprint-${n} story: ${key}`);
+      assert.equal(story.id, `S${n}.1`);
+      assert.deepEqual(validateSprintFrontmatter(parsed, { n, slug: 'tmp-check' }), []);
+      // The human-readable prose is still there.
+      assert.match(parsed.body, new RegExp(`^### Story ${n}\\.1 — `, 'm'));
+      assert.match(parsed.body, /^\*\*As a\*\* <role>/m);
+    }
+    assert.equal(parseDocFrontmatter(readFileSync(join(dir, 'sprint-2.md'), 'utf8')).data.title, 'Two: second');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a risk outside the two tiers is refused before anything is written', () => {
+  assert.throws(() => scaffold(['--risk', 'medium', '--sprints', 'One']), /--risk must be low\|high/);
+});

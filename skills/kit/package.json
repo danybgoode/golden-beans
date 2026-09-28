@@ -1,0 +1,41 @@
+{
+  "name": "@golden-frijoles/kit",
+  "version": "0.5.2",
+  "description": "The scripts the Golden Frijoles skills run, packaged so they work in any repo: planning, build-order, reporting and verification rails. Zero dependencies.",
+  "type": "module",
+  "bin": {
+    "gf-kit": "bin.mjs"
+  },
+  "files": [
+    "bin.mjs",
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/golden-frijoles/skills.git",
+    "directory": "kit"
+  },
+  "homepage": "https://github.com/golden-frijoles/skills#readme",
+  "keywords": [
+    "golden-frijoles",
+    "claude-code",
+    "agent-skills",
+    "roadmap"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./bin.mjs",
+    "./config": {
+      "types": "./dist/lib/config.d.mts",
+      "default": "./dist/lib/config.mjs"
+    },
+    "./package.json": "./package.json"
+  }
+}

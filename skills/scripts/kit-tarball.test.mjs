@@ -1,0 +1,138 @@
+// kit-tarball.test.mjs — the PUBLISHED shape works: pack the kit, install it into a stranger's repo, run it
+// from a subdirectory, and it writes THAT repo's files (golden-frijoles-plugin S2.1 QA, D2).
+//
+// It tests the tarball `npm publish` would upload, not the source tree, because "works from template/" and
+// "works from node_modules/" are exactly the two modes D2 exists to reconcile. It SKIPS, loudly, when npm is
+// absent — could not look is not a failure. Offline by construction: the kit has zero dependencies.
+// Run: node --test scripts/kit-tarball.test.mjs
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
+import { stageKit } from './build-kit.mjs';
+
+// git exports GIT_DIR & co. into hooks, and from a worktree they point at the REAL repo (LEARNINGS, 2026-09-23).
+function sealedEnv() {
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.startsWith('GIT_')) delete env[k];
+  return env;
+}
+
+const npm = spawnSync('npm', ['--version'], { encoding: 'utf8' });
+const hasNpm = !npm.error && npm.status === 0;
+
+test('the packed kit, installed in a stranger repo, runs build-order from a subdir against that repo', { skip: !hasNpm && 'npm not found — could not look' }, () => {
+  const kitDir = realpathSync(mkdtempSync(join(tmpdir(), 'kit-stage-')));
+  stageKit(kitDir);
+  const packDir = realpathSync(mkdtempSync(join(tmpdir(), 'kit-pack-')));
+  const pack = spawnSync('npm', ['pack', '--pack-destination', packDir, kitDir], {
+    encoding: 'utf8',
+    env: sealedEnv(),
+  });
+  assert.equal(pack.status, 0, pack.stderr);
+  const tgz = readdirSync(packDir).find((f) => f.endsWith('.tgz'));
+  assert.ok(tgz, 'npm pack produced no tarball');
+
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'kit-stranger-')));
+  mkdirSync(join(repo, 'Roadmap', '00-ideas', 'seeds'), { recursive: true });
+  mkdirSync(join(repo, 'apps', 'web', 'src'), { recursive: true });
+  writeFileSync(
+    join(repo, 'Roadmap', '00-ideas', 'seeds', 'a-seed.md'),
+    '---\ntitle: "A seed"\nslug: a-seed\nstatus: raw\ntype: feature\nepic: null\n---\n# A seed\n'
+  );
+  writeFileSync(join(repo, 'package.json'), JSON.stringify({ name: 'stranger', private: true }));
+  const git = spawnSync('git', ['init', '-q'], { cwd: repo, env: sealedEnv() });
+  assert.equal(git.status, 0, String(git.stderr));
+
+  // Installed OUTSIDE the stranger repo, the way npx's cache is (~/.npm/_npx): a walk that started from the
+  // package's own location instead of cwd would then find no project (fresh review of #45, nit 2).
+  const tools = realpathSync(mkdtempSync(join(tmpdir(), 'kit-tools-')));
+  const install = spawnSync('npm', ['install', '--offline', '--no-audit', '--no-fund', '--prefix', tools, join(packDir, tgz)], {
+    encoding: 'utf8',
+    env: sealedEnv(),
+  });
+  assert.equal(install.status, 0, install.stderr);
+
+  const bin = join(tools, 'node_modules', '.bin', 'gf-kit');
+  const run = spawnSync(bin, ['build-order'], { cwd: join(repo, 'apps', 'web', 'src'), encoding: 'utf8', env: sealedEnv() });
+  assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+
+  const board = join(repo, 'Roadmap', '00-ideas', 'BUILD-ORDER.md');
+  assert.ok(existsSync(board), 'BUILD-ORDER.md was not written into the stranger repo');
+  assert.match(readFileSync(board, 'utf8'), /\[A seed\]\(seeds\/a-seed\.md\)/, 'the board must list THIS repo’s seed');
+  const pkgDir = join(tools, 'node_modules', '@golden-frijoles', 'kit');
+  assert.equal(existsSync(join(pkgDir, 'Roadmap')), false, 'the kit wrote into its own package');
+  assert.equal(existsSync(join(pkgDir, 'dist', 'Roadmap')), false, 'the kit wrote into its own dist/');
+  assert.equal(existsSync(join(repo, 'scripts')), false, 'nothing may be copied into the stranger repo');
+
+  const list = spawnSync(bin, ['--list'], { cwd: repo, encoding: 'utf8', env: sealedEnv() });
+  assert.match(list.stdout, /^build-order$/m);
+
+  // A RELATIVE --root must survive a script that spawns a sibling with `cwd: <project>` (fresh review of #45,
+  // should-fix 1): build-order-sync's drift check is exactly that child. Commit a fresh board, then ask from the
+  // parent directory. The right answer is "up to date"; the bug read the project at <project>/<project>.
+  const git2 = (args) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: repo, env: sealedEnv() });
+  assert.equal(git2(['add', '-A']).status, 0);
+  assert.equal(git2(['commit', '-q', '-m', 'board']).status, 0);
+  const sync = spawnSync(bin, ['--root', basename(repo), 'build-order-sync', '--dry-run'], {
+    cwd: dirname(repo),
+    encoding: 'utf8',
+    env: sealedEnv(),
+  });
+  assert.equal(sync.status, 0, `${sync.stdout}\n${sync.stderr}`);
+  assert.match(sync.stdout, /up to date/);
+
+  const missing = spawnSync(bin, ['--root', join(repo, 'nope'), 'build-order'], { encoding: 'utf8', env: sealedEnv() });
+  assert.equal(missing.status, 2, 'a --root that does not exist is refused, not guessed');
+});
+
+// golden-frijoles-plugin S3.2: `gf-kit init` adopts a repo that has NOTHING yet — no Roadmap/, no .git even,
+// the true "stranger pasted the prompt into an empty folder" case the epic's whole promise rests on.
+test('the packed kit runs `gf-kit init` in an EMPTY temp repo and writes the Roadmap/ skeleton, nothing else', { skip: !hasNpm && 'npm not found — could not look' }, () => {
+  const kitDir = realpathSync(mkdtempSync(join(tmpdir(), 'kit-stage-init-')));
+  stageKit(kitDir);
+  const packDir = realpathSync(mkdtempSync(join(tmpdir(), 'kit-pack-init-')));
+  const pack = spawnSync('npm', ['pack', '--pack-destination', packDir, kitDir], { encoding: 'utf8', env: sealedEnv() });
+  assert.equal(pack.status, 0, pack.stderr);
+  const tgz = readdirSync(packDir).find((f) => f.endsWith('.tgz'));
+  assert.ok(tgz, 'npm pack produced no tarball');
+
+  const tools = realpathSync(mkdtempSync(join(tmpdir(), 'kit-tools-init-')));
+  const install = spawnSync(
+    'npm',
+    ['install', '--offline', '--no-audit', '--no-fund', '--prefix', tools, join(packDir, tgz)],
+    { encoding: 'utf8', env: sealedEnv() }
+  );
+  assert.equal(install.status, 0, install.stderr);
+  const bin = join(tools, 'node_modules', '.bin', 'gf-kit');
+
+  // A truly empty folder — no Roadmap/, no .git, no package.json — the projectRoot() fallback for
+  // "installed, and no marker directory found anywhere above cwd" (D2: falls back to cwd itself).
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'kit-stranger-empty-')));
+  const run = spawnSync(bin, ['--root', repo, 'init'], { encoding: 'utf8', env: sealedEnv() });
+  assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+  assert.match(run.stdout, /wrote Roadmap\/README\.md/);
+
+  for (const rel of [
+    'Roadmap/README.md',
+    'Roadmap/WAYS-OF-WORKING.md',
+    'Roadmap/LEARNINGS.md',
+    'Roadmap/00-ideas/README.md',
+    'Roadmap/00-ideas/seeds/.gitkeep',
+    'Roadmap/00-ideas/audits/.gitkeep',
+  ]) {
+    assert.ok(existsSync(join(repo, rel)), `gf-kit init did not write ${rel}`);
+  }
+  assert.equal(existsSync(join(repo, 'scripts')), false, 'gf-kit init must not create a scripts/ dir');
+  const pkgDir = join(tools, 'node_modules', '@golden-frijoles', 'kit');
+  assert.equal(existsSync(join(pkgDir, 'dist', 'skeleton', 'Roadmap')), true, 'the kit must carry its own skeleton source');
+
+  // Idempotent: a second run against the now-adopted repo skips every file, writes nothing new.
+  const again = spawnSync(bin, ['--root', repo, 'init'], { encoding: 'utf8', env: sealedEnv() });
+  assert.equal(again.status, 0, `${again.stdout}\n${again.stderr}`);
+  assert.match(again.stdout, /skipped Roadmap\/README\.md \(exists\)/);
+  assert.doesNotMatch(again.stdout, /^wrote /m);
+});

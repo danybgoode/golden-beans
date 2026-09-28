@@ -1,0 +1,128 @@
+#!/bin/sh
+# Local-first pre-push gate — budgeted at UNDER 30 SECONDS. Auto-enabled by the root package.json's
+# "prepare" script (git config core.hooksPath .githooks) on every `npm install` / `npm ci`.
+#
+# Two sections, and the split matters:
+#   BLOCKING  — cheap, deterministic, whole-repo. A failure here is unambiguous, so it stops the push.
+#   ADVISORY  — expensive or environment-dependent (tsc, build, e2e needing local infra). Prints and
+#               exits 0: a cold build or a missing local database must not hold up your git workflow.
+#
+# ── Read .githooks/README.md before adding anything here ────────────────────────────────────────
+# pre-commit < 2s (staged files only) · pre-push < 30s (cheap whole-repo) · CI unbounded.
+# Cost decides the stage, not importance.
+#
+# What belongs here rather than in pre-commit: whole-repo checks that can't be scoped to a diff, and
+# the unit test suite. What does NOT belong here: integration tests that spawn processes or walk the
+# whole corpus — name those `*.itest.mjs` so the glob below skips them, and run them in CI.
+#
+# Note on why this hook exists at all: if your CI is PR-triggered and you also commit direct to
+# `main`, that path never opens a PR and this hook is its only local gate. Add a `push: [main]`
+# trigger to CI as well — a hook is fast feedback, never the last line of defence.
+#
+# Bypass with `git push --no-verify` if you genuinely need to.
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-push: node not found — skipping local guards (CI still applies)." >&2
+  exit 0
+fi
+
+# ── What is actually being pushed — read from git, not guessed from HEAD ─────────────────────────
+# git feeds a pre-push hook one line per ref on STDIN: "<local ref> <local sha> <remote ref> <remote
+# sha>". An earlier version of this hook ignored that and derived its scope from the CURRENT BRANCH
+# (`@{upstream}...HEAD`, then `origin/main...HEAD`, then `HEAD~1...HEAD`). For an ordinary push of the
+# checked-out branch those agree, so the bug stays invisible.
+#
+# They do NOT agree when the pushed ref is not the checked-out branch — which is exactly what
+# scripts/lib/log-branch.mjs does: it pushes append-only log commits by plumbing
+# (`git push origin <sha>:refs/heads/claude/<log>`) for the session journal, the standup, the weekly
+# recap and the PMO reports. Those commits carry one flat file and share no ancestry with the working
+# tree. In the project this was ported from, a Roadmap-touching commit on `main` made the old hook run
+# the board check against the WORKING TREE, and a stale board — caused by another agent's untracked
+# file in a shared checkout — blocked the journal push. session-note fails soft by design, so the
+# journal silently stopped recording the one thing that cannot be re-derived: intent. (2026-08-25.)
+#
+# Reading stdin fixes the general case: every push is gated on the paths it actually carries.
+# Deletions (local sha all-zero) contribute nothing. A brand-new remote ref (remote sha all-zero) has no
+# range, so it falls back to `origin/main...<local sha>`. If stdin is empty (a manual invocation), fall
+# back to the HEAD-derived scope rather than checking nothing — a hook that cannot determine scope must
+# not silently pass, and must not block either. scripts/pre-push-hook.test.mjs pins all of this.
+zero=0000000000000000000000000000000000000000
+stdin_seen=0
+changed=''
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -z "$local_sha" ] && continue
+  stdin_seen=1
+  [ "$local_sha" = "$zero" ] && continue                      # branch deletion — carries no paths
+  if [ "$remote_sha" = "$zero" ] || [ -z "$remote_sha" ]; then
+    range=$(git diff --name-only "origin/main...$local_sha" 2>/dev/null)
+  else
+    range=$(git diff --name-only "$remote_sha...$local_sha" 2>/dev/null)
+  fi
+  changed=$(printf '%s\n%s' "$changed" "$range")
+done
+
+if [ "$stdin_seen" -eq 0 ]; then
+  remote_head=$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)
+  if [ -n "$remote_head" ]; then
+    changed=$(git diff --name-only "$remote_head"...HEAD 2>/dev/null)
+  else
+    changed=$(git diff --name-only origin/main...HEAD 2>/dev/null)
+  fi
+  [ -z "$changed" ] && changed=$(git diff --name-only HEAD~1...HEAD 2>/dev/null)
+fi
+
+fail=0
+
+# ── BLOCKING ─────────────────────────────────────────────────────────────────────────────────────
+
+# The unit tier. Globs `*.test.mjs` ONLY, so `*.itest.mjs` (process-spawning / corpus-walking) is
+# excluded by pattern rather than by an exclusion list that would rot as files are added.
+if echo "$changed" | grep -qE '^scripts/'; then
+  echo "pre-push: scripts/ unit tests..." >&2
+  if ! node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'; then
+    echo "pre-push: scripts/ node:test failed — see output above." >&2
+    fail=1
+  fi
+fi
+
+# The derived board must not be stale. One corpus walk — the most expensive thing here — hence
+# path-gated to Roadmap-touching pushes only. It cannot self-heal (the commit is already made), so it
+# reports and blocks with the exact fix rather than rewriting history.
+if echo "$changed" | grep -qE '^(Roadmap/|scripts/(build-order|roadmap-extract)\.mjs)'; then
+  echo "pre-push: build-order freshness..." >&2
+  if ! node scripts/build-order.mjs --check >/dev/null 2>&1; then
+    echo "pre-push: BUILD-ORDER.md is STALE — it is DERIVED, never hand-edited." >&2
+    echo "          Run:  node scripts/build-order.mjs" >&2
+    echo "          Then: git add Roadmap/00-ideas/BUILD-ORDER.md && git commit --amend --no-edit" >&2
+    fail=1
+  fi
+fi
+
+# TEMPLATE FILL-IN — any other cheap, path-gated whole-repo check (e.g. an infra/ invariant suite):
+#
+#   if echo "$changed" | grep -qE '^infra/'; then
+#     node --test 'infra/test/*.test.mjs' || fail=1
+#   fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-push: a blocking check failed. Fix and re-push, or 'git push --no-verify' to bypass." >&2
+  exit 1
+fi
+
+# ── ADVISORY — never blocks (this section always falls through to exit 0) ────────────────────────
+# TEMPLATE FILL-IN — mirror your CI's typecheck/build job here for earlier feedback:
+#
+#   echo "pre-push: type-checking..." >&2
+#   if ! npx tsc --noEmit; then
+#     echo "pre-push: tsc --noEmit failed — advisory only, push proceeding. CI will also catch this." >&2
+#   fi
+#
+# If a suite needs local infra (a DB, a local server) that isn't always running, GATE it — check
+# readiness and skip with a message rather than spinning infra up from inside a git hook (surprising,
+# slow, fragile). Say why it was skipped and that CI still runs it.
+#
+# Worth checking before you invest here at all: GitHub Actions minutes are only METERED for PRIVATE
+# repos. If this project is public, its CI is already free and unlimited, so this section is a
+# nice-to-have for speed, not a cost necessity. `gh repo view --json isPrivate`
+
+exit 0

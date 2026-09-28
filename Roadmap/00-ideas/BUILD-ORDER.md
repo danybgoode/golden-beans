@@ -10,10 +10,11 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (2)
+## 🏗️ Building now (3)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
+- [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 0/14 stories · risk: High · single-product-wave-A
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
@@ -56,7 +57,7 @@
 - [The build view — a machine-readable frontmatter contract, rendered in the CLI as a Claude Mod](../../09-platform-infra/build-visualization-claude-mods/README.md) — 09 Platform Infra · 13/13 stories · risk: Low · wave-2026-09-16-plugin
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (24)
+## ⬜ Funnel — seeds not yet scaffolded (23)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
@@ -67,7 +68,6 @@
 - [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
-- [One public monorepo with per-folder licences, a private docs repo, and a lean install mirror](seeds/public-monorepo.md) — Raw · Feature · appetite M · single-product-wave-A
 - [Distribute what we use: review rail, Jev and notify setup, schedulers, build view](seeds/distribute-what-we-use.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Intent match: a score for how well the agent understood the ask, with routed follow-ups](seeds/intent-match.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Semantic lint: Jev judges what deterministic checks select](seeds/semantic-lint.md) — Raw · Feature · appetite S · single-product-wave-B
@@ -83,7 +83,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -93,6 +93,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
+| One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Scaffolded |
 
 ---
-_Epics: 37 · seeds in funnel: 24 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 38 · seeds in funnel: 23 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
