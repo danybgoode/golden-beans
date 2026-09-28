@@ -21,7 +21,7 @@ stories:
     risk: high
     status: planned
   - id: S1.3
-    title: "Absolute paths and the docs that describe the layout"
+    title: "The docs that describe the layout (absolute paths: disproved)"
     as_a: "an agent starting a session"
     i_want: "AGENTS.md and the repo layout to say skills/ exists and what it is"
     so_that: "nobody edits the mirror or the copies by mistake"
@@ -46,7 +46,7 @@ stories:
 
 ### Story 1.3 — Absolute paths and the docs that describe the layout
 **As an agent starting a session**, **I want** AGENTS.md and the repo layout to say skills/ exists and what it is, **so that** nobody edits the mirror or the copies by mistake.
-**Acceptance:** The three `/Users/cosmo/dobby/golden-beans` references are gone or made relative. AGENTS.md's layout and routing table name `skills/` and the mirror rule.
+**Acceptance:** AGENTS.md's layout and routing table name `skills/` and the mirror rule. *Scope disproved at build (2026-09-28):* the three `/Users/cosmo/dobby/golden-beans` hits are **quotations**: a retro note, a handoff doc, and a labelled fixture's text (byte-identical to the template's copy, so it must not be edited). No tool resolves them, so they stay as they are.
 **Risk:** high
 
 ## Sprint QA
