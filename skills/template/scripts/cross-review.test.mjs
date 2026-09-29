@@ -178,3 +178,12 @@ test('the reviewer diff treats jev-eval.fixtures.json as generated data (jev-sem
     'diff --git a/scripts/jev-eval.fixtures.json b/scripts/jev-eval.fixtures.json\nindex 1..2 100644\n--- a/scripts/jev-eval.fixtures.json\n+++ b/scripts/jev-eval.fixtures.json\n@@ -1 +1 @@\n-{}\n+{"review":[]}\n';
   assert.deepEqual(stripGeneratedFileDiffs(hunk).strippedFiles, ['scripts/jev-eval.fixtures.json']);
 });
+
+test('buildComment still accepts the older (label, findings, opts) shape (distribute-what-we-use D1)', () => {
+  // This repo's copy called buildComment without `fellBack` until the rail was merged into one; an
+  // options object in third position must never be read as a truthy "fell back".
+  const legacy = buildComment('Codex', 'findings', { lens: 'security' });
+  assert.match(legacy, /🔐 Cross-agent review — security lens \(Codex\)/);
+  assert.doesNotMatch(legacy, /Codex unavailable/);
+  assert.match(buildComment('Codex', 'findings', true, {}), /Antigravity — Codex unavailable/);
+});

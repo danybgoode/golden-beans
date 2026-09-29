@@ -157,17 +157,33 @@ test('--lens security swaps the prompt, and an unknown lens is refused rather th
 });
 
 test('the comment labels the lens, records the CLI version, and marks a re-review', () => {
-  const security = buildComment('Codex', 'findings', { lens: 'security', version: 'codex 0.154.0' });
+  const security = buildComment('Codex', 'findings', false, { lens: 'security', version: 'codex 0.154.0' });
   assert.match(security, /🔐 Cross-agent review — security lens \(Codex\)/);
   assert.match(security, /static analysis/i);
   assert.match(security, /_codex 0\.154\.0\._/);
-  const owed = buildComment('Codex', 'findings', {
+  const owed = buildComment('Codex', 'findings', false, {
     securityOwed: 'touches security paths: app/api/x.ts',
   });
   assert.match(owed, /security lens is OWED/);
-  const general = buildComment('Codex', 'findings', { reReview: true });
+  const general = buildComment('Codex', 'findings', false, { reReview: true });
   assert.doesNotMatch(general, /OWED/);
   assert.match(general, /🔎 Cross-agent review \(Codex\)/);
   assert.match(general, /Re-review/);
-  assert.doesNotMatch(buildComment('Codex', 'f', {}), /Re-review/);
+  assert.doesNotMatch(buildComment('Codex', 'f', false, {}), /Re-review/);
+});
+
+test('the reviewer diff treats jev-eval.fixtures.json as generated data (jev-semantic-guards)', async () => {
+  const { stripGeneratedFileDiffs } = await import('./lib/cross-agent-cli.mjs');
+  const hunk =
+    'diff --git a/scripts/jev-eval.fixtures.json b/scripts/jev-eval.fixtures.json\nindex 1..2 100644\n--- a/scripts/jev-eval.fixtures.json\n+++ b/scripts/jev-eval.fixtures.json\n@@ -1 +1 @@\n-{}\n+{"review":[]}\n';
+  assert.deepEqual(stripGeneratedFileDiffs(hunk).strippedFiles, ['scripts/jev-eval.fixtures.json']);
+});
+
+test('buildComment still accepts the older (label, findings, opts) shape (distribute-what-we-use D1)', () => {
+  // This repo's copy called buildComment without `fellBack` until the rail was merged into one; an
+  // options object in third position must never be read as a truthy "fell back".
+  const legacy = buildComment('Codex', 'findings', { lens: 'security' });
+  assert.match(legacy, /🔐 Cross-agent review — security lens \(Codex\)/);
+  assert.doesNotMatch(legacy, /Codex unavailable/);
+  assert.match(buildComment('Codex', 'findings', true, {}), /Antigravity — Codex unavailable/);
 });
