@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: distribute-what-we-use
 title: "Distribute what we use — one review rail, Jev and notify setup, schedulers, build view"
@@ -32,27 +32,137 @@ No engine data, route or table changes (rule #1 n/a). Everything here is kit, te
 change under `skills/` is a plugin release (check-release) and ships as a pinned kit version. Stage-2.5 bucket:
 **mostly light enhancement** — every rail already runs in this repo; only the routine bootstrap is new.
 
-## Decisions carried from grooming (the architecture lock verifies each against live code)
-- **D1 — The review rail is a superset, not a pick.** `scripts/cross-review.mjs` (698 lines) vs the template's (506),
-  `lib/cross-agent-cli.mjs` 1,324 vs 695; the prompt and `review-config.json` differ. Ours has context, pairing and
-  transient-agy; the template's has the wave-2 `readSection` loader. The lock byte-compares all three copies
-  (including medusa-bonsai's) and builds the superset export by export. **Both consumers' OLD tests run against it**
-  (`git show origin/main:<test>` into a temp file); every failure is read, not deleted as superseded.
-- **D2 — One doctor: `cross-agent-doctor.mjs`** (medusa-bonsai's, covers codex + agy) moves into the template.
-  `agy-doctor.mjs` becomes a delegating alias. No file may name a doctor that doesn't exist
-  (today: `skills/template/scripts/lib/cross-agent-cli.mjs:348`).
-- **D3 — Copy-back in the same wave.** This repo's `scripts/` gets the same bytes; medusa-bonsai gets a PR. If
-  medusa-bonsai is unreachable, S1 ships the two in-repo copies and names the medusa PR as owed.
-- **D4 — The kit closure is the manifest.** The rail and `build-state.mjs` enter through a skill's
-  `requires_scripts` (`skills/scripts/build-kit.mjs`, `check-skill-scripts.mjs`), not a hand list.
-- **D5 — Automatic behaviour never runs repo-supplied code.** When a project has no `scripts/build-state.mjs`, the
-  build-view hook runs the **kit's** copy by absolute path; it never looks up a same-named file a stranger's repo owns.
-- **D6 — Parity, not deletion.** The 81 scripts byte-identical between `scripts/` and `skills/template/scripts/`
-  stay (public-monorepo D5). A guard keeps them identical or listed with a reason.
-- **D7 — Jev asks before it sends.** Fix `effectiveMode()` (`skills/template/scripts/lib/jev.mjs:186`) so an
-  unanswered egress asks even when a rail defaults to `off`. Nothing leaves the machine before `egress: true`.
-- **D8 — No CLI change.** `gf doctor` reads the kit registry (golden-frijoles-plugin S5.3), so new rows are free; a
-  CLI release is a hand publish (D14).
+## Architecture lock (verified 2026-09-29 against `main` @ 93aec48, medusa-bonsai `main` @ 7a7c709)
+
+Every decision below was checked against live code and live config before any builder started. Where the live
+system disproved the groomed wording, the correction is stated under **Deviations** and the decision reads as
+corrected. Builders cite these by number; each sprint file's *Build contract* says which ones it builds.
+
+**The three-way compare (the evidence D1–D3 rest on).** `=` byte-identical, `x` differs, `.` absent.
+
+| File | ours | template | medusa | O=T | O=M | T=M |
+|---|---|---|---|---|---|---|
+| `cross-review.mjs` | 698 | 506 | 485 | x | x | x |
+| `lib/cross-agent-cli.mjs` | 1,324 | 695 | 740 | x | x | x |
+| `cross-review.prompt.md` / `.security.prompt.md` | 99 / 96 | 100 / 92 | 97 / 113 | x | x | x |
+| `review-config.json` | 22 | 25 | 38 | x | x | x |
+| `cross-panel.prompt.md` | 115 | 115 | 117 | = | x | x |
+| `cross-panel.mjs`, `review-route.mjs`, `lib/review-guard.mjs`, `lib/jev.mjs` | — | — | — | = | = | = |
+| `cross-agent-doctor.mjs` (+ `.agy`/`.codex` tests) | . | . | 417 | | | |
+| `agy-doctor.mjs` (+ test) | 309 | . | . | | | |
+
+`lib/cross-agent-cli.mjs` exports: ours 51, template 34, medusa 36, union 52. The only name ours lacks is
+`isCodexOutdated` (medusa). Every importer in all three trees imports only names in the union. The forks are in
+**bodies**, not names: 19 shared declarations differ between at least two copies.
+
+- **D1 — The review rail is a superset, built on OURS, with named imports from the other two.** Ours is the base
+  (51/52 exports, the context/pairing/transient-agy/truncation work). Into it come, by name:
+  - from the template: `cross-review.mjs`'s `loadReviewConfig` through `readSection('review', …)` (wave-2 config
+    loader), and codex's auth fallback (`runWithCodexFallback`) as the codex path;
+  - from medusa: `isCodexOutdated` + the `cliOutdated` fallback class, `CODEX_MODEL` overridable to `null` (use
+    codex's own default), and every fix message naming `cross-agent-doctor.mjs`.
+  **Where two copies disagree on a safety property, the stricter one wins, and the choice is recorded in a comment
+  at the decision.** Two are known:
+  - **Vibe runs with every host tool disabled** (`--disabled-tools '*'`, no `--auto-approve`), and a reply that is
+    a bare tool call is refused. This is the template/medusa stance. Medusa's probe on 2026-08-08 (vibe 2.23.3)
+    found auto-approval is checked *before* vibe's sensitive-file and outside-workdir prompts, and `read_file`
+    takes absolute paths. So our current `read_file`/`grep` allow-list lets a malicious PR diff read `.env` into
+    a comment posted on a **public** repo. The reviewer still gets the code: ours already embeds head-side file
+    context (`buildFileContext`). `isTruncatedReview` stays too. `VIBE_MAX_TURNS` goes to 24 (the template's
+    live-probed value; with no tools, turns are cheap).
+  - **A codex→agy fallback re-checks the builder pairing.** The fallback changes the reviewing family. If the
+    builder is `agy`, falling back to agy would be a same-family review, so that case fails loudly instead
+    (`checkReviewerPairing`, which ours already has).
+  Pins take the newest live-verified value: `AGY_PINNED` 1.2.12 / `gemini-3.8-flash-high` (ours, 2026-09-28).
+  Formatting follows this repo's Prettier. **Both consumers' OLD tests run against the superset** (`git show
+  origin/main:<test>` for ours; medusa's from its `main`), and every failure is read and resolved, never deleted
+  as superseded (LEARNINGS, shared rails across repos).
+- **D2 — One doctor: `cross-agent-doctor.mjs`, itself a superset.** Medusa's file is the base (codex + agy, the
+  `unavailable` probe class, the stricter `parseAgyModelSlugs`). Ours adds `AGY_MODELS_IN_USE` coverage (every
+  configured agy model is checked, including `PROSE_MODEL`) and the drift note that names the model. It ships in
+  `skills/template/scripts/` with both test files. `agy-doctor.mjs` stays as a thin alias that runs
+  `cross-agent-doctor.mjs agy` with the same arguments. The marker line becomes `cross-agent-doctor: last verified …`
+  and `bumpPinnedSource` accepts the old marker once. After S1, `grep -rn "agy-doctor\|cross-agent-doctor"` over
+  `skills/template scripts` names only files that exist.
+- **D3 — Copy-back in the same wave, code only.** This repo's `scripts/` gets byte-identical copies of the rail's
+  **code**. medusa-bonsai (`danybgoode/miyagi-product-management`, reachable) gets a PR with the same code bytes.
+  The **project-owned** files keep each repo's own content: `cross-review.prompt.md`,
+  `cross-review.security.prompt.md`, `cross-panel.prompt.md` (rules slot) and `review-config.json` (security
+  paths). Only their shared body is aligned, by hand. See deviation 1.
+- **D4 — The kit closure is the manifest.** The rail enters through the `groom` skill's `requires_scripts`,
+  because groom emits the kickoff that names it. `check-skill-scripts.mjs` holds the declaration to the real
+  import closure. The files are `cross-review.mjs`, `review-route.mjs`, `lib/review-guard.mjs`,
+  `cross-agent-doctor.mjs`, both review prompts and a default `review-config.json`, and the same for
+  `session-resume.mjs` and `session-note.mjs` (deviation 4).
+- **D5 — Automatic behaviour never runs repo-supplied code, whether or not the repo has the file.** The build-view
+  hook always runs a copy of `build-state.mjs` **bundled inside the plugin** (`hooks/vendor/`: `build-state.mjs`,
+  `lib/roadmap-contract.mjs`, `lib/session-journal.mjs`), located from the hook module's own path. It never
+  executes `<repo>/scripts/build-state.mjs`. The bundle is generated from `template/scripts/`, and a check fails
+  when it is not byte-equal. See deviation 2.
+- **D6 — Parity, not deletion.** Measured live: 94 files are byte-identical between `scripts/` and
+  `skills/template/scripts/`, 10 differ, 39 are template-only. After S1, the ones that differ are the four
+  project-owned review files, `prose-lessons.md`, `routines/README.md` and `roadmap-extract.mjs`. The guard (S2.3)
+  passes when a file is identical or listed with a one-line reason.
+- **D7 — Jev asks before it sends: two bugs, one fix at the loader.** Bug 1: with no config at all, `loadJevConfig`
+  returns `parseJevConfig({})`, whose `egress` defaults to **`true`**, so "unanswered" is never seen. Bug 2:
+  `effectiveMode` returns `configured off` (`lib/jev.mjs:186`) before the `egress === null` branch. The fix: an
+  absent config, or an absent/`null` `egress`, loads as `egress: null` (unanswered). `jevContext` fires
+  `needSetting('jev.egress')` whenever egress is unanswered, whatever the rail mode. Nothing is sent unless
+  `egress === true`. The ask stays **non-blocking** (the regex still decides this run), so a stranger's review is
+  never stalled by it. Live data: both consumers' `jev.config.json` set `egress: true` explicitly, and the
+  registry's default is already `null`, so neither consumer changes behaviour.
+- **D8 — No CLI change.** `gf doctor` derives module state from the kit registry (`packages/cli/src/modules.ts:70`),
+  so new or reworded rows are free. Operate reads "configured" only when **both** `reporting.destination` and
+  `deploy.vercelProject` are answered (deviation 5).
+- **D9 — Stricter wins, and one kit release per sprint.** Every sprint that touches `skills/` bumps `plugin.json`
+  + `kit/package.json` + `CHANGELOG.md` once (`check-release.mjs` blocks otherwise). The next sprint's consumer
+  pins wait for the npm tarball URL to return 200.
+- **D10 — Routine placeholders have a declared source, and runtime tokens are left alone.** The routines use two
+  kinds of angle-bracket token. **Fill-ins** (`<root-repo>`, `<app-repo>`, `<api-repo>`, `<your-org>`,
+  `TEMPLATE FILL-IN`) must be filled before scheduling. **Runtime tokens** (`<date>`, `<id>`, `<trigger-id>`,
+  `<name>`, `<your-file>`, `<repo>`) are filled by the routine when it runs. The bootstrap fills only the declared
+  fill-ins from one `routines` section of `golden-frijoles.config.json` (a registry row). It refuses, naming each
+  one, while any fill-in is left, and it never touches a runtime token.
+
+### Deviations — where the live system disproved the groomed scope (corrected out loud)
+1. **S1.3's "`cmp` of every review-rail file prints nothing" is wrong for four files.** The review prompts and
+   `review-config.json` carry each project's own rules and security paths: ours names AGENTS.md rules 1–5,
+   medusa's names Medusa/Clerk, the template's is a fill-in slot. Byte-equality applies to the **code** (`cross-review.mjs`,
+   `lib/cross-agent-cli.mjs`, `cross-agent-doctor.mjs`, `agy-doctor.mjs`, `cross-panel.mjs`, `review-route.mjs`,
+   `lib/review-guard.mjs` and their tests). The four project-owned files are S2.3's listed exceptions.
+2. **D5 as groomed ("the kit's copy when the project has none") would have kept the hole.** Today
+   `hooks/index.ts:34` runs `${root}/scripts/build-state.mjs` from whatever repo is open, on every turn. That is
+   the exact LEARNINGS violation. There is also no "kit copy by absolute path" to reach: the installed plugin
+   (`~/.claude/plugins/cache/golden-frijoles/golden-frijoles/<v>/`) holds only `agents/ hooks/ skills/`, not
+   `template/`, and the npm kit would need a network call inside a 5-second hook. Corrected: a byte-checked
+   bundle inside the plugin, always used.
+3. **D7 was one bug in the seed; it is two** (absent config ⇒ `egress: true`). Fixing only the ordering in
+   `effectiveMode` would still leave the ask dead for the no-config stranger.
+4. **The kickoff names a second script a stranger lacks, and so does this repo.** `templates/epic-kickoff.md:7`
+   says "Start with `node scripts/session-resume.mjs`". It is template-only: not in the kit, and not in this
+   repo's `scripts/`, which is why this run's first command failed. The same fix as `review-route.mjs` applies
+   (S2.1), and this repo gets the copy.
+5. **Nothing reads `reporting.destination`.** The registry asks "Telegram, Slack, or terminal?", and every report
+   sender (`standup`, `weekly-recap`, `merge-report`, `pmo-delivery`) posts to Telegram only. S3.3 therefore
+   (a) promotes `slack-notify.mjs` + `lib/slack-text.mjs` as a standalone, tested sender the route offers for
+   ad-hoc and merge messages, and (b) rewords the registry question so it offers only what a report can
+   actually do. Routing every report through `destination` is **out of scope** and is named as follow-up. S3's
+   smoke step 4 reads "Operate no longer lists `reporting.destination` as missing", because "configured" also
+   needs `deploy.vercelProject`.
+6. **The router's comment `review-route.mjs:187`** ("cross-review self-heals a dead codex token to agy") is true of
+   the template copy only. After D1 it is true everywhere. No edit is needed, but it is noted so no one "fixes"
+   the comment.
+
+### Routing (who builds, who reviews)
+- **Claude (this orchestrator, strongest tier):** S1 in full (shared infra), 2.2 (automatic code execution) and
+  3.1 (egress/privacy). Nothing in these three is delegated.
+- **Codex (`scripts/codex-task.mjs --tier build`, `gpt-5.6-terra`):** 2.1, 2.3, 3.2, 3.3 and 4.x, each against its
+  sprint's build contract. The architect diffs the tree after every run (WAYS-OF-WORKING, *Verifying delegated
+  work*).
+- **Review:** `node scripts/review-route.mjs --builder <family that wrote most of the diff> <PR#>`. When a PR holds
+  code from two families, the second is `--exclude`d too. The fresh `pr-reviewer` subagent runs on every PR
+  (high risk). The security lens triggers on every sprint (`review-config.json` lists the rail's own paths and
+  `.github/workflows/**`).
 
 ## What already exists (reuse, don't rebuild)
 - `skills/scripts/build-kit.mjs` + `check-skill-scripts.mjs` (the closure), `render-skill-adverts.mjs`,
@@ -84,7 +194,7 @@ change under `skills/` is a plugin release (check-release) and ships as a pinned
 
 **Cut line** (if the appetite runs short): 4.2, then 2.3, then the Slack half of 3.3.
 
-## Routing
+## Routing (as groomed — superseded by the lock's Routing above)
 S1 and 3.1 stay on the strongest tier (the review rail is shared infra; egress is privacy). 2.x, 3.2, 3.3 and 4.x go
 to builders against the locked contract. Review per the router; CI and review paths trigger the security lens.
 S1's own PR is reviewed through the new rail.

@@ -10,16 +10,16 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 0/11 stories · unranked
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
-- [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 0/11 stories · unranked
 
 ## ✅ Shipped (34)
 

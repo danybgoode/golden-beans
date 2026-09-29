@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 3
 title: "Jev and notify, set up rather than documented"
 risk: high
-phase: Shaping
+phase: Building
 stories_total: 3
 stories:
   - id: S3.1
@@ -49,6 +49,25 @@ stories:
 **Acceptance:** `reporting.config.example.json` is in the kit. The route says `getUpdates` is empty while a webhook is set, and names group privacy mode. `slack-notify.mjs` + `lib/slack-text.mjs` move into the template with their tests (or setup stops offering Slack). A test send reaches a fresh bot. *(Slack half: cut line, third to go.)*
 **Risk:** low
 
+## Build contract (locked by the architect before the builder started)
+Builds **D7, D8** and deviation 5 (README → *Architecture lock*).
+- **3.1 (Claude):** the loader-level fix (D7). Specs cover four cases: no config → the ask fires, `mode:'off'`,
+  nothing sent; `egress:null` + rail `off` → the ask fires; `egress:false` → no ask, nothing sent; `egress:true`
+  + key + `jev` → sends. The fetch is spied, so "nothing sent" is asserted, not assumed. Each spec is observed
+  failing on today's code first. `jev.mjs` stays byte-equal in both trees.
+- **3.2 (Codex):** a `## Jev setup` route in the umbrella skill (`golden-frijoles/SKILL.md`, within its line
+  budget; a linked reference file if it would overflow). The route runs in order: one sentence on what leaves
+  the machine, the TypeSafe signup link, the key into `.env.local`, `jev-eval --live --limit 10` as proof, then
+  `config set jev.egress true` and the rail modes. `jev-eval --live` without a key exits non-zero with one clear
+  line. A `--limit` flag is added if it is missing.
+- **3.3 (Codex):** a `## Notify setup` route: BotFather, a first message to the bot, the chat id via
+  `getUpdates` (empty while a webhook is set, `deleteWebhook` names the fix), group privacy mode, then a test
+  send through the kit (`telegram-notify` or the report sender's `--test`). `reporting.config.example.json` goes
+  into the kit closure. `slack-notify.mjs` + `lib/slack-text.mjs` + tests move to the template byte-equal. The
+  registry question for `reporting.destination` is reworded so it offers only what a sender exists for
+  (deviation 5).
+- **Release:** one plugin/kit bump (D9).
+
 ## Sprint QA
 - 3.1: regression spec in `skills/template/scripts/lib/jev.test.mjs` (or alongside), observed failing on `main` first.
 - 3.2/3.3: `node --test` for the routes' helpers; `slack-text` tests move with the sender.
@@ -64,6 +83,6 @@ stories:
 3. Create a bot with https://t.me/BotFather, message it once, and follow the notify route.
    → the test message arrives in your Telegram.
 4. Run `gf doctor`.
-   → the Operate line says configured.
+   → the Operate line no longer lists `reporting.destination` as missing (README deviation 5).
 
 If any step fails, note the step number + what you saw — that's the bug report.

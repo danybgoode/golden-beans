@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 4
 title: "Schedulers"
 risk: low
-phase: Shaping
+phase: Building
 stories_total: 2
 stories:
   - id: S4.1
@@ -36,6 +36,18 @@ stories:
 **As** a stranger without routines, **I want** cron workflow templates for the parts that need no model, **so that** the model-free reports still run on a schedule.
 **Acceptance:** Templates under `skills/template/.github/workflows/` carry a loud note (or keep-alive) because Actions disables `schedule` after 60 quiet days. *(Cut line: first to go.)*
 **Risk:** low
+
+## Build contract (locked by the architect before the builder started)
+Builds **D10** (README → *Architecture lock*). Builder: Codex.
+- **4.1:** `routines/` (the seven prompts + README) enters the kit through a skill's `requires_scripts`. A
+  `routine-bootstrap.mjs <name>` fills the declared fill-ins from `golden-frijoles.config.json` → `routines`
+  (a new registry row, `askWhen: 'first-routine'`) and prints the paste-ready prompt. It refuses (exit 1, naming
+  every one) while any fill-in or `TEMPLATE FILL-IN` remains, and never touches a runtime token. The runbook
+  states: one-hour minimum interval, a daily run cap, and a custom network environment for any routine that posts
+  to Telegram. `routines.test.mjs` covers fill, refusal and runtime-token passthrough.
+- **4.2 (cut line, first to go):** model-free cron templates (`standup`, `build-order-sync --check`) under
+  `skills/template/.github/workflows/` as `.yml.example`, each with the 60-day-disable note in its header.
+- **Release:** one plugin/kit bump (D9).
 
 ## Sprint QA
 - `routines.test.mjs` extended (fill from config, refuse on a leftover placeholder).

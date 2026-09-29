@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 2
 title: "What a stranger's kit carries"
 risk: high
-phase: Shaping
+phase: Building
 stories_total: 3
 stories:
   - id: S2.1
@@ -41,13 +41,34 @@ stories:
 
 ### Story 2.2 — The build view renders outside our projects
 **As** a stranger on a `feat/*` branch, **I want** the status line to show "Currently building", **so that** the build view isn't silent in every repo but ours.
-**Acceptance:** `build-state.mjs` is in the kit closure. `hooks/build-view.mjs` runs the kit's copy by absolute path when the project has no `scripts/build-state.mjs`, and never resolves a same-named file from the stranger's repo (D5). `build-view.test.mjs` covers both branches, and the new case was observed failing first.
+**Acceptance:** `build-state.mjs` is in the kit closure. The hook always runs the copy bundled in the plugin and never a repo's `scripts/build-state.mjs`, present or not (D5 as corrected, README deviation 2). `build-view.test.mjs` covers both branches, and the new case was observed failing first.
 **Risk:** high
 
 ### Story 2.3 — Byte-parity guard over the shared scripts
 **As** a maintainer, **I want** a check that fails when a file in `scripts/` ∩ `skills/template/scripts/` differs without a listed reason, **so that** the 81 copies can't drift into the next three-way fork.
 **Acceptance:** A guard (root CI) lists the intersection, passes when identical or listed in an allowlist with a one-line reason, and fails on an unlisted diff. A planted one-byte change turns it red. *(Cut line: second to go.)*
 **Risk:** low
+
+## Build contract (locked by the architect before the builder started)
+Builds **D4, D5, D6** (README → *Architecture lock*).
+- **2.1 (Codex):** extend `groom`'s `requires_scripts` with the review rail (D4 list) and `session-resume.mjs`
+  + `session-note.mjs` (deviation 4), letting `check-skill-scripts` force the true closure. The default
+  `review-config.json` in the kit is the template's (fill-in globs). `review-route.mjs` run with no `gh`/CLIs
+  prints its DARK / could-not-look state and exits 0, never a stack trace. Proven in an isolated `HOME` with the
+  packed kit tarball (`kit-tarball.test.mjs` extended). `golden-frijoles/SKILL.md:96` stops calling the
+  cross-review rails "project-local". This repo gets byte-equal `scripts/session-resume.mjs` + `session-note.mjs`
+  (and their libs).
+- **2.2 (Claude):** `hooks/vendor/{build-state.mjs,lib/roadmap-contract.mjs,lib/session-journal.mjs}`, generated
+  from `template/scripts/` by `render-skill-adverts.mjs` or a sibling `--check` script, and failing CI when stale.
+  `index.ts` always runs the vendored copy, located from the module's own URL, and never `${root}/scripts/…`
+  (D5). `build-view.test.mjs` pins the path choice (observed failing first against today's code). The
+  runtime's support for `import.meta.url` inside a function-hooks module is **probed live** (`claude -p
+  --plugin-dir … --debug`), not assumed (LEARNINGS, golden-frijoles-plugin).
+- **2.3 (Codex):** `scripts/check-script-parity.mjs` over `scripts/` ∩ `skills/template/scripts/`. It passes on
+  identical files or files listed in `scripts/script-parity.allowlist.json` with a reason, and it fails on an
+  unlisted diff or a **stale** allowlist entry (listed but now identical, or missing). It is wired into root CI.
+  A planted one-byte change turns it red.
+- **Release:** one plugin/kit bump (D9).
 
 ## Sprint QA
 - Kit tarball test (`kit-tarball.test.mjs`) extended for the new closure; `check-skill-scripts` green.
