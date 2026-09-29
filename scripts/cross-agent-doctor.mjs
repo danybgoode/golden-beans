@@ -19,7 +19,8 @@
 // this is a merge, not a rewrite. vibe and claude have no pinned print contract to drift, so they are
 // presence-checked by cross-review.mjs itself rather than here.
 //
-// Zero npm deps — Node 18+. isMain-guarded so importing the pure cores does not run the CLI.
+// Zero npm deps — Node 18+ to diagnose; `agy --fix` needs Node 21+ and refuses below it (see agyMain).
+// isMain-guarded so importing the pure cores does not run the CLI.
 
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +34,7 @@ import {
   AGY_FALLBACK_MODEL,
   AGY_MODELS_IN_USE,
   codexExecArgs,
+  isCodexCapped,
 } from './lib/cross-agent-cli.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -81,6 +83,11 @@ export function decideCodexDoctorAction({ present, probe }) {
       return { action: 'auth-lapsed', note: 'codex is installed but its token has lapsed/was revoked.' };
     case 'outdated':
       return { action: 'cli-outdated', note: 'the installed codex is too old for the model it runs.' };
+    case 'capped':
+      return {
+        action: 'capped',
+        note: 'codex is installed and signed in, but the account hit its usage cap.',
+      };
     default:
       return { action: 'broken', note: 'a live `codex exec` probe failed for a non-auth, non-stale reason.' };
   }
@@ -99,6 +106,11 @@ export function remediation(action, ctx = {}) {
       return 'Install the Codex CLI (e.g. `npm install -g @openai/codex`), then `codex login`.';
     case 'auth-lapsed':
       return 'Restore the token: `codex login`. (The cross-review runtime already auto-falls-back to Antigravity meanwhile.)';
+    case 'capped':
+      return (
+        'Wait for the cap to reset, or route past codex: `node scripts/review-route.mjs --builder <who> --exclude codex <PR#>`. ' +
+        '(cross-review already heals a capped codex onto Antigravity.)'
+      );
     case 'cli-outdated':
       return [
         'The installed codex is behind its model requirement. Either:',
@@ -128,6 +140,7 @@ function observeCodex() {
   let probe;
   if (r.status === 0 && (r.stdout || '').trim()) probe = 'ok';
   else if (isCodexOutdated(out)) probe = 'outdated';
+  else if (isCodexCapped(out)) probe = 'capped';
   else if (isCodexAuthError(out)) probe = 'auth';
   else probe = 'error';
   return { present: true, version, probe, probeStderr: (r.stderr || '').trim() };
@@ -524,6 +537,15 @@ async function agyMain() {
       process.exitCode = 1;
       return;
     case 'bump': {
+      // --fix runs `node --test '<glob>'`, whose glob expansion Node added in 21; below that the pattern matches
+      // nothing and a pin would be bumped with no tests run. Refuse rather than bless blind (cross-review, #188).
+      if (fix && Number(process.versions.node.split('.')[0]) < 21) {
+        line(
+          `✗ --fix needs Node 21+ (this is ${process.versions.node}): it runs the test suite after bumping. Not bumped.`
+        );
+        process.exitCode = 1;
+        return;
+      }
       if (!fix) {
         line(
           `→ version drift with a GREEN contract probe: safe to bump. Run \`node scripts/cross-agent-doctor.mjs agy --fix\` to update AGY_PINNED ${obs.pinned} → ${obs.installed}.`

@@ -35,3 +35,9 @@ test('remediation: cli-outdated offers BOTH the upgrade and the CODEX_MODEL stop
   const unset = remediation('cli-outdated', {});
   assert.match(unset, /CODEX_MODEL \(unset/); // names the escape hatch even when off
 });
+
+test('a usage cap is its own diagnosis, with the route-past remediation (cross-review on #188)', () => {
+  const d = decideCodexDoctorAction({ present: true, probe: 'capped' });
+  assert.equal(d.action, 'capped');
+  assert.match(remediation('capped'), /--exclude codex/);
+});
