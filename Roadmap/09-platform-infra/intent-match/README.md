@@ -41,7 +41,8 @@ No engine data, route or table (rule #1 n/a). Kit scripts, groom skill text and 
 - **D5 — The ask is stored verbatim** in the seed, with numbered claims (split by the groom agent, editable) and the
   teach-back answer.
 - **D6 — Visuals are drawn from the shape of the ask** (groom Stage 4.6): a system context for every M/L bet, plus the
-  triggered diagram types, in Mermaid.
+  triggered diagram types, in Mermaid; a screen is a `surface` block (the `sketch-specs` format), its states named from
+  the ten-state taxonomy. *(Amended 2026-09-29 at the `sketch-specs` groom; no story added.)*
 - **D7 — The close label is a retrospective line** (`_Intent: yes | mostly | no_`), required by `epic-dod` only for
   epics whose seed carries a score.
 - **D8 — Backfilled pitches are flagged `ask: proxy`**; no agreement is backfilled.

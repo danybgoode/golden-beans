@@ -37,6 +37,12 @@ both my projects to seed that record, **so that** we can tell soon whether the s
    and any failure (not installed, capped, timeout, empty reply) is skipped with one line. It never stops the lock.
 3. Learn from past builds now, **in both golden-frijoles and medusa-bonsai.**
 
+**Amended 2026-09-29 (grooming `sketch-specs` and `compiled-prompts`):** the visuals rule writes a screen as a
+`surface` block rather than an HTML or ASCII sketch, and names a screen's states from the ten-state taxonomy, so every
+wireframe drawn from here on is already a spec `sketch-specs` can render. The four question sets stay in one exported
+object (id → question, when true, when false) so `compiled-prompts` can move them to a data file unchanged. No story
+added, appetite unchanged.
+
 ## System, actors and data flow (this wave)
 
 ```mermaid
@@ -119,14 +125,16 @@ systems and the data flow between them, like the one above. On top of that:
 
 | The ask has… | Draw | Format |
 |---|---|---|
-| a screen or a page someone uses | wireframe (low fidelity, the words that matter) | HTML sketch or ASCII in the seed |
+| a screen or a page someone uses | wireframe (low fidelity, the words that matter) | a `surface` block in the seed: state, route, ordered blocks by kind with the words that matter (the [`sketch-specs`](sketch-specs.md) format, which renders it and makes it the contract) |
 | a multi-step journey | flow | Mermaid `flowchart` |
 | a new table, record or payload | data sample (3 real-looking rows) | table in the seed |
-| a lifecycle or statuses | state machine | Mermaid `stateDiagram` |
+| a lifecycle or statuses | state machine (a screen's states named from the ten-state taxonomy in `references/ux-guidelines.md`) | Mermaid `stateDiagram` |
 | calls across services, async or retries | sequence | Mermaid `sequenceDiagram` |
 | a new repo, package or deploy boundary | container diagram | Mermaid `flowchart` with subgraphs |
 
-Mermaid because it renders on GitHub, diffs as text, and `sketch-specs` can generate it later. Fixed-scope work
+Mermaid because it renders on GitHub and diffs as text: it is already the spec for flows, states, sequences and
+containers, so `sketch-specs` adds no format for those. Screens are the exception: a `surface` block, which
+`sketch-specs` renders as a grey wireframe and turns into the route's state contract. Fixed-scope work
 (appetite S) draws only when a trigger in the table fires.
 
 ## Bill of materials
@@ -163,7 +171,8 @@ Mermaid because it renders on GitHub, diffs as text, and `sketch-specs` can gene
 - **The score never gates.** It can add a step; it never removes your approval or blocks a scaffold (E6).
 - **No Claude readers, and never more than one reader.** No reader ever blocks or retries into a stall.
 - **No threshold fitting in this epic.** The data is collected; `compiled-prompts`' `optimize/` fits it later.
-- **No spec-to-render tooling.** The visuals rule says what to draw; making specs render is `sketch-specs` (wave 2).
+- **No spec-to-render tooling.** The visuals rule says what to draw and writes screens as `surface` blocks; rendering
+  them and making them the contract is `sketch-specs` (wave 2).
 - No dashboard, no engine table, no CLI change.
 
 ## Slices (one wave, stacked branches `feat/intent-match` → `-s2` → `-s3`)

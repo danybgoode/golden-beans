@@ -46,7 +46,7 @@ stories:
 
 ### Story 1.3 — Measured wording
 **As** a maintainer, **I want** the question wording measured on labelled examples, **so that** the score isn't a guess with a decimal point.
-**Acceptance:** A labelled fixture set (pitches from both repos, with known gaps) in the same shape as `jev-eval.fixtures.json`; recorded once with `jev-eval --live`; the chosen wording's decided/right counts are written into the script's comments, as `REVIEW_QUESTIONS` does.
+**Acceptance:** A labelled fixture set (pitches from both repos, with known gaps) in the same shape as `jev-eval.fixtures.json`; recorded once with `jev-eval --live`; the chosen wording's decided/right counts are written into the script's comments, as `REVIEW_QUESTIONS` does. The question sets live in one exported object (id → question, when true, when false) so `compiled-prompts` S1 can move them to `lib/jev-questions/` unchanged.
 **Risk:** low
 
 ## Sprint QA

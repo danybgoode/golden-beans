@@ -36,12 +36,12 @@ stories:
 
 ### Story 2.1 — The seed template keeps the ask
 **As** the product owner, **I want** my ask kept word for word in every pitch, with numbered claims I can edit and my teach-back answer, **so that** the score compares against what I said, not a rewrite.
-**Acceptance:** `templates/scope-seed.md` gains "The ask, as given", "Claims", "Teach-back" and `## Visuals`. `scaffold-epic` tests pass; the doc-format contract accepts the new sections and the `intent_match:` key.
+**Acceptance:** `templates/scope-seed.md` gains "The ask, as given", "Claims", "Teach-back" and `## Visuals` (with a `surface` block example for a screen). `scaffold-epic` tests pass; the doc-format contract accepts the new sections and the `intent_match:` key.
 **Risk:** low
 
 ### Story 2.2 — Groom Stage 3.5 and Stage 4.6
 **As** the product owner, **I want** groom to score each pitch and draw what its shape calls for, **so that** I see the gaps and the system before I approve.
-**Acceptance:** Stage 3.5 runs `intent-match.mjs` and writes `intent_match: <n>` + a `## Intent match` section. Stage 4.6 draws a system context (actors, systems, data flow) for every M/L bet, plus the triggered types (wireframe, flow, data sample, state machine, sequence, container diagram) in Mermaid. Advisory: nothing blocks the scope-doc gate.
+**Acceptance:** Stage 3.5 runs `intent-match.mjs` and writes `intent_match: <n>` + a `## Intent match` section. Stage 4.6 draws a system context (actors, systems, data flow) for every M/L bet, plus the triggered types in Mermaid (flow, state machine, sequence, container diagram), a data sample as a table, and a screen as a `surface` block (state, route, ordered blocks by kind with the words that matter; `sketch-specs` format) with its states named from the ten-state taxonomy. Advisory: nothing blocks the scope-doc gate.
 **Risk:** low
 
 ### Story 2.3 — An optional reader at the lock
