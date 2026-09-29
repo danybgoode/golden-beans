@@ -81,8 +81,10 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   `unavailable` probe class, the stricter `parseAgyModelSlugs`). Ours adds `AGY_MODELS_IN_USE` coverage (every
   configured agy model is checked, including `PROSE_MODEL`) and the drift note that names the model. It ships in
   `skills/template/scripts/` with both test files. `agy-doctor.mjs` stays as a thin alias that runs
-  `cross-agent-doctor.mjs agy` with the same arguments. The marker line becomes `cross-agent-doctor: last verified …`
-  and `bumpPinnedSource` accepts the old marker once. After S1, `grep -rn "agy-doctor\|cross-agent-doctor"` over
+  `cross-agent-doctor.mjs agy` with the same arguments. The machine-managed marker keeps its anchor text
+  (`// agy-doctor: last verified …`): both consumers' tests and medusa's `bumpPinnedSource` pin it, and renaming
+  an anchor buys nothing. The instruction line under it names the new command. *(Amended during S1: the lock
+  first said the marker would be renamed.)* After S1, `grep -rn "agy-doctor\|cross-agent-doctor"` over
   `skills/template scripts` names only files that exist.
 - **D3 — Copy-back in the same wave, code only.** This repo's `scripts/` gets byte-identical copies of the rail's
   **code**. medusa-bonsai (`danybgoode/miyagi-product-management`, reachable) gets a PR with the same code bytes.

@@ -67,6 +67,36 @@ Builds **D1, D2, D3** (README → *Architecture lock*). Builder: Claude (orchest
 - **Release:** plugin + kit version bump + CHANGELOG entry in this PR (D9).
 - **medusa-bonsai:** PR with the same code bytes, opened after this PR merges and its kit version returns 200.
 
+## Build notes — what the old tests said, and what was done (S1.1, the D1 evidence)
+
+The three-way byte-compare is in the README (*Architecture lock*). The superset was then run against **every
+consumer's old tests**: ours from `origin/main`, the template's, and medusa-bonsai's from its `main` @ 7a7c709.
+Every failure was read. None was deleted as superseded.
+
+| Old test | Result against the superset | Resolution |
+|---|---|---|
+| ours `agy-doctor.test.mjs` (17) | 17/17 through the alias | none needed |
+| medusa `cross-agent-doctor.{agy,codex}.test.mjs` (27) | 27/27 | adopted into both trees |
+| medusa `lib/cross-agent-cli.test.mjs` (56) | 54/56 at first | `AGENTS.devin` missing → **devin kept as an explicit-only reviewer** (no consumer loses a behaviour); `AGY_PINNED === '1.2.8'` → the superset takes the newer verified 1.2.12, and the adopted copy asserts *constant = marker* instead, because `--fix` runs this suite right after it bumps |
+| medusa `cross-review.test.mjs` (8), template `cross-review.test.mjs` (9) | one failure each at first | `buildComment(label, findings, fellBack, opts)` adopted as the signature (two of three copies); the older `(label, findings, opts)` shape still works and is pinned by a new test |
+| medusa `cross-review.lens.test.mjs` | import error, then 3 failures | `resolveReviewModel` ported (the comment records the model). Three assertions changed **premise**: medusa read `~/.codex/config.toml` when `CODEX_MODEL` was unset; the superset pins the model execCodex actually passes, and `CODEX_MODEL=default` returns to the config, where medusa's null-on-unreadable rule still holds (pinned) |
+| ours `lib/vibe-invocation.test.mjs` | 1 failure | **deliberate stance change** (D1, stricter wins): the read-only allow-list is removed; the test now pins `--disabled-tools '*'`, no `--auto-approve`, no tool named, and a disabled-tool request refused |
+| template + medusa `lib/vibe-invocation.test.mjs` | file exits | their stub returns the bare word `findings`, which our stricter truncation guard (kept) rejects as not-a-review before the argv assertions run; the merged test uses a review-shaped stub and carries both copies' assertions |
+
+**Found while building, fixed in S1:**
+- The Vibe reviewer's allow-list could read `.env.local` into a public PR comment (the reason for D1's stricter-wins rule).
+- The codex→agy heal could become a same-family review; it now re-checks the builder (`lib/codex-fallback-pairing.test.mjs`).
+- **agy is signed out right now** (1.2.13 auto-updated mid-session). Both the old and the new doctor called that "contract
+  broken, every model NOT LISTED" and spent a minute per probe waiting for a login. The doctor now says *could not
+  look: signed out* in under a second (`isAgySignedOut`, observed failing first by mutation). **Owed to the product
+  owner:** run `agy` once to sign in, then `node scripts/cross-agent-doctor.mjs agy --fix` (1.2.12 → 1.2.13).
+- The shared lib named the product owner and the origin project in comments. The template's leak guard caught it
+  (the copy-in is a gate); scrubbed in the source so both trees stay byte-equal.
+- The marker anchor stays `// agy-doctor: last verified …` (README D2 amended).
+
+Mutation checks: the pairing refusal, the Vibe tool filter and the signed-out branch were each removed and the
+suite went red, then restored byte-for-byte.
+
 ## Sprint QA
 - `node --test` on both trees (root `scripts/` and `skills/`), including both consumers' old tests against the superset.
 - Live check: S1's own PR is reviewed through the new rail (`node scripts/review-route.mjs --builder <who> <PR#>` then the routed passes). A silent reviewer is a failed run.
