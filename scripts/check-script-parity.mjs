@@ -17,7 +17,7 @@
 //
 // Zero deps — Node 18+.
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -60,7 +60,18 @@ export function checkParity({ projectDir, templateDir, allowed = {} }) {
   let allowedCount = 0;
 
   for (const rel of shared) {
-    const same = readFileSync(join(projectDir, rel)).equals(readFileSync(join(templateDir, rel)));
+    let same;
+    try {
+      same = readFileSync(join(projectDir, rel)).equals(readFileSync(join(templateDir, rel)));
+    } catch (e) {
+      // Unreadable is could-not-look (exit 2), never drift (exit 1) and never a stack trace.
+      return {
+        state: 'could-not-look',
+        identical,
+        allowed: allowedCount,
+        problems: [`${rel}: unreadable (${e.code || e.message})`],
+      };
+    }
     const listed = Object.hasOwn(allowed, rel);
     if (listed && (typeof allowed[rel] !== 'string' || !allowed[rel].trim())) {
       problems.push(
@@ -96,7 +107,17 @@ export function readAllowlist(path = ALLOWLIST_PATH) {
   return parsed && typeof parsed.allowed === 'object' && parsed.allowed !== null ? parsed.allowed : {};
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+// realpath on both sides: invoked through a symlinked path (macOS /tmp → /private/tmp) a plain compare is
+// false, and the script would exit 0 having checked nothing (#189 review).
+const isMain = (() => {
+  try {
+    return (
+      !!process.argv[1] && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])
+    );
+  } catch {
+    return false;
+  }
+})();
 if (isMain) {
   let allowed;
   try {

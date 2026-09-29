@@ -18,7 +18,7 @@
 //
 // Zero deps — Node 18+.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, realpathSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { importClosure } from './check-skill-scripts.mjs';
@@ -63,7 +63,15 @@ export function writeVendor({ manifest = vendorManifest(), sourceDir = SOURCE_DI
   return manifest;
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+// realpath on both sides: invoked through a symlinked path (macOS /tmp → /private/tmp) a plain compare is
+// false, and the script would exit 0 having checked nothing (#189 review).
+const isMain = (() => {
+  try {
+    return !!process.argv[1] && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+})();
 if (isMain) {
   if (process.argv.includes('--check')) {
     const { stale, extra } = vendorDrift();

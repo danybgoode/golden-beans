@@ -153,6 +153,7 @@ function main() {
   }
   if (!builder) die('--builder is required (who wrote the diff): ' + BUILDERS.join(' | '));
   if (!pr) die('a PR number is required');
+  if (!/^\d+$/.test(String(pr))) die(`PR number must be numeric, got '${pr}'.`);
   if (!BUILDERS.includes(builder)) die(`unknown --builder '${builder}' (expected: ${BUILDERS.join(' | ')})`);
 
   // The `review` section of golden-frijoles.config.json over scripts/review-config.json (D9).
@@ -169,9 +170,16 @@ function main() {
   let trigger = forceSecurity ? 'forced with --security' : null;
   if (!forceSecurity) {
     const facts = prFacts(pr, repo);
-    if (!facts) {
-      // UNKNOWN is not "no security path". Still render the route for a stranger with no gh: treating that
-      // machine as a hard CLI error hid the DARK state the kickoff needs to explain. Force the lens instead.
+    if (!facts && hasCmd('gh')) {
+      // gh is installed and still could not read the PR: a wrong number or --repo, expired auth, the
+      // network. A route printed for a PR that may not exist is worse than stopping (#189 review, S1).
+      die(
+        `could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Check the PR ` +
+          'number and --repo, and `gh auth status`; re-run when gh works, or pass --security.'
+      );
+    } else if (!facts) {
+      // No gh at all — a stranger's machine. UNKNOWN is not "no security path", but refusing to print a route
+      // hides the DARK state the kickoff needs to explain, so render it with the lens forced instead.
       securityPass = true;
       trigger =
         `could not look: GitHub CLI could not read PR #${pr}'s changed files — install GitHub CLI ` +

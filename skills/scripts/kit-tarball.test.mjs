@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { stageKit } from './build-kit.mjs';
@@ -118,7 +118,11 @@ test('the packed kit degrades review routing and session resume without gh or re
     JSON.stringify({ review: { reviewScope: 'security-paths-only', securityPaths: ['src/**'] } })
   );
   const isolatedHome = realpathSync(mkdtempSync(join(tmpdir(), 'kit-home-review-')));
-  const noCliEnv = { ...sealedEnv(), HOME: isolatedHome, PATH: dirname(process.execPath) };
+  // A bin dir holding ONLY node: node's own directory is not enough — under nvm it also holds globally
+  // installed CLIs (codex, claude), and the DARK state would then go unproven (#189 review).
+  const onlyNode = realpathSync(mkdtempSync(join(tmpdir(), 'kit-bin-review-')));
+  symlinkSync(process.execPath, join(onlyNode, 'node'));
+  const noCliEnv = { ...sealedEnv(), HOME: isolatedHome, PATH: onlyNode };
   const pkgDir = join(tools, 'node_modules', '@golden-frijoles', 'kit');
 
   const review = spawnSync(process.execPath, [join(pkgDir, 'dist', 'review-route.mjs'), '--builder', 'claude', '1'], {
@@ -128,7 +132,9 @@ test('the packed kit degrades review routing and session resume without gh or re
   });
   const reviewOutput = `${review.stdout}\n${review.stderr}`;
   assert.equal(review.status, 0, reviewOutput);
-  assert.match(reviewOutput, /DARK|could not look/i);
+  assert.match(reviewOutput, /could not look/i);
+  // No reviewer CLI is on PATH, so the layer must be reported DARK — not merely the gh message.
+  assert.match(reviewOutput, /NONE AVAILABLE|DARK/);
   assert.match(reviewOutput, /install GitHub CLI/);
   assert.match(reviewOutput, /review scope:\s+security-paths-only/);
   assert.doesNotMatch(reviewOutput, /^ {4}at /m);

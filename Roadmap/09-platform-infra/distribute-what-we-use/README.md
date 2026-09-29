@@ -91,8 +91,9 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   The **project-owned** files keep each repo's own content: `cross-review.prompt.md`,
   `cross-review.security.prompt.md`, `cross-panel.prompt.md` (rules slot) and `review-config.json` (security
   paths). Only their shared body is aligned, by hand. See deviation 1.
-- **D4 — The kit closure is the manifest.** The rail enters through the `groom` skill's `requires_scripts`,
-  because groom emits the kickoff that names it. `check-skill-scripts.mjs` holds the declaration to the real
+- **D4 — The kit closure is the manifest.** The rail enters through a skill's `requires_scripts` — *(amended
+  during S2: the umbrella `golden-frijoles` skill, not `groom`, whose 220-line budget could not take the list;
+  the kit is the union of every skill's closure, so nothing else changes)*. `check-skill-scripts.mjs` holds the declaration to the real
   import closure. The files are `cross-review.mjs`, `review-route.mjs`, `lib/review-guard.mjs`,
   `cross-agent-doctor.mjs`, both review prompts and a default `review-config.json`, and the same for
   `session-resume.mjs` and `session-note.mjs` (deviation 4).
@@ -133,7 +134,7 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
    `cross-panel.prompt.md` is byte-identical to the template, so here it is three files; medusa's panel prompt is
    its own.)* Byte-equality applies to the **code** (`cross-review.mjs`,
    `lib/cross-agent-cli.mjs`, `cross-agent-doctor.mjs`, `agy-doctor.mjs`, `cross-panel.mjs`, `review-route.mjs`,
-   `lib/review-guard.mjs` and their tests). The four project-owned files are S2.3's listed exceptions.
+   `lib/review-guard.mjs` and their tests). The project-owned files are S2.3's listed exceptions (three here; see the note above).
 2. **D5 as groomed ("the kit's copy when the project has none") would have kept the hole.** Today
    `hooks/index.ts:34` runs `${root}/scripts/build-state.mjs` from whatever repo is open, on every turn. That is
    the exact LEARNINGS violation. There is also no "kit copy by absolute path" to reach: the installed plugin

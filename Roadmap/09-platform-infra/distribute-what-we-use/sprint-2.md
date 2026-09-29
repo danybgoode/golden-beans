@@ -92,7 +92,7 @@ Builds **D4, D5, D6** (README → *Architecture lock*).
     and the marker never appeared.
   - The new specs were observed failing against the old hook.
 - **2.3 (Claude subagent, Sonnet).** `check-script-parity.mjs` runs in the scripts guard, whose paths now include
-  `skills/template/scripts/**`. Measured: 114 identical, 6 allowed with reasons. The planted one-byte change went
+  `skills/template/scripts/**`. Measured: 116 identical, 6 allowed with reasons (after the S1 rebase). The planted one-byte change went
   red. It corrected the lock: `cross-panel.prompt.md` is identical here (deviation 1 amended).
 - **Release 0.7.0.** The kit gains the rail, the session scripts and `build-state.mjs`.
 
