@@ -121,7 +121,10 @@ export const REGISTRY = Object.freeze([
   {
     key: 'routines',
     module: 'Operate',
-    askWhen: 'first-routine',
+    // never-yet: declares the section so readSection accepts it, while `gf doctor` (which skips never-yet
+    // rows) never reports Operate unconfigured for it — its values are per-routine fill-ins that
+    // routine-bootstrap.mjs names itself when one is missing (#191 review).
+    askWhen: 'never-yet',
     default: null,
     question: 'Which project values should routine prompts fill before you schedule them?',
   },

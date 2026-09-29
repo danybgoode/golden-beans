@@ -1,4 +1,4 @@
-# ⚠️ GitHub silently disables scheduled workflows after 60 days without repository activity. Re-enable it from
+# ⚠️ In a PUBLIC repo, GitHub silently disables scheduled workflows after 60 days without repository activity. Re-enable it from
 # the Actions tab, or keep the repository active. This is a model-free freshness check; it never regenerates,
 # commits, opens a PR, or calls a model.
 name: build-order-freshness

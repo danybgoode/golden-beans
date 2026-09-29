@@ -12,7 +12,7 @@
 // Exit codes: 0 rendered, 1 missing fill-ins/configuration, 2 bad routine name or usage. Zero deps; Node 18+.
 
 import { existsSync, readdirSync, realpathSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readSection } from './lib/config.mjs';
 import { loadPromptBody } from './lib/cross-agent-cli.mjs';
@@ -98,8 +98,10 @@ export function missingFillIns(body, values) {
 export function unclassifiedTokens(text) {
   const known = new Set(ROUTINE_TOKENS.map((e) => e.token));
   const found = new Set();
-  if (/<TEMPLATE FILL-IN|TEMPLATE FILL-IN:/.test(text) && !ROUTINE_TOKENS.some((e) => e.kind === 'fill-in' && text.includes(e.token)))
-    found.add('TEMPLATE FILL-IN');
+  // Remove every CLASSIFIED marker first, so a new marker beside a known one is still seen (#191 review).
+  let rest = text;
+  for (const e of ROUTINE_TOKENS) if (e.kind === 'fill-in') rest = rest.split(e.token).join('');
+  if (/<TEMPLATE FILL-IN|TEMPLATE FILL-IN:/.test(rest)) found.add('TEMPLATE FILL-IN');
   for (const m of text.matchAll(/<([A-Za-z][A-Za-z0-9_ #.-]{0,40})>/g)) if (!known.has(m[0])) found.add(m[0]);
   return [...found];
 }
@@ -184,4 +186,6 @@ const isMain = (() => {
   }
 })();
 
-if (isMain) process.exitCode = runRoutineBootstrap(process.argv.slice(2), { root: resolve(process.cwd()) });
+// No explicit root: readSection's default (projectRoot) honours GF_PROJECT_ROOT and walks up from a subdirectory,
+// like every other kit script (#191 review).
+if (isMain) process.exitCode = runRoutineBootstrap(process.argv.slice(2));

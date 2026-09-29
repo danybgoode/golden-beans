@@ -110,3 +110,30 @@ test('every real prompt is fully classified today (a new token fails here first)
     assert.deepEqual(unclassifiedTokens(text.replace(html, '')), [], name);
   }
 });
+
+test('#191 review: a new TEMPLATE FILL-IN marker is seen even beside a known one', async () => {
+  const { unclassifiedTokens, ROUTINE_TOKENS } = await import('./routine-bootstrap.mjs');
+  const known = ROUTINE_TOKENS.find((e) => e.kind === 'fill-in' && e.token.startsWith('TEMPLATE FILL-IN')).token;
+  assert.deepEqual(unclassifiedTokens(`${known}\nTEMPLATE FILL-IN: a brand new slot`), ['TEMPLATE FILL-IN']);
+  assert.deepEqual(unclassifiedTokens(known), []);
+});
+
+test('#191 review: run from a SUBDIRECTORY, the project root config is read', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const repo = mkdtempSync(join(tmpdir(), 'rb-root-'));
+  spawnSync('git', ['init', '-q'], { cwd: repo });
+  mkdirSync(join(repo, 'Roadmap'));
+  mkdirSync(join(repo, 'apps', 'web'), { recursive: true });
+  const values = { 'root-repo': 'acme/root', 'your-org': 'acme', 'app-repo': 'acme/app' };
+  writeFileSync(join(repo, 'golden-frijoles.config.json'), JSON.stringify({ routines: values }));
+  const script = join(dirname(fileURLToPath(import.meta.url)), 'routine-bootstrap.mjs');
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.startsWith('GIT_') || k === 'GF_PROJECT_ROOT') delete env[k];
+  const r = spawnSync(process.execPath, [script, 'weekly-recap'], { cwd: join(repo, 'apps', 'web'), encoding: 'utf8', env: { ...env, GF_PROJECT_ROOT: repo } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /acme\/root/);
+});

@@ -1,5 +1,5 @@
-# ⚠️ GitHub silently disables scheduled workflows after 60 days without repository activity. Re-enable it from
-# the Actions tab, or keep the repository active. This is the model-free, read-only standup preview: it prints
+# ⚠️ In a PUBLIC repo, GitHub silently disables scheduled workflows after 60 days without repository activity.
+# Re-enable it from the Actions tab, or keep the repository active. Needs a committed reporting.config.json. This is the model-free, read-only standup preview: it prints
 # deterministic signals and never posts to Telegram, writes a log, or calls a model.
 name: standup-preview
 
@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+  actions: read
 
 jobs:
   standup-preview:
@@ -21,3 +23,6 @@ jobs:
           node-version: '20'
       - name: Gather and print the standup (no post, no model)
         run: node scripts/standup.mjs --dry-run
+        env:
+          # standup.mjs checks `gh auth status` first; a runner's gh is authenticated only through GH_TOKEN.
+          GH_TOKEN: ${{ github.token }}
