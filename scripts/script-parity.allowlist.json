@@ -1,0 +1,11 @@
+{
+  "$comment": "Files present in BOTH scripts/ and skills/template/scripts/ that may differ (distribute-what-we-use D6). Read by scripts/check-script-parity.mjs. Every entry needs a one-line reason, and an entry that is now identical or no longer in both trees fails the check as stale. Do not add an entry to silence a drift you did not intend: make the copies identical instead.",
+  "allowed": {
+    "cross-review.prompt.md": "This project's own review rules; the template ships fill-ins.",
+    "cross-review.security.prompt.md": "This project's own security review paths and rules; the template ships fill-ins.",
+    "prose-lessons.md": "This project's own prose lessons.",
+    "review-config.json": "This project's own review globs and security paths; the template ships fill-in globs.",
+    "roadmap-extract.mjs": "Delegates to this project's Notion sync (see scripts/README.md); the template's is generic.",
+    "routines/README.md": "This project's own routines."
+  }
+}
