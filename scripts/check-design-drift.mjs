@@ -828,33 +828,8 @@ export function inspectRepository(root = repoRoot) {
     });
   }
 
-  const handoffMirrors = [
-    [
-      'references/golden-beans-design-system-proposal/golden-beans-polish-pass-proposal.html',
-      'references/design/polish-pass-proposal.html',
-    ],
-    ['references/golden-beans-design-system-proposal/ux-guidelines.md', 'references/ux-guidelines.md'],
-  ];
-
-  handoffMirrors.forEach(([source, mirror]) => {
-    const sourcePath = join(root, source);
-    const mirrorPath = join(root, mirror);
-    if (!existsSync(sourcePath) || !existsSync(mirrorPath)) {
-      violations.push({
-        path: mirror,
-        line: 1,
-        rule: 'handoff-mirror',
-        content: `both this file and ${source} must exist`,
-      });
-    } else if (readFileSync(sourcePath, 'utf8') !== readFileSync(mirrorPath, 'utf8')) {
-      violations.push({
-        path: mirror,
-        line: 1,
-        rule: 'handoff-mirror',
-        content: `must remain byte-identical to ${source}`,
-      });
-    }
-  });
+  // The `handoff-mirror` rule (two design hand-offs byte-identical under references/) was removed on 2026-09-28:
+  // references/ is local-only now (gitignored and untracked, public-monorepo S4.1), so CI can't see either side.
 
   return { files: files.length, violations };
 }

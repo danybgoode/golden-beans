@@ -79,7 +79,7 @@ Done when a new session in `~/dobby/golden-frijoles` loads its memory index, and
 `launchctl list` already showed this runner's last exit as `1` before the move, which predates this epic and is worth a look.
 
 ## Sprint QA
-- The deploy proof (S4.3) is the gate. **Owed to Daniel:** the lawyer's OK before S4.1 merges, the Vercel dashboard check if it needs reconnecting, and S4.4's local moves.
+- The deploy proof (S4.3) is the gate. **Owed to Daniel:** S4.4's local moves.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` green, plus the skills checks from S1.2 on.
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
