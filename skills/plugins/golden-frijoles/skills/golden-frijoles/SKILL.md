@@ -25,6 +25,7 @@ requires_scripts:
   - lib/review-guard.mjs
   - lib/cross-agent-cli.mjs
   - lib/jev.mjs
+  - lib/secret-guard.mjs
   - cross-agent-doctor.mjs
   - session-resume.mjs
   - session-note.mjs
