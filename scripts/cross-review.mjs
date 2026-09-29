@@ -13,7 +13,7 @@
 //     up, and the risk-tier rule still decides *who* clicks merge.
 //
 // Usage:
-//   node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
+//   node scripts/cross-review.mjs [PR#] --agent codex --builder <family> [--repo owner/repo] [--force] [--dry-run]
 //     [--skip-trivial] [--min-lines N]
 //
 // --skip-trivial is the CI cost guard: skip (exit 0, no comment) when the PR is docs-only or under
@@ -41,6 +41,8 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { readSection } from './lib/config.mjs';
+import { projectRoot } from './lib/project-root.mjs';
+import { collectSecretValues, findSecretLeaks } from './lib/secret-guard.mjs';
 import {
   AGENTS,
   headSidePaths,
@@ -73,6 +75,7 @@ import {
   shortSha,
   checkReviewerPairing,
   reviewersFor,
+  BUILDER_FAMILIES,
 } from './lib/cross-agent-cli.mjs';
 import {
   changedFileCount,
@@ -112,7 +115,7 @@ const BANNER =
 const HELP = `cross-review.mjs — the cross-agent judgment-layer review for a PR diff.
 
 Usage:
-  node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
+  node scripts/cross-review.mjs [PR#] --agent codex --builder <family> [--repo owner/repo] [--force] [--dry-run]
 
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
@@ -122,7 +125,7 @@ Flags:
                        scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
                        The reduced scope is STATED in the posted comment.
-  --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
+  --builder <family>   who WROTE this diff: ${BUILDER_FAMILIES.join(' | ')}. Refuses a
                        same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
   --force              proceed even when local HEAD differs from the resolved PR head (auto-resolve only)
@@ -518,7 +521,7 @@ async function main() {
     if (decision.run) {
       securityOwed = decision.reason;
       process.stderr.write(
-        `⚠ this PR triggers the security lens (${decision.reason}) — run: node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent <another-family> --lens security\n`
+        `⚠ this PR triggers the security lens (${decision.reason}) — run: node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent <another-family>${builder ? ` --builder ${builder}` : ''} --lens security\n`
       );
     }
   }
@@ -746,6 +749,30 @@ async function main() {
       `\n───── ${reviewerLabel}'s full reply, rejected by the output guard ─────\n${findings || '(empty)'}\n───── end of reply ─────\n`
     );
     die(`${reviewerLabel} did not return a review: ${verdict.reason}`);
+  }
+
+  // Never POST a reply that carries this machine's secrets (lib/secret-guard.mjs): a reviewer fed an
+  // injected diff can still read host files (codex's read-only sandbox allows reads), and this comment is
+  // public. Nothing is posted; the reply is printed here, redacted, so a false positive costs a look.
+  const secrets = findSecretLeaks(findings, { values: collectSecretValues({ root: projectRoot() }) });
+  if (secrets.leaks.length) {
+    const what = secrets.leaks.map((l) => l.name).join(', ');
+    if (!dryRun)
+      postReviewStatus({
+        pr,
+        repo,
+        state: 'failure',
+        lens,
+        description: `${reviewerLabel}: reply withheld — it carried secret-shaped text`,
+        sha: reviewedSha,
+      });
+    process.stderr.write(
+      `\n───── ${reviewerLabel}'s reply, WITHHELD (redacted: ${what}) ─────\n${secrets.redacted}\n───── end of reply ─────\n`
+    );
+    die(
+      `${reviewerLabel}'s reply carried ${what} and was NOT posted. If this is a real leak, rotate the ` +
+        `credential and treat the diff as hostile; if it is a false positive, post the redacted text by hand.`
+    );
   }
 
   const body =

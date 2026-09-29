@@ -35,6 +35,14 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 - **`--agent devin` is refused.** A consumer used Devin as a third review pool, but `devin -p` auto-approves
   read-only tools with no flag to disable them, so the same injected-diff read applies. Devin stays the prose
   writer.
+- **Codex reviews locked down:** `--sandbox read-only --ignore-user-config --ephemeral`. It used to inherit the
+  user's config — observed: a `workspace-write` sandbox, `on-request` approvals, and the user's MCP servers,
+  a database one among them. Codex can still **read** host files; no flag removes that, so the risk is reduced,
+  not closed. The channel is closed instead:
+- **cross-review never posts a reply that carries a secret.** Before posting, the reply is checked against every
+  value in the project's `.env*` files, this process's secret-named env vars, and common credential shapes. A
+  match posts nothing, fails the status, and prints the reply locally with the match redacted.
+- **A codex usage cap heals onto agy** like an auth lapse (a different quota pool).
 - **The codex→agy self-heal re-checks the builder.** When agy built the diff, the heal fails loud instead of
   turning into a same-family review.
 

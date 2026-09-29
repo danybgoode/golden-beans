@@ -196,6 +196,13 @@ test('every status post pins the reviewed sha (distribute-what-we-use S1, cross-
     .split('postReviewStatus({')
     .slice(1)
     .map((rest) => rest.slice(0, rest.indexOf('});')));
-  assert.equal(calls.length, 3, 'pending, failure and success');
+  assert.ok(calls.length >= 3, 'pending, failure, withheld and success');
   for (const call of calls) assert.match(call, /\bsha: reviewedSha\b/);
+});
+
+test('the secret guard runs before anything is posted (pr-reviewer round 2 on #188)', () => {
+  const src = readFileSync(new URL('./cross-review.mjs', import.meta.url), 'utf8');
+  const guard = src.indexOf('findSecretLeaks(findings');
+  assert.ok(guard > 0, 'cross-review checks the reply with findSecretLeaks');
+  assert.ok(guard < src.indexOf('= postComment(pr, repo, body)'), 'and does so before postComment');
 });

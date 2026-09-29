@@ -11,6 +11,8 @@ import {
   decideCodexFallback,
   codexModelFrom,
   codexExecArgs,
+  isCodexCapped,
+  isCodexModelUnavailable,
 } from './cross-agent-cli.mjs';
 
 /** Deps where codex fails with `codex` and agy answers; `fail` throws so the test can see the message. */
@@ -100,14 +102,41 @@ test('CODEX_MODEL: unset is the pin, `default` is codex’s own default, anythin
   assert.equal(codexModelFrom('gpt-5.6-sol'), 'gpt-5.6-sol');
 });
 
-test('codex exec argv: a pinned model carries its effort; `default` passes neither', () => {
+test('codex exec argv: locked down always; a pinned model carries its effort; `default` passes neither', () => {
+  const lock = ['--sandbox', 'read-only', '--ignore-user-config', '--ephemeral'];
   assert.deepEqual(codexExecArgs('P', { model: 'm', effort: 'high' }), [
     'exec',
+    ...lock,
     '--model',
     'm',
     '-c',
     'model_reasoning_effort=high',
     'P',
   ]);
-  assert.deepEqual(codexExecArgs('P', { model: null, effort: 'high' }), ['exec', 'P']);
+  assert.deepEqual(codexExecArgs('P', { model: null, effort: 'high' }), ['exec', ...lock, 'P']);
+  assert.ok(!codexExecArgs('P').includes('workspace-write'));
+});
+
+test('a usage cap heals onto agy like an auth lapse; a model refusal names CODEX_MODEL=default, a cap does not', () => {
+  const CAPPED = {
+    ok: false,
+    text: '',
+    authFailed: false,
+    cliOutdated: false,
+    capped: true,
+    contextOverflow: false,
+    stderr: '',
+  };
+  const { deps: d } = deps(CAPPED);
+  assert.equal(runWithCodexFallback({ prompt: 'p', stdin: 's', antigravityArgv: 'a' }, d).fellBack, true);
+  assert.equal(isCodexCapped("ERROR: You've hit your usage limit. To continue using Codex…"), true);
+  assert.equal(
+    isCodexModelUnavailable('model: gpt-5.6-terra\nERROR: something else'),
+    false,
+    'the banner is not a refusal'
+  );
+  assert.equal(
+    isCodexModelUnavailable("The 'x' model is not supported when using Codex with a ChatGPT account."),
+    true
+  );
 });

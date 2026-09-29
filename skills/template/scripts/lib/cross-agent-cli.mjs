@@ -669,10 +669,31 @@ function execCodex(prompt, stdin) {
   });
 }
 
-/** The `codex exec` argv. Pure, for tests: `model: null` means codex's own default (CODEX_MODEL=default). */
+/**
+ * The `codex exec` argv. Pure, for tests: `model: null` means codex's own default (CODEX_MODEL=default).
+ *
+ * ── The reviewer is locked down, not trusted (distribute-what-we-use S1, pr-reviewer round 2 on #188) ──
+ * Codex reads an attacker-controllable diff. Without these flags it ran with whatever ~/.codex/config.toml
+ * said — observed: `sandbox: workspace-write`, `approval: on-request`, and the user's MCP servers started
+ * (a database one among them). Pinned instead, and observed live with codex-cli 0.158.0:
+ *   --sandbox read-only    no writes and no network from commands the model runs;
+ *   --ignore-user-config   no user MCP servers, no ambient profile (auth still comes from CODEX_HOME);
+ *   --ephemeral            no session file written for a review.
+ * The banner then reads `sandbox: read-only`, `approval: never`, with no MCP worker. What remains is READ
+ * access to the host — no codex flag removes it — which is why cross-review refuses to post a reply that
+ * carries a secret (lib/secret-guard.mjs). Reduced, not closed; said so in the CHANGELOG.
+ * Also used by lib/prose-writer.mjs's codex path, where read-only is equally right.
+ */
+export const CODEX_REVIEW_FLAGS = Object.freeze([
+  '--sandbox',
+  'read-only',
+  '--ignore-user-config',
+  '--ephemeral',
+]);
+
 export function codexExecArgs(prompt, { model = CODEX_MODEL, effort = CODEX_REASONING_EFFORT } = {}) {
   const pin = model ? ['--model', model, '-c', `model_reasoning_effort=${effort}`] : [];
-  return ['exec', ...pin, prompt];
+  return ['exec', ...CODEX_REVIEW_FLAGS, ...pin, prompt];
 }
 
 // codex exec wrapper preserving the original contract: returns trimmed stdout, or fail()s (die unless soft).
@@ -700,6 +721,7 @@ export function tryCodex(prompt, stdin) {
     // codex cannot run here and agy can, so it triggers the same one-shot fallback. A distinct flag (not
     // folded into authFailed) so the banner names the real cause and points at the doctor.
     cliOutdated: r.status !== 0 && isCodexOutdated(`${stdout}\n${stderr}`),
+    capped: r.status !== 0 && isCodexCapped(`${stdout}\n${stderr}`),
     stderr,
   };
 }
@@ -708,6 +730,20 @@ export function tryCodex(prompt, stdin) {
 // an auth lapse or a context overflow. Confirmed live by a consuming project (2026-07-20, codex-cli 0.142.5):
 //   "The 'gpt-5.6-sol' model requires a newer version of Codex. Please upgrade to the latest app or CLI…"
 // Kept tight to the upgrade signal so a bad-model-name typo (a different 400) is not masked as "upgrade".
+// True when the account cannot use the requested model (an entitlement refusal, not a stale binary).
+export function isCodexModelUnavailable(output) {
+  return /model (?:is )?not (?:supported|available|found)|not supported when using codex|does not have access to (?:the )?model|unknown model/i.test(
+    output || ''
+  );
+}
+
+// True when codex refused because the account hit its usage cap (observed 2026-09-29, codex-cli 0.158.0:
+// "You've hit your usage limit"). Codex cannot run here and agy draws on a different pool, so it heals like
+// an auth lapse or a stale CLI.
+export function isCodexCapped(output) {
+  return /hit your usage limit|usage limit reached|rate limit exceeded for your plan/i.test(output || '');
+}
+
 export function isCodexOutdated(output) {
   return /requires a newer version of codex|upgrade to the latest (?:app or )?cli|update codex|codex (?:is )?out of date/i.test(
     output || ''
@@ -731,6 +767,7 @@ export function decideCodexFallback({
   codexOk,
   authFailed,
   cliOutdated = false,
+  capped = false,
   contextOverflow,
   agyAvailable,
   fallbackPairingError = null,
@@ -741,7 +778,7 @@ export function decideCodexFallback({
   // than falling through to the generic "(non-auth): <cryptic tail line>" text.
   if (contextOverflow) return 'fail-context-overflow';
   // Both an auth lapse AND a too-old CLI mean "codex can't run here, agy can" → the same one-shot fallback.
-  if (!authFailed && !cliOutdated) return 'fail-non-auth';
+  if (!authFailed && !cliOutdated && !capped) return 'fail-non-auth';
   if (!agyAvailable) return 'fail-both-dead';
   // The fallback CHANGES the reviewing family. When agy built the diff, falling back to agy would be a
   // same-family review wearing a cross-family label, so it fails loud instead (distribute-what-we-use D1).
@@ -767,6 +804,7 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder =
     codexOk: codex.ok,
     authFailed: codex.authFailed,
     cliOutdated: codex.cliOutdated,
+    capped: codex.capped,
     contextOverflow: codex.contextOverflow,
     agyAvailable: hasCmdFn('agy'),
     fallbackPairingError,
@@ -774,12 +812,17 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder =
 
   // The two recoverable causes want different operator guidance — a lapsed token vs a stale binary — so the
   // banner/fatal text branches on the flag even though the ACTION (fall back to agy) is the same.
-  const cause = codex.cliOutdated
+  const cause = codex.capped
     ? {
-        blurb: 'Codex CLI is behind its model requirement',
-        restore: 'upgrade codex (see `node scripts/cross-agent-doctor.mjs codex`)',
+        blurb: 'Codex hit its usage cap',
+        restore: 'wait for the cap to reset, or route past it with --exclude codex',
       }
-    : { blurb: 'Codex token revoked', restore: '`codex login`' };
+    : codex.cliOutdated
+      ? {
+          blurb: 'Codex CLI is behind its model requirement',
+          restore: 'upgrade codex (see `node scripts/cross-agent-doctor.mjs codex`)',
+        }
+      : { blurb: 'Codex token revoked', restore: '`codex login`' };
 
   switch (action) {
     case 'use-codex':
@@ -793,10 +836,12 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder =
           'large hand-written diff that needs splitting.'
       );
     case 'fail-non-auth':
-      // A pinned model this codex account cannot use fails here, not as auth — so name the escape.
+      // A pinned model this codex account cannot use fails here, not as auth — so name the escape. Matched on
+      // the entitlement error itself: codex's banner prints `model: …` on EVERY run, so the bare word would
+      // advise dropping the pin on any failure (pr-reviewer round 2, S2).
       return failFn(
         `codex exec failed (non-auth): ${lastLine(codex.stderr)}` +
-          (/\bmodel\b/i.test(codex.stderr || '') && CODEX_MODEL
+          (isCodexModelUnavailable(codex.stderr) && CODEX_MODEL
             ? ` — if this account cannot use "${CODEX_MODEL}", re-run with CODEX_MODEL=default (codex's own default).`
             : '')
       );
@@ -1290,10 +1335,11 @@ export function isTruncatedReview(out) {
 // cross-review can hand both runners the identical prompt/stdin pair). Tool-less and MCP-less by
 // construction — see CLAUDE_REVIEW_MODEL's header for why each flag is there.
 //
-// NOTE ON SAME-FAMILY REVIEW: nothing in this function knows or cares who built the diff. Routing a
-// Claude-built diff to a Claude reviewer would be a same-family pass wearing a cross-family label, and
-// preventing that is `review-route.mjs`'s job (rule 1: a family never reviews its own diff). Calling this
-// directly with `--agent claude` on a Claude-authored PR is a deliberate act, and the caller owns it.
+// NOTE ON SAME-FAMILY REVIEW: nothing in this function knows who built the diff. The refusal lives one
+// level up: review-route never routes a family to its own diff, and cross-review refuses `--agent claude`
+// when `--builder claude` is stated (checkReviewerPairing). Without a stated builder, the caller owns it.
+//
+// AUTH NOTE: `--bare` skips keychain/OAuth reads, so this path authenticates with ANTHROPIC_API_KEY.
 export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   const { spawn = spawnSync } = deps;
   const args = [
@@ -1315,7 +1361,7 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
     return fail(
       opts.soft,
       `claude not found or failed to spawn (${r.error.message}) — install Claude Code ` +
-        `(https://claude.com/claude-code) and run \`claude auth login\`, or use --agent codex/antigravity.`
+        `(https://claude.com/claude-code) and set ANTHROPIC_API_KEY (this path runs \`--bare\`), or use --agent codex/antigravity.`
     );
   if (r.status !== 0) return fail(opts.soft, `claude -p failed: ${lastLine(r.stderr)}`);
 
@@ -1323,7 +1369,7 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   if (!out)
     return fail(
       opts.soft,
-      `claude returned no output — likely a usage cap or an expired session. Check \`claude auth status\`, ` +
+      `claude returned no output — likely a usage cap or a missing ANTHROPIC_API_KEY (this path runs \`--bare\`), ` +
         `or use --agent codex/antigravity/vibe. (An empty result is a failure, never "no findings".)`
     );
   return out;
