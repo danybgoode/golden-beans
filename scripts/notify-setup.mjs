@@ -57,7 +57,13 @@ export function parseArgs(argv) {
 /** A secret from the environment, then `.env.local` at the project root (then the cwd). null when absent. */
 export function readEnvValue(
   name,
-  { env = process.env, root = projectRoot(), cwd = process.cwd(), read = readFileSync, exists = existsSync } = {}
+  {
+    env = process.env,
+    root = projectRoot(),
+    cwd = process.cwd(),
+    read = readFileSync,
+    exists = existsSync,
+  } = {}
 ) {
   if (env[name]?.trim()) return env[name].trim();
   for (const dir of [root, cwd]) {
@@ -81,7 +87,14 @@ export const scrub = (text, secrets) =>
 export function chatsFromUpdates(updates) {
   const seen = new Map();
   for (const u of updates ?? []) {
-    for (const key of ['message', 'edited_message', 'channel_post', 'edited_channel_post', 'my_chat_member', 'chat_member']) {
+    for (const key of [
+      'message',
+      'edited_message',
+      'channel_post',
+      'edited_channel_post',
+      'my_chat_member',
+      'chat_member',
+    ]) {
       const chat = u?.[key]?.chat;
       if (!chat || chat.id == null || seen.has(chat.id)) continue;
       const person = [chat.first_name, chat.last_name].filter(Boolean).join(' ');
@@ -104,11 +117,21 @@ export function emptyChatExplanation(webhook) {
     'A bot in a GROUP only sees commands and @mentions while group privacy is on: ask @BotFather (/mybots → your bot → ' +
     'Bot Settings → Group Privacy → Turn off), or send the bot a /command in the group.';
   const webhookCause = (url) =>
-    `A webhook is set on this bot (${url}), and while one is, getUpdates returns nothing. Remove it with ` +
+    `A webhook is set on this bot (on ${url}), and while one is, getUpdates returns nothing. Remove it with ` +
     `${TELEGRAM_API}/bot<YOUR-TOKEN>/deleteWebhook (open that URL with your real token), message the bot again, ` +
     'then re-run. Only remove it if nothing else of yours relies on that webhook.';
-  const nobody = 'Nobody has messaged the bot yet: open a chat with it in Telegram, press Start (or send any message), then re-run.';
-  if (webhook && webhook.url) return `No chats found. Cause: a webhook is set.\n  ${webhookCause(webhook.url)}\n  ${privacy}`;
+  const nobody =
+    'Nobody has messaged the bot yet: open a chat with it in Telegram, press Start (or send any message), then re-run.';
+  // Host only: a webhook URL often carries a secret path segment (#190 review).
+  const host = (u) => {
+    try {
+      return new URL(u).host;
+    } catch {
+      return 'a URL';
+    }
+  };
+  if (webhook && webhook.url)
+    return `No chats found. Cause: a webhook is set.\n  ${webhookCause(host(webhook.url))}\n  ${privacy}`;
   if (webhook) return `No chats found. No webhook is set, so: ${nobody}\n  ${privacy}`;
   return `No chats found, and getWebhookInfo could not be read, so the cause is one of two.\n  1. ${webhookCause('unknown')}\n  2. ${nobody}\n  ${privacy}`;
 }
@@ -130,7 +153,12 @@ export async function telegramCall(method, token, payload, fetchImpl = fetch) {
     }
     return { ok: res.ok && body?.ok === true, status: res.status, body };
   } catch (err) {
-    return { ok: false, status: 0, network: true, body: { description: scrub(err?.message ?? err, [token]) } };
+    return {
+      ok: false,
+      status: 0,
+      network: true,
+      body: { description: scrub(err?.message ?? err, [token]) },
+    };
   }
 }
 
@@ -140,7 +168,9 @@ const apiError = (r) =>
 /** `--chat-id`. */
 async function chatIdCommand({ token, fetchImpl, stdout, stderr }) {
   if (!token) {
-    stderr('could not look: TELEGRAM_BOT_TOKEN is not set. Create a bot with @BotFather (/newbot), then put TELEGRAM_BOT_TOKEN=… in .env.local.\n');
+    stderr(
+      'could not look: TELEGRAM_BOT_TOKEN is not set. Create a bot with @BotFather (/newbot), then put TELEGRAM_BOT_TOKEN=… in .env.local.\n'
+    );
     return EXIT.couldNotLook;
   }
   const updates = await telegramCall('getUpdates', token, { timeout: 0 }, fetchImpl);
@@ -158,7 +188,9 @@ async function chatIdCommand({ token, fetchImpl, stdout, stderr }) {
   if (chats.length) {
     stdout(`Found ${chats.length} chat(s) your bot has seen:\n`);
     for (const c of chats) stdout(`  ${String(c.id).padEnd(16)} ${c.type.padEnd(11)} ${c.title}\n`);
-    stdout('Put the id in reporting.config.local.json (a public repo) or reporting.config.json as {"telegram":{"chatId":"<id>"}}.\n');
+    stdout(
+      'Put the id in reporting.config.local.json (a public repo) or reporting.config.json as {"telegram":{"chatId":"<id>"}}.\n'
+    );
     return EXIT.ok;
   }
   const info = await telegramCall('getWebhookInfo', token, {}, fetchImpl);
@@ -170,7 +202,9 @@ async function chatIdCommand({ token, fetchImpl, stdout, stderr }) {
 export function resolveChatId({ env, load = loadReportingConfig }) {
   try {
     const id = chatIdFor(load(), null, env);
-    return id ? { id: String(id), from: 'reporting config / TELEGRAM_CHAT_ID' } : { reason: 'no telegram.chatId in the reporting config and no TELEGRAM_CHAT_ID' };
+    return id
+      ? { id: String(id), from: 'reporting config / TELEGRAM_CHAT_ID' }
+      : { reason: 'no telegram.chatId in the reporting config and no TELEGRAM_CHAT_ID' };
   } catch (err) {
     if (!(err instanceof ReportingConfigError)) throw err;
     return env.TELEGRAM_CHAT_ID
@@ -187,7 +221,8 @@ async function testCommand({ opts, token, webhook, env, chatIdEnv, fetchImpl, lo
   const wantSlack = opts.slack || (!opts.telegram && Boolean(webhook));
   const missing = [];
   if (wantTelegram && !token) missing.push('TELEGRAM_BOT_TOKEN is not set (put it in .env.local)');
-  if (wantTelegram && !chat.id) missing.push(`no Telegram chat id: ${chat.reason} (run --chat-id, then set telegram.chatId)`);
+  if (wantTelegram && !chat.id)
+    missing.push(`no Telegram chat id: ${chat.reason} (run --chat-id, then set telegram.chatId)`);
   if (wantSlack && !webhook) missing.push('SLACK_WEBHOOK_URL is not set (put it in .env.local)');
   if (!wantTelegram && !wantSlack)
     missing.push('nothing is configured: set TELEGRAM_BOT_TOKEN + a chat id, and/or SLACK_WEBHOOK_URL');
@@ -196,16 +231,25 @@ async function testCommand({ opts, token, webhook, env, chatIdEnv, fetchImpl, lo
     return EXIT.couldNotLook;
   }
 
+  // One precedence whatever the send order: a refusal (a real configuration answer) outranks could-not-look
+  // (weather), which outranks ok (#190 review).
+  const RANK = { [EXIT.ok]: 0, [EXIT.couldNotLook]: 1, [EXIT.refused]: 2 };
+  const worse = (a, b) => (RANK[b] > RANK[a] ? b : a);
   let code = EXIT.ok;
   if (wantTelegram) {
-    const r = await telegramCall('sendMessage', token, { chat_id: chat.id, text: TEST_TEXT, disable_web_page_preview: true }, fetchImpl);
+    const r = await telegramCall(
+      'sendMessage',
+      token,
+      { chat_id: chat.id, text: TEST_TEXT, disable_web_page_preview: true },
+      fetchImpl
+    );
     if (r.ok) stdout(`Telegram: sent to chat ${chat.id} (from ${chat.from}): "${TEST_TEXT}"\n`);
     else if (r.network) {
       stderr(`could not look: Telegram unreachable: ${r.body.description}\n`);
-      code = Math.max(code, EXIT.couldNotLook);
+      code = worse(code, EXIT.couldNotLook);
     } else {
       stderr(`Telegram rejected the message to chat ${chat.id}: ${apiError(r)}\n`);
-      code = EXIT.refused;
+      code = worse(code, EXIT.refused);
     }
   }
   if (wantSlack) {
@@ -213,13 +257,14 @@ async function testCommand({ opts, token, webhook, env, chatIdEnv, fetchImpl, lo
     if (r.ok) stdout(`Slack: sent to the incoming webhook in SLACK_WEBHOOK_URL: "${TEST_TEXT}"\n`);
     else if (r.status === 0) {
       stderr(`could not look: Slack unreachable: ${scrub(r.body, [webhook])}\n`);
-      code = Math.max(code, EXIT.couldNotLook);
+      code = worse(code, EXIT.couldNotLook);
     } else {
       stderr(`Slack rejected the message: status=${r.status} body=${scrub(r.body, [webhook])}\n`);
-      code = EXIT.refused;
+      code = worse(code, EXIT.refused);
     }
   }
-  if (code === EXIT.ok) stdout('Scheduled reports post to Telegram only today; Slack covers this test and ad-hoc sends.\n');
+  if (code === EXIT.ok)
+    stdout('Scheduled reports post to Telegram only today; Slack covers this test and ad-hoc sends.\n');
   return code;
 }
 
@@ -235,7 +280,9 @@ export async function run(argv, io = {}) {
   } = io;
   const parsed = parseArgs(argv);
   if (parsed.error) {
-    stderr(`notify-setup: ${parsed.error}\nusage: notify-setup.mjs --chat-id | --test [--telegram] [--slack]\n`);
+    stderr(
+      `notify-setup: ${parsed.error}\nusage: notify-setup.mjs --chat-id | --test [--telegram] [--slack]\n`
+    );
     return EXIT.usage;
   }
   const token = readValue('TELEGRAM_BOT_TOKEN');
@@ -245,7 +292,17 @@ export async function run(argv, io = {}) {
   const out = (t) => stdout(scrub(t, secrets));
   const err = (t) => stderr(scrub(t, secrets));
   if (parsed.opts.chatId) return chatIdCommand({ token, fetchImpl, stdout: out, stderr: err });
-  return testCommand({ opts: parsed.opts, token, webhook, env, chatIdEnv: readValue('TELEGRAM_CHAT_ID'), fetchImpl, load, stdout: out, stderr: err });
+  return testCommand({
+    opts: parsed.opts,
+    token,
+    webhook,
+    env,
+    chatIdEnv: readValue('TELEGRAM_CHAT_ID'),
+    fetchImpl,
+    load,
+    stdout: out,
+    stderr: err,
+  });
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

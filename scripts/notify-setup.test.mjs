@@ -292,3 +292,31 @@ test('scrub removes every occurrence of every secret and tolerates missing ones'
 test('exit codes are a contract: 0 ok, 1 refused, 2 usage, 3 could-not-look (never the failure code)', () => {
   assert.deepEqual(EXIT, { ok: 0, refused: 1, usage: 2, couldNotLook: 3 });
 });
+
+// ── #190 review: one exit precedence whatever the send order; a webhook's secret path is never printed ──
+test('--test: a refusal outranks unreachable, in either order', async () => {
+  const unreachable = () => {
+    throw new Error('connect ECONNREFUSED');
+  };
+  const values = { TELEGRAM_BOT_TOKEN: TOKEN, SLACK_WEBHOOK_URL: HOOK };
+  const a = harness({
+    values,
+    routes: { sendMessage: json({ ok: false, description: 'chat not found' }, 400), slack: unreachable },
+  });
+  assert.equal(await run(['--test'], a.io), EXIT.refused, 'telegram refused, slack unreachable');
+  const b = harness({ values, routes: { sendMessage: unreachable, slack: text('invalid_payload', 400) } });
+  assert.equal(await run(['--test'], b.io), EXIT.refused, 'telegram unreachable, slack refused');
+});
+
+test('--chat-id: a set webhook is named by host only — its path can carry a secret', async () => {
+  const h = harness({
+    routes: {
+      getUpdates: json({ ok: true, result: [] }),
+      getWebhookInfo: json({ ok: true, result: { url: 'https://hooks.example.test/tg/SECRET-PATH-123' } }),
+    },
+  });
+  await run(['--chat-id'], h.io);
+  const all = h.out + h.err;
+  assert.match(all, /hooks\.example\.test/);
+  assert.doesNotMatch(all, /SECRET-PATH-123/);
+});

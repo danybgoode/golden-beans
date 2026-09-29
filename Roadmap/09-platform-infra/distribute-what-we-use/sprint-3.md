@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 3
 title: "Jev and notify, set up rather than documented"
 risk: high
-phase: Building
+phase: In review
 stories_total: 3
 stories:
   - id: S3.1
