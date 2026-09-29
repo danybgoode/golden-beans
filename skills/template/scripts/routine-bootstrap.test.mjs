@@ -118,22 +118,33 @@ test('#191 review: a new TEMPLATE FILL-IN marker is seen even beside a known one
   assert.deepEqual(unclassifiedTokens(known), []);
 });
 
+// git exports GIT_DIR into hooks, and from a linked worktree it points at the REAL repo: an unsealed
+// `git init` here would rewrite it (git-fixtures-sealed.test.mjs).
+function sealedEnv() {
+  const env = { ...process.env };
+  for (const k of Object.keys(env)) if (k.startsWith('GIT_') || k === 'GF_PROJECT_ROOT') delete env[k];
+  return env;
+}
+
 test('#191 review: run from a SUBDIRECTORY, the project root config is read', async () => {
   const { spawnSync } = await import('node:child_process');
   const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join, dirname } = await import('node:path');
   const { fileURLToPath } = await import('node:url');
+  const env = sealedEnv();
   const repo = mkdtempSync(join(tmpdir(), 'rb-root-'));
-  spawnSync('git', ['init', '-q'], { cwd: repo });
+  spawnSync('git', ['init', '-q'], { cwd: repo, env });
   mkdirSync(join(repo, 'Roadmap'));
   mkdirSync(join(repo, 'apps', 'web'), { recursive: true });
   const values = { 'root-repo': 'acme/root', 'your-org': 'acme', 'app-repo': 'acme/app' };
   writeFileSync(join(repo, 'golden-frijoles.config.json'), JSON.stringify({ routines: values }));
   const script = join(dirname(fileURLToPath(import.meta.url)), 'routine-bootstrap.mjs');
-  const env = { ...process.env };
-  for (const k of Object.keys(env)) if (k.startsWith('GIT_') || k === 'GF_PROJECT_ROOT') delete env[k];
-  const r = spawnSync(process.execPath, [script, 'weekly-recap'], { cwd: join(repo, 'apps', 'web'), encoding: 'utf8', env: { ...env, GF_PROJECT_ROOT: repo } });
+  const r = spawnSync(process.execPath, [script, 'weekly-recap'], {
+    cwd: join(repo, 'apps', 'web'),
+    encoding: 'utf8',
+    env: { ...env, GF_PROJECT_ROOT: repo },
+  });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /acme\/root/);
 });
