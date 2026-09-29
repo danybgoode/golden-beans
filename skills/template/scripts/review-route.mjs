@@ -170,19 +170,22 @@ function main() {
   if (!forceSecurity) {
     const facts = prFacts(pr, repo);
     if (!facts) {
-      // Three states, never two: "I could not check" is not "no security path touched".
-      die(
-        `could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Re-run when gh works, or pass --security.`
-      );
+      // UNKNOWN is not "no security path". Still render the route for a stranger with no gh: treating that
+      // machine as a hard CLI error hid the DARK state the kickoff needs to explain. Force the lens instead.
+      securityPass = true;
+      trigger =
+        `could not look: GitHub CLI could not read PR #${pr}'s changed files — install GitHub CLI ` +
+        '(https://cli.github.com), then `gh auth login`. Security trigger is UNKNOWN; lens requested conservatively.';
+    } else {
+      const decision = decideSecurityPass({
+        files: facts.files,
+        body: facts.body,
+        securityPaths: config.securityPaths,
+        totalFiles: changedFileCount({ pr, repo }),
+      });
+      securityPass = decision.run;
+      trigger = decision.reason;
     }
-    const decision = decideSecurityPass({
-      files: facts.files,
-      body: facts.body,
-      securityPaths: config.securityPaths,
-      totalFiles: changedFileCount({ pr, repo }),
-    });
-    securityPass = decision.run;
-    trigger = decision.reason;
   }
   // `hasCmd` says INSTALLED, not UNCAPPED — a quota-capped CLI is present and answers `--version`.
   // There is no way to know a family is capped without spending a run on it, so the fallback is

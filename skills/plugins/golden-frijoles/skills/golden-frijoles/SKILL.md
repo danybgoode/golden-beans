@@ -16,6 +16,22 @@ requires_scripts:
   - lib/config.mjs
   - lib/config-registry.mjs
   - lib/config.d.mts
+  # The epic kickoff's own commands (distribute-what-we-use D4): the review rail and the session resume.
+  - review-route.mjs
+  - cross-review.mjs
+  - cross-review.prompt.md
+  - cross-review.security.prompt.md
+  - review-config.json
+  - lib/review-guard.mjs
+  - lib/cross-agent-cli.mjs
+  - lib/jev.mjs
+  - cross-agent-doctor.mjs
+  - session-resume.mjs
+  - session-note.mjs
+  - lib/gh-rest.mjs
+  - lib/log-branch.mjs
+  - lib/reporting-config.mjs
+  - lib/session-journal.mjs
 ---
 
 # golden-frijoles — start here
@@ -93,7 +109,7 @@ restate `lib/config-registry.mjs` here.
 | The ask sounds like… | Route to |
 |---|---|
 | planning, shaping, a new idea, "what should we build" | `groom` |
-| verifying rendered behavior, "does this look right", a build-time check | `live-smoke` (plus the cross-review rails — **project-local**: they need a consuming project's own copies, same as any other `requires_scripts` skill) |
+| verifying rendered behavior, "does this look right", a build-time check | `live-smoke` (the cross-review rails also ship in the kit) |
 | daily/weekly ops: standups, recaps, PMO reporting, watching a PR, doc bloat, stale previews | `standup-post` / `weekly-recap` / `pmo-report` / `babysit-pr` / `doc-hygiene` / `vercel-prune` |
 | shipping, flags, kill switches | `gf` (the hosted CLI — see the repo README's flags section) |
 
