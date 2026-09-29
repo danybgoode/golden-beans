@@ -41,6 +41,16 @@ requires_scripts:
   - lib/slack-text.mjs
   - lib/notification-text.mjs
   - lib/session-journal.mjs
+  # Routine setup (S4): the bootstrap and reviewed prompts travel together so /schedule never starts from a partial copy.
+  - routine-bootstrap.mjs
+  - routines/README.md
+  - routines/ops-nightly.prompt.md
+  - routines/pmo-report.prompt.md
+  - routines/pr-review.prompt.md
+  - routines/prod-smoke.prompt.md
+  - routines/roadmap-hygiene.prompt.md
+  - routines/smoke-triage.prompt.md
+  - routines/weekly-recap.prompt.md
   # The build view's resolver, for running it by hand (the hook runs its own bundled copy, D5).
   - build-state.mjs
   - lib/roadmap-contract.mjs
@@ -123,6 +133,7 @@ restate `lib/config-registry.mjs` here.
 | planning, shaping, a new idea, "what should we build" | `groom` |
 | verifying rendered behavior, "does this look right", a build-time check | `live-smoke` (the cross-review rails also ship in the kit) |
 | daily/weekly ops: standups, recaps, PMO reporting, watching a PR, doc bloat, stale previews | `standup-post` / `weekly-recap` / `pmo-report` / `babysit-pr` / `doc-hygiene` / `vercel-prune` |
+| standing up a reviewed Claude Code routine | `node scripts/routine-bootstrap.mjs <name>`, then paste it into `/schedule` |
 | shipping, flags, kill switches | `gf` (the hosted CLI — see the repo README's flags section) |
 | turning on Jev (semantic review/prose guards), "set up Jev", a TypeSafe key | **Jev setup** below |
 | Telegram/Slack notifications, "find my chat id", "send a test message" | **Notify setup** below |
