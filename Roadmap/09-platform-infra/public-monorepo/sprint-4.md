@@ -12,7 +12,7 @@ stories:
     i_want: "each folder to say what I may do with it"
     so_that: "the engine is source-available and the funnel is open (E8)"
     risk: high
-    status: planned
+    status: done
   - id: S4.2
     title: "Rename in place to danybgoode/golden-frijoles"
     as_a: "the product owner"
@@ -37,13 +37,13 @@ stories:
 ---
 # One public monorepo — Sprint 4: S4 Licences and identity
 
-**Status:** 🚧 S4.2 and S4.3 shipped. S4.1 is held (draft #184, awaiting the lawyer). S4.4 is owed to Daniel (commands below).
+**Status:** 🚧 S4.1–S4.3 shipped. S4.4 is owed to Daniel (commands below), and he'll run it after this session.
 
 ## Stories
 
-### Story 4.1 — Per-folder licences ⏸ HELD: draft #184, awaiting the lawyer's OK (four questions are in the PR body).
+### Story 4.1 — Per-folder licences ✅ #184. **Decided 2026-09-28:** Daniel approved merging with standard open-core defaults instead of waiting for the lawyer. Licensor "The Golden Frijoles authors" (the Apache "The X Authors" convention, matching `skills/NOTICE`). Everything outside the four named packages defaults to FSL. Already-published CLI versions stay `UNLICENSED`, and the next release carries Apache-2.0. `references/` is untracked and gitignored, and the brand tokens it held moved to `apps/web/brand/tokens.css`.
 **As a stranger reading the repo**, **I want** each folder to say what I may do with it, **so that** the engine is source-available and the funnel is open (E8).
-**Acceptance:** `skills/` keeps Apache-2.0 + NOTICE. `packages/cli` and `packages/sdk` get Apache-2.0 (`license` field + LICENSE). `apps/web` and `supabase/` get FSL-1.1-ALv2. A root LICENSE maps the folders. **This is held unmerged until Daniel confirms the lawyer's OK.**
+**Acceptance:** `skills/` keeps Apache-2.0 + NOTICE. `packages/cli` and `packages/sdk` get Apache-2.0 (`license` field + LICENSE). `apps/web` and `supabase/` get FSL-1.1-ALv2. A root LICENSE maps the folders. *Originally held for the lawyer's OK. Daniel waived that on 2026-09-28 in favour of standard open-core defaults (see the ✅ note).*
 **Risk:** high
 
 ### Story 4.2 — Rename in place to danybgoode/golden-frijoles ✅ renamed 2026-09-28 with `gh repo rename`; the old URL redirects. Vercel `link.repoId` 1299999527 = the repo id, so the link survives the rename (proven by S4.3). References updated: `reporting.config.json`, `commit-report.mjs`, both `epic-dod.exemptions.json`, and the skills README/CONTRIBUTING/fill-ins/Roadmap pointers. Historical Roadmap mentions (97 files), test fixtures and labelled Jev data are left as they are, since redirects cover them.
@@ -79,7 +79,7 @@ Done when a new session in `~/dobby/golden-frijoles` loads its memory index, and
 `launchctl list` already showed this runner's last exit as `1` before the move, which predates this epic and is worth a look.
 
 ## Sprint QA
-- The deploy proof (S4.3) is the gate. **Owed to Daniel:** the lawyer's OK before S4.1 merges, the Vercel dashboard check if it needs reconnecting, and S4.4's local moves.
+- The deploy proof (S4.3) is the gate. **Owed to Daniel:** S4.4's local moves.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` green, plus the skills checks from S1.2 on.
 
 ## Sprint 4 — Smoke walkthrough (do these in order)

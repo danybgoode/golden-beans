@@ -346,8 +346,8 @@ independently shippable slice of value.
 - 🚧 [One public monorepo](09-platform-infra/public-monorepo/README.md): the plugin, kit and template live in
   `skills/` (with history), and `golden-frijoles/skills` is a fast-forward mirror whose own release workflow still
   publishes the kit. Release 0.5.3 went out that way. The repo is now `danybgoode/golden-frijoles`, and sensitive docs
-  live in the private `golden-frijoles/internal`. **Shipped 2026-09-28 except** the licences (held for the lawyer, #184)
-  and the local folder move (owed).
+  live in the private `golden-frijoles/internal`. Per-folder licences apply: Apache-2.0 for `skills/`, the CLI and the SDK, and FSL-1.1-ALv2 for
+  the engine (#184). **Shipped 2026-09-28 except** the local folder move (owed to Daniel).
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).

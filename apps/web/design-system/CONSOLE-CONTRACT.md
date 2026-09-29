@@ -103,7 +103,7 @@ so the gate is red while the work is being done, and going green is what "done" 
 Ground: `--roast` `#16120d`.
 
 > ⚠️ **CORRECTED 2026-08-29 (`design-system-rails` D2-c).** This section used to end with *"Every
-> colour comes from `references/design/assets/tokens.css`; the prototype introduced no new ones."*
+> colour comes from `apps/web/brand/tokens.css`; the prototype introduced no new ones."*
 > **That is false.** `tokens.css` does not define `--card-2`, `--card-3`, `--line-soft`,
 > `--green-deep` or `--red-deep` — five colours — nor `--r`, `--r-lg`, `--shadow`, `--shadow-hi` or
 > `--t`. It also disagrees on one value it does define: `--roast-2` is `#221b13` there and

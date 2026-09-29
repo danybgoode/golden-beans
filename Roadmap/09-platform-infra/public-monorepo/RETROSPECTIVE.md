@@ -1,6 +1,6 @@
 # One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo — Retrospective
 
-_Retro written 2026-09-28. The epic stays **in progress** until S4.1 (lawyer) and S4.4 (Daniel) land._
+_Retro written 2026-09-28. The epic stays **in progress** until S4.4 (the local folder move, Daniel) lands._
 
 ## What shipped
 <!-- The capability now live, by sprint, with commit/PR refs. -->
@@ -39,8 +39,10 @@ _Retro written 2026-09-28. The epic stays **in progress** until S4.1 (lawyer) an
 
 ## Gaps / follow-ups
 <!-- Smoke gaps owed to the product owner, deferred slices, known limitations. -->
-- **S4.1 licences are HELD** (draft #184) until the lawyer answers: the licensor name, the FSL root default, the
-  already-published `UNLICENSED` CLI versions, and `references/`.
+- **S4.1 licences merged (#184) without the lawyer's review**, by Daniel's decision, using standard open-core defaults
+  (see sprint-4). Revisit if counsel disagrees. `references/` is now local-only. Its only load-bearing file, the brand
+  tokens `globals.css` imports, moved to `apps/web/brand/tokens.css`. 7 historical Roadmap links into `references/`
+  now 404 on GitHub.
 - **S4.4 is owed to Daniel:** the folder, Claude-memory and report-runner commands are in sprint-4.md. The runner
   already showed exit `1` before the move.
 - **Notification and report headers still read `golden-beans`** (`telegram-notify.mjs:118`, `slack-notify.mjs:123`,

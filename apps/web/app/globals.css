@@ -1,4 +1,4 @@
-@import '../../../references/design/assets/tokens.css';
+@import '../brand/tokens.css';
 
 /* Two derived kraft surfaces the infomercial band needs and `tokens.css` does
    not carry. Declared here rather than added to the token file, which is the

@@ -37,7 +37,7 @@ export const SCOPE_SELECTORS = ['.ds', '.is-console'];
 //    `--font-mono` on `<html>`. A static prototype opened from `file://` has no such variable and
 //    must name the family literally.
 // 2. **The values below are what the console resolves TODAY** — they are
-//    `references/design/assets/tokens.css`'s, which `.is-console` inherited because it never
+//    `apps/web/brand/tokens.css`'s, which `.is-console` inherited because it never
 //    declared these two. Sprint 1's contract is that no product pixel moves, so the generated file
 //    must reproduce the resolved stack exactly rather than adopt the prototype's slightly longer
 //    fallback tail (`-apple-system`, `'Segoe UI'`). Both stacks begin with the same next/font
@@ -94,7 +94,7 @@ export function buildTokensCss(tokens) {
   return `${HEADER('tokens.css \u2014 the product design system\u2019s token set')}
 /* Scoped to a CLASS, not \`:root\`, and that is the whole point of D3.
  *
- * \`references/design/assets/tokens.css\` owns \`:root\` for the landing and is imported first by
+ * \`apps/web/brand/tokens.css\` owns \`:root\` for the landing and is imported first by
  * globals.css. Several of these names collide with it, and ONE collides with a different VALUE:
  * \`--roast-2\` is #221b13 on the landing and #1c1710 here, and both are on screen today. Declaring
  * the product set on a class means the console gets its value without the landing losing its own \u2014

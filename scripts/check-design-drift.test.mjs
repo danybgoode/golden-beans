@@ -34,23 +34,13 @@ function scaffoldFixtureRepo() {
   for (const dir of [
     ...SWEPT_ROOTS,
     ...VOICE_AND_STYLE_ROOTS,
-    'references/design',
-    'references/golden-beans-design-system-proposal',
   ]) {
     mkdirSync(join(root, dir), { recursive: true });
   }
 
-  // The two non-sweep assertions inspectRepository also makes. Copied from the real repo so the
+  // The one non-sweep assertion inspectRepository also makes (the token import). Copied from the real repo so the
   // fixture starts CLEAN — a fixture that was already failing could not prove a new violation.
   cpSync(join(repoRoot, 'apps/web/app/globals.css'), join(root, 'apps/web/app/globals.css'));
-  for (const path of [
-    'references/golden-beans-design-system-proposal/golden-beans-polish-pass-proposal.html',
-    'references/design/polish-pass-proposal.html',
-    'references/golden-beans-design-system-proposal/ux-guidelines.md',
-    'references/ux-guidelines.md',
-  ]) {
-    cpSync(join(repoRoot, path), join(root, path));
-  }
 
   return root;
 }

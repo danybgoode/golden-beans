@@ -53,7 +53,7 @@
   /* ⚠️ **The token block that was here is DELETED** — `design-system-rails` Sprint 1, Story 1.2
      (epic D2). It declared 23 custom properties under a comment reading:
 
-       "Tokens are the prototype's, which are `references/design/assets/tokens.css` verbatim — the
+       "Tokens are the prototype's, which are `apps/web/brand/tokens.css` verbatim — the
         design introduced no new colours. Declared locally so this file is self-contained and can be
         diffed against the prototype's `:root` without chasing an import."
 
@@ -537,7 +537,7 @@
    splitting a stylesheet across the stories that happen to reach it first is how a port drifts. */
 
 /* ⚠️ **`section { padding: 36px 0 }` is a LANDING rule, and it applies here.**
-   `references/design/assets/tokens.css` sets it for the public page's bands. Inside the console it
+   `apps/web/brand/tokens.css` sets it for the public page's bands. Inside the console it
    opens 72px of dead air around `<section>` — which was invisible while `FlagManager` rendered the
    authoring stack inside one, and became 72px of nothing the moment Story 3.3 emptied it. Exactly
    the class `app-shell-and-agent-rail` recorded when the same rule opened 72px per section inside a
