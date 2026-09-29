@@ -730,6 +730,7 @@ async function main() {
         state: 'failure',
         lens,
         description: `${reviewerLabel}: ${verdict.reason}`,
+        sha: reviewedSha,
       });
       process.stderr.write(
         st.posted
@@ -767,6 +768,7 @@ async function main() {
       state: 'success',
       lens,
       description: `review produced by ${reviewerLabel} (${verdict.reason}) — not a verdict`,
+      sha: reviewedSha,
     });
     process.stderr.write(
       st.posted

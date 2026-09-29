@@ -187,3 +187,15 @@ test('buildComment still accepts the older (label, findings, opts) shape (distri
   assert.doesNotMatch(legacy, /Codex unavailable/);
   assert.match(buildComment('Codex', 'findings', true, {}), /Antigravity — Codex unavailable/);
 });
+
+test('every status post pins the reviewed sha (distribute-what-we-use S1, cross-review on #188)', () => {
+  // The template pinned all three; this repo's copy pinned only the pending one, and the first superset
+  // kept that. Without the pin, a push during the review attaches the verdict to a head nobody reviewed.
+  const src = readFileSync(new URL('./cross-review.mjs', import.meta.url), 'utf8');
+  const calls = src
+    .split('postReviewStatus({')
+    .slice(1)
+    .map((rest) => rest.slice(0, rest.indexOf('});')));
+  assert.equal(calls.length, 3, 'pending, failure and success');
+  for (const call of calls) assert.match(call, /\bsha: reviewedSha\b/);
+});
