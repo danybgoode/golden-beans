@@ -14,8 +14,8 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 - **One review rail.** `cross-review.mjs` and `lib/cross-agent-cli.mjs` are now the superset of the three copies
   that had forked (the template, the origin project and a second consumer): whole-file context, builder/reviewer
   pairing, the transient-agy fallback and truncation guard, the `readSection('review')` config loader, the codex
-  self-heal onto agy (now also on a stale codex CLI), `--agent devin` as an explicit-only third quota pool, and a
-  comment that records the model that actually answered. Every consumer's old tests were run against it.
+  self-heal onto agy (now also on a stale codex CLI), and a comment that records the model that actually
+  answered. Every consumer's old tests were run against it.
 - **One doctor: `cross-agent-doctor.mjs`** (codex + agy) ships in the template. `agy-doctor.mjs` is an alias for
   `cross-agent-doctor.mjs agy`. Every fix message names a doctor that exists.
 - **`CODEX_MODEL=default`** opts out of the pinned review model and uses codex's own default.
@@ -25,6 +25,9 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 - **The Vibe reviewer runs with every host tool disabled** (`--disabled-tools '*'`, no `--auto-approve`). The
   read-only allow-list one copy carried let a malicious diff read an absolute path, such as `.env.local`, into a
   review comment posted on the PR. Reviewers still get the touched files' contents, embedded in the prompt.
+- **`--agent devin` is refused.** A consumer used Devin as a third review pool, but `devin -p` auto-approves
+  read-only tools with no flag to disable them, so the same injected-diff read applies. Devin stays the prose
+  writer.
 - **The codex→agy self-heal re-checks the builder.** When agy built the diff, the heal fails loud instead of
   turning into a same-family review.
 

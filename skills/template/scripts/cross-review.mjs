@@ -52,7 +52,6 @@ import {
   loadPromptBody,
   runAntigravity,
   runWithCodexFallback,
-  runDevin,
   runVibe,
   AGY_MODEL,
   codexModelFrom,
@@ -118,7 +117,7 @@ Usage:
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join(' | ')} (default: antigravity; devin is explicit-only)
+  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join(' | ')} (default: antigravity)
   --paths a,b,c        review ONLY files whose path contains one of these. The reduced
                        scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
@@ -276,9 +275,6 @@ function runReview(agent, prompt, diff, { builder = '', onModel } = {}) {
     );
   if (agent === 'antigravity')
     return { findings: runAntigravity(agyArgv(prompt, diff), { onModel }), fellBack: false };
-  // Devin takes the whole thing in a prompt FILE (no argv cap), so it reuses agy's embedded-diff framing.
-  // A selectable third quota pool (a consuming project); review-route never routes to it on its own.
-  if (agent === 'devin') return { findings: runDevin(agyArgv(prompt, diff)), fellBack: false };
   if (agent === 'vibe') return { findings: runVibe(agyArgv(prompt, diff)), fellBack: false };
   if (agent === 'claude') return { findings: runClaudeCode(prompt, stdinContext), fellBack: false };
   die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
@@ -328,7 +324,6 @@ export function buildComment(agentLabel, findings, fellBack = false, opts = {}) 
 export function resolveReviewModel(agent, fellBack, deps = {}) {
   const { env = process.env, readCfg = defaultReadCodexConfig, usedAgyModel = null } = deps;
   if (fellBack || agent === 'antigravity') return `agy ${usedAgyModel || env.AGY_MODEL || AGY_MODEL}`;
-  if (agent === 'devin') return 'devin default';
   if (agent === 'vibe') return env.VIBE_MODEL || env.VIBE_ACTIVE_MODEL || 'vibe configured default';
   if (agent === 'claude') return env.CLAUDE_REVIEW_MODEL || CLAUDE_REVIEW_MODEL;
   // The same resolution execCodex uses: unset → the pin, `default` → codex's own config (read, never guessed).

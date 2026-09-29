@@ -77,7 +77,7 @@ Every failure was read. None was deleted as superseded.
 |---|---|---|
 | ours `agy-doctor.test.mjs` (17) | 17/17 through the alias | none needed |
 | medusa `cross-agent-doctor.{agy,codex}.test.mjs` (27) | 27/27 | adopted into both trees |
-| medusa `lib/cross-agent-cli.test.mjs` (56) | 54/56 at first | `AGENTS.devin` missing → **devin kept as an explicit-only reviewer** (no consumer loses a behaviour); `AGY_PINNED === '1.2.8'` → the superset takes the newer verified 1.2.12, and the adopted copy asserts *constant = marker* instead, because `--fix` runs this suite right after it bumps |
+| medusa `lib/cross-agent-cli.test.mjs` (56) | 54/56 at first | `AGENTS.devin` missing → first kept as an explicit-only reviewer, then **removed on the security lens's Blocking finding** (`devin -p` auto-approves read-only tools and has no flag to disable them, so an injected diff can read host secrets into the posted comment; stricter wins over "no consumer loses a behaviour"; the adopted test now asserts the exclusion); `AGY_PINNED === '1.2.8'` → the superset takes the newer verified 1.2.12, and the adopted copy asserts *constant = marker* instead, because `--fix` runs this suite right after it bumps |
 | medusa `cross-review.test.mjs` (8), template `cross-review.test.mjs` (9) | one failure each at first | `buildComment(label, findings, fellBack, opts)` adopted as the signature (two of three copies); the older `(label, findings, opts)` shape still works and is pinned by a new test |
 | medusa `cross-review.lens.test.mjs` | import error, then 3 failures | `resolveReviewModel` ported (the comment records the model). Three assertions changed **premise**: medusa read `~/.codex/config.toml` when `CODEX_MODEL` was unset; the superset pins the model execCodex actually passes, and `CODEX_MODEL=default` returns to the config, where medusa's null-on-unreadable rule still holds (pinned) |
 | ours `lib/vibe-invocation.test.mjs` | 1 failure | **deliberate stance change** (D1, stricter wins): the read-only allow-list is removed; the test now pins `--disabled-tools '*'`, no `--auto-approve`, no tool named, and a disabled-tool request refused |
@@ -85,6 +85,10 @@ Every failure was read. None was deleted as superseded.
 
 **Found while building, fixed in S1:**
 - The Vibe reviewer's allow-list could read `.env.local` into a public PR comment (the reason for D1's stricter-wins rule).
+- Review on #188 found two more: status posts had lost the template's `sha: reviewedSha` pin (codex general,
+  Blocking; restored and pinned by a source-level test), and `--agent devin` had the Vibe hole (codex security
+  lens, Blocking; removed). Vibe (`MISTRAL_API_KEY` missing) and agy (signed out) could not run, so codex ran
+  both prompts (WAYS-OF-WORKING: one family left).
 - The codex→agy heal could become a same-family review; it now re-checks the builder (`lib/codex-fallback-pairing.test.mjs`).
 - **agy is signed out right now** (1.2.13 auto-updated mid-session). Both the old and the new doctor called that "contract
   broken, every model NOT LISTED" and spent a minute per probe waiting for a login. The doctor now says *could not

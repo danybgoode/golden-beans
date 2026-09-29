@@ -777,8 +777,12 @@ function devinDeps(spawnResult, { failWrite = false } = {}) {
   };
 }
 
-test('AGENTS includes devin (a third selectable cross-family reviewer)', () => {
-  assert.equal(AGENTS.devin, 'Devin');
+// Adopted from a consuming project, where `--agent devin` was a third review pool. Inverted by
+// distribute-what-we-use S1's security lens: `devin -p` auto-approves read-only tools with no flag to turn
+// them off, so an attacker's diff could steer it into reading host secrets into a posted comment.
+test('AGENTS excludes devin — a reviewer that can read host files is refused', () => {
+  assert.equal(AGENTS.devin, undefined);
+  assert.equal(Object.keys(AGENTS).includes('devin'), false);
 });
 
 test('runDevin: stubbed devin → trimmed output via `-p --prompt-file <file>`, temp dir cleaned up', () => {

@@ -27,10 +27,6 @@ import { join } from 'node:path';
 export const AGENTS = {
   codex: 'Codex',
   antigravity: 'Antigravity',
-  // Explicit-only (`--agent devin`): review-route never routes to it, so it is a third quota pool a person
-  // or agent reaches for deliberately when codex and agy are both capped (a consuming project's use). Kept in the
-  // superset because no consumer may lose a behaviour it had (distribute-what-we-use D1).
-  devin: 'Devin',
   vibe: 'Mistral Vibe',
   claude: 'Claude Code',
 };
@@ -1326,10 +1322,14 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   return out;
 }
 
-// ── Devin — the PROSE WRITER first, an explicit-only reviewer second (independent quota pool) ─────────────
-// lib/prose-writer.mjs drafts with Devin first (plugin-audit-and-extraction S1). It is also in AGENTS so
-// `cross-review.mjs --agent devin` works, but the reviewer ROSTER is review-route.mjs's decision, and the
-// router never picks it — see AGENTS.
+// ── Devin — a PROSE WRITER here, never a reviewer (independent quota pool) ────────────────────────────────
+// lib/prose-writer.mjs drafts with Devin first (plugin-audit-and-extraction S1). It is deliberately NOT in
+// AGENTS, so `cross-review.mjs --agent devin` is refused. A consuming project used it as a third review pool;
+// distribute-what-we-use S1's security lens found why that is unsafe: `devin -p` auto-approves read-only
+// tools (`--permission-mode auto`), there is no flag that disables them, and even `--sandbox` "can read
+// everything except paths hidden by Deny(Read(...)) rules" (`devin --help`, 3000.11.3). A reviewer fed an
+// attacker's PR diff could be steered into reading `.env.local` into a comment posted on the PR — the same
+// hole closed for Vibe (see VIBE_READ_ONLY_TOOLS). Its prose drafts are fed this repo's own docs and git log.
 // `devin -p --prompt-file <file>` runs non-interactively and prints the response. The prompt (framing +
 // diff) rides in a FILE, not argv, so there is NO size cap to guard — the whole reason to prefer prompt-file
 // over agy's argv path for large diffs. Empty stdout is a failure (a quota-capped devin, like agy, exits 0
