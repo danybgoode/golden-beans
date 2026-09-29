@@ -19,7 +19,7 @@
 // Zero deps — Node 18+.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, realpathSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { importClosure } from './check-skill-scripts.mjs';
 
@@ -40,7 +40,8 @@ function listFiles(dir, base = dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
-    return statSync(p).isDirectory() ? listFiles(p, base) : [relative(base, p)];
+    // POSIX separators, to compare with the manifest on Windows too (agy on #189).
+    return statSync(p).isDirectory() ? listFiles(p, base) : [relative(base, p).split(sep).join('/')];
   });
 }
 
