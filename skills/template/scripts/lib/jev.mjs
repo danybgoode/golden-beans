@@ -150,7 +150,7 @@ export function loadJevConfig({ root = repoRoot(), read = readFileSync, exists =
 }
 
 /** Parse `KEY=value` lines. Enough for .env.local; quotes stripped. */
-function envFileValue(text, key) {
+export function envFileValue(text, key) {
   for (const line of String(text).split('\n')) {
     const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
     if (m && m[1] === key) return m[2].trim().replace(/^(['"])(.*)\1$/, '$2') || null;

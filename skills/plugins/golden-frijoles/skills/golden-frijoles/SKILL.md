@@ -32,6 +32,14 @@ requires_scripts:
   - lib/gh-rest.mjs
   - lib/log-branch.mjs
   - lib/reporting-config.mjs
+  # The Jev setup proof (S3.2) and the notify setup (S3.3): `jev-eval --live --limit`, the chat-id finder and the test message.
+  - jev-eval.mjs
+  - jev-eval.fixtures.json
+  - lib/prose-guard.mjs
+  - notify-setup.mjs
+  - slack-notify.mjs
+  - lib/slack-text.mjs
+  - lib/notification-text.mjs
   - lib/session-journal.mjs
   # The build view's resolver, for running it by hand (the hook runs its own bundled copy, D5).
   - build-state.mjs
@@ -116,8 +124,48 @@ restate `lib/config-registry.mjs` here.
 | verifying rendered behavior, "does this look right", a build-time check | `live-smoke` (the cross-review rails also ship in the kit) |
 | daily/weekly ops: standups, recaps, PMO reporting, watching a PR, doc bloat, stale previews | `standup-post` / `weekly-recap` / `pmo-report` / `babysit-pr` / `doc-hygiene` / `vercel-prune` |
 | shipping, flags, kill switches | `gf` (the hosted CLI — see the repo README's flags section) |
+| turning on Jev (semantic review/prose guards), "set up Jev", a TypeSafe key | **Jev setup** below |
+| Telegram/Slack notifications, "find my chat id", "send a test message" | **Notify setup** below |
 
 Say which skill you're handing off to and why, in one line, before switching.
+
+## Jev setup
+
+Jev is an optional semantic check on PR review text and report drafts: turning it on sends that text to TypeSafe's
+API, and **nothing leaves this machine until the user says yes**. Do these in order, and never skip ahead:
+
+1. **Ask** whether that text may be sent to TypeSafe. On yes, run
+   `npx -y @golden-frijoles/kit@<the version stamped in the run rule above> config set jev.egress true`. On no, run the same
+   with `jev.egress false` and **stop**: no key, no proof, no rail modes.
+2. Point them to **https://docs.typesafe.ai** to sign up and get an API key.
+3. The key goes in `.env.local` as `TYPESAFE_API_KEY=…`, never in a committed file (`.env.local` is gitignored).
+4. **Prove it** with `node scripts/jev-eval.mjs --live --limit 10` (the run rule applies). It asks Jev about only the
+   first 10 labelled fixtures of each rail, prints agreement with the labels, and writes nothing. Never use `--live` without `--limit` for this: that
+   re-records the committed set. With no key it exits 2 naming `TYPESAFE_API_KEY` and `.env.local`.
+5. Only after that succeeds, offer the rail modes for `review` and `prose` in `jev.config.json`: `off`, `shadow` (Jev
+   runs beside the regex and only logs; needs a `shadowExpires` date no more than 21 days out) or `jev`.
+
+`gf doctor` then shows `jev.egress` as configured.
+
+## Notify setup
+
+The scheduled reports (standup, weekly recap, PMO report) post to **Telegram only** today. Slack covers the test
+message and ad-hoc sends (`slack-notify.mjs`), not the scheduled reports; `reporting.destination` is recorded but no
+script reads it yet. Say that plainly before starting Slack, then:
+
+1. **Telegram bot:** in Telegram, message `@BotFather`, send `/newbot`, and put the token in `.env.local` as
+   `TELEGRAM_BOT_TOKEN=…`. Then have the user **send the bot one message** (in a group, add the bot first).
+2. `node scripts/notify-setup.mjs --chat-id` lists the chats the bot has seen. If it finds none it says why: a webhook
+   set on the bot (the fix is `deleteWebhook`), nobody has messaged it, or group privacy (BotFather → Group Privacy).
+3. Put the id in `reporting.config.local.json` as `{"telegram":{"chatId":"<id>"}}` (gitignored: use this for a public
+   repo) or in `reporting.config.json` (needs that file's `repos` list). With neither file, `TELEGRAM_CHAT_ID=<id>` in
+   `.env.local` works for the test.
+4. `node scripts/notify-setup.mjs --test` sends one message and prints what went where; it should arrive in Telegram.
+   Exit 3 is "could not look" (a token or id is missing), exit 1 is Telegram refusing, with its own error text.
+5. **Slack (optional):** create an incoming webhook, put the URL in `.env.local` as `SLACK_WEBHOOK_URL=…`, then run
+   `node scripts/notify-setup.mjs --test --slack`.
+
+Tokens and webhook URLs are never printed or written by these scripts; never paste one into chat or a committed file.
 
 ## What the `npx skills` channel lacks
 
