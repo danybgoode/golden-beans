@@ -151,6 +151,11 @@ test('credentialValues: padded base64 values are kept whole; registry URLs are n
   assert.ok(credentialValues(`      "auth": "${padded}"`).includes(padded));
   const session = 'fixture' + 'S'.repeat(20) + '=';
   assert.ok(credentialValues(`aws_session_token = ${session}`).includes(session));
+  const slashKey = '//' + 'fixture' + 'A'.repeat(31);
+  assert.ok(
+    credentialValues(`aws_secret_access_key = ${slashKey}`).includes(slashKey),
+    'a // -leading key is a key'
+  );
   assert.deepEqual(credentialValues('registry=https://registry.npmjs.org/'), []);
   assert.deepEqual(credentialValues('@scope:registry=https://npm.pkg.github.com/'), []);
   assert.deepEqual(credentialValues('repository = https://upload.pypi.org/legacy/'), []);

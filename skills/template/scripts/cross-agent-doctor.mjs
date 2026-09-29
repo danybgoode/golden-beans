@@ -556,7 +556,7 @@ async function agyMain() {
       const today = new Date().toISOString().slice(0, 10);
       writeFileSync(LIB_PATH, bumpPinnedSource(src, obs.installed, today));
       line(`✓ AGY_PINNED bumped ${obs.pinned} → ${obs.installed} (probe green; marker dated ${today}).`);
-      const t = spawnSync('node', ['--test', 'scripts/lib/*.test.mjs', 'scripts/*.test.mjs'], {
+      const t = spawnSync(process.execPath, ['--test', 'scripts/lib/*.test.mjs', 'scripts/*.test.mjs'], {
         encoding: 'utf8',
         cwd: resolve(__dirname, '..'),
         shell: false,

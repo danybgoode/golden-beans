@@ -115,7 +115,8 @@ export function credentialValues(text) {
     // Trailing base64 `=` padding is part of the value (`_auth=…==`, docker "auth": "…="); a URL remainder
     // (`registry=https://…` → `//registry…`) is configuration, not a secret (round 5 on #188).
     const kv = /[=:]\s*"?([^\s"',=:]{16,}={0,2})"?\s*,?\s*$/.exec(line);
-    if (kv && !kv[1].startsWith('//')) out.push(kv[1]);
+    // Skip ONLY a URL's `scheme://` remainder; a base64 value can itself start with `//` (round 6).
+    if (kv && !(kv[1].startsWith('//') && /https?:$/i.test(line.slice(0, kv.index + 1)))) out.push(kv[1]);
     const pw = /\bpassword\s+(\S{16,})/.exec(line);
     if (pw) out.push(pw[1]);
     const url = /https?:\/\/[^:\s]+:([^@\s]{16,})@/.exec(line);
