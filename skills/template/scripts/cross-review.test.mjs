@@ -242,3 +242,16 @@ test('an author without write access is refused before the reviewer runs or anyt
   });
   assert.equal(allowed.code, 0, allowed.out);
 });
+
+test('a reply carrying a secret is WITHHELD end to end: no comment, a failing status, redacted locally (#188 r4)', () => {
+  const token = 'ghp_' + 'Z'.repeat(36);
+  const { bin, log } = sandbox(`### Blocking\n\n- \`x.mjs:1\` the config is ${token}\n`);
+  const r = runCrossReview({ bin, args: ['7', '--repo', 'o/r', '--agent', 'codex'] });
+  assert.notEqual(r.code, 0);
+  assert.match(r.out, /WITHHELD/);
+  assert.doesNotMatch(r.out, new RegExp(token), 'the value is redacted even in the local print');
+  const gh = readFileSync(log, 'utf8');
+  assert.doesNotMatch(gh, /pr comment/, 'nothing posted as a comment');
+  assert.doesNotMatch(gh, new RegExp(token), 'nothing carrying the token reached gh');
+  assert.match(gh, /state=failure/);
+});

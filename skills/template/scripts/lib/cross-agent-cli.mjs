@@ -696,7 +696,9 @@ export const CODEX_REVIEW_FLAGS = Object.freeze([
 ]);
 
 export function codexExecArgs(prompt, { model = CODEX_MODEL, effort = CODEX_REASONING_EFFORT } = {}) {
-  const pin = model ? ['--model', model, '-c', `model_reasoning_effort=${effort}`] : [];
+  // Effort is independent of the model: `CODEX_MODEL=default` changes WHICH model, not how hard it thinks
+  // (codex round 4 on #188).
+  const pin = [...(model ? ['--model', model] : []), '-c', `model_reasoning_effort=${effort}`];
   return ['exec', ...CODEX_REVIEW_FLAGS, ...pin, prompt];
 }
 

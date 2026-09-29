@@ -103,7 +103,7 @@ test('CODEX_MODEL: unset is the pin, `default` is codex’s own default, anythin
   assert.equal(codexModelFrom('gpt-5.6-sol'), 'gpt-5.6-sol');
 });
 
-test('codex exec argv: locked down always; a pinned model carries its effort; `default` passes neither', () => {
+test('codex exec argv: locked down always; effort always; `default` drops only the model', () => {
   const lock = ['--sandbox', 'read-only', '--ignore-user-config', '--ignore-rules', '--ephemeral'];
   assert.deepEqual(codexExecArgs('P', { model: 'm', effort: 'high' }), [
     'exec',
@@ -114,7 +114,13 @@ test('codex exec argv: locked down always; a pinned model carries its effort; `d
     'model_reasoning_effort=high',
     'P',
   ]);
-  assert.deepEqual(codexExecArgs('P', { model: null, effort: 'high' }), ['exec', ...lock, 'P']);
+  assert.deepEqual(codexExecArgs('P', { model: null, effort: 'high' }), [
+    'exec',
+    ...lock,
+    '-c',
+    'model_reasoning_effort=high',
+    'P',
+  ]);
   assert.ok(!codexExecArgs('P').includes('workspace-write'));
 });
 

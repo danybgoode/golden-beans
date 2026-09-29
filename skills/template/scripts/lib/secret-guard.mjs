@@ -18,6 +18,7 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 /** Shorter values are too likely to occur in ordinary review prose ("development", a port, a flag). */
 export const MIN_SECRET_LENGTH = 16;
@@ -33,6 +34,7 @@ export const SECRET_SHAPES = Object.freeze([
   { name: 'Telegram bot token', re: /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/ },
   { name: 'AWS access key id', re: /\bAKIA[0-9A-Z]{16}\b/ },
   { name: 'Supabase access token', re: /\bsbp_[a-f0-9]{40}\b/ },
+  { name: 'npm token', re: /\bnpm_[A-Za-z0-9]{36}\b/ },
   { name: 'Supabase secret key', re: /\bsb_secret_[A-Za-z0-9_-]{16,}\b/ },
   // A signed JWT (header.payload.signature, both JSON parts base64url `eyJ…`): service-role keys are JWTs.
   // An opaque base64 run long enough to carry a key. Real reviews quote code, not 80-char blobs; this is
@@ -88,6 +90,39 @@ export function envFiles(root, { depth = 2, list = readdirSync, exists = existsS
 }
 
 /**
+ * The operator's own credential stores, by path under $HOME. A collaborator's diff can still steer a reviewer
+ * into reading one of these (codex's read-only sandbox reads the whole disk), and their values often have no
+ * distinctive shape (an AWS secret access key is 40 plain characters) — so their VALUES are matched verbatim.
+ * Only `key = value` / `key: value` style lines are read; nothing is stored or printed.
+ */
+export const HOME_CREDENTIAL_FILES = Object.freeze([
+  '.aws/credentials',
+  '.netrc',
+  '.npmrc',
+  '.pypirc',
+  '.config/gh/hosts.yml',
+  '.docker/config.json',
+  '.git-credentials',
+  '.codex/auth.json',
+]);
+
+/** Pure: every long value on a `key = value`, `key: value`, `"key": "value"` or `login x password y` line. */
+export function credentialValues(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    // The value after the LAST `=`/`:` on the line (`//registry.npmjs.org/:_authToken=npm_…` keeps only the
+    // token), and the word after `password` (netrc).
+    const kv = /[=:]\s*"?([^\s"',=:]{16,})"?\s*,?\s*$/.exec(line);
+    if (kv) out.push(kv[1]);
+    const pw = /\bpassword\s+(\S{16,})/.exec(line);
+    if (pw) out.push(pw[1]);
+    const url = /https?:\/\/[^:\s]+:([^@\s]{16,})@/.exec(line);
+    if (url) out.push(url[1]);
+  }
+  return out;
+}
+
+/**
  * The secret VALUES this machine could leak for this project: every value in the root's `.env*` files (a
  * dotenv file is secrets by convention; nested ones too, see envFiles), plus this process's env vars whose NAME says secret. Values
  * shorter than MIN_SECRET_LENGTH are skipped. Unreadable files are skipped — could not look is not a leak.
@@ -95,11 +130,20 @@ export function envFiles(root, { depth = 2, list = readdirSync, exists = existsS
 export function collectSecretValues({
   root = process.cwd(),
   env = process.env,
+  home = homedir(),
   read = readFileSync,
   list = readdirSync,
   exists = existsSync,
 } = {}) {
   const values = new Set();
+  for (const rel of home ? HOME_CREDENTIAL_FILES : []) {
+    try {
+      const p = join(home, rel);
+      if (exists(p)) for (const v of credentialValues(read(p, 'utf8'))) values.add(v);
+    } catch {
+      /* unreadable: skip */
+    }
+  }
   for (const file of envFiles(root, { list, exists })) {
     try {
       for (const { value } of parseEnvValues(read(file, 'utf8')))

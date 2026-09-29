@@ -20,14 +20,18 @@ test('collectSecretValues: every long value in the root .env* files, never the .
   const root = mkdtempSync(join(tmpdir(), 'sg-'));
   writeFileSync(join(root, '.env.local'), `SUPABASE_SERVICE_ROLE_KEY=${SERVICE_KEY}\nPORT=3000\n`);
   writeFileSync(join(root, '.env.example'), 'SUPABASE_SERVICE_ROLE_KEY=placeholder-placeholder-1234\n');
-  const values = collectSecretValues({ root, env: {} });
+  const values = collectSecretValues({ root, env: {}, home: null });
   assert.deepEqual(values, [SERVICE_KEY]);
 });
 
 test('collectSecretValues: secret-NAMED process env vars count; ordinary ones do not', () => {
   const root = mkdtempSync(join(tmpdir(), 'sg-'));
   const long = 'x'.repeat(MIN_SECRET_LENGTH);
-  const values = collectSecretValues({ root, env: { TELEGRAM_BOT_TOKEN: long, PATH: `/usr/bin:${long}` } });
+  const values = collectSecretValues({
+    root,
+    home: null,
+    env: { TELEGRAM_BOT_TOKEN: long, PATH: `/usr/bin:${long}` },
+  });
   assert.deepEqual(values, [long]);
 });
 
@@ -70,7 +74,7 @@ test('collectSecretValues: nested .env files (apps/web/.env.local) and .envrc co
   );
   writeFileSync(join(root, '.envrc'), 'export DB_URL=envrc-secret-value-12345\n');
   writeFileSync(join(root, 'node_modules', 'x', '.env'), 'X=vendored-not-ours-0123456\n');
-  const values = collectSecretValues({ root, env: {} }).sort();
+  const values = collectSecretValues({ root, env: {}, home: null }).sort();
   assert.deepEqual(values, ['envrc-secret-value-12345', 'nested-app-secret-value-1']);
 });
 
@@ -108,4 +112,34 @@ test('findSecretLeaks: an 80+ char base64 run is withheld; ordinary code is not'
     findSecretLeaks('- `scripts/lib/secret-guard.mjs:12` uses readFileSync(join(root, name))').leaks,
     []
   );
+});
+
+// ── codex security lens, round 4 on #188: shapeless secrets in the operator's own credential stores ─────
+test('credentialValues: aws, netrc, npmrc, gh hosts and URL-embedded passwords', async () => {
+  const { credentialValues } = await import('./secret-guard.mjs');
+  // Fixtures are built at runtime so no committed line looks like a live credential (push protection).
+  const awsKey = 'fixture' + 'Q'.repeat(33);
+  assert.ok(credentialValues(`[default]\naws_secret_access_key = ${awsKey}\n`).includes(awsKey));
+  const netrc = 'fixture-netrc-' + 'n'.repeat(8);
+  assert.ok(credentialValues(`machine api.x.com login me password ${netrc}`).includes(netrc));
+  const npmTok = 'npm_' + 'f'.repeat(36);
+  assert.ok(
+    credentialValues(`//registry.npmjs.org/:_authToken=${npmTok}`).includes(npmTok),
+    'the token alone'
+  );
+  assert.equal(findSecretLeaks(`- ${npmTok}`).leaks[0].name, 'npm token');
+  const gh = 'gho_' + 'g'.repeat(30);
+  assert.ok(credentialValues(`    oauth_token: ${gh}`).includes(gh));
+  const pw = 'fixture-url-pw-' + 'u'.repeat(8);
+  assert.ok(credentialValues(`https://user:${pw}@example.com`).includes(pw));
+});
+
+test('collectSecretValues: a value from ~/.aws/credentials is matched verbatim in a reply', async () => {
+  const { mkdirSync } = await import('node:fs');
+  const home = mkdtempSync(join(tmpdir(), 'sg-home-'));
+  mkdirSync(join(home, '.aws'));
+  const secret = 'fixture' + 'R'.repeat(33);
+  writeFileSync(join(home, '.aws', 'credentials'), `[default]\naws_secret_access_key = ${secret}\n`);
+  const values = collectSecretValues({ root: mkdtempSync(join(tmpdir(), 'sg-')), env: {}, home });
+  assert.equal(findSecretLeaks(`**Nit**\n- ${secret}`, { values }).leaks.length, 1);
 });
