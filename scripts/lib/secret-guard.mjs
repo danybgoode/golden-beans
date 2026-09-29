@@ -112,8 +112,10 @@ export function credentialValues(text) {
   for (const line of String(text || '').split('\n')) {
     // The value after the LAST `=`/`:` on the line (`//registry.npmjs.org/:_authToken=npm_…` keeps only the
     // token), and the word after `password` (netrc).
-    const kv = /[=:]\s*"?([^\s"',=:]{16,})"?\s*,?\s*$/.exec(line);
-    if (kv) out.push(kv[1]);
+    // Trailing base64 `=` padding is part of the value (`_auth=…==`, docker "auth": "…="); a URL remainder
+    // (`registry=https://…` → `//registry…`) is configuration, not a secret (round 5 on #188).
+    const kv = /[=:]\s*"?([^\s"',=:]{16,}={0,2})"?\s*,?\s*$/.exec(line);
+    if (kv && !kv[1].startsWith('//')) out.push(kv[1]);
     const pw = /\bpassword\s+(\S{16,})/.exec(line);
     if (pw) out.push(pw[1]);
     const url = /https?:\/\/[^:\s]+:([^@\s]{16,})@/.exec(line);

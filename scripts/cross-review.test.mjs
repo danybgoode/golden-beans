@@ -86,7 +86,13 @@ function runCrossReview({ bin, args, env = {} }) {
   // only reads stdout would pass whatever the run said.
   const r = spawnSync(process.execPath, [join(SCRIPTS, 'cross-review.mjs'), ...args], {
     encoding: 'utf8',
-    env: { ...process.env, ...env, PATH: `${bin}:${process.env.PATH}` },
+    // HOME is a temp dir: the secret guard reads the operator's credential stores, and a test must not.
+    env: {
+      ...process.env,
+      HOME: mkdtempSync(join(tmpdir(), 'cr-home-')),
+      ...env,
+      PATH: `${bin}:${process.env.PATH}`,
+    },
   });
   return { code: r.status ?? 1, out: `${r.stdout || ''}${r.stderr || ''}` };
 }

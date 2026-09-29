@@ -143,3 +143,15 @@ test('collectSecretValues: a value from ~/.aws/credentials is matched verbatim i
   const values = collectSecretValues({ root: mkdtempSync(join(tmpdir(), 'sg-')), env: {}, home });
   assert.equal(findSecretLeaks(`**Nit**\n- ${secret}`, { values }).leaks.length, 1);
 });
+
+test('credentialValues: padded base64 values are kept whole; registry URLs are not secrets (round 5 on #188)', async () => {
+  const { credentialValues } = await import('./secret-guard.mjs');
+  const padded = 'Zml4dHVyZS11c2VyOmZpeHR1cmUtcGFzcw' + '==';
+  assert.ok(credentialValues(`_auth=${padded}`).includes(padded));
+  assert.ok(credentialValues(`      "auth": "${padded}"`).includes(padded));
+  const session = 'fixture' + 'S'.repeat(20) + '=';
+  assert.ok(credentialValues(`aws_session_token = ${session}`).includes(session));
+  assert.deepEqual(credentialValues('registry=https://registry.npmjs.org/'), []);
+  assert.deepEqual(credentialValues('@scope:registry=https://npm.pkg.github.com/'), []);
+  assert.deepEqual(credentialValues('repository = https://upload.pypi.org/legacy/'), []);
+});

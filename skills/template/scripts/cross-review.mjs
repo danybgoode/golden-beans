@@ -345,7 +345,7 @@ export function resolveReviewModel(agent, fellBack, deps = {}) {
   void readCfg;
   const pinned = 'codexModel' in deps ? deps.codexModel : codexModelFrom(env.CODEX_MODEL);
   if (pinned) return `${pinned} (effort: ${env.CODEX_REASONING_EFFORT || CODEX_REASONING_EFFORT})`;
-  return 'codex built-in default (user config ignored)';
+  return `codex built-in default (effort: ${env.CODEX_REASONING_EFFORT || CODEX_REASONING_EFFORT}; user config ignored)`;
 }
 
 function defaultReadCodexConfig() {
