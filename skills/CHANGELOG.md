@@ -17,8 +17,9 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   DARK with the install line), never "script not found". Proven on the packed tarball in a blank `HOME` with no
   `gh` or reviewer CLI on `PATH`. The project's own `golden-frijoles.config.json` → `review` still wins over the
   kit's default config.
-- **`review-route.mjs` renders a route when `gh` cannot read the PR,** with the security lens forced
-  (unknown is not "no security path"), instead of exiting.
+- **`review-route.mjs` renders a route when GitHub CLI is not installed,** with the security lens forced
+  (unknown is not "no security path"), so a stranger sees the DARK state instead of an exit. An installed `gh`
+  that cannot read the PR (a wrong number, expired auth) still stops, and the PR number must be numeric.
 
 ### Security
 

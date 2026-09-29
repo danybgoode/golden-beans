@@ -47,7 +47,7 @@ import { spawnSync } from 'node:child_process';
 // worth of edits from crossing it. Both in bytes; see decideMemoryBudgetAnomaly.
 export const MEMORY_HARD_LIMIT_BYTES = 25_000;
 export const MEMORY_BUDGET_BYTES = 23_552;
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { listPulls, getPullMergeability, getStatusRollup } from './lib/gh-rest.mjs';
@@ -935,7 +935,17 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
   }
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+// realpath on both sides: through a symlinked path a plain compare is false and the script exits 0 having
+// done nothing (#189 review).
+const isMain = (() => {
+  try {
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+})();
 if (isMain) {
   main().then((code) => {
     process.exitCode = code;

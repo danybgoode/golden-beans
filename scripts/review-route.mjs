@@ -29,8 +29,8 @@
 // Zero npm deps — Node 18+. Pure policy exported for node:test; the CLI is a thin shell.
 
 import { spawnSync } from 'node:child_process';
-import { writeSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { writeSync, realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need, hasCmd, AGENT_BIN } from './lib/cross-agent-cli.mjs';
 import { changedFileCount, decideSecurityPass, parseReviewConfig } from './lib/review-guard.mjs';
@@ -220,5 +220,15 @@ function main() {
   );
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// realpath on both sides: through a symlinked path a plain compare is false and the script exits 0 having
+// done nothing (#189 review).
+const isMain = (() => {
+  try {
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+})();
 if (isMain) main();

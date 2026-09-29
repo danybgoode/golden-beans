@@ -77,7 +77,8 @@ Builds **D4, D5, D6** (README → *Architecture lock*).
   cut meaning. That was reverted. The closure lives on the **umbrella `golden-frijoles` skill** instead (the
   stranger's front door; no line budget), with D4 unchanged in substance (the kit is the union of every skill's
   `requires_scripts`). Codex's other change was kept: `review-route.mjs` forces the security lens and renders a
-  route when `gh` cannot read the PR, where it used to exit. Proof is on the **packed tarball**
+  route when GitHub CLI is not installed, where it used to exit (an installed `gh` that cannot read the PR
+  still stops — narrowed in review of #189). Proof is on the **packed tarball**
   (`kit-tarball.test.mjs`): offline install into a stranger repo, `PATH` = node only, blank `HOME`.
   `review-route` prints DARK / could-not-look with the install line, and the project's config beats the kit's
   default. `session-resume` degrades. There is no stack trace. The test goes red with `review-route.mjs` out of
