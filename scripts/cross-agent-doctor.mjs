@@ -139,7 +139,7 @@ async function codexMain() {
   const line = (s) => process.stdout.write(`${s}\n`);
 
   line(
-    `codex — ${obs.present ? `installed ${obs.version || '(unparsed version)'}` : 'NOT INSTALLED'} · CODEX_MODEL ${CODEX_MODEL ? `="${CODEX_MODEL}"` : "=default (codex's own)"}`
+    `codex — ${obs.present ? `installed ${obs.version || '(unparsed version)'}` : 'NOT INSTALLED'} · CODEX_MODEL ${CODEX_MODEL ? `="${CODEX_MODEL}"` : '=default (codex built-in; user config ignored)'}`
   );
   if (obs.present) line(`live probe: ${obs.probe}`);
   line(`  → ${note}`);

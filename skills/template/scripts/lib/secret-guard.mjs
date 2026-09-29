@@ -33,6 +33,9 @@ export const SECRET_SHAPES = Object.freeze([
   { name: 'Telegram bot token', re: /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/ },
   { name: 'AWS access key id', re: /\bAKIA[0-9A-Z]{16}\b/ },
   { name: 'Supabase access token', re: /\bsbp_[a-f0-9]{40}\b/ },
+  { name: 'Supabase secret key', re: /\bsb_secret_[A-Za-z0-9_-]{16,}\b/ },
+  // A signed JWT (header.payload.signature, both JSON parts base64url `eyJ…`): service-role keys are JWTs.
+  { name: 'JWT', re: /\beyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/ },
 ]);
 
 const SECRET_KEY_RE = /(KEY|TOKEN|SECRET|PASSWORD|PASS|PRIVATE|CREDENTIAL|WEBHOOK|DSN)/i;
@@ -43,15 +46,47 @@ export function parseEnvValues(text) {
   for (const line of String(text || '').split('\n')) {
     const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
     if (!m) continue;
-    const v = m[2].trim().replace(/^(['"])(.*)\1$/, '$2');
+    const raw = m[2].trim();
+    // A quoted value ends at its closing quote (a trailing `# comment` is dropped); an unquoted one ends
+    // before ` #` (dotenv's inline-comment rule).
+    const q = /^(['"])(.*?)\1(?:\s+#.*)?$/.exec(raw);
+    const v = q ? q[2] : raw.replace(/\s+#.*$/, '').trim();
     if (v) out.push({ key: m[1], value: v });
   }
   return out;
 }
 
+const ENV_FILE_RE = /^\.env(?:rc|\..+)?$/;
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', '.vercel', '.turbo']);
+
+/**
+ * Every `.env*` file (and `.envrc`) at the root and up to `depth` directories below it — a monorepo keeps
+ * its app's secrets in `apps/<app>/.env.local`, not at the root. `.example` files are templates, not secrets.
+ */
+export function envFiles(root, { depth = 2, list = readdirSync, exists = existsSync } = {}) {
+  const out = [];
+  const walk = (dir, left) => {
+    let names;
+    try {
+      names = exists(dir) ? list(dir, { withFileTypes: true }) : [];
+    } catch {
+      return;
+    }
+    for (const d of names) {
+      const name = typeof d === 'string' ? d : d.name;
+      const isDir = typeof d === 'string' ? false : d.isDirectory();
+      if (isDir) {
+        if (left > 0 && !SKIP_DIRS.has(name)) walk(join(dir, name), left - 1);
+      } else if (ENV_FILE_RE.test(name) && !/\.example$/.test(name)) out.push(join(dir, name));
+    }
+  };
+  walk(root, depth);
+  return out;
+}
+
 /**
  * The secret VALUES this machine could leak for this project: every value in the root's `.env*` files (a
- * dotenv file is secrets by convention), plus this process's env vars whose NAME says secret. Values
+ * dotenv file is secrets by convention; nested ones too, see envFiles), plus this process's env vars whose NAME says secret. Values
  * shorter than MIN_SECRET_LENGTH are skipped. Unreadable files are skipped — could not look is not a leak.
  */
 export function collectSecretValues({
@@ -62,15 +97,9 @@ export function collectSecretValues({
   exists = existsSync,
 } = {}) {
   const values = new Set();
-  let names = [];
-  try {
-    names = exists(root) ? list(root).filter((n) => /^\.env(\..+)?$/.test(n) && !/\.example$/.test(n)) : [];
-  } catch {
-    names = [];
-  }
-  for (const name of names) {
+  for (const file of envFiles(root, { list, exists })) {
     try {
-      for (const { value } of parseEnvValues(read(join(root, name), 'utf8')))
+      for (const { value } of parseEnvValues(read(file, 'utf8')))
         if (value.length >= MIN_SECRET_LENGTH) values.add(value);
     } catch {
       /* unreadable: skip */

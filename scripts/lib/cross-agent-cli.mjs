@@ -164,14 +164,16 @@ export const AGY_MODELS_IN_USE = [
 // no dedicated flag for it (checked with `codex exec --help`, not from memory — LEARNINGS: never
 // build against a documented flag from memory on a young foreign CLI).
 //
-// `CODEX_MODEL=default` opts OUT of the pin and lets codex use its own configured default (the shape
-// a consuming project ran with, and the template before this superset). It exists for a stranger whose codex
+// `CODEX_MODEL=default` opts OUT of the pin and lets codex pick its BUILT-IN default model. Not the user's
+// configured one: reviews run `--ignore-user-config` (see CODEX_REVIEW_FLAGS), so ~/.codex/config.toml —
+// its model, and any custom model_provider/base URL — is not read. A setup that needs a custom provider
+// cannot use the codex reviewer through this rail; route past it (`review-route.mjs --exclude codex`). It exists for a stranger whose codex
 // account is not entitled to the pinned model: that fails loud rather than silently (see execCodex), and
 // this is the one-word escape from it. It is an explicit choice, never the fallback for an unset var.
 export const CODEX_MODEL = codexModelFrom(process.env.CODEX_MODEL);
 export const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'high';
 
-/** `CODEX_MODEL`'s value: the pin when unset, `null` (codex's own default) for `default`. Pure, for tests. */
+/** `CODEX_MODEL`'s value: the pin when unset, `null` (codex's built-in default) for `default`. Pure, for tests. */
 export function codexModelFrom(raw) {
   const v = String(raw ?? '').trim();
   if (!v) return 'gpt-5.6-terra';
@@ -670,7 +672,7 @@ function execCodex(prompt, stdin) {
 }
 
 /**
- * The `codex exec` argv. Pure, for tests: `model: null` means codex's own default (CODEX_MODEL=default).
+ * The `codex exec` argv. Pure, for tests: `model: null` means codex's built-in default (CODEX_MODEL=default).
  *
  * ── The reviewer is locked down, not trusted (distribute-what-we-use S1, pr-reviewer round 2 on #188) ──
  * Codex reads an attacker-controllable diff. Without these flags it ran with whatever ~/.codex/config.toml
@@ -688,6 +690,8 @@ export const CODEX_REVIEW_FLAGS = Object.freeze([
   '--sandbox',
   'read-only',
   '--ignore-user-config',
+  // A hostile PR's checkout is on disk while it is reviewed; its execpolicy `.rules` must not load either.
+  '--ignore-rules',
   '--ephemeral',
 ]);
 
@@ -745,7 +749,8 @@ export function isCodexCapped(output) {
 }
 
 export function isCodexOutdated(output) {
-  return /requires a newer version of codex|upgrade to the latest (?:app or )?cli|update codex|codex (?:is )?out of date/i.test(
+  // Also: a codex too old to know the review's lockdown flags (clap: "unexpected argument '--ignore-rules'").
+  return /unexpected argument '--(?:ignore-user-config|ignore-rules|ephemeral|sandbox)'|requires a newer version of codex|upgrade to the latest (?:app or )?cli|update codex|codex (?:is )?out of date/i.test(
     output || ''
   );
 }
@@ -842,7 +847,7 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder =
       return failFn(
         `codex exec failed (non-auth): ${lastLine(codex.stderr)}` +
           (isCodexModelUnavailable(codex.stderr) && CODEX_MODEL
-            ? ` — if this account cannot use "${CODEX_MODEL}", re-run with CODEX_MODEL=default (codex's own default).`
+            ? ` — if this account cannot use "${CODEX_MODEL}", re-run with CODEX_MODEL=default (codex's built-in default).`
             : '')
       );
     case 'fail-both-dead':

@@ -57,3 +57,34 @@ test('findSecretLeaks: an ordinary review is clean', () => {
   const reply = '**Blocking**\n- None.\n\n**Should-fix**\n- `scripts/cross-review.mjs:42` pins the sha.';
   assert.deepEqual(findSecretLeaks(reply, { values: ['not-in-the-reply-0123456789'] }).leaks, []);
 });
+
+// ── round 3 on #188: this repo's own service-role key lives in apps/web/.env.local ─────────────────────
+test('collectSecretValues: nested .env files (apps/web/.env.local) and .envrc count; node_modules never does', async () => {
+  const { mkdirSync } = await import('node:fs');
+  const root = mkdtempSync(join(tmpdir(), 'sg-'));
+  mkdirSync(join(root, 'apps', 'web'), { recursive: true });
+  mkdirSync(join(root, 'node_modules', 'x'), { recursive: true });
+  writeFileSync(
+    join(root, 'apps', 'web', '.env.local'),
+    'SUPABASE_SERVICE_ROLE_KEY=nested-app-secret-value-1\n'
+  );
+  writeFileSync(join(root, '.envrc'), 'export DB_URL=envrc-secret-value-12345\n');
+  writeFileSync(join(root, 'node_modules', 'x', '.env'), 'X=vendored-not-ours-0123456\n');
+  const values = collectSecretValues({ root, env: {} }).sort();
+  assert.deepEqual(values, ['envrc-secret-value-12345', 'nested-app-secret-value-1']);
+});
+
+test('parseEnvValues: inline comments are not part of the value, quoted or not', () => {
+  assert.deepEqual(
+    parseEnvValues(
+      'A="quoted-secret-value" # note\nB=bare-secret-value-123 # note\nC=has#hash-no-space\n'
+    ).map((e) => e.value),
+    ['quoted-secret-value', 'bare-secret-value-123', 'has#hash-no-space']
+  );
+});
+
+test('findSecretLeaks: JWT and Supabase secret-key shapes are caught with no env file', () => {
+  const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJlLXZhbHVl';
+  assert.equal(findSecretLeaks(`- ${jwt}`).leaks[0].name, 'JWT');
+  assert.equal(findSecretLeaks('- sb_secret_' + 'k'.repeat(24)).leaks[0].name, 'Supabase secret key');
+});

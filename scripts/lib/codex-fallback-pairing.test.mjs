@@ -13,6 +13,7 @@ import {
   codexExecArgs,
   isCodexCapped,
   isCodexModelUnavailable,
+  isCodexOutdated,
 } from './cross-agent-cli.mjs';
 
 /** Deps where codex fails with `codex` and agy answers; `fail` throws so the test can see the message. */
@@ -103,7 +104,7 @@ test('CODEX_MODEL: unset is the pin, `default` is codex’s own default, anythin
 });
 
 test('codex exec argv: locked down always; a pinned model carries its effort; `default` passes neither', () => {
-  const lock = ['--sandbox', 'read-only', '--ignore-user-config', '--ephemeral'];
+  const lock = ['--sandbox', 'read-only', '--ignore-user-config', '--ignore-rules', '--ephemeral'];
   assert.deepEqual(codexExecArgs('P', { model: 'm', effort: 'high' }), [
     'exec',
     ...lock,
@@ -139,4 +140,9 @@ test('a usage cap heals onto agy like an auth lapse; a model refusal names CODEX
     isCodexModelUnavailable("The 'x' model is not supported when using Codex with a ChatGPT account."),
     true
   );
+});
+
+test('a codex too old for the lockdown flags is told to upgrade, not failed as non-auth', () => {
+  assert.equal(isCodexOutdated("error: unexpected argument '--ignore-rules' found"), true);
+  assert.equal(isCodexOutdated('error: something unrelated'), false);
 });

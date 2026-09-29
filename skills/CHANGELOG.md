@@ -20,7 +20,9 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   `cross-agent-doctor.mjs agy`. Every fix message names a doctor that exists.
 - **Codex now reviews on a pinned model, `gpt-5.6-terra` at high effort** (was: codex's own configured default).
   The review's model is then a property of the repo, not of each machine. If your codex account cannot use it,
-  the failure names the escape: **`CODEX_MODEL=default`** returns to codex's own default. The default
+  the failure names the escape: **`CODEX_MODEL=default`** uses codex's built-in default model. Reviews ignore
+  `~/.codex/config.toml` (below), so a custom `model_provider` or base URL is not used either: such a setup
+  routes past codex (`review-route.mjs --exclude codex`). The default
   `--agent` stays `codex`.
 - **`review-route.mjs` passes `--builder`** in every command it prints, so the same-family refusal (and the
   codex→agy heal's re-check) fire in normal use. The heal also checks agy's version pin now.
@@ -35,12 +37,14 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 - **`--agent devin` is refused.** A consumer used Devin as a third review pool, but `devin -p` auto-approves
   read-only tools with no flag to disable them, so the same injected-diff read applies. Devin stays the prose
   writer.
-- **Codex reviews locked down:** `--sandbox read-only --ignore-user-config --ephemeral`. It used to inherit the
+- **Codex reviews locked down:** `--sandbox read-only --ignore-user-config --ignore-rules --ephemeral`. It used to inherit the
   user's config — observed: a `workspace-write` sandbox, `on-request` approvals, and the user's MCP servers,
   a database one among them. Codex can still **read** host files; no flag removes that, so the risk is reduced,
   not closed. The channel is closed instead:
-- **cross-review never posts a reply that carries a secret.** Before posting, the reply is checked against every
-  value in the project's `.env*` files, this process's secret-named env vars, and common credential shapes. A
+- **cross-review never publishes a reply that carries a secret verbatim** — not in a comment, not in a status,
+  and not to Jev. Encoded or transformed output is out of scope for a string match; read access is the real
+  control, and codex keeps it. The reply is checked first, against every value in the project's `.env*` files (root and two levels
+  down, plus `.envrc`), this process's secret-named env vars, and common credential shapes. A
   match posts nothing, fails the status, and prints the reply locally with the match redacted.
 - **A codex usage cap heals onto agy** like an auth lapse (a different quota pool).
 - **The codex→agy self-heal re-checks the builder.** When agy built the diff, the heal fails loud instead of

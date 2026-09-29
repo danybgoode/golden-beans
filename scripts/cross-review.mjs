@@ -336,14 +336,13 @@ export function resolveReviewModel(agent, fellBack, deps = {}) {
   if (fellBack || agent === 'antigravity') return `agy ${usedAgyModel || env.AGY_MODEL || AGY_MODEL}`;
   if (agent === 'vibe') return env.VIBE_MODEL || env.VIBE_ACTIVE_MODEL || 'vibe configured default';
   if (agent === 'claude') return env.CLAUDE_REVIEW_MODEL || CLAUDE_REVIEW_MODEL;
-  // The same resolution execCodex uses: unset → the pin, `default` → codex's own config (read, never guessed).
+  // The same resolution execCodex uses: unset → the pin. `default` → codex's BUILT-IN default: the review
+  // runs `--ignore-user-config`, so ~/.codex/config.toml is not what ran, and naming its model would be a
+  // false attribution (pr-reviewer round 3 on #188). `readCfg` is kept only so old callers' deps still parse.
+  void readCfg;
   const pinned = 'codexModel' in deps ? deps.codexModel : codexModelFrom(env.CODEX_MODEL);
   if (pinned) return `${pinned} (effort: ${env.CODEX_REASONING_EFFORT || CODEX_REASONING_EFFORT})`;
-  const cfg = readCfg();
-  const m = cfg && /^\s*model\s*=\s*"([^"]+)"/m.exec(cfg);
-  if (!m) return null;
-  const effort = /^\s*model_reasoning_effort\s*=\s*"([^"]+)"/m.exec(cfg);
-  return effort ? `${m[1]} (effort: ${effort[1]})` : m[1];
+  return 'codex built-in default (user config ignored)';
 }
 
 function defaultReadCodexConfig() {
@@ -720,6 +719,32 @@ async function main() {
   const answered = fellBack ? 'antigravity' : agent;
   const reviewerLabel = fellBack ? `${AGENTS.antigravity} — Codex unavailable` : AGENTS[agent];
 
+  // Never PUBLISH a reply that carries this machine's secrets (lib/secret-guard.mjs): a reviewer fed an
+  // injected diff can still read host files (codex's read-only sandbox allows reads). Checked FIRST, before
+  // the output guard — that guard quotes the reply's opening text in a PUBLIC status description, and asks
+  // Jev about the reply (egress) — so a secret-carrying reply reaches neither (pr-reviewer round 3 on #188).
+  // The status posted here names no reply text. The reply is printed locally, redacted.
+  const secrets = findSecretLeaks(findings, { values: collectSecretValues({ root: projectRoot() }) });
+  if (secrets.leaks.length) {
+    const what = secrets.leaks.map((l) => l.name).join(', ');
+    if (!dryRun)
+      postReviewStatus({
+        pr,
+        repo,
+        state: 'failure',
+        lens,
+        description: `${reviewerLabel}: reply withheld — it carried secret-shaped text`,
+        sha: reviewedSha,
+      });
+    process.stderr.write(
+      `\n───── ${reviewerLabel}'s reply, WITHHELD (redacted: ${what}) ─────\n${secrets.redacted}\n───── end of reply ─────\n`
+    );
+    die(
+      `${reviewerLabel}'s reply carried ${what} and was NOT posted. If this is a real leak, rotate the ` +
+        `credential and treat the diff as hostile; if it is a false positive, post the redacted text by hand.`
+    );
+  }
+
   // THE GUARD (ways-of-work-lean-pass D9). With one external pass, a CLI that exits 0 with nothing to say
   // reads exactly like a clean review and nothing contradicts it. A structureless reply FAILS the run and
   // fails the PR's `cross-review/<lens>` status rather than posting a comment that looks like a pass.
@@ -749,30 +774,6 @@ async function main() {
       `\n───── ${reviewerLabel}'s full reply, rejected by the output guard ─────\n${findings || '(empty)'}\n───── end of reply ─────\n`
     );
     die(`${reviewerLabel} did not return a review: ${verdict.reason}`);
-  }
-
-  // Never POST a reply that carries this machine's secrets (lib/secret-guard.mjs): a reviewer fed an
-  // injected diff can still read host files (codex's read-only sandbox allows reads), and this comment is
-  // public. Nothing is posted; the reply is printed here, redacted, so a false positive costs a look.
-  const secrets = findSecretLeaks(findings, { values: collectSecretValues({ root: projectRoot() }) });
-  if (secrets.leaks.length) {
-    const what = secrets.leaks.map((l) => l.name).join(', ');
-    if (!dryRun)
-      postReviewStatus({
-        pr,
-        repo,
-        state: 'failure',
-        lens,
-        description: `${reviewerLabel}: reply withheld — it carried secret-shaped text`,
-        sha: reviewedSha,
-      });
-    process.stderr.write(
-      `\n───── ${reviewerLabel}'s reply, WITHHELD (redacted: ${what}) ─────\n${secrets.redacted}\n───── end of reply ─────\n`
-    );
-    die(
-      `${reviewerLabel}'s reply carried ${what} and was NOT posted. If this is a real leak, rotate the ` +
-        `credential and treat the diff as hostile; if it is a false positive, post the redacted text by hand.`
-    );
   }
 
   const body =

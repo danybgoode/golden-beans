@@ -32,8 +32,8 @@ test('LENSES is the single source of valid values', () => {
 // The reviewer model is machine-local state no artifact recorded; if it drifts, review strength changes
 // family and nothing notices. Adopted from a consuming project, where an unset CODEX_MODEL meant "read
 // ~/.codex/config.toml". In the superset (distribute-what-we-use D1) unset means the PIN, because that is
-// what execCodex actually passes; `CODEX_MODEL=default` is the explicit way back to codex's own config,
-// and there that consumer's rule still holds: unreadable ⇒ null, never a guess.
+// what execCodex actually passes; `CODEX_MODEL=default` means codex's built-in default, because reviews ignore
+// the user config — so the config file is never read for attribution.
 
 test('CODEX_MODEL wins when set, with the effort execCodex passes alongside it', () => {
   assert.equal(
@@ -47,20 +47,13 @@ test('unset CODEX_MODEL is attributed to the pin, not to whatever the local conf
   assert.match(resolveReviewModel('codex', false, { env: {}, readCfg: () => cfg }), /^gpt-5\.6-terra /);
 });
 
-test('CODEX_MODEL=default reads the codex config default, with its reasoning effort', () => {
-  const cfg = 'model = "gpt-5.6-terra"\nmodel_reasoning_effort = "high"\n';
-  assert.equal(
-    resolveReviewModel('codex', false, { env: { CODEX_MODEL: 'default' }, readCfg: () => cfg }),
-    'gpt-5.6-terra (effort: high)'
-  );
-});
-
-test('CODEX_MODEL=default with an unreadable config yields null — "unrecorded", never a guess', () => {
-  // A wrong attribution is worse than a missing one: it makes an unauditable review look audited.
-  assert.equal(
-    resolveReviewModel('codex', false, { env: { CODEX_MODEL: 'default' }, readCfg: () => null }),
-    null
-  );
+test("CODEX_MODEL=default is attributed to codex's BUILT-IN default — the review ignores the user config", () => {
+  // Reviews run --ignore-user-config, so ~/.codex/config.toml's model is not what ran; naming it would be
+  // the false attribution this file exists to prevent (pr-reviewer round 3 on #188).
+  const cfg = 'model = "gpt-5.6-luna"\nmodel_reasoning_effort = "xhigh"\n';
+  const got = resolveReviewModel('codex', false, { env: { CODEX_MODEL: 'default' }, readCfg: () => cfg });
+  assert.match(got, /built-in default/);
+  assert.doesNotMatch(got, /luna|xhigh/);
 });
 
 test('a fallback run is attributed to agy, naming the model that actually answered', () => {

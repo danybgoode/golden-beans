@@ -205,4 +205,10 @@ test('the secret guard runs before anything is posted (pr-reviewer round 2 on #1
   const guard = src.indexOf('findSecretLeaks(findings');
   assert.ok(guard > 0, 'cross-review checks the reply with findSecretLeaks');
   assert.ok(guard < src.indexOf('= postComment(pr, repo, body)'), 'and does so before postComment');
+  // …and before the output guard, which quotes the reply in a public status and asks Jev about it.
+  const judged = src.indexOf('await judgeReviewOutput(findings');
+  assert.ok(judged > 0 && guard < judged, 'the secret guard runs before judgeReviewOutput');
+  const afterReview = src.indexOf('runReview(', src.indexOf('async function main'));
+  const firstStatus = src.indexOf('postReviewStatus({', afterReview);
+  assert.ok(guard < firstStatus, 'and before any status posted after the review ran');
 });
