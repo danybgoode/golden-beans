@@ -2,7 +2,7 @@
 //
 // ── What this file exists to make impossible ──────────────────────────────────────────────────
 // `console.css` carried 23 custom properties under a comment saying they were
-// `references/design/assets/tokens.css` "verbatim — the design introduced no new colours". Ten of
+// `apps/web/brand/tokens.css` "verbatim — the design introduced no new colours". Ten of
 // them were not in that file at all, and one of them — `--roast-2` — had a DIFFERENT VALUE there.
 // Nothing noticed for an entire epic, because two definitions that currently agree look exactly
 // like one definition, and a comment asserting they agree looks exactly like a check.
@@ -32,7 +32,7 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = join(HERE, '..', '..', '..')
-const BRAND_TOKENS = join(REPO, 'references', 'design', 'assets', 'tokens.css')
+const BRAND_TOKENS = join(REPO, 'apps', 'web', 'brand', 'tokens.css')
 
 /**
  * The FORKED tokens: one name, two live values, decided on purpose.

@@ -83,7 +83,7 @@ transformation nothing can enumerate is indistinguishable from a bug.
 ## Namespacing
 
 Everything here is scoped to **`.ds`** and every class is **`ds-`**-prefixed (epic D3). Verified
-free of collisions in `globals.css`, `console.css`, `references/design/assets/tokens.css` and
+free of collisions in `globals.css`, `console.css`, `apps/web/brand/tokens.css` and
 `hub.module.css` before it was chosen — landing rules reached the console through shared class
 names (`.tag`, `.note`) three times in one epic, and `.row` is *already* declared by two
 stylesheets. `check-design-drift.mjs` enforces the prefix.

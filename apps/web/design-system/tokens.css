@@ -9,7 +9,7 @@
 
 /* Scoped to a CLASS, not `:root`, and that is the whole point of D3.
  *
- * `references/design/assets/tokens.css` owns `:root` for the landing and is imported first by
+ * `apps/web/brand/tokens.css` owns `:root` for the landing and is imported first by
  * globals.css. Several of these names collide with it, and ONE collides with a different VALUE:
  * `--roast-2` is #221b13 on the landing and #1c1710 here, and both are on screen today. Declaring
  * the product set on a class means the console gets its value without the landing losing its own —

@@ -819,7 +819,7 @@ export function inspectRepository(root = repoRoot) {
     }
   });
 
-  if (!globals.startsWith("@import '../../../references/design/assets/tokens.css';")) {
+  if (!globals.startsWith("@import '../brand/tokens.css';")) {
     violations.push({
       path: relative(root, globalsPath),
       line: 1,

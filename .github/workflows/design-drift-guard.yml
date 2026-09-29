@@ -13,7 +13,7 @@ on:
       # zero executions, on the one directory they were written for. It only ran on the PR that
       # ADDED them because that PR also edited the script. Found by the fresh reviewer, Blocking.
       - 'apps/web/design-system/**'
-      - 'references/design/assets/tokens.css'
+      - 'apps/web/brand/tokens.css'
       - 'scripts/check-design-drift.mjs'
       - '.github/workflows/design-drift-guard.yml'
   pull_request:
@@ -23,7 +23,7 @@ on:
       # Same reason as the `push` block above — GitHub requires the filter in both, and a rule that
       # is only in one is a rule that does not run for half the events.
       - 'apps/web/design-system/**'
-      - 'references/design/assets/tokens.css'
+      - 'apps/web/brand/tokens.css'
       - 'scripts/check-design-drift.mjs'
       - '.github/workflows/design-drift-guard.yml'
 

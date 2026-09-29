@@ -3,13 +3,15 @@ Golden Frijoles is licensed per folder. The LICENSE file in each folder governs 
   skills/          Apache-2.0      (the plugin, the kit and the spawn template; mirrored to golden-frijoles/skills)
   packages/cli/    Apache-2.0      (@golden-frijoles/cli)
   packages/sdk/    Apache-2.0      (@golden-frijoles/sdk)
-  apps/web/        FSL-1.1-ALv2    (the engine, including apps/web/supabase/). Each version converts to
+  apps/web/        FSL-1.1-ALv2    (the engine, including apps/web/supabase/ and the brand tokens in apps/web/brand/).
+                                   Each version converts to
                                    Apache-2.0 two years after it is made available.
 
 Everything else in this repository (scripts/, Roadmap/, the root configuration and docs) is FSL-1.1-ALv2, on the
 same terms as apps/web/. See apps/web/LICENSE.
 
-references/ holds third-party material (screenshots, summaries) that is quoted for design and planning. It is not
-licensed by this repository, and its original owners' rights apply.
+references/ (design and research material, some of it third-party) is local-only and not part of this repository:
+it is gitignored and was untracked on 2026-09-28. Earlier commits in history contain it, and it is not licensed by
+this repository.
 
 "Golden Frijoles" and its logo are trademarks. See NOTICE.
