@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 2
 title: "What a stranger's kit carries"
 risk: high
-phase: Building
+phase: In review
 stories_total: 3
 stories:
   - id: S2.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 2: What a stranger's kit carries
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
@@ -69,6 +69,32 @@ Builds **D4, D5, D6** (README → *Architecture lock*).
   unlisted diff or a **stale** allowlist entry (listed but now identical, or missing). It is wired into root CI.
   A planted one-byte change turns it red.
 - **Release:** one plugin/kit bump (D9).
+
+## Build notes — what was built, and what the live system said
+
+- **2.1 (Codex, finished by Claude).** Codex hit its usage cap mid-run (resets 2026-10-28) and left a partial
+  apply. It had rewritten large parts of `groom/SKILL.md` to fit the new list under groom's 220-line budget, which
+  cut meaning. That was reverted. The closure lives on the **umbrella `golden-frijoles` skill** instead (the
+  stranger's front door; no line budget), with D4 unchanged in substance (the kit is the union of every skill's
+  `requires_scripts`). Codex's other change was kept: `review-route.mjs` forces the security lens and renders a
+  route when `gh` cannot read the PR, where it used to exit. Proof is on the **packed tarball**
+  (`kit-tarball.test.mjs`): offline install into a stranger repo, `PATH` = node only, blank `HOME`.
+  `review-route` prints DARK / could-not-look with the install line, and the project's config beats the kit's
+  default. `session-resume` degrades. There is no stack trace. The test goes red with `review-route.mjs` out of
+  the closure.
+- **2.2 (Claude).**
+  - The function-hooks runtime was probed live before designing: `import.meta.url` in a hook helper is the
+    plugin's installed directory, and `$.process.run` can execute a file there.
+  - `hooks/vendor/` holds `build-state.mjs` + `lib/{roadmap-contract,session-journal}.mjs`, derived by
+    `render-hook-vendor.mjs` from the real import closure; `--check` runs in skills-ci.
+  - **Live:** in a stranger repo on `feat/smoke-test` with a *hostile* `scripts/build-state.mjs` (it writes a
+    marker file), a real `claude -p --plugin-dir …` session logged `build view: resolved (feat/smoke-test@…) (ok)`,
+    and the marker never appeared.
+  - The new specs were observed failing against the old hook.
+- **2.3 (Claude subagent, Sonnet).** `check-script-parity.mjs` runs in the scripts guard, whose paths now include
+  `skills/template/scripts/**`. Measured: 114 identical, 6 allowed with reasons. The planted one-byte change went
+  red. It corrected the lock: `cross-panel.prompt.md` is identical here (deviation 1 amended).
+- **Release 0.7.0.** The kit gains the rail, the session scripts and `build-state.mjs`.
 
 ## Sprint QA
 - Kit tarball test (`kit-tarball.test.mjs`) extended for the new closure; `check-skill-scripts` green.

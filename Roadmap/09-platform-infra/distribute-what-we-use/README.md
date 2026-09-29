@@ -102,7 +102,7 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   executes `<repo>/scripts/build-state.mjs`. The bundle is generated from `template/scripts/`, and a check fails
   when it is not byte-equal. See deviation 2.
 - **D6 — Parity, not deletion.** Measured live: 94 files are byte-identical between `scripts/` and
-  `skills/template/scripts/`, 10 differ, 39 are template-only. After S1, the ones that differ are the four
+  `skills/template/scripts/`, 10 differ, 39 are template-only. After S1, the ones that differ are the three
   project-owned review files, `prose-lessons.md`, `routines/README.md` and `roadmap-extract.mjs`. The guard (S2.3)
   passes when a file is identical or listed with a one-line reason.
 - **D7 — Jev asks before it sends: two bugs, one fix at the loader.** Bug 1: with no config at all, `loadJevConfig`
@@ -127,9 +127,11 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   one, while any fill-in is left, and it never touches a runtime token.
 
 ### Deviations — where the live system disproved the groomed scope (corrected out loud)
-1. **S1.3's "`cmp` of every review-rail file prints nothing" is wrong for four files.** The review prompts and
-   `review-config.json` carry each project's own rules and security paths: ours names AGENTS.md rules 1–5,
-   medusa's names Medusa/Clerk, the template's is a fill-in slot. Byte-equality applies to the **code** (`cross-review.mjs`,
+1. **S1.3's "`cmp` of every review-rail file prints nothing" is wrong for the project-owned files.** The review
+   prompts and `review-config.json` carry each project's own rules and security paths: ours names AGENTS.md rules
+   1–5, medusa's names Medusa/Clerk, the template's is a fill-in slot. *(Measured by S2.3's guard: in this repo
+   `cross-panel.prompt.md` is byte-identical to the template, so here it is three files; medusa's panel prompt is
+   its own.)* Byte-equality applies to the **code** (`cross-review.mjs`,
    `lib/cross-agent-cli.mjs`, `cross-agent-doctor.mjs`, `agy-doctor.mjs`, `cross-panel.mjs`, `review-route.mjs`,
    `lib/review-guard.mjs` and their tests). The four project-owned files are S2.3's listed exceptions.
 2. **D5 as groomed ("the kit's copy when the project has none") would have kept the hole.** Today
