@@ -11,8 +11,8 @@ Non-negotiable for this run:
    live code and live data, before any builder starts. Scope the live system disproves gets corrected out loud.
 2. **Stack** `feat/{{SLUG}}` → `-s2` → …, one PR per sprint, merged in order. Worktree or in place: decide
    per *Epic-mode builds*.
-3. **Review** every PR through `node scripts/review-route.mjs --builder <who-wrote-it> <PR#>`; each finding
-   is fixed or answered on the PR before merge.
+3. **Review** every PR through `node scripts/review-route.mjs --builder <who-wrote-it> <PR#>` (one general
+   pass, plus the security lens when the paths trigger it); each finding is fixed or answered before merge.
 4. **Merge on green** — pre-authorized, except a new category of production mutation: ask that once.
 5. **Done means shipped** — deployed and verified live, each sprint's smoke walkthrough in its sprint file,
    then the epic Definition of Done.
