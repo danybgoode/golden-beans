@@ -35,6 +35,9 @@ export const SECRET_SHAPES = Object.freeze([
   { name: 'Supabase access token', re: /\bsbp_[a-f0-9]{40}\b/ },
   { name: 'Supabase secret key', re: /\bsb_secret_[A-Za-z0-9_-]{16,}\b/ },
   // A signed JWT (header.payload.signature, both JSON parts base64url `eyJ…`): service-role keys are JWTs.
+  // An opaque base64 run long enough to carry a key. Real reviews quote code, not 80-char blobs; this is
+  // defence in depth against an injected "encode it" (the author-trust check below is the real control).
+  { name: 'opaque base64 blob', re: /[A-Za-z0-9+/]{80,}={0,2}/ },
   { name: 'JWT', re: /\beyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/ },
 ]);
 
@@ -131,4 +134,32 @@ export function findSecretLeaks(text, { values = [] } = {}) {
     }
   }
   return { leaks, redacted };
+}
+
+// ── Who wrote the diff decides whether a reviewer may read it at all (codex security lens on #188) ─────
+// No reviewer flag stops codex READING host files, and no string matcher catches a secret the model was
+// told to encode. What closes the realistic threat on a public repo is the input: a hostile diff comes from
+// someone without write access (a fork PR). So cross-review refuses such a PR unless the operator says so.
+
+/** Repo permissions that can already push code here — their diff is not a new attacker. */
+export const TRUSTED_PERMISSIONS = Object.freeze(['admin', 'maintain', 'write']);
+
+/**
+ * Pure: may a reviewer read this PR? `permission` is the author's repo permission as GitHub reports it
+ * (`null` when it could not be read — treated as untrusted: could-not-look must not open the door).
+ */
+export function decideAuthorTrust({ permission, allowUntrusted = false }) {
+  if (TRUSTED_PERMISSIONS.includes(permission)) return { ok: true, why: `author has ${permission} access` };
+  if (allowUntrusted)
+    return {
+      ok: true,
+      why: `author has ${permission ?? 'unknown'} access — allowed by --allow-untrusted-author`,
+    };
+  return {
+    ok: false,
+    why:
+      `the PR author has ${permission ?? 'UNKNOWN'} access to this repo. A reviewer fed an outsider's diff can be ` +
+      `steered by it into reading this machine's files; review it only after reading the diff yourself, then ` +
+      `re-run with --allow-untrusted-author.`,
+  };
 }

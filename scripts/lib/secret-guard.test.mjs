@@ -88,3 +88,24 @@ test('findSecretLeaks: JWT and Supabase secret-key shapes are caught with no env
   assert.equal(findSecretLeaks(`- ${jwt}`).leaks[0].name, 'JWT');
   assert.equal(findSecretLeaks('- sb_secret_' + 'k'.repeat(24)).leaks[0].name, 'Supabase secret key');
 });
+
+// ── codex security lens on #188: the realistic hostile diff is an outsider's ──────────────────────────
+test('decideAuthorTrust: write access and up is trusted; read, none and unknown are refused unless allowed', async () => {
+  const { decideAuthorTrust } = await import('./secret-guard.mjs');
+  for (const p of ['admin', 'maintain', 'write'])
+    assert.equal(decideAuthorTrust({ permission: p }).ok, true, p);
+  for (const p of ['triage', 'read', 'none', null]) {
+    const d = decideAuthorTrust({ permission: p });
+    assert.equal(d.ok, false, String(p));
+    assert.match(d.why, /--allow-untrusted-author/);
+  }
+  assert.equal(decideAuthorTrust({ permission: null, allowUntrusted: true }).ok, true);
+});
+
+test('findSecretLeaks: an 80+ char base64 run is withheld; ordinary code is not', () => {
+  assert.equal(findSecretLeaks(`- ${'QUJD'.repeat(25)}==`).leaks[0].name, 'opaque base64 blob');
+  assert.deepEqual(
+    findSecretLeaks('- `scripts/lib/secret-guard.mjs:12` uses readFileSync(join(root, name))').leaks,
+    []
+  );
+});

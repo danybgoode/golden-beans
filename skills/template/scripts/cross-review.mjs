@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { readSection } from './lib/config.mjs';
 import { projectRoot } from './lib/project-root.mjs';
-import { collectSecretValues, findSecretLeaks } from './lib/secret-guard.mjs';
+import { collectSecretValues, decideAuthorTrust, findSecretLeaks } from './lib/secret-guard.mjs';
 import {
   AGENTS,
   headSidePaths,
@@ -125,6 +125,7 @@ Flags:
                        scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
                        The reduced scope is STATED in the posted comment.
+  --allow-untrusted-author  review a PR whose author lacks write access (read the diff first).
   --builder <family>   who WROTE this diff: ${BUILDER_FAMILIES.join(' | ')}. Refuses a
                        same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
@@ -147,6 +148,7 @@ function parseArgs(argv) {
     agent: 'codex',
     builder: process.env.CROSS_REVIEW_BUILDER || '',
     codeOnly: false,
+    allowUntrustedAuthor: false,
     paths: [],
     repo: null,
     force: false,
@@ -167,6 +169,7 @@ function parseArgs(argv) {
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
     else if (a === '--code-only') out.codeOnly = true;
+    else if (a === '--allow-untrusted-author') out.allowUntrustedAuthor = true;
     else if (a === '--paths')
       out.paths = need(argv[++i], '--paths')
         .split(',')
@@ -354,6 +357,24 @@ function defaultReadCodexConfig() {
 }
 
 /** Comment bodies already on the PR, for re-review convergence. [] on any failure (degrade to first pass). */
+/** The PR author's permission on the repo (admin/maintain/write/triage/read/none), or null if unreadable. */
+function prAuthorPermission(pr, repo) {
+  const view = spawnSync(
+    'gh',
+    ['pr', 'view', String(pr), '--json', 'author', '-q', '.author.login', ...(repo ? ['--repo', repo] : [])],
+    { encoding: 'utf8' }
+  );
+  const login = String(view.stdout || '').trim();
+  if (view.status !== 0 || !login) return null;
+  const perm = spawnSync(
+    'gh',
+    ['api', `repos/${repo || '{owner}/{repo}'}/collaborators/${login}/permission`, '-q', '.permission'],
+    { encoding: 'utf8' }
+  );
+  const p = String(perm.stdout || '').trim();
+  return perm.status === 0 && p ? p : null;
+}
+
 /** The PR body, for the `risk: high` half of the security trigger. '' on any failure. */
 function ghBody(pr, repo) {
   const args = ['pr', 'view', String(pr), '--json', 'body'];
@@ -440,6 +461,7 @@ async function main() {
     help,
     builder,
     codeOnly,
+    allowUntrustedAuthor,
     paths,
   } = parseArgs(process.argv.slice(2));
   if (help) {
@@ -505,6 +527,14 @@ async function main() {
       );
     }
   }
+  // An outsider's diff never reaches a reviewer unasked (lib/secret-guard.mjs → decideAuthorTrust).
+  const trust = decideAuthorTrust({
+    permission: prAuthorPermission(pr, repo),
+    allowUntrusted: allowUntrustedAuthor,
+  });
+  if (!trust.ok) die(trust.why);
+  process.stderr.write(`Author check: ${trust.why}.\n`);
+
   // The security lens is triggered by the CHANGED PATHS, not by judgement (ways-of-work-lean-pass D7).
   // The router prints both commands, but a hand-run general pass must not silently stand in for a missing
   // security pass — so this run says so, on stderr AND in the posted comment where a PR reader sees it.

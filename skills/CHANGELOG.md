@@ -46,6 +46,11 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   control, and codex keeps it. The reply is checked first, against every value in the project's `.env*` files (root and two levels
   down, plus `.envrc`), this process's secret-named env vars, and common credential shapes. A
   match posts nothing, fails the status, and prints the reply locally with the match redacted.
+- **cross-review refuses an outsider's diff.** A PR whose author lacks write access to the repo (a fork PR on a
+  public repo, or permission that cannot be read) is refused before any reviewer sees it. Read the diff yourself,
+  then pass `--allow-untrusted-author`. This is the control for what the reviewer can read: no reviewer flag
+  stops codex reading host files, and no string matcher catches an encoded secret. Long opaque base64 runs are
+  withheld too, as defence in depth.
 - **A codex usage cap heals onto agy** like an auth lapse (a different quota pool).
 - **The codex→agy self-heal re-checks the builder.** When agy built the diff, the heal fails loud instead of
   turning into a same-family review.

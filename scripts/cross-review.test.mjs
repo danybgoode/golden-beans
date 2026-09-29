@@ -60,6 +60,8 @@ case "$*" in
   *"--json headRefOid,url"*) echo '{"headRefOid":"abc123def456","url":"https://github.com/o/r/pull/7"}' ;;
   *"--json headRefOid"*) echo '{"headRefOid":"abc123def456"}' ;;
   *"--json files"*) echo '{"files":[{"path":"${SECURITY_PATH}","additions":40,"deletions":0}]}' ;;
+  *"--json author"*) echo 'a-collaborator' ;;
+  *"/permission"*) echo "\${GH_PERMISSION:-write}" ;;
   *) echo "ok" ;;
 esac
 exit 0
@@ -79,12 +81,12 @@ exit 0
   return { dir, bin, log };
 }
 
-function runCrossReview({ bin, args }) {
+function runCrossReview({ bin, args, env = {} }) {
   // stdout AND stderr: the run's warnings (a security lens still owed) go to stderr, and a spec that
   // only reads stdout would pass whatever the run said.
   const r = spawnSync(process.execPath, [join(SCRIPTS, 'cross-review.mjs'), ...args], {
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    env: { ...process.env, ...env, PATH: `${bin}:${process.env.PATH}` },
   });
   return { code: r.status ?? 1, out: `${r.stdout || ''}${r.stderr || ''}` };
 }
@@ -211,4 +213,32 @@ test('the secret guard runs before anything is posted (pr-reviewer round 2 on #1
   const afterReview = src.indexOf('runReview(', src.indexOf('async function main'));
   const firstStatus = src.indexOf('postReviewStatus({', afterReview);
   assert.ok(guard < firstStatus, 'and before any status posted after the review ran');
+});
+
+test('the author-trust gate runs before any reviewer is given the diff (codex security lens on #188)', () => {
+  const src = readFileSync(new URL('./cross-review.mjs', import.meta.url), 'utf8');
+  const main = src.indexOf('async function main');
+  const gate = src.indexOf('decideAuthorTrust({', main);
+  assert.ok(gate > main, 'main() checks the author');
+  assert.ok(gate < src.indexOf('runReview(', main), 'before runReview');
+});
+
+test('an author without write access is refused before the reviewer runs or anything is posted', () => {
+  const { bin, log } = sandbox('### Blocking\n\n- `x.mjs:1` a finding.\n');
+  const r = runCrossReview({
+    bin,
+    args: ['7', '--repo', 'o/r', '--agent', 'codex'],
+    env: { GH_PERMISSION: 'read' },
+  });
+  assert.notEqual(r.code, 0);
+  assert.match(r.out, /--allow-untrusted-author/);
+  const gh = readFileSync(log, 'utf8');
+  assert.doesNotMatch(gh, /pr diff/, 'the diff was never even fetched');
+  assert.doesNotMatch(gh, /statuses\/|pr comment/, 'nothing was posted');
+  const allowed = runCrossReview({
+    bin,
+    args: ['7', '--repo', 'o/r', '--agent', 'codex', '--allow-untrusted-author'],
+    env: { GH_PERMISSION: 'read' },
+  });
+  assert.equal(allowed.code, 0, allowed.out);
 });
