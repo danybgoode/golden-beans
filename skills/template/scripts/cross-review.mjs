@@ -117,7 +117,7 @@ Usage:
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join(' | ')} (default: antigravity)
+  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join(' | ')} (default: codex)
   --paths a,b,c        review ONLY files whose path contains one of these. The reduced
                        scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
@@ -141,7 +141,7 @@ The judgment-layer review — not a second CI. CI (green/red) + the risk-tier ru
 function parseArgs(argv) {
   const out = {
     pr: null,
-    agent: 'antigravity',
+    agent: 'codex',
     builder: process.env.CROSS_REVIEW_BUILDER || '',
     codeOnly: false,
     paths: [],
@@ -271,7 +271,14 @@ function runReview(agent, prompt, diff, { builder = '', onModel } = {}) {
         antigravityArgv: agyArgv(prompt, diff),
         builder,
       },
-      { runAntigravity: (argv) => runAntigravity(argv, { onModel }) }
+      {
+        // The heal is still an agy run, so it gets agy's version-pin check like `--agent antigravity` does
+        // (pr-reviewer S3): a drifted print contract would otherwise review silently on the heal path.
+        runAntigravity: (argv) => {
+          checkAgyVersion();
+          return runAntigravity(argv, { onModel });
+        },
+      }
     );
   if (agent === 'antigravity')
     return { findings: runAntigravity(agyArgv(prompt, diff), { onModel }), fellBack: false };
@@ -603,7 +610,7 @@ async function main() {
     diff = codeOnlyDiff.diff;
     scopeNote =
       `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
-      `withheld from this reviewer to fit ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit, so it did ` +
+      `withheld from this reviewer to fit a ${argvLimit / 1024} KB input budget, so it did ` +
       `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
       `code against its own stated acceptance criteria. Withheld: ` +
       `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
@@ -615,7 +622,7 @@ async function main() {
     diff = scoped.diff;
     const note =
       `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
-      `subset of the PR — the diff exceeds ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit in full, so ` +
+      `subset of the PR — the diff exceeds a ${argvLimit / 1024} KB input budget in full, so ` +
       `the alternative was no second-family review at all. It saw: ` +
       `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
       `file(s), and could not check any of this against the sprint docs.`;
@@ -631,7 +638,7 @@ async function main() {
   //
   // Three wrong findings in two days came from a reviewer reasoning about code it could not see —
   // a helper "not defined" that was defined eight lines above the hunk being the clearest. See
-  // buildFileContext's header for why agy gets attachment rather than the repo access vibe got.
+  // buildFileContext's header for why agy and vibe get attachment rather than repo access.
   let fileContext = '';
   if (agent === 'antigravity' || agent === 'vibe') {
     // Whatever argv budget the diff has not already spent, less a margin for the prompt and the

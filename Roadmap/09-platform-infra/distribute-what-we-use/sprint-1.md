@@ -89,6 +89,13 @@ Every failure was read. None was deleted as superseded.
   Blocking; restored and pinned by a source-level test), and `--agent devin` had the Vibe hole (codex security
   lens, Blocking; removed). Vibe (`MISTRAL_API_KEY` missing) and agy (signed out) could not run, so codex ran
   both prompts (WAYS-OF-WORKING: one family left).
+- The fresh `pr-reviewer` (#188) found the rest: the version bump left 11 kit adverts stale, which turned Skills CI
+  red and skipped every later step (the self-QA had not replayed the whole workflow; a local replay of every
+  skills-ci step now runs before each push); the router never passed `--builder`, so the new pairing guard could
+  not fire in normal use; the heal skipped agy's version-pin check; signed-out was checked before a visible
+  help-contract break. All fixed with specs observed failing first. This repo's default `--agent` moved from
+  `antigravity` to `codex` (residue of a superseded cadence; the router, the template and the consumer all say
+  codex), and the pinned codex model is recorded in the CHANGELOG as consumer-visible.
 - The codex→agy heal could become a same-family review; it now re-checks the builder (`lib/codex-fallback-pairing.test.mjs`).
 - **agy is signed out right now** (1.2.13 auto-updated mid-session). Both the old and the new doctor called that "contract
   broken, every model NOT LISTED" and spent a minute per probe waiting for a login. The doctor now says *could not

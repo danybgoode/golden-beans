@@ -793,7 +793,13 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder =
           'large hand-written diff that needs splitting.'
       );
     case 'fail-non-auth':
-      return failFn(`codex exec failed (non-auth): ${lastLine(codex.stderr)}`);
+      // A pinned model this codex account cannot use fails here, not as auth — so name the escape.
+      return failFn(
+        `codex exec failed (non-auth): ${lastLine(codex.stderr)}` +
+          (/\bmodel\b/i.test(codex.stderr || '') && CODEX_MODEL
+            ? ` — if this account cannot use "${CODEX_MODEL}", re-run with CODEX_MODEL=default (codex's own default).`
+            : '')
+      );
     case 'fail-both-dead':
       return failFn(
         `${cause.blurb} AND Antigravity unavailable — restore Codex (${cause.restore}), ` +
@@ -835,8 +841,9 @@ function execAgy(fullArgv, model, spawn) {
 // (the source passes one), "imported from a file the diff never creates" (a lower PR creates it).
 // Every one is a reviewer reasoning about code it could not see.
 //
-// vibe got repo ACCESS instead (read_file + grep, scoped by --enabled-tools). **agy cannot have the
-// same treatment**: its only permission lever is `--dangerously-skip-permissions`, which is
+// vibe briefly got repo ACCESS instead (read_file + grep, 2026-08-07); that was removed because it let an
+// injected diff read host files (see VIBE_READ_ONLY_TOOLS), so vibe is attached-to like agy. **agy could
+// never have had it**: its only permission lever is `--dangerously-skip-permissions`, which is
 // all-or-nothing — there is no --enabled-tools equivalent to scope it to reads — and without it agy
 // simply BLOCKS in `-p` mode waiting for an approval that never comes (measured: no output after
 // 9 minutes, with and without `--mode plan`). Granting an external CLI blanket tool approval in this

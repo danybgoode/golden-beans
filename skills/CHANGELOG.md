@@ -18,7 +18,14 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   answered. Every consumer's old tests were run against it.
 - **One doctor: `cross-agent-doctor.mjs`** (codex + agy) ships in the template. `agy-doctor.mjs` is an alias for
   `cross-agent-doctor.mjs agy`. Every fix message names a doctor that exists.
-- **`CODEX_MODEL=default`** opts out of the pinned review model and uses codex's own default.
+- **Codex now reviews on a pinned model, `gpt-5.6-terra` at high effort** (was: codex's own configured default).
+  The review's model is then a property of the repo, not of each machine. If your codex account cannot use it,
+  the failure names the escape: **`CODEX_MODEL=default`** returns to codex's own default. The default
+  `--agent` stays `codex`.
+- **`review-route.mjs` passes `--builder`** in every command it prints, so the same-family refusal (and the
+  codex→agy heal's re-check) fire in normal use. The heal also checks agy's version pin now.
+- **The doctor checks the agy help contract before "signed out"**, so a visible contract break is never
+  reported as merely could-not-look.
 
 ### Security
 

@@ -32,6 +32,7 @@ import {
   AGY_MODEL,
   AGY_FALLBACK_MODEL,
   AGY_MODELS_IN_USE,
+  codexExecArgs,
 } from './lib/cross-agent-cli.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -122,10 +123,7 @@ function observeCodex() {
   const version = (((ver.stdout || '') + (ver.stderr || '')).match(/\d+\.\d+\.\d+/) || [null])[0];
   // One real, minimal `codex exec` — the same call cross-review makes (respecting CODEX_MODEL), so the
   // probe sees exactly what the reviewer would. A tiny prompt keeps the token/CLI-version check cheap.
-  const args = CODEX_MODEL
-    ? ['exec', '-m', CODEX_MODEL, 'Reply with exactly: OK']
-    : ['exec', 'Reply with exactly: OK'];
-  const r = codex(args, '');
+  const r = codex(codexExecArgs('Reply with exactly: OK'), '');
   const out = `${r.stdout || ''}\n${r.stderr || ''}`;
   let probe;
   if (r.status === 0 && (r.stdout || '').trim()) probe = 'ok';
@@ -141,7 +139,7 @@ async function codexMain() {
   const line = (s) => process.stdout.write(`${s}\n`);
 
   line(
-    `codex — ${obs.present ? `installed ${obs.version || '(unparsed version)'}` : 'NOT INSTALLED'} · CODEX_MODEL ${CODEX_MODEL ? `="${CODEX_MODEL}"` : 'unset'}`
+    `codex — ${obs.present ? `installed ${obs.version || '(unparsed version)'}` : 'NOT INSTALLED'} · CODEX_MODEL ${CODEX_MODEL ? `="${CODEX_MODEL}"` : "=default (codex's own)"}`
   );
   if (obs.present) line(`live probe: ${obs.probe}`);
   line(`  → ${note}`);
@@ -278,13 +276,6 @@ export function decideDoctorAction({
   signedOut = false,
 }) {
   const notes = [];
-  if (signedOut)
-    return {
-      action: 'signed-out',
-      notes: [
-        'agy is signed out, so models and the print contract could not be checked (not a contract break).',
-      ],
-    };
   if (!installed)
     return {
       action: 'contract-broken',
@@ -296,6 +287,15 @@ export function decideDoctorAction({
     return {
       action: 'contract-broken',
       notes: ['`agy --help` no longer shows the -p/--model print contract.'],
+    };
+  // Signed out AFTER the checks that need no login (pr-reviewer S2): a help-contract break is visible
+  // signed in or not, and must never be reported as merely "could not look".
+  if (signedOut)
+    return {
+      action: 'signed-out',
+      notes: [
+        'agy is signed out, so models and the print contract could not be checked (not a contract break).',
+      ],
     };
   if (probes.primary === 'error' || probes.fallback === 'error')
     return {

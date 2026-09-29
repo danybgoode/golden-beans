@@ -266,3 +266,17 @@ test('signed out outranks every contract verdict — it is an operator action, n
     'contract-broken'
   );
 });
+
+test('a help-contract break is reported as broken even while signed out (pr-reviewer S2 on #188)', () => {
+  const base = {
+    installed: '1.2.13',
+    pinned: '1.2.12',
+    primaryListed: false,
+    fallbackListed: false,
+    probes: { primary: 'skipped', fallback: 'skipped' },
+    signedOut: true,
+  };
+  assert.equal(decideDoctorAction({ ...base, helpOk: false }).action, 'contract-broken');
+  assert.equal(decideDoctorAction({ ...base, installed: null, helpOk: true }).action, 'contract-broken');
+  assert.equal(decideDoctorAction({ ...base, helpOk: true }).action, 'signed-out');
+});
