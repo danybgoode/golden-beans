@@ -30,7 +30,7 @@ stories:
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 3: Jev and notify, set up rather than documented
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
@@ -67,6 +67,20 @@ Builds **D7, D8** and deviation 5 (README → *Architecture lock*).
   registry question for `reporting.destination` is reworded so it offers only what a sender exists for
   (deviation 5).
 - **Release:** one plugin/kit bump (D9).
+
+## Build notes
+
+- **3.1 (Claude).** Two bugs, as the lock found (D7): no config at all loaded as `egress: true`, and `effectiveMode`
+  returned `configured off` before looking at egress. The fix is at the loader and in the ordering. The four specs
+  were observed failing on the old code (3 red; the `egress:false` guard green as it should be). Both consumers set
+  `egress: true` explicitly, so neither changes.
+- **3.2 / 3.3 (Claude subagent, Sonnet).** Two facts reshaped the route:
+  - `jev-eval --live` refuses until egress is `true`, so the route records the yes first.
+  - `--live` re-records the committed fixtures, so the proof is `--live --limit 10`, which writes nothing.
+  `notify-setup.mjs` makes the chat-id step executable and tells a set webhook from an unmessaged bot. The kit cannot
+  carry `reporting.config.example.json` (it copies only `requires_scripts` and the Roadmap skeleton), so the route
+  gives the one-line config instead. Every new spec was observed red by mutation.
+- **Release 0.8.0.**
 
 ## Sprint QA
 - 3.1: regression spec in `skills/template/scripts/lib/jev.test.mjs` (or alongside), observed failing on `main` first.
