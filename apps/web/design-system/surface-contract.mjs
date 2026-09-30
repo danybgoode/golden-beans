@@ -96,6 +96,10 @@ export function surfaceEntry(surface, map, kinds, file = `${surface.state}.surfa
  * `surface.map.json` beside it. The generator and `route-manifest.test.ts` both call this, so the ids a route may
  * cite and the entries the contract holds cannot disagree (#211 review: the manifest admitted prototype ids only, so
  * an approved surface could never reach the gate).
+ *
+ * ⚠️ `entries` is only a contract when `problems` is EMPTY: an unapproved or clashing surface still converts, so a
+ * caller that reads `entries` without refusing on `problems` admits exactly what D12 exists to keep out. Both callers
+ * refuse first (#211 review).
  */
 export function approvedSurfaces(designSystemDir, { kinds, prototypeIds }) {
   return specContract(join(designSystemDir, 'surfaces'), {

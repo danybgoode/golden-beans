@@ -3,7 +3,7 @@ epic: sketch-specs
 sprint: 1
 title: "The format and the grey wireframe"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Sketch specs — a surface spec renders the grey wireframe and becomes the state contract — Sprint 1: The format and the grey wireframe
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #210 (`307999c`), deployed to production 2026-09-30; plugin + kit **0.16.0** released (`v0.16.0`, npm)
 
 ## Stories
 
@@ -92,3 +92,16 @@ Cites the epic README's C1–C6 and D8–D16; nothing here restates a rule that 
    → it fails with the line number and the list of known kinds.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-09-30, `main` @ `307999c`, and the published kit)
+
+1. ✅ `node scripts/sketch-render.mjs Roadmap/00-ideas/seeds/sketch-specs.md --out /tmp/sketch.html` → exit 0; blocks
+   `head · answer · summary · toolbar · list`; the head's button reads `+ new feature`; 4 summary boxes; list header
+   `feature | state in production | type & risk | on / off`.
+2. ✅ `lsit` in a copy → exit 1: `` /tmp/seed-copy.md:63: unknown kind `lsit` — did you mean `list`? Known kinds: head,
+   answer, summary, tiles, toolbar, list, empty, card, steps, field, tabs, note. ``
+- ✅ **The published package, from outside the repo:** `npx -y @golden-frijoles/kit@0.16.0 sketch-render seed.md --out o.html`
+  in a temp folder → exit 0, `head` + `empty` drawn.
+- ✅ **Looked at, not only tested:** the all-kinds page and the seed rendered in Chromium at 1200px and 375px. Two phone
+  defects (list bars clipping out of their cells, a long header word running into the next column) were fixed before merge.
+- ⬜ **Owed to Daniel:** open one rendered wireframe and say whether it reads.

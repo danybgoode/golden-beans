@@ -379,6 +379,17 @@ independently shippable slice of value.
   a new wording on held-out folds. Its first run, on `flag-state-claim`, produced a win on paper that was **not
   adopted**: the win was leakage from the drafts the candidate was written against. **Shipped 2026-09-30** (#207,
   kit 0.15.0; #208).
+- ✅ [Sketch specs](09-platform-infra/sketch-specs/README.md): **a screen is written once as a `surface` block** — a
+  state id, a route, then one line per block from twelve kinds (`- head "Orders" action "Share your shop"`), with only
+  an action's words, a count and a list's columns as facts. `node scripts/sketch-render.mjs <seed>` draws every block
+  as one **grey** wireframe page for the product owner to approve (no design system, no colour); a line it cannot read
+  fails with the file, the line and the known kinds. Groom's seed template and visuals rule now write this grammar.
+  In this repo, an approved block in `apps/web/design-system/surfaces/` **is** a state contract: `state-contract.mjs`
+  turns it into the entry the gate compares, refuses an id the prototype owns, and refuses a file whose SHA-256 is not
+  on an `APPROVED.md` line — **the repo's first approval hash any code checks**. Three prototype states rewritten as
+  surfaces reproduce their entries byte for byte. **0 surfaces approved yet**: the first new console state is the first
+  user (story 2.3, deferred). **Shipped 2026-09-30** (#210, kit 0.16.0; #211). ⚠️ Owed to Daniel: say whether a
+  rendered wireframe reads.
 - ✅ [Session budget](09-platform-infra/session-budget/README.md): **one deep ask per approval gate; keep going while
   the budget line says so.** It replaces "one per run" and "fresh session per sprint". In Claude Code a status row
   under the prompt reads the engine's own figures, for example `Session 48% · 5h 23% · 7d 9% → keep going`, and
@@ -405,6 +416,11 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-30**: `sketch-specs` **shipped**: two sprints, kit 0.16.0.
+  - A screen can now be approved as a grey wireframe drawn from text, and that same text is the state contract CI
+    enforces. Nothing checked an approval hash before; this does.
+  - The lock corrected six things out loud, among them 38 states rather than 33, a seed template that already shipped a
+    shape nothing could read, and a walkthrough that asked for the duplicate its own D5 forbids.
 - **2026-09-30**: `compiled-prompts` wave 1 **shipped**: two sprints, kit 0.15.0.
   - Jev's questions moved to data without changing a verdict; the stamp-then-move commit order is the proof.
   - The first wording test passed its own held-out rule and was still rejected: the winning examples were lifted
