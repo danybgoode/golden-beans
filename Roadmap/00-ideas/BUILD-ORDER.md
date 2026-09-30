@@ -16,12 +16,11 @@
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
-- [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 0/4 stories · risk: Low · audit-wave-B
 
-## ✅ Shipped (35)
+## ✅ Shipped (36)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -57,9 +56,10 @@
 - [Jev semantic guards — review-guard and prose-guard decide with Jev, not regex](../../09-platform-infra/jev-semantic-guards/README.md) — 09 Platform Infra · 15/15 stories · risk: High · wave-2026-09-19
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 - [The build view — a machine-readable frontmatter contract, rendered in the CLI as a Claude Mod](../../09-platform-infra/build-visualization-claude-mods/README.md) — 09 Platform Infra · 13/13 stories · risk: Low · wave-2026-09-16-plugin
+- [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (20)
+## ⬜ Funnel — seeds not yet scaffolded (21)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
@@ -74,6 +74,7 @@
 - [Session budget: replace 'one deep ask per run' with a measured line](seeds/session-budget.md) — Raw · Chore · appetite S · single-product-wave-B
 - [Compiled prompts: the kickoff and build/QA prompts assembled from measured parts](seeds/compiled-prompts.md) — Raw · Feature · appetite L · single-product-wave-C
 - [Sketch specs: approved specs render the wireframe and become the build contract](seeds/sketch-specs.md) — Raw · Feature · appetite L · single-product-wave-C
+- [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — Raw · Chore · unranked
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — Raw · Chore · unranked
 - [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — Raw · Feature · appetite S · unranked
@@ -95,4 +96,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 40 · seeds in funnel: 20 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 40 · seeds in funnel: 21 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

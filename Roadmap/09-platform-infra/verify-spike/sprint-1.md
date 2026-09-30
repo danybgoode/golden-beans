@@ -3,7 +3,7 @@ epic: verify-spike
 sprint: 1
 title: "S1 Measure and decide"
 risk: low
-phase: Shaping
+phase: Shipped
 stories_total: 4
 stories:
   - id: S1.1
@@ -12,32 +12,32 @@ stories:
     i_want: "the outbox's three promised invariants model-checked"
     so_that: "I know whether spec-level checking finds anything real, and at what cost"
     risk: low
-    status: planned
+    status: done
   - id: S1.2
     title: "Lean model of the evaluator: explanation ⇔ verdict agreement + differential test"
     as_a: "the product owner"
     i_want: "the preview screen's explanation proven to agree with the served verdict"
     so_that: "I know what a proof tier costs and whether it catches a gap tests miss"
     risk: low
-    status: planned
+    status: done
   - id: S1.3
     title: "Jev triage in shadow over ~10 merged PRs"
     as_a: "the product owner"
     i_want: "Jev's four triage answers logged against real past diffs"
     so_that: "verify-module knows whether Jev can route verification depth"
     risk: low
-    status: planned
+    status: done
   - id: S1.4
     title: "The written decision (DECISION.md)"
     as_a: "the product owner"
     i_want: "one decision doc: language, tiers, cost, findings"
     so_that: "verify-module can be shaped from evidence"
     risk: low
-    status: planned
+    status: done
 ---
 # Verify spike: Quint on the outbox, Lean on the flag evaluator — Sprint 1: S1 Measure and decide
 
-**Status:** ⬜ not started · **Appetite:** S (one builder session). When it runs out, write the decision
+**Status:** ✅ done 2026-09-29. Results: [`DECISION.md`](DECISION.md) · **Appetite:** S (one builder session). When it runs out, write the decision
 with what was measured and name the gaps. Pitch and Fix policy: [`seeds/verify-spike.md`](../../00-ideas/seeds/verify-spike.md).
 
 All artifacts go in this folder: `quint/`, `lean/`, `diff-test/`, `jev-triage.md`, `DECISION.md`, and a
@@ -46,7 +46,7 @@ one of the answers.
 
 ## Stories
 
-### Story 1.1 — Quint spec of the delivery outbox + bounded model check
+### Story 1.1 — Quint spec of the delivery outbox + bounded model check ✅
 **As the** product owner, **I want** the outbox's promised invariants model-checked, **so that** I know
 whether spec-level checking finds anything real, and at what cost.
 Model `event_deliveries` (`pending → in_flight → delivered | failed | dead`), `claim_deliveries` (as an
@@ -59,7 +59,7 @@ are small: 2 destinations, 3 events, cap 3.
 violation or a counterexample, reproducible from `REPRODUCE.md`. Wall-clock time and bounds are recorded.
 **Risk:** low
 
-### Story 1.2 — Lean model of the evaluator: explanation ⇔ verdict agreement + differential test
+### Story 1.2 — Lean model of the evaluator: explanation ⇔ verdict agreement + differential test ✅
 **As the** product owner, **I want** the preview screen's explanation proven to agree with the served
 verdict, **so that** I know what a proof tier costs and whether it catches a gap tests miss.
 Model `evaluateFlag` / `matchesRule` / `explainFlagEvaluation` over parsed definitions in Lean 4, with the
@@ -74,7 +74,7 @@ with the reason). The differential test runs ≥ 1,000 cases with 0 disagreement
 explained. Both commands are in `REPRODUCE.md` with timings.
 **Risk:** low
 
-### Story 1.3 — Jev triage in shadow over ~10 merged PRs
+### Story 1.3 — Jev triage in shadow over ~10 merged PRs ✅
 **As the** product owner, **I want** Jev's four triage answers logged against real past diffs, **so that**
 `verify-module` knows whether Jev can route verification depth.
 Pick the ~10 most recent merged PRs that touched the outbox migrations/dispatcher or `packages/sdk/src/flags.ts`.
@@ -85,7 +85,7 @@ owner before sending anything. Nothing gates.
 each one, and a one-paragraph verdict on whether Jev's answers were usable.
 **Risk:** low
 
-### Story 1.4 — The written decision (`DECISION.md`)
+### Story 1.4 — The written decision (`DECISION.md`) ✅
 **As the** product owner, **I want** one decision doc, **so that** `verify-module` can be shaped from evidence.
 Answer: **(1) spec language**, and whether Quint is kept (TLA+ and Veil are listed as *not evaluated*, one
 line each); **(2) tiers worth productizing** (model check / proof / differential test / trace validation /
@@ -96,7 +96,7 @@ found, and each one's fix PR or bug seed.
 one-line pointer to the decision.
 **Risk:** low
 
-**Stretch (only if appetite remains):** trace validation. Run the dispatcher against **local Supabase**
+**Stretch — NOT reached** (the appetite went to modelling the F2 fix and to the mutation checks; see DECISION § 2): trace validation. Run the dispatcher against **local Supabase**
 with a sink forced down and then up, export `event_delivery_attempts`, and replay it as a Quint trace. No
 prod reads.
 
