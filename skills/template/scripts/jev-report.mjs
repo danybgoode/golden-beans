@@ -92,11 +92,12 @@ export function dedupe(rows) {
   const by = new Map();
   // One key per thing judged: a comment URL whether it came from the backtest (`backtest:<url>`) or a marker
   // (`marker:<url>`), else the text hash. Keying on the raw source counted one comment twice (PR #39).
-  // A lint row's source is `<file>@<sha>`, which two hunks of one file share and one hunk re-pushed does not: the hunk's
-  // own hash is the thing judged (semantic-lint C5).
+  // A lint row's source is `<file>@<sha>`, which two hunks of one file share and one hunk re-pushed does not: the file
+  // plus the hunk's own hash is the thing judged (semantic-lint C5) — the hash alone merged identical windows in two
+  // files (fresh review of #200).
   const key = (r) =>
     isLint(r)
-      ? `${r.rail}:${r.textHash}`
+      ? `${r.rail}:${r.evidence?.file ?? ''}:${r.textHash}`
       : `${r.rail}:${r.source ? String(r.source).replace(/^(?:backtest|marker):/, '') : r.textHash}`;
   // Newest by timestamp, not by input order: several --log files and markers arrive in any order (codex, #192).
   const byTime = [...rows].sort((a, b) => String(a.ts ?? '').localeCompare(String(b.ts ?? '')));

@@ -113,7 +113,9 @@ export function parseLintRules(raw) {
 export const questionsFor = (rule) => ({ [QUESTION_ID]: { type: 'noul', ...rule.question } });
 
 /** Pins a recording to the wording that produced it: an edited question must be re-measured, not replayed (D8). */
-export const questionHash = (rule) => textHash(JSON.stringify(questionsFor(rule)));
+export const questionHash = (rule) =>
+  // `source` is sent in the state beside the question, so it is part of what was measured (fresh review of #200).
+  textHash(JSON.stringify({ questions: questionsFor(rule), source: rule.source }));
 
 /**
  * `git diff` text → [{ file, hunks: [{ header, lines: [diff line], added: [line] }] }]. Pure. `lines` keep their +/-/space
@@ -409,7 +411,22 @@ async function main() {
         return 'origin/main...HEAD';
       }
     },
-    diff: (range) => git(root, ['diff', '-U3', '--no-color', '--no-ext-diff', '--diff-filter=d', range]),
+    diff: (range) =>
+      // Pinned, not inherited from the person's git config: the default core.quotePath turns a non-ASCII path into
+      // "b/…\303\261.ts", and a custom diff.dstPrefix changes `b/` — either one made a real candidate match no glob
+      // and read as "nothing to judge" (fresh review of #200).
+      git(root, [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--src-prefix=a/',
+        '--dst-prefix=b/',
+        '-U3',
+        '--no-color',
+        '--no-ext-diff',
+        '--diff-filter=d',
+        range,
+      ]),
     headSha: (range) => {
       try {
         return git(root, ['rev-parse', '--short=12', range.split('...').pop() || 'HEAD']).trim();

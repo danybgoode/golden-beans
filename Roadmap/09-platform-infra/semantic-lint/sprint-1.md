@@ -58,7 +58,7 @@ push), the question-hash replay guard (an edited question still replays green).
 
 ### Story 1.1 — `semantic-lint.mjs` and rules as data
 **As** the product owner, **I want** a rail that runs each rule's selector over a push's added lines and asks Jev only about the candidates, **so that** a paraphrased rule break is caught without a Jev call on every line.
-**Acceptance:** Rules load from the `lint` section; `RAILS` includes `lint`; mode, threshold and `shadowExpires` come from `jev.rails.lint`. No candidates → no Jev call. "Could not look" prints "not checked" and is logged, never counted as a pass. Decisions log as `rail: lint:<id>`. A registry row declares `lint.rules` (`gf doctor` cannot list it — README C2). Ships in `template/scripts/`, not the kit closure (README C4).
+**Acceptance:** Rules load from the `lint` section; `RAILS` includes `lint`; mode, threshold and `shadowExpires` come from `jev.rails.lint`. No candidates → no Jev call. "Could not look" prints "not checked" and is logged, never counted as a pass. Decisions log as `rail: lint:<id>`. A registry row declares `lint.rules` (`gf doctor` cannot list it — README C2). Ships in `template/scripts/` and, through `jev-eval`, in the kit closure (README C4, corrected).
 **Risk:** low
 
 ### Story 1.2 — Rule 1, measured

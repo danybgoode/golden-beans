@@ -74,6 +74,11 @@ test('the question hash moves when a word of the question moves', () => {
   const [b] = rules({ question: { ...RULE.question, instructions: `${RULE.question.instructions} ` } });
   assert.notEqual(questionHash(a), questionHash(b));
   assert.equal(questionHash(a), questionHash(rules()[0]));
+  assert.notEqual(
+    questionHash(a),
+    questionHash(rules({ source: 'AGENTS.md rule 2' })[0]),
+    'source is sent, so it is hashed'
+  );
 });
 
 // ── the diff and the selector ───────────────────────────────────────────────────────────────────

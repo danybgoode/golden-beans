@@ -29,11 +29,11 @@
 //
 // The `lint` rail (semantic-lint D8) is reported the same way — its selector picks candidates but has no verdict to
 // compare with — and "decided" means raised or cleared at the rail's own threshold. Its question is project data, so a
-// recording pins the wording's hash, and a fixture for a rule the project does not have is skipped.
+// recording pins the wording's hash, and the fixtures live in the project's own jev-eval.lint.fixtures.json.
 //
 // Zero deps — Node 18+.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readSection } from './lib/config.mjs';
@@ -41,6 +41,12 @@ import { loadJevConfig, parseJevConfig, RAILS, readApiKey, repoRoot } from './li
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const FIXTURES_PATH = join(__dirname, 'jev-eval.fixtures.json');
+/**
+ * The `lint` set's fixtures are PROJECT data, like the rules they measure (semantic-lint D8, fresh review of #200):
+ * this repo's rule-1 labels shipped in the shared file would fail any consumer whose own rule reused the id, and fail
+ * every consumer with a rule but no such fixtures. So they live beside the script in a file the template never has.
+ */
+export const LINT_FIXTURES_PATH = join(__dirname, 'jev-eval.lint.fixtures.json');
 
 /** Shadow is a short, expiring measurement: at most this many days out, ever. */
 export const MAX_SHADOW_DAYS = 21;
@@ -79,6 +85,11 @@ export function expiredShadowRails(config, today) {
 export function coverageFailures(fixtures, rails) {
   const out = [];
   for (const name of EVAL_SETS) {
+    // A set that knows its own coverage rule (lint: per configured rule) answers for itself.
+    if (rails[name]?.coverage) {
+      out.push(...rails[name].coverage(fixtures[name] ?? []));
+      continue;
+    }
     const n = (fixtures[name] ?? []).length;
     if (!rails[name] && n)
       out.push(`${name}: ${n} fixture(s) but no judge to replay them — was the judge renamed?`);
@@ -172,7 +183,18 @@ export async function loadRails({ lintRules = [] } = {}) {
   if (typeof lint.judgeCandidate === 'function') {
     const byId = new Map(lintRules.map((r) => [r.id, r]));
     rails.lint = {
+      // Never replayed (there is no question to replay it against) — and `coverage` below fails it, so a renamed or
+      // removed rule cannot go green by skipping every fixture it had (fresh review of #200).
       skip: (fx) => (byId.has(fx.rule) ? null : `no rule "${fx.rule}" in this project's lint config`),
+      coverage: (cases) => [
+        ...[...new Set(cases.filter((fx) => !byId.has(fx.rule)).map((fx) => fx.rule))].map(
+          (id) => `lint: fixtures for "${id}", which this project's lint config does not define — renamed or removed?`
+        ),
+        ...[...byId.keys()]
+          .map((id) => [id, cases.filter((fx) => fx.rule === id).length])
+          .filter(([, n]) => n < MIN_FIXTURES)
+          .map(([id, n]) => `lint/${id}: only ${n} labelled fixture(s); a rule needs ≥${MIN_FIXTURES}`),
+      ],
       // A recording answers the wording that produced it: an edited question replaying green would prove nothing.
       stale: (fx) =>
         fx.recorded?.questionHash === lint.questionHash(byId.get(fx.rule))
@@ -429,12 +451,18 @@ async function main() {
   const code = await run(process.argv.slice(2), {
     root,
     config: loadJevConfig({ root }),
-    fixtures: JSON.parse(readFileSync(FIXTURES_PATH, 'utf8')),
+    fixtures: {
+      ...JSON.parse(readFileSync(FIXTURES_PATH, 'utf8')),
+      lint: existsSync(LINT_FIXTURES_PATH) ? JSON.parse(readFileSync(LINT_FIXTURES_PATH, 'utf8')) : [],
+    },
     // A malformed lint section throws here: CI must go red on it, not replay against no rules.
     rails: await loadRails({ lintRules: parseLintRules(readSection('lint', { root }).raw) }),
     key: () => readApiKey({ root }),
     makeAsk: ({ key, model }) => (req) => askJev(req, { key, model }),
-    writeFixtures: (fx) => writeFileSync(FIXTURES_PATH, `${JSON.stringify(fx, null, 2)}\n`),
+    writeFixtures: ({ lint, ...shared }) => {
+      writeFileSync(FIXTURES_PATH, `${JSON.stringify(shared, null, 2)}\n`);
+      if (lint.length) writeFileSync(LINT_FIXTURES_PATH, `${JSON.stringify(lint, null, 2)}\n`);
+    },
     stdout: (t) => process.stdout.write(t),
     stderr: (t) => process.stderr.write(t),
     today: new Date().toISOString().slice(0, 10),

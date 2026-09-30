@@ -173,4 +173,6 @@ test('dedupe: one lint row per hunk — two hunks of one file both count, one hu
   ]);
   assert.equal(rows.length, 2);
   assert.equal(rows.find((r) => r.textHash === 'a').evidence.outcome, 'raise', 'the newest decision wins');
+  assert.equal(dedupe([lintRow('clear', { hash: 'a' }), lintRow('clear', { hash: 'a', file: 'apps/web/y.ts' })]).length, 2,
+    'the same window in two files is two decisions');
 });

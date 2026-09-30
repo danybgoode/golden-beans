@@ -104,7 +104,11 @@ is stated here, out loud; builders cite these, never a paraphrase.
 - **D7 — The log.** One `logDecision` per candidate: `rail: 'lint:<id>'`, `mode`, `decider: 'jev' | 'not-checked'`,
   `regex: null`, `jev: outcome === 'raise'` (null when not checked), `confidence: p`, `text: hunk`, `source:
   '<file>@<head sha>'`, `evidence: { file, outcome }`, `error`.
-- **D8 — Eval.** `lint` fixtures live in the shared `jev-eval.fixtures.json`: `{ id, rule, file, hunk, label, origin:
+- **D8 — Eval.** *Amended after the fresh review of #200:* the fixtures live in a project-owned
+  `scripts/jev-eval.lint.fixtures.json` (the template ships none) — in the shared file, this repo's `rule-1` labels
+  would fail any consumer that reused the id; every configured rule needs ≥30 of them, and a fixture for a rule the
+  project no longer defines FAILS rather than skips. The recording's hash covers the question and `source`. Original
+  text: `lint` fixtures live in the shared `jev-eval.fixtures.json`: `{ id, rule, file, hunk, label, origin:
   'history:<sha>' | 'constructed', recorded: { model, questionHash, answers }, decision }`. Replay runs the real judge
   with the rule from the project's `lint` config and fails when the question's hash differs from the recording's
   (wording changed → `--live`). A fixture whose rule the project lacks (the template's own run) is skipped, loudly.

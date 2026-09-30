@@ -157,6 +157,15 @@ test('pre-push: a NEW branch is linted from origin/main, the same range the gate
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('pre-push: a deletion-only push lints NOTHING — no fallback to a branch nobody pushed', () => {
+  const zero = '0'.repeat(40);
+  const { dir, after } = repoTouching('apps/web/x.ts');
+  withLintStub(dir);
+  assert.equal(runHook({ dir, stdin: `refs/heads/x ${zero} refs/heads/gone ${after}\n` }).code, 0);
+  assert.throws(() => readFileSync(join(dir, 'lint-args.json')), /ENOENT/, 'the lint ran on a deletion-only push');
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('sealedEnv strips every git location variable a hook exports (else fixtures rewrite the real repo)', () => {
   const env = sealedEnv({ GIT_DIR: '/real/.git/worktrees/x', GIT_INDEX_FILE: 'i', GIT_WORK_TREE: 'w', GIT_COMMON_DIR: 'c', PATH: '/bin' });
   for (const k of ['GIT_DIR', 'GIT_INDEX_FILE', 'GIT_WORK_TREE', 'GIT_COMMON_DIR']) assert.equal(env[k], undefined, k);
