@@ -24,6 +24,7 @@ requires_scripts:
   - lib/config.mjs
   - lib/config-registry.mjs
   - intent-reader.mjs
+  - lib/secret-guard.mjs
 ---
 
 # Groom — the planning front door (Cowork)

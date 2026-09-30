@@ -123,6 +123,7 @@ test('the real template renders with no leftover placeholders', async () => {
   // The non-negotiables that went missing when kickoffs were hand-composed — the reason this generator exists.
   assert.match(out, /ONE orchestrated run/);
   assert.match(out, /Lock first/);
+  assert.match(out, /\*\*Stack\*\*/);
   assert.match(out, /review-route\.mjs/);
   assert.match(out, /Merge on green/);
   assert.match(out, /Done means shipped/);

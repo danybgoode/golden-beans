@@ -244,28 +244,3 @@ _Advisory and uncalibrated (intent-match D1, D3). Agreement written by `intent-r
 </details>
 
 <!-- intent-match: {"coverage_in":0.951,"coverage_out":0.873,"clarity":0.836,"agreement":0.7,"total":84} -->
-
-## Will build
-
-- Advisory intent scorer with coverage, clarity, teach-back, optional agreement, gaps, routes, and placeholder bands
-- Seed/epic/retro tooling to capture asks, claims, visuals, scores, outcomes, and backfill samples across both repos
-- Groom visuals rule: system context plus triggered flow, data, state, sequence, container, or `surface` spec
-- Optional non-Claude lock reader that never blocks
-- Tests, measured Jev fixtures, and calibration-readiness reporting
-
-## Won't build
-
-- A gating score, automated approval, or blocked scaffold
-- Claude or multiple/retrying readers
-- Threshold/weight fitting, dashboard, database table, engine changes, or a new CLI interface
-- Wireframe rendering or spec-to-render tooling
-- Retroactive failure for older unscored epics
-
-## First question
-
-- Who owns—and by what deadline—the 20–30 backfilled “yes / mostly / no” intent judgments needed to make calibration meaningful?
-```
-
-</details>
-
-<!-- intent-match: {"coverage_in":0.951,"coverage_out":0.873,"clarity":0.836,"agreement":0.75,"total":85} -->

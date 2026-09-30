@@ -36,6 +36,7 @@ import {
   vibeArgs,
 } from './lib/cross-agent-cli.mjs';
 import { getKey } from './lib/config.mjs';
+import { collectSecretValues, findSecretLeaks } from './lib/secret-guard.mjs';
 import { askJev, loadJevConfig, readApiKey, repoRoot, stateSize, STATE_CHAR_BUDGET } from './lib/jev.mjs';
 import {
   componentsFrom,
@@ -123,7 +124,8 @@ export function askReader(family, pitch, { spawn = spawnSync, timeoutMs }) {
     return { ok: false, why: `${family.id}: could not start (${e?.message || e})` };
   }
   if (r?.error?.code === 'ETIMEDOUT')
-    return { ok: false, why: `${family.id}: timed out after ${Math.round(timeoutMs / 1000)}s` };
+    return { ok: false, why: `${family.id}: timed out after ${timeoutMs / 1000}s` };
+  if (r?.error?.code === 'ENOBUFS') return { ok: false, why: `${family.id}: the reply was over 16 MB` };
   if (r?.error) return { ok: false, why: `${family.id}: could not start (${r.error.message})` };
   if (r?.status !== 0)
     return {
@@ -165,13 +167,13 @@ export function readerSection({ family, agreement, seedComponents, seedTotal, da
   ];
   if (seedComponents) lines.push(`- Total with agreement: **${withAgreement.total} / 100** — uncalibrated`);
   const clipped = reply.length > 4000 ? `${reply.slice(0, 4000)}\n…[truncated]` : reply;
+  // Indented, never fenced: a reply is model output, and a fence it carries (``` or ~~~) would close ours and leave its
+  // own `## ` headings outside the section, where the next run cannot find them (fresh review of #197).
   lines.push(
     '',
     "<details><summary>The reader's reply</summary>",
     '',
-    '```text',
-    clipped.replace(/```/g, "'''"),
-    '```',
+    ...clipped.split('\n').map((l) => `    ${l}`),
     '',
     '</details>',
     ''
@@ -259,6 +261,14 @@ export async function run(argv, io) {
   const plan = io.read(where.readme);
   const reply = askReader(family, pitch, { spawn: io.spawn, timeoutMs: args.timeout * 1000 });
   if (!reply.ok) return skip(reply.why);
+  // The reply is about to leave this process twice: to Jev, then into a README that may be public. A reader can READ
+  // host files (codex's sandbox allows reads; agy has no tool restriction), so a secret-shaped reply is skipped before
+  // either, as cross-review does (lib/secret-guard.mjs). Names only: a value is never printed.
+  const leaks = io.secrets(reply.text).leaks;
+  if (leaks.length)
+    return skip(
+      `${family.id}: the reply carried secret-shaped text (${leaks.map((l) => l.name).join(', ')}); nothing sent, nothing written`
+    );
   const state = { plan, reading: reply.text };
   if (stateSize(state) > STATE_CHAR_BUDGET)
     return skip(`the plan and the reading are over Jev's state budget (${stateSize(state)} chars)`);
@@ -299,6 +309,7 @@ async function main() {
     config: () => loadJevConfig({ root }),
     key: () => readApiKey({ root }),
     has: hasCmd,
+    secrets: (text) => findSecretLeaks(text, { values: collectSecretValues({ root }) }),
     spawn: spawnSync,
     ask: (req, { key, model }) => askJev(req, { key, model, timeoutMs: INTENT_TIMEOUT_MS }),
     read: (p) => readFileSync(p, 'utf8'),
