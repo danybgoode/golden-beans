@@ -3,7 +3,7 @@ epic: session-budget
 sprint: 1
 title: "The rule and the line"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -12,25 +12,25 @@ stories:
     i_want: "\"one deep ask per approval gate\" written the same way in every place the old rule lived"
     so_that: "my decisions set the pace, and no file contradicts another"
     risk: low
-    status: built
+    status: shipped
   - id: S1.2
     title: "The session line"
     as_a: "the product owner"
     i_want: "a status line under the build view saying how full the session is and whether to keep going"
     so_that: "I know when to checkpoint or hand off without guessing"
     risk: low
-    status: built
+    status: shipped
   - id: S1.3
     title: "The line at each groom gate in Cowork"
     as_a: "the product owner"
     i_want: "each approval gate in a Cowork planning session to end with the same line"
     so_that: "I see my decision load where planning happens, too"
     risk: low
-    status: built
+    status: shipped
 ---
 # Session budget — one deep ask per approval gate, plus a measured line — Sprint 1: The rule and the line
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped 2026-09-30 (#202, `c778bb1`; plugin + kit 0.14.0)
 
 ## Stories
 
@@ -66,3 +66,14 @@ stories:
    → the gate ends with one line: asks open, questions waiting, "context: not measured here", and a verdict.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-09-30, after the merge)
+
+1. ✅ `main`'s groom `SKILL.md` (read through the GitHub API) says "One deep ask per approval gate" twice and has no
+   "per run". `session-line.mjs` is in the mirrored `golden-frijoles/skills`.
+2. ⬜ **Owed to Daniel:** a real Claude Code session on the 0.14.0 plugin, with function hooks on. The mod's hooks
+   are validated by `claude plugin validate`, but only the engine raises `session.measure`, so nobody has seen the
+   line draw yet.
+3. ⬜ **Owed to Daniel:** the same session past 60% context → `checkpoint`.
+4. ⬜ **Owed to Daniel:** a Cowork groom session to its gate. The CLI half was run here and printed
+   `1 ask open · 3 questions waiting · 2 gates passed · context: not measured here → checkpoint` (its test pins that).

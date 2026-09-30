@@ -1072,6 +1072,10 @@ one-liner + why + date shape.
   the *migration* that does the same backfill was left untouched, and round 2 flagged it as Blocking.
   The fix is cheap at the time you're already in the mental model; it's a whole extra review cycle
   later. *(2026-07-20, multi-tenant-activation S1.)*
+  **The same holds for a rule's wording:** a seed that lists "the N places this rule lives" gives you a
+  starting grep, not the scope. session-budget's seed listed four; the grep found nine, because shared
+  templates hold byte-identical copies (three `WAYS-OF-WORKING.template.md` files and the template's own
+  LEARNINGS). *(2026-09-30, session-budget.)*
 - **`onConflict` + `ignoreDuplicates` on a GLOBALLY-unique credential column is a silent cross-tenant
   bind, not idempotency.** Two seed scripts upserted an `api_keys` row with `{ onConflict: 'key_hash',
   ignoreDuplicates: true }` to be "safely re-runnable." Because `key_hash` is unique *across all
