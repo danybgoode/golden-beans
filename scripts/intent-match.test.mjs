@@ -239,6 +239,8 @@ test('scoreAnswers: a malformed answer is could-not-look for the whole score, ne
     { type: 'noul', noul: true },
     { type: 'noul', noul: '0.9' },
     { type: 'noul', noul: 1.2 },
+    { type: 'score', noul: 0.9 },
+    { noul: 0.9 },
     null,
     undefined,
   ]) {
@@ -247,6 +249,11 @@ test('scoreAnswers: a malformed answer is could-not-look for the whole score, ne
     assert.match(r.error, /in_c1/);
   }
   assert.equal(scoreAnswers(parseSeed(SEED), { ...ANSWERS, clar_a2: score(4) }).ok, false);
+  assert.equal(
+    scoreAnswers(parseSeed(SEED), { ...ANSWERS, clar_a2: { type: 'noul', score: 2 } }).ok,
+    false,
+    'a Score read off a Noul-typed answer'
+  );
 });
 
 test('totalOf: signals that are absent do not count, and none at all is no total', () => {
@@ -436,6 +443,61 @@ test('judgeItem: asks exactly the question the scorer asks, and reads only a val
   assert.deepEqual(d, { value: false, p: 0.2, decider: 'jev' });
   const nope = await judgeItem(fx, { ask: async () => ({ ok: true, answers: { clar_a1: { score: '2' } } }) });
   assert.deepEqual(nope, { value: null, p: null, decider: 'could-not-look' });
+  const wrongType = await judgeItem(fx, {
+    ask: async () => ({ ok: true, answers: { clar_a1: { type: 'noul', score: 2 } } }),
+  });
+  assert.deepEqual(wrongType, { value: null, p: null, decider: 'could-not-look' });
+});
+
+// ── fresh review of #196 ─────────────────────────────────────────────────────────────────────────────────────
+
+test('a teach-back line directly under the last claim ends the claims instead of joining the last one', () => {
+  const p = parseSeed(
+    '## The ask, as given\n> x\n\n### Claims\n1. A\n2. B\n**Teach-back:** yes — "you want A and B"\n'
+  );
+  assert.deepEqual(p.claims, ['A', 'B']);
+  assert.equal(p.teachBack, 'yes');
+});
+
+test('the format string "yes | partly | no" is not an answer', () => {
+  for (const line of [
+    '**Teach-back:** yes | partly | no — "<mirror>"',
+    '**Teach-back:** yes|partly|no',
+    '**Teach-back:** <yes | partly | no>',
+  ])
+    assert.equal(
+      parseSeed(`## The ask, as given\n> x\n\n### Claims\n1. A\n\n${line}\n`).teachBack,
+      null,
+      line
+    );
+  assert.equal(parseSeed('## The ask, as given\n> x\n\n**Teach-back:** partly — "…"\n').teachBack, 'partly');
+});
+
+test('a CRLF seed parses the same as an LF one', () => {
+  const crlf = SEED.replace(/\n/g, '\r\n');
+  const a = parseSeed(crlf);
+  const b = parseSeed(SEED);
+  assert.deepEqual([a.claims, a.criteria, a.teachBack], [b.claims, b.criteria, b.teachBack]);
+});
+
+test('--write ignores a "## Intent match" inside a code fence, and never deletes the text around it', () => {
+  const fenced = `${SEED.replace('## Intent match\n\nold score, must not reach Jev\n', '')}\n## Notes\n\n\`\`\`md\n## Intent match\nan example\n\`\`\`\n\nkeep me\n`;
+  const r = scoreAnswers(parseSeed(fenced), ANSWERS);
+  r.gaps = [];
+  const w = writeIntoSeed(fenced, r, { hasAsk: true });
+  assert.match(w, /```md\n## Intent match\nan example\n```\n\nkeep me/);
+  assert.equal(
+    w.match(/^## Intent match$/gm).length,
+    2,
+    'the fenced example stays, and the real section is appended'
+  );
+});
+
+test('--write on a CRLF seed writes the score into the frontmatter it reports writing', async () => {
+  const { io, out } = makeIo({ text: SEED.replace(/\n/g, '\r\n') });
+  assert.equal(await run(['seed.md', '--write', '--no-route'], io), EXIT_SCORED);
+  assert.match(out.written, /^---\n[\s\S]*\nintent_match: \d+\n[\s\S]*?---\n/);
+  assert.doesNotMatch(out.written, /\r/);
 });
 
 // ── the seed template (intent-match S2.1) is the parser's contract ───────────────────────────────────────────

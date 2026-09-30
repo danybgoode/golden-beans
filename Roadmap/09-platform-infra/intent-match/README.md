@@ -20,7 +20,9 @@ intent_match: 84
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/intent-match.md`](../../00-ideas/seeds/intent-match.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in ## Why, not here). -->
+
+## Why
 Nothing measures whether a groomed pitch captures what the product owner meant, so gaps surface as "that's not what I
 meant" after the build. This epic keeps the ask verbatim, scores each pitch against it with Jev (advisory, labelled
 uncalibrated), names the artifact that closes each gap, makes a system diagram the default for every shaped bet, and

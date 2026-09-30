@@ -72,8 +72,11 @@ stories:
 - This epic's own seed had no verbatim ask (groomed before the template kept one). It now carries a **proxy** ask
   (`intent_ask: proxy`, D8): the groomed user stories moved into `## The ask, as given`, split into seven claims by the
   builder. It scored **89** (build band) with no gaps; teach-back absent (never recorded).
-- `.prettierignore` gains the two root copies: the template's copy is formatted under the template's config, and a
-  byte-identical root copy cannot satisfy both (the `config.mjs` precedent).
+- **Review round 1 (#196), all fixed with a spec each, each spec observed failing:** the epic README's scaffold
+  comment was never closed, hiding most of it on GitHub (codex + fresh reviewer); an answer whose `type` did not match
+  its question was still read as a number (codex); a `**Teach-back:**` line directly under the last claim folded
+  into that claim; the format string `yes | partly | no` parsed as "yes"; `--write` took a fenced example
+  `## Intent match` for the section and deleted text; a CRLF seed parsed to no claims (fresh reviewer).
 
 ## Sprint QA
 - `node --test` with a replay client (no key, no egress); one `--live` record of the fixtures.

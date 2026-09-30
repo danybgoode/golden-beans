@@ -214,7 +214,7 @@ up by pinning the new plugin version.
 - Grooming a new M-sized seed leaves a system context diagram in it, plus any diagram its shape triggers.
 - The same seed has "The ask, as given", `intent_match: <n>` in its frontmatter, and a `## Intent match` section showing
   each component, "agreement pending", and a route for each gap.
-- With `intentReader` off (the default) the lock runs no reader. Switched on with no CLI installed, or with a capped
+- With `intent.reader` off (the default) the lock runs no reader. Switched on with no CLI installed, or with a capped
   one, the lock prints "reader skipped" and carries on without a pause.
 - With no `TYPESAFE_API_KEY`, groom says "could not look", with no number.
 - Closing a scored epic without `_Intent:` fails `epic-dod --check`; closing an older one doesn't.
