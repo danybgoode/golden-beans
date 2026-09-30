@@ -1662,7 +1662,11 @@ one-liner + why + date shape.
 - **Replacing a file with the shared copy? Run the consumer's OLD tests against the NEW code.** The shared
   copy can be weaker than the local one it replaces. A consumer's stricter prose guard was silently undone
   that way, and the tests that pinned it were deleted as "superseded". `git show origin/main:<test>` into a
-  temp file, run it, and read every failure.
+  temp file, run it, and read every failure. **Merging N forks: build the superset from the strongest copy,
+  import the others' features BY NAME, and let the stricter copy win any safety property.** Then apply that
+  property to EVERY runner, not the one in front of you. distribute-what-we-use locked Vibe down and
+  re-admitted devin with the same host-read hole in the same round, and then the *default* reviewer (codex)
+  turned out to have it too, with MCP servers loaded. *(2026-09-29)*
 - **A review that skips "copies" cannot see a regression against the file the copy replaced.** Review the
   consumer's adoption against the consumer's previous version too, not only against the template.
 - **"Could not look" is its own exit code, never the failure one.** A watchdog's missing, unloadable or
@@ -1806,7 +1810,10 @@ one-liner + why + date shape.
   moved command's before/after output. It kept one skill local that byte parity would have moved.
 - **Automatic behaviour must not run repo-supplied code.** "The project's own `scripts/<x>` wins" suits a command
   the user explicitly invokes. First-contact detection and setup call the trusted package directly: `init.mjs`
-  and `preflight.mjs` are names a stranger's repo can own.
+  and `preflight.mjs` are names a stranger's repo can own. **The build-view hook violated this for weeks,
+  running `<repo>/scripts/build-state.mjs` on every turn**, and it was found only by a lock that read the
+  hook. The fix is a byte-checked bundle inside the plugin, located from the module's own `import.meta.url`
+  (probed live), and always used. *(2026-09-29)*
 - **`$CLAUDE_PLUGIN_ROOT` is not set in a skill's shell** (measured, Claude Code 2.1.280). Locate a skill from its
   own base directory, which the host shows when the skill is invoked.
 - **A local runner that mirrors CI must sandbox CI's global installs.** One `npm i -g <pinned CLI>` step, run
@@ -1823,3 +1830,35 @@ one-liner + why + date shape.
   change.
 - **Copy the shared rails into a consumer before calling the wave done.** The consumers' own lint, Prettier and
   reviews found five defects the source repo's gates couldn't see. The copy-in is a gate, not a chore.
+
+### Reviewing a security guard, and reviewing through a partial lens (distribute-what-we-use, 2026-09-29)
+
+- **A security guard's review converges on the guard.** #188 took 7 fresh rounds. From round 4 on, each round
+  found one small defect in the *new* secret guard, introduced by the previous round's fix. The stop signal is
+  a clean round, not a count. The residual no code can close (a reviewer that can read the host can be told to
+  encode what it reads) is a risk-acceptance question for the product owner, asked once, with a recommendation.
+- **A reviewer's output is a publishing path, and so is everything that quotes it.** The secret guard ran before
+  the comment post but *after* the output guard, whose failing status quoted the reply's first line into a
+  PUBLIC commit status. Put the egress check where the text first leaves the process, not where you think it's
+  posted.
+- **A `--paths`-scoped external pass files findings about what it didn't see.** agy's scoped pass on #189 called
+  committed files "missing" (one Blocking, two Should-fix). Verify every finding against the tree, and state
+  each scoped pass's coverage exactly: an overclaimed coverage line was itself a review finding.
+- **Retargeting a PR's base does not trigger CI.** After squash-merging the base of a stack, force-push the
+  child (or push a commit), or the PR reads green with no run on its head.
+
+### Formal verification on our own code (verify-spike, 2026-09-29)
+
+- **A proof verifies the model, not the code.** Ship a proof tier only with a differential test
+  against the real implementation. A Lean model that used Lean's own whitespace rule where the code
+  uses JS `trim()` disagreed with production on 8% of inputs, and every theorem still held.
+- **Random simulation and bounded exhaustive search find different bugs. Run both.** Quint's simulator
+  found a stranded row in 1 s and never found the 12-step unbounded-resend trace that Apalache found in
+  about 2 minutes. Use simulation per PR (fast) and exhaustive search nightly (slow).
+- **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
+  feeds "what did this PR change" to a model or reviewer must diff against the first parent
+  (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.
+- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** A loop over "module invariant depth"
+  strings ran nine model checks with empty arguments and printed nine blank results that looked
+  like output. Put such loops in a `bash` script, which the reproduce doc needs anyway.
+

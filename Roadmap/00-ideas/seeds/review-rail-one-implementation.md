@@ -1,16 +1,19 @@
 ---
 title: "Review rail — one implementation, and a doctor the template actually ships"
 slug: review-rail-one-implementation
-status: raw
+status: archived
 area: "09"
 type: chore
 priority: unranked
-epic: null
+epic: "09-platform-infra/distribute-what-we-use"
 build_order: 46
-updated: 2026-09-18
+updated: 2026-09-29
 ---
 
 # Seed — the review rail, one implementation
+
+> **Absorbed 2026-09-29** into [`distribute-what-we-use`](distribute-what-we-use.md) as Sprint 1
+> ([epic](../../09-platform-infra/distribute-what-we-use/README.md)). The product owner's call at grooming.
 
 ## Problem
 

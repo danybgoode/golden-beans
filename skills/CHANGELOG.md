@@ -7,6 +7,114 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-29
+
+### Added
+
+- **Routines stand up without hand-editing.** `routine-bootstrap.mjs <name>` fills a routine's project values from
+  `golden-frijoles.config.json` → `routines`, leaves the values a routine fills while running alone, and prints a
+  prompt ready to paste into `/schedule`. It refuses, naming every missing key, while any fill-in remains, and
+  refuses any placeholder its table does not classify. The seven prompts and the runbook ship in the kit; the
+  runbook names the one-hour minimum interval, the daily run cap, and the custom network environment a Telegram
+  routine needs.
+- **Cron templates for the model-free parts** (`standup.yml.example`, `build-order-sync.yml.example`), each warning
+  that GitHub silently disables a scheduled workflow after 60 days without repository activity.
+
+## [0.8.0] - 2026-09-29
+
+### Fixed
+
+- **A stranger with no Jev config is asked before anything is sent.** Two bugs made the ask unreachable: no config at
+  all loaded as `egress: true`, and a rail's default `off` mode was checked before egress. An unanswered egress now
+  asks once (non-blocking) whatever the rail mode, and nothing is sent before an explicit `egress: true`.
+
+### Added
+
+- **Jev setup route** in the umbrella skill: the egress answer first, the TypeSafe signup, the key in `.env.local`,
+  then `jev-eval --live --limit 10` as proof — which asks only 10 fixtures per rail and writes nothing.
+- **Notify setup route** and `notify-setup.mjs`: `--chat-id` reads the bot's chats and, when there are none, tells a
+  set webhook from an unmessaged bot and names group privacy; `--test` sends one message to Telegram and/or Slack.
+  `slack-notify.mjs` ships in the template. The `reporting.destination` question offers only what a sender exists for
+  (the scheduled reports post to Telegram; Slack is test and ad-hoc).
+
+## [0.7.0] - 2026-09-29
+
+### Added
+
+- **The epic kickoff's commands ship in the kit.** `review-route.mjs`, `cross-review.mjs` with its prompts and a
+  default `review-config.json`, `lib/review-guard.mjs`, `cross-agent-doctor.mjs`, `session-resume.mjs`,
+  `session-note.mjs` and `build-state.mjs` are in the closure, so a repo with only the plugin gets a route (or
+  DARK with the install line), never "script not found". Proven on the packed tarball in a blank `HOME` with no
+  `gh` or reviewer CLI on `PATH`. The project's own `golden-frijoles.config.json` → `review` still wins over the
+  kit's default config.
+- **`review-route.mjs` renders a route when GitHub CLI is not installed,** with the security lens forced
+  (unknown is not "no security path"), so a stranger sees the DARK state instead of an exit. An installed `gh`
+  that cannot read the PR (a wrong number, expired auth) still stops, and the PR number must be numeric.
+
+### Security
+
+- **The build view never runs code the open repo supplies.** It ran `<repo>/scripts/build-state.mjs` on every
+  turn in whatever repo was open. It now always runs the copy bundled in the plugin (`hooks/vendor/`, generated
+  from `template/scripts/` and checked in CI), and works in a repo that has no `scripts/` at all.
+
+## [0.6.0] - 2026-09-29
+
+### Changed
+
+- **One review rail.** `cross-review.mjs` and `lib/cross-agent-cli.mjs` are now the superset of the three copies
+  that had forked (the template, the origin project and a second consumer): whole-file context, builder/reviewer
+  pairing, the transient-agy fallback and truncation guard, the `readSection('review')` config loader, the codex
+  self-heal onto agy (now also on a stale codex CLI), and a comment that records the model that actually
+  answered. Every consumer's old tests were run against it.
+- **One doctor: `cross-agent-doctor.mjs`** (codex + agy) ships in the template. `agy-doctor.mjs` is an alias for
+  `cross-agent-doctor.mjs agy`. Every fix message names a doctor that exists.
+- **Codex now reviews on a pinned model, `gpt-5.6-terra` at high effort** (was: codex's own configured default).
+  The review's model is then a property of the repo, not of each machine. If your codex account cannot use it,
+  the failure names the escape: **`CODEX_MODEL=default`** uses codex's built-in default model. Reviews ignore
+  `~/.codex/config.toml` (below), so a custom `model_provider` or base URL is not used either: such a setup
+  routes past codex (`review-route.mjs --exclude codex`). The default
+  `--agent` stays `codex`.
+- **`review-route.mjs` passes `--builder`** in every command it prints, so the same-family refusal (and the
+  codex→agy heal's re-check) fire in normal use. The heal also checks agy's version pin now.
+- **The doctor checks the agy help contract before "signed out"**, so a visible contract break is never
+  reported as merely could-not-look.
+
+### Security
+
+- **The Vibe reviewer runs with every host tool disabled** (`--disabled-tools '*'`, no `--auto-approve`). The
+  read-only allow-list one copy carried let a malicious diff read an absolute path, such as `.env.local`, into a
+  review comment posted on the PR. Reviewers still get the touched files' contents, embedded in the prompt.
+- **`--agent devin` is refused.** A consumer used Devin as a third review pool, but `devin -p` auto-approves
+  read-only tools with no flag to disable them, so the same injected-diff read applies. Devin stays the prose
+  writer.
+- **Codex reviews locked down:** `--sandbox read-only --ignore-user-config --ignore-rules --ephemeral`. It used to inherit the
+  user's config — observed: a `workspace-write` sandbox, `on-request` approvals, and the user's MCP servers,
+  a database one among them. Codex can still **read** host files; no flag removes that, so the risk is reduced,
+  not closed. The channel is closed instead:
+- **cross-review never publishes a reply that carries a secret verbatim** — not in a comment, not in a status,
+  and not to Jev. Encoded or transformed output is out of scope for a string match; read access is the real
+  control, and codex keeps it. The reply is checked first, against every value in the project's `.env*` files (root and two levels
+  down, plus `.envrc`), this process's secret-named env vars, the values in the operator's own credential stores (`~/.aws/credentials`,
+  `.netrc`, `.npmrc`, `gh`'s hosts file and a few more — an AWS secret key has no distinctive shape), and common
+  credential shapes. A
+  match posts nothing, fails the status, and prints the reply locally with the match redacted.
+- **cross-review refuses an outsider's diff.** A PR whose author lacks write access to the repo (a fork PR on a
+  public repo, or permission that cannot be read) is refused before any reviewer sees it. Read the diff yourself,
+  then pass `--allow-untrusted-author`. This is the control for what the reviewer can read: no reviewer flag
+  stops codex reading host files, and no string matcher catches an encoded secret. Long opaque base64 runs are
+  withheld too, as defence in depth. **Residual, stated plainly:** a collaborator with write access is still
+  trusted with more than their push access gives them. Their diff can steer codex into reading the *operator's*
+  own files (`~/.aws`, `~/.npmrc`, codex's auth) and encoding the value so no string match catches it. Run the
+  rail only on PRs from people you would hand those files to, or review from a machine that doesn't hold them.
+- **A codex usage cap heals onto agy** like an auth lapse (a different quota pool).
+- **The codex→agy self-heal re-checks the builder.** When agy built the diff, the heal fails loud instead of
+  turning into a same-family review.
+
+### Fixed
+
+- **A signed-out agy is diagnosed as signed out,** not as a broken contract with every model "not listed", and
+  the doctor no longer waits a minute per probe for a login that will not come.
+
 ## [0.5.4] - 2026-09-28
 
 ### Changed

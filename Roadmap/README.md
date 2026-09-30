@@ -348,6 +348,14 @@ independently shippable slice of value.
   publishes the kit. Release 0.5.3 went out that way. The repo is now `danybgoode/golden-frijoles`, and sensitive docs
   live in the private `golden-frijoles/internal`. Per-folder licences apply: Apache-2.0 for `skills/`, the CLI and the SDK, and FSL-1.1-ALv2 for
   the engine (#184). **Shipped 2026-09-28 except** the local folder move (owed to Daniel).
+- ✅ [Verify spike](09-platform-infra/verify-spike/README.md): formal verification, measured on our own code
+  in one session. A Quint model of the delivery outbox found a stranded row, an unbounded unlogged resend
+  (bug seed, fix already model-checked) and an unenforced timing order (guard test, #194). Lean proves the
+  flag explanation agrees with the served value for every type-correct call, and a differential test ties
+  the model to the shipped code (0/6,000 disagreements). **Decision:** Quint + Lean, per-PR simulation,
+  nightly exhaustive checks, and no proof without a differential test. **Shipped 2026-09-29.** No landing
+  claim yet (audit D7). ⚠️ **Owed to Daniel (F7):** confirm the delivery cron is registered in production
+  (Vercel → Settings → Cron Jobs). Root Directory is `.`, but the `crons` entry lives only in `apps/web/vercel.json`.
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -362,11 +370,22 @@ independently shippable slice of value.
   - ✅ **The build view** — a machine-readable frontmatter contract on every epic doc (`lib/roadmap-contract.mjs`), enforced by `doc-format.mjs` and born from the `groom` scaffolder; `roadmap-backfill.mjs` brought the whole corpus onto it and recorded what it could not resolve; `build-state.mjs` is the one resolver for "what is being built right now"; and `plugins/golden-frijoles/hooks/` renders it in the CLI as a Claude Mod (opt-in, deleting `hooks.json` is the kill-switch). [`build-visualization-claude-mods`](09-platform-infra/build-visualization-claude-mods/README.md)
   - ✅ **Jev semantic guards** — the review guard ("did the reviewer actually review?", which gates a PR's `cross-review/<lens>` status) and the prose guard's four semantic families (invented fix, beneficiary, liveness, deadline) are decided by Jev (TypeSafe, pinned `jev-1.13.0`) in all three repos, with the regexes as the offline fallback. One zero-dependency client (`lib/jev.mjs`) and a committed per-rail kill-switch (`jev.config.json`). Every decision is logged, and every posted review carries a `<!-- jev: -->` marker. `jev-eval.mjs` replays 240 labelled fixtures offline in CI, and `jev-report.mjs` watches agreement. Measured: review 98.7% vs the regex's 87.0%, prose 86.5% vs 71.2%. [`jev-semantic-guards`](09-platform-infra/jev-semantic-guards/README.md)
   - ✅ **Ways-of-work lean pass** — committed permissions with a cited deny/ask ledger (three spellings, deny **and** ask), one external general pass + one lean security lens + one fresh reviewer, a generated `WAYS-OF-WORKING`, and `epic-dod --check` for the mechanical half of the epic DoD. [`ways-of-work-lean-pass`](09-platform-infra/ways-of-work-lean-pass/README.md)
+  - ✅ **Distribute what we use** — a stranger's repo gets the rails this one runs, from the kit, by construction. **One review rail**, byte-identical across this repo, the template and medusa-bonsai. It is locked down: Vibe runs with no host tools, devin is refused, codex runs read-only with no user config or MCP, a reply carrying a secret is never posted, and outsiders' diffs are refused. One doctor. The **review rail, `session-resume` and `build-state` ship in the kit**. The **build view never runs the open repo's code**. A **byte-parity guard** covers the shared scripts. **Jev asks before anything is sent**, and a Jev setup route leads to a proof that writes nothing. A **notify setup route** covers `--chat-id` and `--test`. **Routines** are paste-ready for `/schedule`, and there are model-free cron templates. **Shipped 2026-09-30** (#188–#191, kit 0.6.0–0.9.0; medusa-bonsai #197). [`distribute-what-we-use`](09-platform-infra/distribute-what-we-use/README.md)
 
 ---
 
 ## Recent highlights
 
+- **2026-09-29**: `verify-spike` **shipped**: one session, one decision (`DECISION.md`).
+  - The outbox model found three things two dozen review rounds had not; one is fixed (#194), one is a
+    bug seed with its fix already model-checked, one is an accepted residual.
+  - The lesson for `verify-module`: model checking pays outright, and a proof pays only with a
+    differential test against the real code.
+- **2026-09-30**: `distribute-what-we-use` **shipped**: four sprints, four kit releases (0.6.0–0.9.0).
+  - The review rail's three forks became one, and it is locked down. #188 took seven fresh review rounds; the
+    one residual no code can close was accepted and documented.
+  - A stranger's plugin-only repo now gets the kickoff's review route, the build view (it never runs the repo's
+    own code), the Jev egress question before anything is sent, notify setup, and `/schedule`-ready routines.
 - **2026-09-28**: `public-monorepo` S1–S4.3 **shipped**: one repo (`danybgoode/golden-frijoles`) with `skills/` mirrored
   byte-for-byte to `golden-frijoles/skills`. The first release through the mirror (kit 0.5.3, with provenance) installed
   cleanly on all three channels. Both repos' full history across every GitHub ref was secret-scanned: 0 live secrets.

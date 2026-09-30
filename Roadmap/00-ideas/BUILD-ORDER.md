@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-29 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-30 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -20,7 +20,7 @@
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (34)
+## ✅ Shipped (36)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -52,30 +52,30 @@
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
+- [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 11/11 stories · unranked
 - [Jev semantic guards — review-guard and prose-guard decide with Jev, not regex](../../09-platform-infra/jev-semantic-guards/README.md) — 09 Platform Infra · 15/15 stories · risk: High · wave-2026-09-19
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 - [The build view — a machine-readable frontmatter contract, rendered in the CLI as a Claude Mod](../../09-platform-infra/build-visualization-claude-mods/README.md) — 09 Platform Infra · 13/13 stories · risk: Low · wave-2026-09-16-plugin
+- [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (23)
+## ⬜ Funnel — seeds not yet scaffolded (21)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
-- [Verify spike: TLA+/Quint on the event outbox and Lean on the flag evaluator, dogfooded on Golden Frijoles](seeds/verify-spike.md) — Raw · Spike · appetite S · audit-wave-B
 - [Board sinks + scrumban on the Hub: one roadmap projection, many destinations](seeds/board-sinks-and-scrumban.md) — Raw · Feature · appetite M · audit-wave-C
 - [FinOps actuals: agent token and cost usage lands in the engine, attributed to skill and epic](seeds/finops-actuals.md) — Raw · Feature · appetite L · audit-wave-C
 - [Portfolio view: every product in a workspace on the Consider · Operate · Exit loop](seeds/portfolio-view.md) — Raw · Feature · appetite M · audit-wave-C
 - [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
-- [Distribute what we use: review rail, Jev and notify setup, schedulers, build view](seeds/distribute-what-we-use.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Intent match: a score for how well the agent understood the ask, with routed follow-ups](seeds/intent-match.md) — Raw · Feature · appetite M · single-product-wave-B
 - [Semantic lint: Jev judges what deterministic checks select](seeds/semantic-lint.md) — Raw · Feature · appetite S · single-product-wave-B
 - [Session budget: replace 'one deep ask per run' with a measured line](seeds/session-budget.md) — Raw · Chore · appetite S · single-product-wave-B
 - [Compiled prompts: the kickoff and build/QA prompts assembled from measured parts](seeds/compiled-prompts.md) — Raw · Feature · appetite L · single-product-wave-C
 - [Sketch specs: approved specs render the wireframe and become the build contract](seeds/sketch-specs.md) — Raw · Feature · appetite L · single-product-wave-C
+- [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — Raw · Chore · unranked
-- [Review rail — one implementation, and a doctor the template actually ships](seeds/review-rail-one-implementation.md) — Raw · Chore · unranked
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — Raw · Chore · unranked
 - [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — Raw · Feature · appetite S · unranked
 - [This repo lints its template scripts the way its consumers do](seeds/foundation-lint-gate.md) — Raw · Chore · unranked
@@ -96,4 +96,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 38 · seeds in funnel: 23 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 40 · seeds in funnel: 21 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

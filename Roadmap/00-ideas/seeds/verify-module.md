@@ -10,7 +10,7 @@ underwritten_by: null
 risk: high
 epic: null
 build_order: 54
-updated: 2026-09-23
+updated: 2026-09-29
 ---
 
 # Seed: Verify module: the verification depth ladder as a product (after the spike)
@@ -25,7 +25,7 @@ Placeholder until the spike decides. If it recommends productizing, this becomes
 
 ## Sketch (from the audit; grooming will cut or reshape it)
 
-- Shape only after `verify-spike` lands its written decision.
+- Shape only after `verify-spike` lands its written decision. **Landed 2026-09-29:** [`DECISION.md`](../../09-platform-infra/verify-spike/DECISION.md) — see "What `verify-module` should be" there.
 - No landing claim until this ships (audit D7).
 
 ## Open questions for the deep groom
