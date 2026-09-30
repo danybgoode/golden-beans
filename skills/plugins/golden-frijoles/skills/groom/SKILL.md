@@ -68,11 +68,8 @@ once the domain is known, and team memory if the project keeps one. State in one
 
 ## Stage 1 — Capture
 Take the brain-dump as given (or read it from `seeds/`). Mirror it back in one sentence — *"You want \<X\>
-so that \<Y\>. Right?"* — before refining it. **Keep three things for the seed** (`templates/scope-seed.md` →
-*The ask, as given*): the ask **word for word**, never tidied; its **claims**, the separate things it asks for, split
-by you, one numbered line each, which the product owner may edit; and the product owner's **teach-back** answer to the
-mirror: yes, partly or no. The intent score (Stage 3.5) compares the pitch against these, so a paraphrase here
-would score the pitch against itself.
+so that \<Y\>. Right?"* — before refining it. Keep the ask **word for word**, its numbered **claims** (split by you,
+editable by them) and their **teach-back** answer in the seed's *The ask, as given*: Stage 3.5 scores against them.
 
 ## Stage 1.5 — Appetite (fix the budget before the solution)
 Ask the inverted estimation question: **how much is this problem worth?** Set `appetite: S | M | L`
@@ -104,15 +101,8 @@ anything recent or changing. The core bank — role & job, outcome & signal, sco
 `references/question-bank.md`.
 
 ## Stage 3.5 — Intent match (advisory)
-Once the pitch has its acceptance criteria, score it against the ask:
-`node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write`. It prints how many questions it will ask,
-then coverage in (does the pitch deliver each claim), coverage out (does each criterion trace to the ask), clarity
-(could two builders test each criterion the same way), the teach-back, a total marked **uncalibrated**, and a band
-(80+ build · 60–79 resolve the follow-ups first · below 60 sketch or spike first). Each gap names the one artifact
-that would close it; make it (Stage 4.6 draws most of them) or say why not, then re-run. `--write` records
-`intent_match:` and an `## Intent match` section in the seed. **It never gates:** it can add a step, never block the
-scaffold or replace the product owner's approval. No `TYPESAFE_API_KEY`, or `jev.egress` not `true`, prints
-"could not look" and no number; say so, and carry on.
+With acceptance criteria written, run `node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write` and make
+(or answer) the artifact each gap is routed to. Never a gate; "could not look" is said, not fixed. `references/intent-and-visuals.md`.
 
 ## Stage 4 — Platform-first reframe (the step that shrinks the epic)
 Read the backend model + route **before** slicing — it repeatedly re-scopes work smaller. Produce the
@@ -127,22 +117,8 @@ product owner to edit — a Why neither of you can defend is a part you cut. The
 and the **no-gos**. All three land in the pitch. Fixed-scope work skips this stage.
 
 ## Stage 4.6 — Visuals (drawn from the shape of the ask)
-Every shaped bet (appetite M or L) gets a **system context** in the seed's `## Visuals`: the actors, the systems and
-the data flow between them, in Mermaid. Then draw what the ask's shape triggers — no more:
-
-| The ask has… | Draw | Format |
-|---|---|---|
-| a screen or a page someone uses | wireframe: low fidelity, the words that matter | a `surface` block: route, the state shown, blocks in order by kind with their words |
-| a journey of several steps | flow | Mermaid `flowchart` |
-| a new table, record or payload | data sample: three real-looking rows | a table in the seed |
-| a lifecycle or statuses | state machine | Mermaid `stateDiagram` |
-| calls across services, async work or retries | sequence | Mermaid `sequenceDiagram` |
-| a new repo, package or deploy boundary | container diagram | Mermaid `flowchart` with subgraphs |
-
-Name a screen's states from the ten: **idle · hover · focus · pressed · loading · success · error · empty · disabled ·
-unbuilt** (`disabled` comes back; `unbuilt` means not built yet, and must look different). Fixed-scope work (appetite
-S) draws only when a row fires. These are the same words Stage 3.5 routes a gap to (plus *copy deck*, *spike* and
-*think chain*), so a routed gap is usually a row here. Mermaid renders on GitHub and diffs as text.
+Every shaped bet gets a system context (actors, systems, data flow) in the seed's `## Visuals`, then only what the ask's
+shape triggers: the table, the formats and the ten state names are in `references/intent-and-visuals.md`.
 
 ## Stage 5 — Slice
 Define the thinnest end-to-end slice that actually works and ships, then each increment. Every slice is a
@@ -266,8 +242,7 @@ cheap.
 - Stage-2.5 bucket named (already-possible / light / new).
 - v1 in/out boundary written; research cited where relevant.
 - Reuse list produced (platform-first reframe done).
-- The ask kept verbatim with its claims and teach-back (Stage 1); the intent score run or its "could not look" said
-  (Stage 3.5 — advisory, never a gate); for a shaped bet, a system context plus what the ask's shape triggers (4.6).
+- The ask kept verbatim (Stage 1), scored or "could not look" said (3.5), the visuals its shape calls for (4.6).
 - Each story risk-tiered; QA stage named; smoke-walkthrough owner identified.
 - **For a `risk: high` epic: the kill-switch decision is recorded** (Stage 6b) — either a recommended Golden Frijoles flag story (polarity · seam · **activation** · placement) or a one-line carve-out reason.
 - the product owner approved the scope doc.
