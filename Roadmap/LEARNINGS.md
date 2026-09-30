@@ -1771,6 +1771,14 @@ one-liner + why + date shape.
 
 ### A model as a guard's judge (jev-semantic-guards, 2026-09-23)
 
+- **Measure what you SEND as well as what you ask, on real history.** semantic-lint first sent whole diff hunks; a
+  new file is one hunk, so 33 of 60 real candidates from 220 commits were over the size limit and would have been
+  "not checked" — invisible on constructed fixtures, which are all small. A ±15-line window around each hit: 3 of 40.
+  And re-asking identical text moves p by up to 0.04, so don't fit a threshold to one recording. *(semantic-lint, 2026-09-30)*
+- **Labels for a rule that is project DATA are project data too.** Shipping this repo's rule fixtures in the template's
+  shared fixtures file would have failed any consumer that reused the id, and — once coverage was per configured rule —
+  every consumer that added one. Skipping fixtures for an unknown rule was worse: a renamed rule replayed green with
+  zero cases scored. Unknown-rule fixtures FAIL; coverage counts what is scored, not what is committed. *(semantic-lint, 2026-09-30)*
 - **Measure the question before trusting the model. The first wording is a guess.** Every first question
   underperformed the regex it was replacing, or barely beat it: a real review scored 0.73, and liveness
   scored 48/62. Keep a labelled fixture set **with recorded answers**. Then wording and thresholds become an
