@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 2
 title: "What a stranger's kit carries"
 risk: high
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S2.1
@@ -12,25 +12,25 @@ stories:
     i_want: "the epic kickoff's review command to print a route in my repo"
     so_that: "the review step stops pointing at a script I don't have"
     risk: high
-    status: planned
+    status: done
   - id: S2.2
     title: "The build view renders outside our projects"
     as_a: "a stranger on a `feat/*` branch"
     i_want: "the status line to show \"Currently building\""
     so_that: "the build view isn't silent in every repo but ours"
     risk: high
-    status: planned
+    status: done
   - id: S2.3
     title: "Byte-parity guard over the shared scripts"
     as_a: "a maintainer"
     i_want: "a check that fails when a file in `scripts/` ∩ `skills/template/scripts/` differs without a listed reason"
     so_that: "the 81 copies can't drift into the next three-way fork"
     risk: low
-    status: planned
+    status: done
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 2: What a stranger's kit carries
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — merged in https://github.com/danybgoode/golden-frijoles/pull/189 (`81c26e6`), kit 0.7.0 live on npm.
 
 ## Stories
 
@@ -113,3 +113,9 @@ Builds **D4, D5, D6** (README → *Architecture lock*).
    → it prints which family takes the general pass, or says DARK and how to install one.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Smoke walkthrough — results (2026-09-30)**
+- Steps 1–2 (a clean machine or fresh macOS user): **owed to the product owner.** The closest proof run here:
+  - a real `claude -p --plugin-dir` session in a stranger repo on `feat/smoke-test`, with a *hostile* `scripts/build-state.mjs`, logged `build view: resolved (…) (ok)`, and the hostile file never ran;
+  - the packed-kit tarball test installs offline into a stranger repo with `PATH` holding only a `node` symlink and a blank `HOME`.
+- Step 3 ✅ **against the published kit:** in a fresh repo with no `gh` on `PATH`, `npx -y @golden-frijoles/kit@0.9.0 review-route --builder claude 1` printed a full route with the security lens forced, since the trigger is unknown. Exit 0, no stack trace.

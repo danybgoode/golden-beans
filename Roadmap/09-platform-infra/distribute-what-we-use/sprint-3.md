@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 3
 title: "Jev and notify, set up rather than documented"
 risk: high
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S3.1
@@ -12,25 +12,25 @@ stories:
     i_want: "the first guarded run to ask whether my text may go to TypeSafe"
     so_that: "the D12 promise (\"ask, never silently off\") holds for the user it was written for"
     risk: high
-    status: planned
+    status: done
   - id: S3.2
     title: "Jev setup route"
     as_a: "a stranger who said yes to egress"
     i_want: "a guided route: what leaves the machine (one sentence), the TypeSafe signup link, the key into `.env.local`, a 10-fixture `jev-eval --live` as proof, then the `jev` config section"
     so_that: "I end with a working key, proven on real fixtures"
     risk: low
-    status: planned
+    status: done
   - id: S3.3
     title: "Notify setup route"
     as_a: "a stranger who wants the merge report"
     i_want: "guided Telegram setup (BotFather, chat id via `getUpdates`, a test send) and a working Slack webhook sender"
     so_that: "\"Operate\" is configured, not documented"
     risk: low
-    status: planned
+    status: done
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 3: Jev and notify, set up rather than documented
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — merged in https://github.com/danybgoode/golden-frijoles/pull/190 (`7b60483`), kit 0.8.0 live on npm.
 
 ## Stories
 
@@ -100,3 +100,7 @@ Builds **D7, D8** and deviation 5 (README → *Architecture lock*).
    → the Operate line no longer lists `reporting.destination` as missing (README deviation 5).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Smoke walkthrough — results (2026-09-30)**
+- Step 1 (no config, the guard asks instead of staying silent): proven at the real callers. `jev-egress-callers.test.mjs` runs `judgeReviewOutput` and `judgeProse` with a spied `fetch`: `egress` null or false sends nothing, and `egress:true` plus a key does reach `fetch`. A caller gate mutated to send turns four specs red.
+- Steps 2–4 (a TypeSafe signup and key, your own Telegram bot, `gf doctor` after): **owed to the product owner.** They need third-party accounts.

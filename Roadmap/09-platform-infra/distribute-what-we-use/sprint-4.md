@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 4
 title: "Schedulers"
 risk: low
-phase: Building
+phase: Shipped
 stories_total: 2
 stories:
   - id: S4.1
@@ -12,18 +12,18 @@ stories:
     i_want: "a command that fills the routine prompts from `golden-frijoles.config.json` and prints one ready to paste into `/schedule`"
     so_that: "I can stand up a routine without hand-editing placeholders"
     risk: low
-    status: planned
+    status: done
   - id: S4.2
     title: "GitHub Actions cron templates for model-free parts"
     as_a: "a stranger without routines"
     i_want: "cron workflow templates for the parts that need no model"
     so_that: "the model-free reports still run on a schedule"
     risk: low
-    status: planned
+    status: done
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 4: Schedulers
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — merged in https://github.com/danybgoode/golden-frijoles/pull/191 (`cba8fc7`), kit 0.9.0 live on npm.
 
 ## Stories
 
@@ -79,3 +79,9 @@ Builds **D10** (README → *Architecture lock*). Builder: Codex.
    → the routine is created and appears in the list.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Smoke walkthrough — results (2026-09-30)**
+1. ✅ With a filled `routines` config, `routine-bootstrap.mjs weekly-recap` printed 68 lines with no `TEMPLATE FILL-IN` or `<app-repo>` left. The fresh reviewer independently rendered all seven routines, with only runtime tokens left.
+2. ✅ With `root-repo` removed, it refused and named it: `root-repo (for <root-repo>)`, exit 1, nothing on stdout.
+- Steps 1–2 re-run **against the published kit**, `npx -y @golden-frijoles/kit@0.9.0 routine-bootstrap weekly-recap` in a fresh repo: 68 lines with 0 placeholders left; with `root-repo` removed it refused, naming it.
+3. Pasting into `/schedule` or https://claude.ai/code/routines: **owed to the product owner.**

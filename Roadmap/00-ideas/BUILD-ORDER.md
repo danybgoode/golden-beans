@@ -5,15 +5,14 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-29 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-30 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (4)
+## 🏗️ Building now (3)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 0/11 stories · unranked
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
@@ -21,7 +20,7 @@
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (34)
+## ✅ Shipped (35)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -53,6 +52,7 @@
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
+- [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 11/11 stories · unranked
 - [Jev semantic guards — review-guard and prose-guard decide with Jev, not regex](../../09-platform-infra/jev-semantic-guards/README.md) — 09 Platform Infra · 15/15 stories · risk: High · wave-2026-09-19
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 - [The build view — a machine-readable frontmatter contract, rendered in the CLI as a Claude Mod](../../09-platform-infra/build-visualization-claude-mods/README.md) — 09 Platform Infra · 13/13 stories · risk: Low · wave-2026-09-16-plugin
