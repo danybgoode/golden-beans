@@ -217,7 +217,9 @@ export function resolveChatId({ env, load = loadReportingConfig }) {
 async function testCommand({ opts, token, webhook, env, chatIdEnv, fetchImpl, load, stdout, stderr }) {
   // TELEGRAM_CHAT_ID may live in .env.local too: a project with no reporting.config.json yet has nowhere else for it.
   const chat = resolveChatId({ env: { ...env, TELEGRAM_CHAT_ID: env.TELEGRAM_CHAT_ID || chatIdEnv }, load });
-  const wantTelegram = opts.telegram || (!opts.slack && Boolean(token) && Boolean(chat.id));
+  // Half-configured Telegram (a token without a chat id, or the reverse) is still WANTED, so the missing half
+  // is named — never silently skipped while Slack succeeds (the scheduled reports post to Telegram only).
+  const wantTelegram = opts.telegram || (!opts.slack && (Boolean(token) || Boolean(chat.id)));
   const wantSlack = opts.slack || (!opts.telegram && Boolean(webhook));
   const missing = [];
   if (wantTelegram && !token) missing.push('TELEGRAM_BOT_TOKEN is not set (put it in .env.local)');

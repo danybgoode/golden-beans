@@ -253,13 +253,18 @@ test('--test with no flag: sends to every destination that is configured, and on
   });
   assert.equal(await run(['--test'], both.io), EXIT.ok);
   assert.deepEqual(both.calls.map((c) => c.method).sort(), ['sendMessage', 'slack']);
-  const slackOnly = harness({ values: { SLACK_WEBHOOK_URL: HOOK }, routes: { slack: text('ok') } });
+  // Genuinely Slack-only: no token AND no chat id (a chat id without a token is half-configured Telegram).
+  const slackOnly = harness({
+    values: { SLACK_WEBHOOK_URL: HOOK },
+    config: new ReportingConfigError('no reporting.config.json'),
+    routes: { slack: text('ok') },
+  });
   assert.equal(await run(['--test'], slackOnly.io), EXIT.ok);
   assert.deepEqual(
     slackOnly.calls.map((c) => c.method),
     ['slack']
   );
-  const nothing = harness({ values: {} });
+  const nothing = harness({ values: {}, config: new ReportingConfigError('no reporting.config.json') });
   assert.equal(await run(['--test'], nothing.io), EXIT.couldNotLook);
   assert.match(nothing.err, /nothing is configured/);
 });
@@ -319,4 +324,15 @@ test('--chat-id: a set webhook is named by host only — its path can carry a se
   const all = h.out + h.err;
   assert.match(all, /hooks\.example\.test/);
   assert.doesNotMatch(all, /SECRET-PATH-123/);
+});
+
+test('--test: a token with no chat id is named as missing, even when Slack alone would succeed (agy on #190)', async () => {
+  const h = harness({
+    values: { TELEGRAM_BOT_TOKEN: TOKEN, SLACK_WEBHOOK_URL: HOOK },
+    config: new ReportingConfigError('no reporting.config.json'),
+    routes: { slack: text('ok') },
+  });
+  assert.equal(await run(['--test'], h.io), EXIT.couldNotLook);
+  assert.match(h.err, /no Telegram chat id/);
+  assert.equal(h.calls.length, 0, 'nothing is sent while half the setup is missing');
 });

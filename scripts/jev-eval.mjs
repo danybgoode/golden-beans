@@ -287,7 +287,7 @@ export function parseLimit(argv) {
  * The CLI, with every side effect injected so a spec can watch it: returns the exit code. `io` carries
  * { root, config, fixtures, rails, key, makeAsk, writeFixtures, stdout, stderr, today }.
  */
-export async function run(argv, io) {
+export async function run(argv, io = {}) {
   const { config, fixtures, rails, stdout, stderr } = io;
   const live = argv.includes('--live');
   const railIx = argv.indexOf('--rail');
@@ -305,7 +305,7 @@ export async function run(argv, io) {
     stderr('jev-eval: --limit only makes sense with --live (a setup proof against real Jev).\n');
     return 2;
   }
-  const expired = expiredShadowRails(config, io.today);
+  const expired = expiredShadowRails(config, io.today ?? new Date().toISOString().slice(0, 10));
   for (const name of ['review', 'prose'])
     if (!rails[name]) stdout(`${name}: no judge in this checkout yet — skipped\n`);
 
