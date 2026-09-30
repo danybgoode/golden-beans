@@ -92,8 +92,9 @@ grooming text are marked **CORRECTED**; they are the lock doing its job, not dri
   `pmo-report`, `weekly-recap`, `groom`, `prose-draft`, `standup-post`. `kit-tarball.test.mjs` asserts they
   are packed.
 - **D10 — Live cost, measured.** **CORRECTED:** a wording run asks **159 questions across 147 drafts per
-  candidate**, not "a few thousand" (the recordings hold 159 `s*_live` answers). Five candidates plus the
-  current wording come to about 950 questions, all under the existing `jev.egress: true`.
+  candidate**, not "a few thousand" (the recordings hold 159 `s*_live` answers). The current wording is never
+  asked (its answers are the stamped recordings), so five candidates cost **795 questions in 735 requests**, the
+  measured cost of the 2026-09-30 run, all under the existing `jev.egress: true`.
 - **D11 — Releases.** S1 changes the kit closure, so it releases plugin/kit **0.15.0** (`RELEASING.md`). S2
   touches `optimize/` and `Roadmap/` only, so it has **no plugin release**. An adopted wording would be its
   own PR and release.

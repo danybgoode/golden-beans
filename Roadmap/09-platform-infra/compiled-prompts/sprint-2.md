@@ -3,7 +3,7 @@ epic: compiled-prompts
 sprint: 2
 title: "Measure a wording"
 risk: low
-phase: Locking architecture
+phase: In review
 stories_total: 2
 stories:
   - id: S2.1
@@ -12,18 +12,18 @@ stories:
     i_want: "to test candidate wordings for one question against the current one on held-out data"
     so_that: "a question changes only when it measurably decides better"
     risk: low
-    status: planned
+    status: done  # 3d9b988
   - id: S2.2
     title: "First run: `flag-state-claim`"
     as_a: "the product owner"
     i_want: "the prose rail's worst question tested against 3 to 5 better-argued wordings"
     so_that: "the 19 errors it causes shrink, or we learn the fix is evidence rather than wording"
     risk: low
-    status: planned
+    status: done  # 9964ef1 candidates · fd3126b run + report · not adopted (product owner, 2026-09-30)
 ---
 # Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured — Sprint 2: Measure a wording
 
-**Status:** ⬜ not started
+**Status:** 🟡 built, in review — 3d9b988 (2.1), 9964ef1 + fd3126b (2.2); winner not adopted by the product owner
 
 ## Stories
 
@@ -74,3 +74,17 @@ Cites the epic README's D6, D10 and D11.
    → held-out right/decided for the current wording and each candidate, and which one (if any) wins.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-09-30, local checkout on `feat/compiled-prompts-s2`)
+
+1. ✅ The command printed `5 candidate(s) for flag-state-claim; 0 fully cached. To ask: 795 question(s) in 735
+   request(s) to jev-1.13.0`. Without `--yes` and without a TTY it prints `nothing sent` and exits 1. The approved
+   live run used `--yes`, and all 735 requests answered.
+2. ✅ Re-run → `5 fully cached. To ask: 0 question(s)`, with no confirmation and no key read, and the same table.
+3. ✅ `optimize/reports/wording-flag-state-claim-2026-09-30.md` gives held-out right per fold and in total for
+   current (141) and each candidate. `examples-extended` shows as winning (+5), and the report's own leakage
+   analysis explains why that win is not evidence.
+
+**Owed to the product owner:** the approve/reject decision, which is **done**. Rejected, recorded in the seed's
+`## Wording result`.
+

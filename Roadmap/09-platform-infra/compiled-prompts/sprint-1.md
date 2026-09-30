@@ -3,7 +3,7 @@ epic: compiled-prompts
 sprint: 1
 title: "Questions as data, optimize/ committed"
 risk: low
-phase: Building
+phase: Shipped
 stories_total: 4
 stories:
   - id: S1.1
@@ -37,7 +37,7 @@ stories:
 ---
 # Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured — Sprint 1: Questions as data, optimize/ committed
 
-**Status:** 🟡 built, in review — commits 1271b68 (1.2), e467a1e (1.1), 3e5010f (1.4), 9a56836 (1.3 + plugin 0.15.0)
+**Status:** ✅ shipped 2026-09-30 — PR #207 squash-merged as `dfdfaa4`; plugin/kit **v0.15.0** tagged and on npm (`@golden-frijoles/kit@0.15.0`). Reviews: fresh pr-reviewer (no blocking; 1 should-fix fixed), agy general (1 should-fix fixed — the swallowed-Why class across 4 epics), vibe security (clean).
 
 ## Stories
 
