@@ -484,3 +484,10 @@ test('--write ignores a "## Intent match" inside a code fence, and never deletes
     'the fenced example stays, and the real section is appended'
   );
 });
+
+test('--write on a CRLF seed writes the score into the frontmatter it reports writing', async () => {
+  const { io, out } = makeIo({ text: SEED.replace(/\n/g, '\r\n') });
+  assert.equal(await run(['seed.md', '--write', '--no-route'], io), EXIT_SCORED);
+  assert.match(out.written, /^---\n[\s\S]*\nintent_match: \d+\n[\s\S]*?---\n/);
+  assert.doesNotMatch(out.written, /\r/);
+});

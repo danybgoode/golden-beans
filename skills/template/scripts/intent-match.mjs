@@ -580,7 +580,9 @@ export async function run(argv, io) {
   const path = args[0];
   let text;
   try {
-    text = io.read(path);
+    // Normalised ONCE, before parse and write: a CRLF seed used to score and then have `--write` miss its frontmatter
+    // and still report the write (fresh review round 2, #196). The seed is written back with LF endings.
+    text = io.read(path).replace(/\r\n?/g, '\n');
   } catch (e) {
     io.stderr(`intent-match: cannot read ${path} (${e.code ?? e.message})\n`);
     return EXIT_USAGE;
