@@ -13,7 +13,7 @@
 //     up, and the risk-tier rule still decides *who* clicks merge.
 //
 // Usage:
-//   node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
+//   node scripts/cross-review.mjs [PR#] --agent codex --builder <family> [--repo owner/repo] [--force] [--dry-run]
 //     [--skip-trivial] [--min-lines N]
 //
 // --skip-trivial is the CI cost guard: skip (exit 0, no comment) when the PR is docs-only or under
@@ -36,9 +36,13 @@
 // lockfile itself.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
+import { readSection } from './lib/config.mjs';
+import { projectRoot } from './lib/project-root.mjs';
+import { collectSecretValues, decideAuthorTrust, findSecretLeaks } from './lib/secret-guard.mjs';
 import {
   AGENTS,
   headSidePaths,
@@ -49,8 +53,12 @@ import {
   checkAgyVersion,
   loadPromptBody,
   runAntigravity,
-  runCodex,
+  runWithCodexFallback,
   runVibe,
+  AGY_MODEL,
+  codexModelFrom,
+  CODEX_REASONING_EFFORT,
+  CLAUDE_REVIEW_MODEL,
   runClaudeCode,
   AGENT_BIN,
   resolveCurrentPr,
@@ -67,6 +75,7 @@ import {
   shortSha,
   checkReviewerPairing,
   reviewersFor,
+  BUILDER_FAMILIES,
 } from './lib/cross-agent-cli.mjs';
 import {
   changedFileCount,
@@ -83,6 +92,7 @@ import {
 import { jevContext } from './lib/jev.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const REVIEW_CONFIG_PATH = join(__dirname, 'review-config.json');
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
 // `--lens security` swaps the prompt ONLY ��� agent selection, the fallback chain, --skip-trivial and the
 // output guard are untouched, so the lens cannot regress the rail that reviews every other PR.
@@ -105,17 +115,18 @@ const BANNER =
 const HELP = `cross-review.mjs — the cross-agent judgment-layer review for a PR diff.
 
 Usage:
-  node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
+  node scripts/cross-review.mjs [PR#] --agent codex --builder <family> [--repo owner/repo] [--force] [--dry-run]
 
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: antigravity | codex (default: antigravity)
+  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join(' | ')} (default: codex)
   --paths a,b,c        review ONLY files whose path contains one of these. The reduced
                        scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
                        The reduced scope is STATED in the posted comment.
-  --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
+  --allow-untrusted-author  review a PR whose author lacks write access (read the diff first).
+  --builder <family>   who WROTE this diff: ${BUILDER_FAMILIES.join(' | ')}. Refuses a
                        same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
   --force              proceed even when local HEAD differs from the resolved PR head (auto-resolve only)
@@ -134,9 +145,10 @@ The judgment-layer review — not a second CI. CI (green/red) + the risk-tier ru
 function parseArgs(argv) {
   const out = {
     pr: null,
-    agent: 'antigravity',
+    agent: 'codex',
     builder: process.env.CROSS_REVIEW_BUILDER || '',
     codeOnly: false,
+    allowUntrustedAuthor: false,
     paths: [],
     repo: null,
     force: false,
@@ -157,6 +169,7 @@ function parseArgs(argv) {
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
     else if (a === '--code-only') out.codeOnly = true;
+    else if (a === '--allow-untrusted-author') out.allowUntrustedAuthor = true;
     else if (a === '--paths')
       out.paths = need(argv[++i], '--paths')
         .split(',')
@@ -251,26 +264,57 @@ function agyArgv(prompt, diff) {
 // became a real bug the moment it grew: `--agent vibe` would have run AGY and posted the findings under
 // a Mistral label. A cross-family review that names the wrong family is worse than none — a later
 // reviewer trusting the label would conclude a family had cleared the diff when it never read it.
-function runReview(agent, prompt, diff) {
+// Returns { findings, fellBack }. codex self-heals to agy on a lapsed token or a stale CLI
+// (runWithCodexFallback), and `builder` is re-checked against that fallback family so the heal can never
+// turn into a same-family review (distribute-what-we-use D1).
+function runReview(agent, prompt, diff, { builder = '', onModel } = {}) {
   const stdinContext = `## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`;
-  if (agent === 'codex') return runCodex(prompt, stdinContext);
-  if (agent === 'antigravity') return runAntigravity(agyArgv(prompt, diff));
-  if (agent === 'vibe') return runVibe(agyArgv(prompt, diff));
-  if (agent === 'claude') return runClaudeCode(prompt, stdinContext);
+  if (agent === 'codex')
+    return runWithCodexFallback(
+      {
+        prompt,
+        stdin: stdinContext,
+        antigravityArgv: agyArgv(prompt, diff),
+        builder,
+      },
+      {
+        // The heal is still an agy run, so it gets agy's version-pin check like `--agent antigravity` does
+        // (pr-reviewer S3): a drifted print contract would otherwise review silently on the heal path.
+        runAntigravity: (argv) => {
+          checkAgyVersion();
+          return runAntigravity(argv, { onModel });
+        },
+      }
+    );
+  if (agent === 'antigravity')
+    return { findings: runAntigravity(agyArgv(prompt, diff), { onModel }), fellBack: false };
+  if (agent === 'vibe') return { findings: runVibe(agyArgv(prompt, diff)), fellBack: false };
+  if (agent === 'claude') return { findings: runClaudeCode(prompt, stdinContext), fellBack: false };
   die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
 }
 
-export function buildComment(
-  agentLabel,
-  findings,
-  { lens = null, version = null, reReview = false, securityOwed = null } = {}
-) {
+/**
+ * The posted comment. Signature `(agentLabel, findings, fellBack, opts)` — the template's and that consumer's; the
+ * older `(agentLabel, findings, opts)` shape is still accepted, so no caller breaks (distribute-what-we-use D1).
+ *
+ * `model` is recorded because the reviewer model is MACHINE-LOCAL state that no artifact used to capture:
+ * if it drifts, review strength changes family and nothing notices. When it genuinely cannot be resolved
+ * the comment says so, rather than printing a default that may be wrong (a consuming project).
+ */
+export function buildComment(agentLabel, findings, fellBack = false, opts = {}) {
+  if (fellBack !== null && typeof fellBack === 'object') [fellBack, opts] = [false, fellBack];
+  const { lens = null, model, version = null, reReview = false, securityOwed = null } = opts;
+  // When codex fell back, make it unmistakable so nobody reads an Antigravity review as a Codex one.
+  const header = fellBack ? `${AGENTS.antigravity} — Codex unavailable` : agentLabel;
   const title = lens
-    ? `### 🔐 Cross-agent review — ${lens} lens (${agentLabel})`
-    : `### 🔎 Cross-agent review (${agentLabel})`;
-  // The reviewer CLI's version is machine-local state no artifact used to capture: if it drifts, review
-  // strength changes and nothing notices. Recorded, not enforced — see lib/review-guard.mjs.
-  const attribution = version ? `\n\n_${version}._` : '';
+    ? `### 🔐 Cross-agent review — ${lens} lens (${header})`
+    : `### 🔎 Cross-agent review (${header})`;
+  // The reviewer CLI's version and model are recorded, not enforced — see lib/review-guard.mjs. `model`
+  // left undefined means the caller did not try; `null` means it tried and could not resolve.
+  const parts = [];
+  if (model !== undefined) parts.push(`Model: ${model || 'unrecorded — resolve failed'}`);
+  if (version) parts.push(version);
+  const attribution = parts.length ? `\n\n_${parts.join(' · ')}._` : '';
   const limit =
     lens === 'security'
       ? `\n\n> **Scope of this pass:** one advisory, single-pass read by a different model family, triggered by the changed paths. It is **not** static analysis, not exhaustive, and not a required check. A clean result here is not a security guarantee.`
@@ -280,12 +324,57 @@ export function buildComment(
     ? `\n\n> ⚠ **The security lens is OWED on this PR** (${securityOwed}) and has not run here. This general pass is not a substitute for it.`
     : '';
   const convergence = reReview
-    ? `\n\n> **Re-review:** Blocking/Important findings only — earlier nits are deliberately not repeated.`
+    ? `\n\n> **Re-review:** Blocking/Should-fix findings only — earlier nits are deliberately not repeated.`
     : '';
   return `${title}\n\n${BANNER}${attribution}${limit}${owed}${convergence}\n\n---\n\n${findings}\n`;
 }
 
+/**
+ * The model that answered, for the comment's attribution line. `usedAgyModel` is what runAntigravity
+ * actually ran (its onModel callback), which beats the configured pair. Returns null when codex's model
+ * cannot be determined — a missing attribution is safer than a false one (a consuming project).
+ */
+export function resolveReviewModel(agent, fellBack, deps = {}) {
+  const { env = process.env, readCfg = defaultReadCodexConfig, usedAgyModel = null } = deps;
+  if (fellBack || agent === 'antigravity') return `agy ${usedAgyModel || env.AGY_MODEL || AGY_MODEL}`;
+  if (agent === 'vibe') return env.VIBE_MODEL || env.VIBE_ACTIVE_MODEL || 'vibe configured default';
+  if (agent === 'claude') return env.CLAUDE_REVIEW_MODEL || CLAUDE_REVIEW_MODEL;
+  // The same resolution execCodex uses: unset → the pin. `default` → codex's BUILT-IN default: the review
+  // runs `--ignore-user-config`, so ~/.codex/config.toml is not what ran, and naming its model would be a
+  // false attribution (pr-reviewer round 3 on #188). `readCfg` is kept only so old callers' deps still parse.
+  void readCfg;
+  const pinned = 'codexModel' in deps ? deps.codexModel : codexModelFrom(env.CODEX_MODEL);
+  if (pinned) return `${pinned} (effort: ${env.CODEX_REASONING_EFFORT || CODEX_REASONING_EFFORT})`;
+  return `codex built-in default (effort: ${env.CODEX_REASONING_EFFORT || CODEX_REASONING_EFFORT}; user config ignored)`;
+}
+
+function defaultReadCodexConfig() {
+  try {
+    return readFileSync(join(homedir(), '.codex', 'config.toml'), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
 /** Comment bodies already on the PR, for re-review convergence. [] on any failure (degrade to first pass). */
+/** The PR author's permission on the repo (admin/maintain/write/triage/read/none), or null if unreadable. */
+function prAuthorPermission(pr, repo) {
+  const view = spawnSync(
+    'gh',
+    ['pr', 'view', String(pr), '--json', 'author', '-q', '.author.login', ...(repo ? ['--repo', repo] : [])],
+    { encoding: 'utf8' }
+  );
+  const login = String(view.stdout || '').trim();
+  if (view.status !== 0 || !login) return null;
+  const perm = spawnSync(
+    'gh',
+    ['api', `repos/${repo || '{owner}/{repo}'}/collaborators/${login}/permission`, '-q', '.permission'],
+    { encoding: 'utf8' }
+  );
+  const p = String(perm.stdout || '').trim();
+  return perm.status === 0 && p ? p : null;
+}
+
 /** The PR body, for the `risk: high` half of the security trigger. '' on any failure. */
 function ghBody(pr, repo) {
   const args = ['pr', 'view', String(pr), '--json', 'body'];
@@ -299,10 +388,21 @@ function ghBody(pr, repo) {
   }
 }
 
-/** The project's review config. A missing/invalid file is FATAL: defaulting it would silently mean "never run the security lens". */
-function loadReviewConfig() {
+/**
+ * The project's review config: `golden-frijoles.config.json` → `review` when present, else the legacy
+ * `scripts/review-config.json` (the wave-2 loader, readSection). A missing/invalid config is FATAL:
+ * defaulting it would silently mean "never run the security lens".
+ */
+export function loadReviewConfig(path = REVIEW_CONFIG_PATH) {
   try {
-    return parseReviewConfig(JSON.parse(readFileSync(join(__dirname, 'review-config.json'), 'utf8')));
+    const { raw, present } = readSection('review', {
+      legacyPath: path,
+      onLegacyError: (_p, e) => {
+        throw e;
+      },
+    });
+    if (!present) throw new Error(`${path} not found`);
+    return parseReviewConfig(raw);
   } catch (e) {
     die(
       `scripts/review-config.json is missing or invalid (${e.message}). It decides which PRs get the security lens — a default would silently mean "never".`
@@ -361,6 +461,7 @@ async function main() {
     help,
     builder,
     codeOnly,
+    allowUntrustedAuthor,
     paths,
   } = parseArgs(process.argv.slice(2));
   if (help) {
@@ -387,7 +488,7 @@ async function main() {
     die(`unknown reviewer '${agent}'; expected one of ${Object.keys(AGENTS).join('|')}`);
   }
 
-  // ── Builder family ≠ reviewer family (Daniel, 2026-07-26) ───────────────────────────────────
+  // ── Builder family ≠ reviewer family (the product owner, 2026-07-26) ───────────────────────────────────
   // Newly reachable now that Codex BUILDS here as well as reviews: `--agent codex` on a Codex-built
   // diff is same-family self-review wearing a cross-review label, which is worse than no review
   // because it gets recorded as one. A hard refusal rather than a warning — the output looks
@@ -426,6 +527,14 @@ async function main() {
       );
     }
   }
+  // An outsider's diff never reaches a reviewer unasked (lib/secret-guard.mjs → decideAuthorTrust).
+  const trust = decideAuthorTrust({
+    permission: prAuthorPermission(pr, repo),
+    allowUntrusted: allowUntrustedAuthor,
+  });
+  if (!trust.ok) die(trust.why);
+  process.stderr.write(`Author check: ${trust.why}.\n`);
+
   // The security lens is triggered by the CHANGED PATHS, not by judgement (ways-of-work-lean-pass D7).
   // The router prints both commands, but a hand-run general pass must not silently stand in for a missing
   // security pass — so this run says so, on stderr AND in the posted comment where a PR reader sees it.
@@ -441,7 +550,7 @@ async function main() {
     if (decision.run) {
       securityOwed = decision.reason;
       process.stderr.write(
-        `⚠ this PR triggers the security lens (${decision.reason}) — run: node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent <another-family> --lens security\n`
+        `⚠ this PR triggers the security lens (${decision.reason}) — run: node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent <another-family>${builder ? ` --builder ${builder}` : ''} --lens security\n`
       );
     }
   }
@@ -533,7 +642,7 @@ async function main() {
     diff = codeOnlyDiff.diff;
     scopeNote =
       `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
-      `withheld from this reviewer to fit ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit, so it did ` +
+      `withheld from this reviewer to fit a ${argvLimit / 1024} KB input budget, so it did ` +
       `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
       `code against its own stated acceptance criteria. Withheld: ` +
       `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
@@ -545,7 +654,7 @@ async function main() {
     diff = scoped.diff;
     const note =
       `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
-      `subset of the PR — the diff exceeds ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit in full, so ` +
+      `subset of the PR — the diff exceeds a ${argvLimit / 1024} KB input budget in full, so ` +
       `the alternative was no second-family review at all. It saw: ` +
       `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
       `file(s), and could not check any of this against the sprint docs.`;
@@ -561,7 +670,7 @@ async function main() {
   //
   // Three wrong findings in two days came from a reviewer reasoning about code it could not see —
   // a helper "not defined" that was defined eight lines above the hunk being the clearest. See
-  // buildFileContext's header for why agy gets attachment rather than the repo access vibe got.
+  // buildFileContext's header for why agy and vibe get attachment rather than repo access.
   let fileContext = '';
   if (agent === 'antigravity' || agent === 'vibe') {
     // Whatever argv budget the diff has not already spent, less a margin for the prompt and the
@@ -629,7 +738,42 @@ async function main() {
     }
   }
 
-  const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
+  let usedAgyModel = null;
+  const { findings, fellBack } = runReview(
+    agent,
+    fileContext ? `${prompt}\n\n${fileContext}` : prompt,
+    diff,
+    { builder, onModel: (m) => (usedAgyModel = m) }
+  );
+  // The family that actually answered: after a codex→agy heal, the comment must not say "Codex".
+  const answered = fellBack ? 'antigravity' : agent;
+  const reviewerLabel = fellBack ? `${AGENTS.antigravity} — Codex unavailable` : AGENTS[agent];
+
+  // Never PUBLISH a reply that carries this machine's secrets (lib/secret-guard.mjs): a reviewer fed an
+  // injected diff can still read host files (codex's read-only sandbox allows reads). Checked FIRST, before
+  // the output guard — that guard quotes the reply's opening text in a PUBLIC status description, and asks
+  // Jev about the reply (egress) — so a secret-carrying reply reaches neither (pr-reviewer round 3 on #188).
+  // The status posted here names no reply text. The reply is printed locally, redacted.
+  const secrets = findSecretLeaks(findings, { values: collectSecretValues({ root: projectRoot() }) });
+  if (secrets.leaks.length) {
+    const what = secrets.leaks.map((l) => l.name).join(', ');
+    if (!dryRun)
+      postReviewStatus({
+        pr,
+        repo,
+        state: 'failure',
+        lens,
+        description: `${reviewerLabel}: reply withheld — it carried secret-shaped text`,
+        sha: reviewedSha,
+      });
+    process.stderr.write(
+      `\n───── ${reviewerLabel}'s reply, WITHHELD (redacted: ${what}) ─────\n${secrets.redacted}\n───── end of reply ─────\n`
+    );
+    die(
+      `${reviewerLabel}'s reply carried ${what} and was NOT posted. If this is a real leak, rotate the ` +
+        `credential and treat the diff as hostile; if it is a false positive, post the redacted text by hand.`
+    );
+  }
 
   // THE GUARD (ways-of-work-lean-pass D9). With one external pass, a CLI that exits 0 with nothing to say
   // reads exactly like a clean review and nothing contradicts it. A structureless reply FAILS the run and
@@ -645,7 +789,8 @@ async function main() {
         repo,
         state: 'failure',
         lens,
-        description: `${AGENTS[agent]}: ${verdict.reason}`,
+        description: `${reviewerLabel}: ${verdict.reason}`,
+        sha: reviewedSha,
       });
       process.stderr.write(
         st.posted
@@ -656,18 +801,21 @@ async function main() {
     // NEVER destroy a reply the run paid for: a false reject would otherwise cost a full re-run, which is
     // exactly how a guard trains people to bypass it.
     process.stderr.write(
-      `\n───── ${AGENTS[agent]}'s full reply, rejected by the output guard ─────\n${findings || '(empty)'}\n───── end of reply ─────\n`
+      `\n───── ${reviewerLabel}'s full reply, rejected by the output guard ─────\n${findings || '(empty)'}\n───── end of reply ─────\n`
     );
-    die(`${AGENTS[agent]} did not return a review: ${verdict.reason}`);
+    die(`${reviewerLabel} did not return a review: ${verdict.reason}`);
   }
 
   const body =
-    buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings, {
+    buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings, fellBack, {
       lens,
-      version: cliVersionNote(agent),
+      model: resolveReviewModel(agent, fellBack, { usedAgyModel }),
+      version: cliVersionNote(answered),
       reReview,
       securityOwed,
-    }) + reviewMarker({ lens, sha: reviewedSha }) + jevMarker(verdict);
+    }) +
+    reviewMarker({ lens, sha: reviewedSha }) +
+    jevMarker(verdict);
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
@@ -679,7 +827,8 @@ async function main() {
       repo,
       state: 'success',
       lens,
-      description: `review produced by ${AGENTS[agent]} (${verdict.reason}) — not a verdict`,
+      description: `review produced by ${reviewerLabel} (${verdict.reason}) — not a verdict`,
+      sha: reviewedSha,
     });
     process.stderr.write(
       st.posted
@@ -690,7 +839,17 @@ async function main() {
 }
 
 // Guarded so importing this module for its pure helpers does not run a review.
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// realpath on both sides: through a symlinked path a plain compare is false and the script exits 0 having
+// done nothing (#189 review).
+const isMain = (() => {
+  try {
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+})();
 if (isMain)
   main().catch((e) => {
     process.stderr.write(`cross-review: ${e?.message || e}\n`);

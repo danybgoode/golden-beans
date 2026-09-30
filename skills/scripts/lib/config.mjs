@@ -42,6 +42,8 @@ export const SECTIONS = Object.freeze([
   'deploy',
   'ship',
   'spend',
+  'routines',
+  'intent',
 ]);
 
 /**
@@ -426,4 +428,3 @@ export function needSetting(
 export function _resetAsked() {
   asked.clear();
 }
-

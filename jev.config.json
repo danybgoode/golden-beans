@@ -17,6 +17,13 @@
         "claim": 0.8
       },
       "shadowExpires": null
+    },
+    "lint": {
+      "mode": "shadow",
+      "thresholds": {
+        "default": 0.8
+      },
+      "shadowExpires": "2026-10-14"
     }
   }
 }

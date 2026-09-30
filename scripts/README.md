@@ -82,16 +82,14 @@ re-check before "unifying" it.
   project's). This one is a superset the template does not need; it shares the prose writer and guard.
 - **`pod-report.mjs`** (+ `lib/pod-metrics.mjs`) — not ops reporting: it computes the Pod Report
   *artifact* this product serves. The template's `pmo-report.mjs` reports on the project's own delivery.
-- **The review rail** — `lib/cross-agent-cli.mjs` (the CLI driver), `cross-review.mjs`,
-  `cross-panel.mjs`, their prompts and `lib/vibe-invocation.test.mjs` — forked by the review-stack work
-  before this epic. Unifying it is that rail's job, not this one's. **Hand-patched for
-  jev-semantic-guards (2026-09-23)**, the same patch the template's copy carries: `main()` is `async`;
-  `jevContext('review')` is resolved before the pending status; the guard line is
-  `await judgeReviewOutput(findings, { sha })` (was `assertReviewOutput`), printing `review guard: <reason>`;
-  the posted comment appends `jevMarker(verdict)`; and `lib/cross-agent-cli.mjs` strips
-  `jev-eval.fixtures.json` from reviewer diffs as generated data. Nothing else in the fork moved.
 - **Project fill-ins** — `prose-lessons.md` (this project's own lessons), `routines/README.md` and
-  `review-config.json` (its routines and review routing; the template ships both as fill-ins). `prose/cpo-persona.md` is
+  `review-config.json` (its routines and review routing; the template ships both as fill-ins), and the three
+  review prompts (`cross-review.prompt.md`, `cross-review.security.prompt.md`, `cross-panel.prompt.md`), whose
+  rules and vulnerability classes are this project's own. The review rail's CODE is shared, not forked:
+  `cross-review.mjs`, `lib/cross-agent-cli.mjs`, `cross-agent-doctor.mjs` (+ its `agy-doctor.mjs` alias),
+  `cross-panel.mjs`, `review-route.mjs`, `lib/review-guard.mjs` and their tests are byte-identical to the
+  template since distribute-what-we-use S1 (2026-09-29), which merged this copy, the template's and a second
+  consumer's into one superset. `prose/cpo-persona.md` is
   still the template's NEUTRAL copy (generic example people), byte-identical on purpose until someone
   fills it in for this product. It only reaches `prose-draft.mjs` here, and that tool's previous prompt
   was the template's neutral one too. The merge report, the surface that matters, keeps its own

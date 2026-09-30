@@ -1,0 +1,185 @@
+{
+  "askedAt": "2026-09-30T03:01:35.645Z",
+  "model": "jev-1.13.0",
+  "questions": {
+    "touches_spec": {
+      "type": "noul",
+      "instructions": "Two formal specs describe parts of this codebase (see state.specs). Does this pull request change behaviour that either spec describes — so that the spec could now be wrong, or a checked property could now fail?",
+      "criteria": {
+        "true": "Yes: the diff changes logic, SQL, state transitions, matching or ordering that a spec models.",
+        "false": "No: the diff only changes comments, docs, names, types, UI copy or code the specs do not model."
+      }
+    },
+    "counterexample_class": {
+      "type": "choice",
+      "instructions": "If this change introduced a defect in the specified behaviour, which kind of counterexample would a checker most likely produce?",
+      "criteria": {
+        "none": "The change cannot affect the specified behaviour.",
+        "lost_or_orphaned_delivery": "A delivery row vanishes or can never be claimed again.",
+        "duplicate_or_unbounded_send": "The same event is sent more times than the budget allows, or after it finished.",
+        "stuck_row": "A row is stranded in_flight or in a state nothing advances.",
+        "budget_violation": "attempt_count exceeds the retry budget, or dead-lettering happens too early or never.",
+        "explain_verdict_disagreement": "The flag explanation disagrees with the value actually served.",
+        "other": "A different class of defect."
+      }
+    },
+    "obligation_difficulty": {
+      "type": "choice",
+      "instructions": "What would it take to keep the formal verification honest after this change?",
+      "criteria": {
+        "none": "Nothing: the specs are unaffected.",
+        "rerun": "Re-run the existing checks; the specs still describe the code.",
+        "update_spec": "Edit the spec to mirror the change, then re-run the checks.",
+        "new_property": "Add a new invariant or theorem the change introduces.",
+        "new_technique": "The change needs a modelling or proof technique the specs do not use yet."
+      }
+    },
+    "verify_depth": {
+      "type": "choice",
+      "instructions": "How much verification does this pull request deserve before merge?",
+      "criteria": {
+        "off": "None — it cannot affect specified behaviour.",
+        "light": "Re-run the existing model checks and proofs in CI.",
+        "standard": "Update the spec and run a bounded model check or differential test.",
+        "deep": "New invariants or proofs, plus a human reading the counterexamples."
+      }
+    }
+  },
+  "results": [
+    {
+      "sha": "7f81540",
+      "title": "Experiments for humans — Sprint 1: widen the contract [risk HIGH] (#167)",
+      "truncated": false,
+      "ms": 300,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.45,
+      "counterexample_class": "explain_verdict_disagreement",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "standard",
+      "usage": {
+        "input_tokens": 1600,
+        "output_tokens": 225
+      }
+    },
+    {
+      "sha": "20cecfb",
+      "title": "Sprint 2 (part 1 of 2) — five routes match; the two detail routes are still outstanding (#137)",
+      "truncated": false,
+      "ms": 232,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.2,
+      "counterexample_class": "none",
+      "obligation_difficulty": "none",
+      "verify_depth": "light",
+      "usage": {
+        "input_tokens": 2479,
+        "output_tokens": 218
+      }
+    },
+    {
+      "sha": "0a0beb0",
+      "title": "Finish the Golden Frijoles rename below the public surface (#96)",
+      "truncated": false,
+      "ms": 363,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.08,
+      "counterexample_class": "none",
+      "obligation_difficulty": "none",
+      "verify_depth": "off",
+      "usage": {
+        "input_tokens": 1348,
+        "output_tokens": 218
+      }
+    },
+    {
+      "sha": "b473d13",
+      "title": "feat(flags-visual-rule-builder): preview as a user [S3] (#90)",
+      "truncated": false,
+      "ms": 248,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.56,
+      "counterexample_class": "explain_verdict_disagreement",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "standard",
+      "usage": {
+        "input_tokens": 4317,
+        "output_tokens": 225
+      }
+    },
+    {
+      "sha": "c258a18",
+      "title": "Merge pull request #58 from danybgoode/feat/flag-serving-prd-g-s3",
+      "truncated": false,
+      "ms": 371,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.21,
+      "counterexample_class": "stuck_row",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "standard",
+      "usage": {
+        "input_tokens": 6238,
+        "output_tokens": 221
+      }
+    },
+    {
+      "sha": "bc1abba",
+      "title": "Merge pull request #39 from danybgoode/feat/flag-serving-and-prd-g",
+      "truncated": false,
+      "ms": 213,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.48,
+      "counterexample_class": "explain_verdict_disagreement",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "deep",
+      "usage": {
+        "input_tokens": 7282,
+        "output_tokens": 225
+      }
+    },
+    {
+      "sha": "9977c5a",
+      "title": "docs(agents): amend the tenancy invariant with a narrow, registered scheduler exemption",
+      "truncated": false,
+      "ms": 440,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.18,
+      "counterexample_class": "none",
+      "obligation_difficulty": "none",
+      "verify_depth": "light",
+      "usage": {
+        "input_tokens": 2012,
+        "output_tokens": 218
+      }
+    },
+    {
+      "sha": "015eae4",
+      "title": "event-destination-router S2 + S3.3: signed destinations, retry/replay, operating view (#16)",
+      "truncated": true,
+      "ms": 318,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.79,
+      "counterexample_class": "stuck_row",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "deep",
+      "usage": {
+        "input_tokens": 18450,
+        "output_tokens": 221
+      }
+    },
+    {
+      "sha": "ce65993",
+      "title": "event-destination-router Sprint 1: versioned event contract + transactional outbox (dark) (#15)",
+      "truncated": false,
+      "ms": 253,
+      "model": "jev-1.13.0",
+      "touches_spec": 0.58,
+      "counterexample_class": "stuck_row",
+      "obligation_difficulty": "update_spec",
+      "verify_depth": "deep",
+      "usage": {
+        "input_tokens": 11872,
+        "output_tokens": 221
+      }
+    }
+  ]
+}

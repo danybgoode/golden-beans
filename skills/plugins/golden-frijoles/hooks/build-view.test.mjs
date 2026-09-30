@@ -1,11 +1,14 @@
 // build-view.test.mjs — the mod's pure half (build-visualization-claude-mods S4).
-// The hook file itself is four calls on `$`; everything decidable without `$` is here, and tested.
+// The hook file only calls `$` and draws; everything decidable without `$` is here, and tested.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { repoFactsFrom, shouldRefresh, statusTextFrom, MAX_AGE_MS } from './build-view.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import * as view from './build-view.mjs';
+
+const { repoFactsFrom, shouldRefresh, statusTextFrom, MAX_AGE_MS } = view;
 
 test('repoFactsFrom: branch@sha and the repo ROOT, else nulls', () => {
   assert.deepEqual(repoFactsFrom('abc123\nfeat/foo-s2\n/repo\n'), { key: 'feat/foo-s2@abc123', root: '/repo' });
@@ -57,4 +60,78 @@ test('the contract with the resolver holds: build-state.mjs really emits a `line
   assert.ok(Array.isArray(state.lines) && state.lines.length, 'build-state --json must carry a non-empty `lines`');
   assert.ok(state.lines.every((l) => typeof l === 'string'));
   assert.equal(statusTextFrom(stdout, 0), state.lines.join('\n'));
+});
+
+// ── D5: automatic behaviour never runs repo-supplied code (distribute-what-we-use S2.2) ──────────────
+// The hook runs on every turn in whatever repo is open. It used to execute `<repo>/scripts/build-state.mjs`,
+// a file any repo can own. It now always runs the copy bundled beside it, whether or not the repo has one.
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+test('the resolver the hook runs is the bundled copy, never a file the open repo owns', () => {
+  assert.equal(typeof view.buildStateArgv, 'function', 'build-view.mjs must export buildStateArgv');
+  for (const root of ['/repo', '/some/stranger', null]) {
+    const argv = view.buildStateArgv(root);
+    assert.equal(argv[0], 'node');
+    assert.equal(argv[1], join(HERE, 'vendor', 'build-state.mjs'));
+    assert.ok(!argv.some((a) => /(^|\/)scripts\/build-state\.mjs$/.test(a)), `no repo scripts/ path in ${argv}`);
+    assert.deepEqual(argv.slice(2), ['--json', '--offline', '--repo-root', root || '.']);
+  }
+});
+
+test('index.tsx builds its command from buildStateArgv, not from the repo root', () => {
+  const src = readFileSync(join(HERE, 'index.tsx'), 'utf8');
+  assert.match(src, /buildStateArgv\(/);
+  assert.doesNotMatch(src, /\/scripts\/build-state\.mjs/, 'the hook must not name a repo-relative resolver');
+});
+
+test('the bundle exists and is the real resolver: it emits `lines` for this repo', () => {
+  const bundled = join(HERE, 'vendor', 'build-state.mjs');
+  assert.ok(existsSync(bundled), 'run `node scripts/render-hook-vendor.mjs` from skills/');
+  const repo = join(HERE, '..', '..', '..');
+  const stdout = execFileSync('node', [bundled, '--json', '--offline', '--repo-root', repo], { encoding: 'utf8' });
+  const state = JSON.parse(stdout);
+  assert.ok(Array.isArray(state.lines) && state.lines.length);
+});
+
+// ── The band (fix/build-view-band): a status row cut the view off at the right edge and drew its newlines
+// as U+FFFD. The band decorates the resolver's lines; these pin that it never adds or drops a fact.
+const { bandRowsFrom, progressOf, toneOf } = view;
+
+test('bandRowsFrom: one row per resolver line, every fact kept', () => {
+  const lines = [
+    'Currently building',
+    '  Epic     Semantic lint — Jev judges    09-platform-infra · risk LOW',
+    '  Story    S1.2 — the rule',
+    '           As a PM, I want X, so that Y.',
+    '  Progress Story 2 of 5 · Sprint 1 of 2',
+    '  Status   Building',
+    '  Also     1 more in other worktrees: feat/y',
+  ];
+  const rows = bandRowsFrom(lines.join('\n'));
+  assert.equal(rows.length, lines.length);
+  assert.deepEqual(rows.map((r) => r.kind), ['heading', 'field', 'field', 'note', 'field', 'field', 'field']);
+  for (const [i, row] of rows.entries()) {
+    const shown = row.kind === 'field' ? `${row.label} ${row.value}` : row.value;
+    assert.equal(shown.replace(/\s+/g, ' '), lines[i].trim().replace(/\s+/g, ' '), `row ${i} is its line`);
+  }
+  assert.equal(rows[1].main, 'Semantic lint — Jev judges');
+  assert.equal(rows[1].meta, '09-platform-infra · risk LOW');
+  assert.equal(rows[1].risk, 'LOW');
+  assert.equal(rows[5].tone, 'busy');
+});
+
+test('bandRowsFrom: the idle view, and nothing for no text', () => {
+  const rows = bandRowsFrom('No epic in flight — on main\n  Open     X · Verifying · 09-platform-infra');
+  assert.equal(rows[0].glyph, '◇');
+  assert.equal(rows[1].label, 'Open');
+  assert.equal(rows[1].tone, 'info');
+  for (const none of [null, undefined, '', '  \n']) assert.deepEqual(bandRowsFrom(none), []);
+});
+
+test('progressOf / toneOf: colour and bar hints only', () => {
+  assert.deepEqual(progressOf('Story 2 of 5 · Sprint 1 of 2'), { done: 1, total: 5 });
+  assert.equal(progressOf('Story ? of 5'), null);
+  assert.equal(toneOf('unknown — no README'), 'bad');
+  assert.equal(toneOf('Shipped'), 'good');
+  assert.equal(toneOf('Something else'), 'plain');
 });

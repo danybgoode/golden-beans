@@ -29,8 +29,8 @@
 // Zero npm deps — Node 18+. Pure policy exported for node:test; the CLI is a thin shell.
 
 import { spawnSync } from 'node:child_process';
-import { writeSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { writeSync, realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need, hasCmd, AGENT_BIN } from './lib/cross-agent-cli.mjs';
 import { changedFileCount, decideSecurityPass, parseReviewConfig } from './lib/review-guard.mjs';
@@ -91,8 +91,10 @@ export function planReview({ builder, available = PREFERENCE, securityPass = fal
 
 /** The exact commands to run, in order. Pure. */
 export function renderPlan(plan, pr, repo) {
+  // `--builder` rides along so cross-review's pairing guard (and its codex→agy heal re-check) fire in
+  // normal use, not only when someone remembers to pass it (distribute-what-we-use S1, pr-reviewer B3).
   const arg = (f) =>
-    `node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent ${AGENT_FLAG[f]}`;
+    `node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent ${AGENT_FLAG[f]} --builder ${plan.builder}`;
   const l = [
     `Review plan — PR #${pr}${repo ? ` (${repo})` : ''}`,
     `  built by:       ${plan.builder}`,
@@ -151,6 +153,7 @@ function main() {
   }
   if (!builder) die('--builder is required (who wrote the diff): ' + BUILDERS.join(' | '));
   if (!pr) die('a PR number is required');
+  if (!/^\d+$/.test(String(pr))) die(`PR number must be numeric, got '${pr}'.`);
   if (!BUILDERS.includes(builder)) die(`unknown --builder '${builder}' (expected: ${BUILDERS.join(' | ')})`);
 
   // The `review` section of golden-frijoles.config.json over scripts/review-config.json (D9).
@@ -160,26 +163,37 @@ function main() {
       throw e;
     },
   });
-  if (!reviewPresent) die('scripts/review-config.json not found, and golden-frijoles.config.json has no review section');
+  if (!reviewPresent)
+    die('scripts/review-config.json not found, and golden-frijoles.config.json has no review section');
   const config = parseReviewConfig(reviewRaw);
   let securityPass = forceSecurity;
   let trigger = forceSecurity ? 'forced with --security' : null;
   if (!forceSecurity) {
     const facts = prFacts(pr, repo);
-    if (!facts) {
-      // Three states, never two: "I could not check" is not "no security path touched".
+    if (!facts && hasCmd('gh')) {
+      // gh is installed and still could not read the PR: a wrong number or --repo, expired auth, the
+      // network. A route printed for a PR that may not exist is worse than stopping (#189 review, S1).
       die(
-        `could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Re-run when gh works, or pass --security.`
+        `could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Check the PR ` +
+          'number and --repo, and `gh auth status`; re-run when gh works, or pass --security.'
       );
+    } else if (!facts) {
+      // No gh at all — a stranger's machine. UNKNOWN is not "no security path", but refusing to print a route
+      // hides the DARK state the kickoff needs to explain, so render it with the lens forced instead.
+      securityPass = true;
+      trigger =
+        `could not look: GitHub CLI could not read PR #${pr}'s changed files — install GitHub CLI ` +
+        '(https://cli.github.com), then `gh auth login`. Security trigger is UNKNOWN; lens requested conservatively.';
+    } else {
+      const decision = decideSecurityPass({
+        files: facts.files,
+        body: facts.body,
+        securityPaths: config.securityPaths,
+        totalFiles: changedFileCount({ pr, repo }),
+      });
+      securityPass = decision.run;
+      trigger = decision.reason;
     }
-    const decision = decideSecurityPass({
-      files: facts.files,
-      body: facts.body,
-      securityPaths: config.securityPaths,
-      totalFiles: changedFileCount({ pr, repo }),
-    });
-    securityPass = decision.run;
-    trigger = decision.reason;
   }
   // `hasCmd` says INSTALLED, not UNCAPPED — a quota-capped CLI is present and answers `--version`.
   // There is no way to know a family is capped without spending a run on it, so the fallback is
@@ -206,5 +220,15 @@ function main() {
   );
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// realpath on both sides: through a symlinked path a plain compare is false and the script exits 0 having
+// done nothing (#189 review).
+const isMain = (() => {
+  try {
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+})();
 if (isMain) main();
