@@ -1,0 +1,458 @@
+{
+  "$comment": "intent-match D19 backfill: shipped epics scored on the seed AS APPROVED (the seed in the commit that first added the epic README), with a PROXY ask (D8, C6 as corrected) and claims split by the builder. Answers live in each retro's _Intent:_ line, never here. Regenerate nothing by hand.",
+  "model": "jev-1.13.0",
+  "scoredAt": "2026-09-30",
+  "epics": [
+    {
+      "slug": "frijoles-rebrand-closeout",
+      "score": 86,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "0a0beb0ce",
+      "sprints": 1,
+      "signals": {
+        "coverage_in": 0.806,
+        "coverage_out": 0.918,
+        "clarity": 0.851,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 1,
+      "untraced": 0,
+      "claims": [
+        "The published SDK address moves to the new name.",
+        "The runtime provider identities and the live wire and data identifiers move to the new name.",
+        "The one public install exception under the old name is closed.",
+        "The mockup-only footnote ledger comes off the footer.",
+        "The signed-in product gets the mobile sweep the public routes already have."
+      ]
+    },
+    {
+      "slug": "verify-spike",
+      "score": 86,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "e20afca1e",
+      "sprints": 1,
+      "signals": {
+        "coverage_in": 0.885,
+        "coverage_out": 0.872,
+        "clarity": 0.819,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "A measured, written decision on whether and how to productize verification.",
+        "The cost and the findings of the verification pipeline are measured on the product's own code.",
+        "The pipeline is a frontier model writing specs, checkers checking them, and Jev triaging.",
+        "Nothing about verification is promised publicly before the verification module ships."
+      ]
+    },
+    {
+      "slug": "event-destination-router",
+      "score": 80,
+      "ask": "proxy",
+      "proxySource": "Outcome & signal",
+      "pitchSha": "dba293611",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.942,
+        "coverage_out": 0.69,
+        "clarity": 0.756,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 2,
+      "claims": [
+        "Every validated event is persisted exactly once.",
+        "Events are delivered asynchronously to configured destinations.",
+        "Product requests are never coupled to any vendor.",
+        "A failed delivery retries a bounded number of times and is visible as failed.",
+        "A failed delivery can be replayed by hand.",
+        "Miyagi's merchant-activation stream reaches its CRM view."
+      ]
+    },
+    {
+      "slug": "flags-visual-rule-builder",
+      "score": 79,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "c9870352e",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.873,
+        "coverage_out": 0.691,
+        "clarity": 0.818,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 1,
+      "claims": [
+        "A PM can create a flag without typing JSON.",
+        "Targeting rules, variants and rollout are built visually.",
+        "A flag's history can be read without diffing JSON by eye.",
+        "The builder reaches the visual-targeting table stakes a direct competitor ships."
+      ]
+    },
+    {
+      "slug": "commercial-shell",
+      "score": 81,
+      "ask": "proxy",
+      "proxySource": "Mirror-back",
+      "pitchSha": "dfc045fda",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.81,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "The final landing page is defined, per persona.",
+        "A launch-ready v1 stands up quickly from the already-shipped features.",
+        "A backfill contract makes every future epic light up its landing section."
+      ]
+    },
+    {
+      "slug": "golden-frijoles-cli",
+      "score": 77,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "4d1a10184",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.82,
+        "coverage_out": 0.706,
+        "clarity": 0.775,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 1,
+      "claims": [
+        "An agent can create a kill-switch flag in every environment without a human.",
+        "There is an operating surface beyond the read-only, one-project MCP connector.",
+        "Consumers stop hand-rolling their own admin-API wrapper."
+      ]
+    },
+    {
+      "slug": "multi-tenant-activation",
+      "score": 98,
+      "ask": "proxy",
+      "proxySource": "Mirror-back",
+      "pitchSha": "a31f11696",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.978,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "Signup provisions a working tenant instantly, with no hand provisioning.",
+        "Tenants have real human accounts.",
+        "Per-tenant isolation is hardened.",
+        "Credentials have a lifecycle.",
+        "The landing hero and pricing sections flip from waitlist to a real signup call to action in the same epic."
+      ]
+    },
+    {
+      "slug": "pod-report",
+      "score": 93,
+      "ask": "proxy",
+      "proxySource": "Mirror-back",
+      "pitchSha": "227cb7c10",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.933,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "A sales artifact shows velocity, throughput, cycle and lead time, DORA and cost per shipped point.",
+        "It compares a human-baseline pod with an agent-augmented one.",
+        "It layers the outcome metrics the engine produces.",
+        "A live Roadmap Hub shows where we are against the desired end state.",
+        "The hub works at every grain: portfolio, epic and sprint.",
+        "It is beautiful enough to share with clients and investors.",
+        "It syncs from the docs that are already the source of truth."
+      ]
+    },
+    {
+      "slug": "experiments-for-humans",
+      "score": 81,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "db32bc1ad",
+      "sprints": 4,
+      "signals": {
+        "coverage_in": 0.933,
+        "coverage_out": 0.683,
+        "clarity": 0.805,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 2,
+      "claims": [
+        "A PM can build a simple A/B test without writing JSON.",
+        "Binding a flag is no longer a separate step limited to exactly matching variant keys.",
+        "The existing governance (immutable versions, SRM, interval, decision record) stays."
+      ]
+    },
+    {
+      "slug": "mockups-as-built",
+      "score": 90,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "be5cbf55a",
+      "sprints": 4,
+      "signals": {
+        "coverage_in": 0.953,
+        "coverage_out": 0.9,
+        "clarity": 0.834,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "The console looks like the approved design.",
+        "The old UI is replaced, not hidden inside disclosures.",
+        "A test opens the approved design and compares the built pages against it.",
+        "Coverage is measured, never self-declared.",
+        "A North Star surface exists.",
+        "The Activity page is paginated."
+      ]
+    },
+    {
+      "slug": "landing-maker-ops",
+      "score": 64,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "46c7e80c8",
+      "sprints": 5,
+      "signals": {
+        "coverage_in": 0.643,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 1,
+      "untraced": 0,
+      "claims": [
+        "The page says who the product is for now: a single maker operating a whole product.",
+        "The page names the four operating surfaces: product, delivery, security and resilience, and AI spend.",
+        "The page keeps its argument that decisions should carry receipts."
+      ]
+    },
+    {
+      "slug": "design-system-rails",
+      "score": 90,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "8e7774694",
+      "sprints": 6,
+      "signals": {
+        "coverage_in": 0.9,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "The console matches the approved design on screen, closing the five visible gaps.",
+        "An acceptance check can fail on the way a page looks.",
+        "The regenerator is committed and runs on a fresh clone.",
+        "The visual gate is not born with exemptions.",
+        "The design lives outside any one epic, so it does not expire when an epic closes."
+      ]
+    },
+    {
+      "slug": "signals-loop",
+      "score": 97,
+      "ask": "proxy",
+      "proxySource": "Mirror-back",
+      "pitchSha": "a41e9c7ac",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.972,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "Error and friction signals are captured into the engine.",
+        "Signals are grouped deterministically into structured tasks carrying product context (funnel position, flag state, experiment variant).",
+        "Tasks reach the customer's own agent over MCP, with read tools to pull them and staged write tools to claim and resolve them.",
+        "There is no integrated AI anywhere in the engine.",
+        "The landing's section 4 lights up in the same epic."
+      ]
+    },
+    {
+      "slug": "console-ia-overhaul",
+      "score": 79,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "e076b5dbd",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.76,
+        "coverage_out": 0.751,
+        "clarity": 0.87,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 1,
+      "untraced": 0,
+      "claims": [
+        "The signed-in product has a deliberate information architecture instead of a flat list of seventeen destinations.",
+        "A feature is the unit of work, with one page for it.",
+        "A feature's funnel and impact are reachable without typing a key into the URL.",
+        "Its switch, funnel, impact, experiment and history are related to each other in one place."
+      ]
+    },
+    {
+      "slug": "app-shell-and-agent-rail",
+      "score": 91,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "eeb1af70f",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.908,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "A PM who signs in sees what their agent did.",
+        "The agent window the landing promises appears inside the product.",
+        "Signing in lands on something better than a bare list of project slugs.",
+        "The feature areas are reachable and related to one another."
+      ]
+    },
+    {
+      "slug": "methodology-experience",
+      "score": 95,
+      "ask": "proxy",
+      "proxySource": "Mirror-back",
+      "pitchSha": "0751e45f9",
+      "sprints": 4,
+      "signals": {
+        "coverage_in": 0.95,
+        "coverage_out": null,
+        "clarity": null,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in"
+      ],
+      "gaps": 0,
+      "untraced": 0,
+      "claims": [
+        "The methodology has its own place a reader can go: /methodology, with six chapters.",
+        "It teaches by doing.",
+        "Reading it feels like a different room from the sales page.",
+        "The method's second move is renamed from Shape to Design.",
+        "The landing's maker loop collapses from five steps to three: Consider, Operate, Exit."
+      ]
+    },
+    {
+      "slug": "flags-console-parity",
+      "score": 84,
+      "ask": "proxy",
+      "proxySource": "Problem",
+      "pitchSha": "cbbee17da",
+      "sprints": 3,
+      "signals": {
+        "coverage_in": 0.933,
+        "coverage_out": 0.755,
+        "clarity": 0.829,
+        "teach_back": null
+      },
+      "present": [
+        "coverage_in",
+        "coverage_out",
+        "clarity"
+      ],
+      "gaps": 0,
+      "untraced": 2,
+      "claims": [
+        "The flags page is designed for a PM's job, not rendered from the engine's storage model.",
+        "A person can see which flags are on, and why others are not, on one screen.",
+        "The page stays usable at around 42 definitions.",
+        "Its words describe the job, not immutable versions, activations and snapshot revisions."
+      ]
+    }
+  ]
+}
