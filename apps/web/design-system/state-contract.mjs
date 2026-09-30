@@ -41,7 +41,7 @@ import { join, relative } from 'node:path';
 import { openPrototype, HERE } from './_harness.mjs';
 import { ALL_STATE_IDS, STATE_SOURCES } from './approved-states.mjs';
 import { BLOCK_KINDS, extractSignature, signatureArgs } from './state-contract-core.mjs';
-import { specContract } from './surface-contract.mjs';
+import { approvedSurfaces } from './surface-contract.mjs';
 
 // The vocabulary and the comparison live in `state-contract-core.mjs` — see its header for why the
 // split exists. Re-exported so the one import path keeps working for anything that can take it.
@@ -54,12 +54,7 @@ const OUT = 'STATE-CONTRACT.json';
  * in `APPROVED.md`. Pure and browser-free, so it runs first: a bad surface fails before Chromium is opened.
  */
 export function readSpecContract() {
-  const { entries, problems } = specContract(join(HERE, 'surfaces'), {
-    approvedMd: readFileSync(join(HERE, 'APPROVED.md'), 'utf8'),
-    map: JSON.parse(readFileSync(join(HERE, 'surface.map.json'), 'utf8')),
-    kinds: BLOCK_KINDS,
-    prototypeIds: ALL_STATE_IDS,
-  });
+  const { entries, problems } = approvedSurfaces(HERE, { kinds: BLOCK_KINDS, prototypeIds: ALL_STATE_IDS });
   if (problems.length > 0) {
     throw new Error(`the approved surfaces do not make a contract:\n  ${problems.join('\n  ')}`);
   }

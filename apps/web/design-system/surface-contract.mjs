@@ -59,23 +59,28 @@ export function surfaceEntry(surface, map, kinds, file = `${surface.state}.surfa
     const target = Object.hasOwn(map.kinds, block.kind) ? map.kinds[block.kind] : undefined;
     if (target === undefined) throw fail(`this project's surface.map.json maps no \`${block.kind}\``);
     const kind = kinds.find((entry) => entry.kind === target);
-    if (kind === undefined) throw fail(`surface.map.json maps \`${block.kind}\` to \`${target}\`, which BLOCK_KINDS lacks`);
+    if (kind === undefined)
+      throw fail(`surface.map.json maps \`${block.kind}\` to \`${target}\`, which BLOCK_KINDS lacks`);
     const records = Object.keys(kind.facts ?? {});
 
     // A fact the project kind does not record would be approved in the picture and enforced nowhere — exactly the
     // gap this epic closes — so it is refused rather than dropped.
     for (const fact of ['action', 'count', 'columns']) {
       if (fact in block && !records.includes(fact)) {
-        throw fail(`\`${target}\` does not record a \`${fact}\` in this project — drop it, or add the fact to BLOCK_KINDS`);
+        throw fail(
+          `\`${target}\` does not record a \`${fact}\` in this project — drop it, or add the fact to BLOCK_KINDS`
+        );
       }
     }
     const out = { kind: target };
     for (const fact of records) {
       if (fact === 'action') out.action = block.action === undefined ? null : words(block.action);
-      else if (fact === 'columns') out.columns = block.columns === undefined ? null : block.columns.map(words);
+      else if (fact === 'columns')
+        out.columns = block.columns === undefined ? null : block.columns.map(words);
       else if (fact === 'count') {
         // `extractSignature` records 0 for a tile row with no tiles, so a missing count would silently assert "zero".
-        if (block.count === undefined) throw fail(`\`${block.kind}\` needs a \`count\` here — the contract records how many`);
+        if (block.count === undefined)
+          throw fail(`\`${block.kind}\` needs a \`count\` here — the contract records how many`);
         out.count = block.count;
       }
     }
@@ -86,6 +91,21 @@ export function surfaceEntry(surface, map, kinds, file = `${surface.state}.surfa
   return { missing: false, blocks, disclosures: 0, annotations: 0, unknown: [], source: 'spec' };
 }
 
+/**
+ * THIS repo's approved surfaces: `<designSystemDir>/surfaces/`, judged against the `APPROVED.md` and
+ * `surface.map.json` beside it. The generator and `route-manifest.test.ts` both call this, so the ids a route may
+ * cite and the entries the contract holds cannot disagree (#211 review: the manifest admitted prototype ids only, so
+ * an approved surface could never reach the gate).
+ */
+export function approvedSurfaces(designSystemDir, { kinds, prototypeIds }) {
+  return specContract(join(designSystemDir, 'surfaces'), {
+    approvedMd: readFileSync(join(designSystemDir, 'APPROVED.md'), 'utf8'),
+    map: JSON.parse(readFileSync(join(designSystemDir, 'surface.map.json'), 'utf8')),
+    kinds,
+    prototypeIds,
+  });
+}
+
 /** The `## Approved surfaces` table rows: `| state | file | hash | by | date |`, backticks stripped. */
 function approvalRows(approvedMd) {
   const at = approvedMd.search(/^## Approved surfaces\s*$/m);
@@ -94,7 +114,12 @@ function approvalRows(approvedMd) {
   return section
     .split('\n')
     .filter((line) => line.startsWith('|'))
-    .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim().replace(/^`|`$/g, '')))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim().replace(/^`|`$/g, ''))
+    )
     .filter((cells) => cells.length >= 3 && !/^-+$/.test(cells[0]) && cells[0] !== 'State');
 }
 
@@ -104,11 +129,13 @@ function approvalRows(approvedMd) {
  */
 export function checkApprovals(surfaces, approvedMd) {
   const rows = approvalRows(approvedMd);
-  if (rows === null) return ['APPROVED.md has no `## Approved surfaces` section, so no surface can be approved'];
+  if (rows === null)
+    return ['APPROVED.md has no `## Approved surfaces` section, so no surface can be approved'];
   const problems = [];
   const seen = new Set();
   for (const [state, file, hash] of rows) {
-    if (seen.has(file)) problems.push(`APPROVED.md approves \`${file}\` twice — one line per approved surface`);
+    if (seen.has(file))
+      problems.push(`APPROVED.md approves \`${file}\` twice — one line per approved surface`);
     seen.add(file);
     const surface = surfaces.find((entry) => entry.file === file);
     if (surface === undefined) {
@@ -122,7 +149,9 @@ export function checkApprovals(surfaces, approvedMd) {
       );
     }
     if (surface.surface !== undefined && surface.surface.state !== state) {
-      problems.push(`APPROVED.md approves \`${file}\` as \`${state}\`, and the file says \`state: ${surface.surface.state}\``);
+      problems.push(
+        `APPROVED.md approves \`${file}\` as \`${state}\`, and the file says \`state: ${surface.surface.state}\``
+      );
     }
   }
   for (const surface of surfaces) {
@@ -154,16 +183,22 @@ export function specContract(dir, { approvedMd, map, kinds, prototypeIds }) {
     }
     const { state } = found.surface;
     if (found.name !== `${state}.surface`) {
-      problems.push(`\`${found.file}\` says \`state: ${state}\` — the file is named for its state: \`${state}.surface\``);
+      problems.push(
+        `\`${found.file}\` says \`state: ${state}\` — the file is named for its state: \`${state}.surface\``
+      );
     }
     // D5: one source per state id. The prototype's 38 are not migrated, so a spec with one of their ids is a
     // second definition of an approved state, and which one CI enforced would depend on load order.
     if (prototype.has(state)) {
-      problems.push(`\`${found.file}\`: \`${state}\` is already defined by the approved prototype — one source per state id`);
+      problems.push(
+        `\`${found.file}\`: \`${state}\` is already defined by the approved prototype — one source per state id`
+      );
       continue;
     }
-    if (state in entries) {
-      problems.push(`\`${found.file}\`: \`${state}\` is defined by two surface files — one source per state id`);
+    if (Object.hasOwn(entries, state)) {
+      problems.push(
+        `\`${found.file}\`: \`${state}\` is defined by two surface files — one source per state id`
+      );
       continue;
     }
     try {
@@ -174,6 +209,10 @@ export function specContract(dir, { approvedMd, map, kinds, prototypeIds }) {
     }
   }
   problems.push(...checkApprovals(surfaces, approvedMd));
-  const sorted = Object.fromEntries(Object.keys(entries).sort().map((state) => [state, entries[state]]));
+  const sorted = Object.fromEntries(
+    Object.keys(entries)
+      .sort()
+      .map((state) => [state, entries[state]])
+  );
   return { entries: sorted, problems };
 }

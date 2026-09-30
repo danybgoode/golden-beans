@@ -2,8 +2,8 @@
 
 A state written as a `surface` block and approved by the product owner lives here as `<state>.surface`: the bare
 block, no fence, with `state:` equal to the file name. `state-contract.mjs` turns each one into a
-`STATE-CONTRACT.json` entry (`"source": "spec"`), and the gate checks the built route against it exactly as it checks
-a prototype-drawn state. The rules are the `sketch-specs` epic README's D5, D12 and D13:
+`STATE-CONTRACT.json` entry (`"source": "spec"`), `route-manifest.ts` may cite its id as a route's `referenceState`, and
+the gate checks that route against it exactly as it checks a prototype-drawn state. The rules are the `sketch-specs` epic README's D5, D12 and D13:
 
 - **Approval is a hash.** Every file here needs a line in `../APPROVED.md` → `## Approved surfaces` carrying the first
   16 hex of its SHA-256. Edit an approved file and `state-contract.mjs --check` fails until it is reverted or approved

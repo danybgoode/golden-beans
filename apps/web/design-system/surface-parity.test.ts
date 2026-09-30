@@ -23,7 +23,10 @@ const CONTRACT = JSON.parse(readFileSync(join(HERE, 'STATE-CONTRACT.json'), 'utf
 
 const fixture = (state: string) =>
   surfaceEntry(
-    parseSurface(readFileSync(join(HERE, 'surface-parity', `${state}.surface`), 'utf8'), `surface-parity/${state}.surface`),
+    parseSurface(
+      readFileSync(join(HERE, 'surface-parity', `${state}.surface`), 'utf8'),
+      `surface-parity/${state}.surface`
+    ),
     MAP,
     BLOCK_KINDS
   )
@@ -40,7 +43,8 @@ for (const state of ['ship-features', 'ship-features-dormant', 'ship-activity'])
 // Three states the byte-for-byte set misses — a trailing unlabelled column, a tile count, a glyph in an action — each
 // carrying ONE designer annotation, which is the only thing a spec cannot say. So the blocks must still agree exactly.
 const BLOCKS_ONLY: Record<string, string> = {
-  'setup-keys': '- head "API keys" action "+ New key"\n- list columns "Key | What it may do | Where · expires |"',
+  'setup-keys':
+    '- head "API keys" action "+ New key"\n- list columns "Key | What it may do | Where · expires |"',
   'measure-journeys':
     '- head "Journeys" action "+ New journey"\n- answer "a"\n- tiles count 4\n- list columns "Journey | State | People |"',
   'measure-scenarios':
