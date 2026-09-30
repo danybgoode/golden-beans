@@ -34,7 +34,15 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { askJev, loadJevConfig, logDecision, readApiKey, repoRoot, stateSize, STATE_CHAR_BUDGET } from './lib/jev.mjs';
+import {
+  askJev,
+  loadJevConfig,
+  logDecision,
+  readApiKey,
+  repoRoot,
+  stateSize,
+  STATE_CHAR_BUDGET,
+} from './lib/jev.mjs';
 import { needSetting } from './lib/config.mjs';
 
 export const EXIT_SCORED = 0;
@@ -118,15 +126,22 @@ export const INTENT_QUESTIONS = Object.freeze({
     instructions:
       '`{item}` is a gap between the request and the plan in `pitch`: {gap}. Which ONE artifact, made next, would close this gap fastest?',
     criteria: {
-      copy_deck: 'The exact words a person will read (labels, messages, names, an email) are what is missing or unclear.',
+      copy_deck:
+        'The exact words a person will read (labels, messages, names, an email) are what is missing or unclear.',
       wireframe: 'A screen or page someone uses: what is on it, in what order, and what they can do there.',
       flow: 'A journey of several steps: the order of the steps and the branches between them.',
-      data_sample: 'A new record, table, file or payload: three real-looking rows would settle what it holds.',
-      state_machine: 'A lifecycle: the statuses something moves through and what moves it from one to the next.',
-      sequence: 'Calls between services, background work or retries: who calls whom, in what order, and what happens on failure.',
-      container_diagram: 'A new repo, package, service or deploy boundary: what runs where and what talks to what.',
-      spike: 'A technical unknown: nobody knows yet whether or how it can be done, and a short experiment would answer it.',
-      think_chain: 'A judgement or trade-off that needs reasoning through in writing, which none of the other artifacts would settle.',
+      data_sample:
+        'A new record, table, file or payload: three real-looking rows would settle what it holds.',
+      state_machine:
+        'A lifecycle: the statuses something moves through and what moves it from one to the next.',
+      sequence:
+        'Calls between services, background work or retries: who calls whom, in what order, and what happens on failure.',
+      container_diagram:
+        'A new repo, package, service or deploy boundary: what runs where and what talks to what.',
+      spike:
+        'A technical unknown: nobody knows yet whether or how it can be done, and a short experiment would answer it.',
+      think_chain:
+        'A judgement or trade-off that needs reasoning through in writing, which none of the other artifacts would settle.',
     },
   },
 });
@@ -191,6 +206,7 @@ export function listItems(lines, { numbered = false } = {}) {
 }
 
 const ASK_HEADING = /^the ask, as given\b/i;
+const TEACH_BACK_LINE = /\*\*Teach-back:\*\*/i;
 const INTENT_HEADING = /^intent match\b/i;
 const ACCEPTANCE_HEADING = /^acceptance\b/i;
 
@@ -200,7 +216,8 @@ const ACCEPTANCE_HEADING = /^acceptance\b/i;
  * never a default that would score as zero (D9).
  */
 export function parseSeed(text) {
-  const src = String(text ?? '');
+  // CRLF would defeat every `$` below and parse to "no claims" (fresh review of #196): normalise first.
+  const src = String(text ?? '').replace(/\r\n?/g, '\n');
   const frontmatter = frontmatterOf(src);
   const body = src.replace(FRONTMATTER_RE, '').replace(/<!--[\s\S]*?-->/g, '');
   const secs = sections(body);
@@ -218,10 +235,14 @@ export function parseSeed(text) {
         .trim() || null;
     if (claimsAt >= 0) {
       const after = askSec.lines.slice(claimsAt + 1);
-      const end = after.findIndex((l) => /^###\s/.test(l));
+      // The claims end at the next sub-heading OR the teach-back line: a `**Teach-back:**` written directly under the
+      // last claim would otherwise fold into it as a lazy continuation (fresh review of #196).
+      const end = after.findIndex((l) => /^###\s/.test(l) || TEACH_BACK_LINE.test(l));
       claims = listItems(end < 0 ? after : after.slice(0, end), { numbered: true });
     }
-    const tb = askSec.lines.join('\n').match(/\*\*Teach-back:\*\*\s*(yes|partly|no)\b/i);
+    // `yes | partly | no` is the template's format string, not an answer: a word followed by `|` never counts
+    // (the same rule D17 applies to the retro's `_Intent:_` line).
+    const tb = askSec.lines.join('\n').match(/\*\*Teach-back:\*\*\s*(yes|partly|no)\b(?!\s*\|)/i);
     teachBack = tb ? tb[1].toLowerCase() : null;
   }
   const accSec = secs.find((s) => s.heading && ACCEPTANCE_HEADING.test(s.heading));
@@ -305,14 +326,18 @@ export function totalOf(signals) {
  */
 export function scoreAnswers(parsed, answers) {
   const bad = [];
+  // The answer's own `type` must match the question's too: a `{ type: 'score', noul: 0.9 }` is not a Noul answer,
+  // and reading its `.noul` anyway would turn a malformed reply into a number (codex on #196).
   const noul = (id) => {
-    const v = answers?.[id]?.noul;
-    if (!isUnit(v)) bad.push(id);
-    return v;
+    const a = answers?.[id];
+    if (a?.type !== 'noul' || !isUnit(a.noul)) bad.push(id);
+    return a?.noul;
   };
   const score = (id) => {
-    const v = answers?.[id]?.score;
-    if (!(typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 3)) bad.push(id);
+    const a = answers?.[id];
+    const v = a?.score;
+    if (a?.type !== 'score' || !(typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 3))
+      bad.push(id);
     return v / 3;
   };
   const claims = parsed.claims.map((text, i) => ({ id: claimKey(i), text, p: noul(`in_${claimKey(i)}`) }));
@@ -331,10 +356,16 @@ export function scoreAnswers(parsed, answers) {
   };
   const { total, present } = totalOf(signals);
   const gaps = [
-    ...claims.filter((c) => c.p < 0.5).map((c) => ({ id: c.id, kind: 'uncovered', value: c.p, text: c.text })),
-    ...criteria.filter((a) => a.clarity < 0.5).map((a) => ({ id: a.id, kind: 'unclear', value: a.clarity, text: a.text })),
+    ...claims
+      .filter((c) => c.p < 0.5)
+      .map((c) => ({ id: c.id, kind: 'uncovered', value: c.p, text: c.text })),
+    ...criteria
+      .filter((a) => a.clarity < 0.5)
+      .map((a) => ({ id: a.id, kind: 'unclear', value: a.clarity, text: a.text })),
   ];
-  const untraced = criteria.filter((a) => a.traced < 0.5).map((a) => ({ id: a.id, value: a.traced, text: a.text }));
+  const untraced = criteria
+    .filter((a) => a.traced < 0.5)
+    .map((a) => ({ id: a.id, value: a.traced, text: a.text }));
   return { ok: true, signals, total, present, band: band(total), claims, criteria, gaps, untraced };
 }
 
@@ -373,10 +404,26 @@ export function formatReport(result, { source = 'the seed', agreement, reader } 
   const row = (name, v, detail) => `  ${name.padEnd(13)} ${v == null ? '—   ' : f2(v)}  ${detail}`;
   const lines = [
     `Intent match — ${source}`,
-    row('coverage in', s.coverage_in, `(${result.claims.length} claim${result.claims.length === 1 ? '' : 's'})`),
-    row('coverage out', s.coverage_out, result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'),
-    row('clarity', s.clarity, result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'),
-    row('teach-back', s.teach_back, s.teach_back == null ? '(not recorded)' : `(${{ 1: 'yes', 0.5: 'partly', 0: 'no' }[s.teach_back]})`),
+    row(
+      'coverage in',
+      s.coverage_in,
+      `(${result.claims.length} claim${result.claims.length === 1 ? '' : 's'})`
+    ),
+    row(
+      'coverage out',
+      s.coverage_out,
+      result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'
+    ),
+    row(
+      'clarity',
+      s.clarity,
+      result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'
+    ),
+    row(
+      'teach-back',
+      s.teach_back,
+      s.teach_back == null ? '(not recorded)' : `(${{ 1: 'yes', 0.5: 'partly', 0: 'no' }[s.teach_back]})`
+    ),
     agreement == null
       ? '  agreement     pending  (the optional reader at the architecture lock)'
       : row('agreement', agreement, reader ? `(reader: ${reader})` : ''),
@@ -441,10 +488,17 @@ export function writeIntoSeed(text, result, opts = {}) {
   }
   const section = intentSection(result, opts);
   const lines = src.split('\n');
-  const start = lines.findIndex((l) => /^## /.test(l) && INTENT_HEADING.test(l.slice(3).trim()));
+  // Fence-aware, like sections(): a `## Intent match` inside a code block is an example, and treating it as the
+  // section deleted everything up to the next heading, closing fence included (fresh review of #196).
+  const headingAt = [];
+  let fence = false;
+  lines.forEach((l, i) => {
+    if (/^\s*(```|~~~)/.test(l)) fence = !fence;
+    else if (!fence && /^## /.test(l)) headingAt.push(i);
+  });
+  const start = headingAt.find((i) => INTENT_HEADING.test(lines[i].slice(3).trim())) ?? -1;
   if (start < 0) return `${src.replace(/\s*$/, '')}\n\n${section}`;
-  let end = lines.findIndex((l, i) => i > start && /^## /.test(l));
-  if (end < 0) end = lines.length;
+  const end = headingAt.find((i) => i > start) ?? lines.length;
   return [...lines.slice(0, start), ...section.replace(/\n$/, '').split('\n'), '', ...lines.slice(end)]
     .join('\n')
     .replace(/\n{3,}/g, '\n\n');
@@ -462,20 +516,25 @@ export async function scoreSeed(text, deps) {
   const { config, key, ask, route = true, onCount = () => {} } = deps;
   const parsed = parseSeed(text);
   if (!parsed.claims.length)
-    return couldNotLook('no claims to match against — the seed needs `## The ask, as given` with a `### Claims` list');
+    return couldNotLook(
+      'no claims to match against — the seed needs `## The ask, as given` with a `### Claims` list'
+    );
   if (config.egress !== true)
     return couldNotLook(`jev.egress is ${JSON.stringify(config.egress)}, not true — nothing is sent to Jev`);
   if (!key) return couldNotLook('no TYPESAFE_API_KEY');
   const req = buildRequest(parsed);
   // Checked here as well as in askJev so the refusal names the pitch, and happens before the count is printed.
   if (stateSize(req.state) > STATE_CHAR_BUDGET)
-    return couldNotLook(`the pitch is over Jev's state budget (${stateSize(req.state)} > ${STATE_CHAR_BUDGET} chars); it is never truncated`);
+    return couldNotLook(
+      `the pitch is over Jev's state budget (${stateSize(req.state)} > ${STATE_CHAR_BUDGET} chars); it is never truncated`
+    );
   onCount(Object.keys(req.questions).length, parsed);
   const res = await ask(req);
   if (!res?.ok) return couldNotLook(`jev: ${res?.error ?? 'no answer'}`);
   const result = scoreAnswers(parsed, res.answers);
   if (!result.ok) return couldNotLook(`jev: ${result.error}`);
-  if (route && result.gaps.length) result.gaps = applyRoutes(result.gaps, await ask(buildRouteRequest(parsed, result.gaps)));
+  if (route && result.gaps.length)
+    result.gaps = applyRoutes(result.gaps, await ask(buildRouteRequest(parsed, result.gaps)));
   else result.gaps = result.gaps.map((g) => ({ ...g, route: null }));
   return { state: 'scored', result, parsed, model: res.model ?? null };
 }
@@ -495,7 +554,15 @@ export async function judgeItem(fx, deps) {
     questions: { [id]: itemQuestion(fx.question, path) },
   });
   const a = res?.ok ? res.answers?.[id] : undefined;
-  const p = fx.question === 'clarity' ? (typeof a?.score === 'number' ? a.score / 3 : undefined) : a?.noul;
+  const want = INTENT_QUESTIONS[fx.question].type;
+  const p =
+    a?.type !== want
+      ? undefined
+      : want === 'score'
+        ? typeof a.score === 'number'
+          ? a.score / 3
+          : undefined
+        : a.noul;
   if (!isUnit(p)) return { value: null, p: null, decider: 'could-not-look' };
   return { value: p >= 0.5, p: Math.round(p * 1000) / 1000, decider: 'jev' };
 }
@@ -542,7 +609,9 @@ export async function run(argv, io) {
   const { result, parsed } = out;
   const report = formatReport(result, { source: path });
   if (flags.has('--json')) {
-    io.stdout(`${JSON.stringify({ state: 'scored', total: result.total, band: result.band, signals: componentsOf(result), present: result.present, gaps: result.gaps, untraced: result.untraced, uncalibrated: true, model: out.model })}\n`);
+    io.stdout(
+      `${JSON.stringify({ state: 'scored', total: result.total, band: result.band, signals: componentsOf(result), present: result.present, gaps: result.gaps, untraced: result.untraced, uncalibrated: true, model: out.model })}\n`
+    );
     io.stderr(`${report}\n`);
   } else io.stdout(`${report}\n`);
   if (flags.has('--write')) {
@@ -556,7 +625,12 @@ export async function run(argv, io) {
     confidence: result.total / 100,
     text: path,
     source: path,
-    evidence: { signals: componentsOf(result), present: result.present, gaps: result.gaps.length, untraced: result.untraced.length },
+    evidence: {
+      signals: componentsOf(result),
+      present: result.present,
+      gaps: result.gaps.length,
+      untraced: result.untraced.length,
+    },
   });
   return EXIT_SCORED;
 }

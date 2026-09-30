@@ -18,10 +18,6 @@ scripts/lib/config.mjs
 scripts/lib/config.test.mjs
 scripts/lib/config-registry.mjs
 scripts/lib/config.d.mts
-# intent-match's scorer: byte-identical to skills/template/scripts/ (check-script-parity), which formats under the
-# template's own Prettier config. Formatting this copy under the root config would fork it (intent-match S1).
-scripts/intent-match.mjs
-scripts/intent-match.test.mjs
 references
 apps/web/supabase/migrations
 Roadmap
