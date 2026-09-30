@@ -182,3 +182,48 @@ test('refuses when folds.json no longer matches the fixtures', async () => {
   assert.equal(await run(ARGS, h.io), 2);
   assert.match(h.err, /folds\.json does not match/);
 });
+
+// ── review of #208 (codex + fresh reviewer) ──────────────────────────────────────────────────────────────────
+test('a recording that answered the family must be stamped with this wording under this model — else refused', async () => {
+  for (const bend of [
+    (fx) => delete fx.recorded.questionHashes.live, // unstamped
+    (fx) => (fx.recorded.model = 'jev-1.12.0'), // another model
+  ]) {
+    const h = harness();
+    h.io.fixtures = structuredClone(fixtures);
+    bend(h.io.fixtures.find((f) => Object.keys(f.recorded.answers).some((id) => id.endsWith('_live'))));
+    assert.equal(await run(ARGS, h.io), 2);
+    assert.match(h.err, /did not answer this wording of live/);
+    assert.deepEqual(h.asked, []);
+  }
+  // A recording the family's gates skipped (no _live answers) has nothing to prove and is not refused.
+  const skipped = fixtures.filter((f) => !Object.keys(f.recorded.answers).some((id) => id.endsWith('_live')));
+  assert.ok(skipped.length > 0 && skipped.every((f) => !f.recorded.questionHashes?.live));
+});
+
+test('a cache from another model is a miss, and a partial cache re-asks exactly the drafts it lacks', async () => {
+  const first = harness();
+  assert.equal(await run([...ARGS, '--yes'], first.io), 0);
+  const [hash] = Object.keys(first.cache);
+
+  const bumped = harness({
+    cache: { [hash]: { ...structuredClone(first.cache[hash]), model: 'jev-0.0.0' } },
+  });
+  assert.equal(await run([...ARGS, '--yes'], bumped.io), 0);
+  assert.equal(bumped.asked.length, 159, 'every question re-asked under the pinned model');
+  assert.match(bumped.out, /cache is from jev-0\.0\.0/);
+
+  const partial = structuredClone(first.cache);
+  const gone = Object.keys(partial[hash].answers).slice(0, 3);
+  for (const id of gone) {
+    const one = Object.keys(partial[hash].answers[id])[0];
+    delete partial[hash].answers[id][one];
+  }
+  const again = harness({ cache: partial });
+  assert.equal(await run([...ARGS, '--yes'], again.io), 0);
+  assert.equal(
+    again.asked.length,
+    gone.reduce((s, id) => s + Object.keys(first.cache[hash].answers[id]).length, 0)
+  );
+  assert.deepEqual(json(again).results, json(first).results, 'refilled, then scored exactly as before');
+});

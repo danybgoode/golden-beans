@@ -188,7 +188,8 @@ rails keep their `off | shadow | jev` switch. Every change under `skills/` is a 
 
 The first live run of `optimize/wording.mjs` asked five hand-written candidates for `flag-state-claim`, 795
 questions to `jev-1.13.0`. They were scored on the spike's 5 seeded folds through the real `judgeProse`. The report
-is `optimize/reports/wording-flag-state-claim-2026-09-30.md`.
+is `optimize/reports/wording-flag-state-claim-2026-09-30.md`, with the analysis in `….analysis.md`
+beside it.
 
 | Wording | Held-out right | vs current | D6 |
 |---|---|---|---|
@@ -201,6 +202,9 @@ is `optimize/reports/wording-flag-state-claim-2026-09-30.md`.
 fixes contain a borrowed phrase. Every wording that reframes the question without borrowed examples loses. The
 breaks exposed the rule the labels actually encode: **"shipped" alone is not a release claim; "shipped *to prod*"
 and "ON *in prod*" are.**
+
+One confound isn't isolated: candidates were asked one family per request, while the current wording's answers
+were batched with the other three families. The losses of 8 to 13 are too large for that to explain.
 
 **What this means:** the spike's reading holds. This family's error is labels and evidence more than wording. D6
 as written can't stop leakage when the author has seen the folds, so the next attempt needs **drafts the author has

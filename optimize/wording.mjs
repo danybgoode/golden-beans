@@ -113,14 +113,18 @@ export function draftQuestions(fx, key, question) {
     }));
 }
 
-/** Pure: what is still to ask — [{ candidate, fixture, questions }] for every draft not already in the cache. */
+/** Does a cached entry answer EVERY question this draft is asked now? A draft edited under the same id would not. */
+export const covers = (entry, questions) =>
+  Boolean(entry) && questions.every((q) => typeof entry[q.id]?.noul === 'number');
+
+/** Pure: what is still to ask — [{ candidate, fixture, questions }] for every draft the cache does not fully cover. */
 export function plan({ fixtures, key, candidates, cache }) {
   const todo = [];
   for (const c of candidates)
     for (const fx of fixtures) {
-      if (cache[c.hash]?.answers?.[fx.id]) continue;
       const questions = draftQuestions(fx, key, c.question);
-      if (questions.length) todo.push({ candidate: c, fixture: fx, questions });
+      if (questions.length && !covers(cache[c.hash]?.answers?.[fx.id], questions))
+        todo.push({ candidate: c, fixture: fx, questions });
     }
   return todo;
 }
@@ -135,7 +139,7 @@ async function pool(items, n, fn) {
 }
 
 /** Ask what the plan says, filling `cache` in place. Returns the drafts Jev could not look at. */
-export async function askAll({ todo, cache, ask, model, onProgress = () => {} }) {
+export async function askAll({ todo, cache, ask, model, onProgress = () => {}, persist = () => {} }) {
   const failed = [];
   let done = 0;
   await pool(todo, CONCURRENCY, async ({ candidate, fixture, questions }) => {
@@ -158,6 +162,8 @@ export async function askAll({ todo, cache, ask, model, onProgress = () => {} })
       );
     }
     onProgress(++done, todo.length);
+    // Paid answers are written as they arrive, so an interrupted run keeps what it bought.
+    if (done % 25 === 0) persist();
   });
   return failed;
 }
@@ -253,7 +259,8 @@ export function formatReport({ question, date, model, threshold, results, sent, 
     '',
     `Model \`${model}\`, claim threshold ${threshold} (configured), ${cur.tally.n} labelled prose drafts on the spike's 5 seeded ` +
       `folds (\`optimize/folds.json\`). Every wording scored through the real \`judgeProse\`, the other three families ` +
-      `replayed from the recordings. This run sent ${sent} request(s); ${cached} candidate(s) were already cached.`,
+      `replayed from the recordings. Candidate answers come from the wording cache (this invocation sent ${sent} request(s); ` +
+      `${cached} candidate(s) were fully cached). This file is REGENERATED on every run — commentary belongs in a sibling file.`,
     '',
     `**The rule (D6):** a candidate wins only if its held-out total beats the current wording by ≥ ${WIN_MARGIN} drafts and it ` +
       `is worse on no more than ${MAX_WORSE_FOLDS} fold. The refit column is information only.`,
@@ -343,12 +350,16 @@ export async function run(argv, io) {
   }
   // The current wording's answers ARE the recordings — but only if the recordings answered this exact wording (D3).
   const currentHash = questionHash(target);
+  // A recording that answered this family must be stamped with EXACTLY this wording, by the configured model; one
+  // with no answers for the family (its gates skipped it) has nothing to prove. Unstamped counts as stale.
   const stale = fixtures.filter(
-    (fx) => fx.recorded?.questionHashes?.[target.id] && fx.recorded.questionHashes[target.id] !== currentHash
+    (fx) =>
+      Object.keys(fx.recorded?.answers ?? {}).some((id) => id.endsWith(`_${target.id}`)) &&
+      (fx.recorded?.questionHashes?.[target.id] !== currentHash || fx.recorded?.model !== io.config.model)
   );
   if (stale.length) {
     io.stderr(
-      `wording: ${stale.length} recording(s) answered another wording of ${target.id} — run \`node scripts/jev-eval.mjs --live\` first.\n`
+      `wording: ${stale.length} recording(s) did not answer this wording of ${target.id} under ${io.config.model} (e.g. ${stale[0].id}) — run \`node scripts/jev-eval.mjs --live\` first.\n`
     );
     return 2;
   }
@@ -356,7 +367,12 @@ export async function run(argv, io) {
   const cache = {};
   for (const c of candidates) {
     const hit = io.readCache(c.hash);
-    if (hit) cache[c.hash] = hit;
+    // A cache answers for the model that produced it: after a model bump it is a miss, never a silent mix.
+    if (hit && hit.model === io.config.model) cache[c.hash] = hit;
+    else if (hit)
+      io.stdout(
+        `wording: ${c.name}'s cache is from ${hit.model}, config pins ${io.config.model} — re-asking.\n`
+      );
   }
   const todo = plan({ fixtures, key: target.id, candidates, cache });
   const nQuestions = todo.reduce((s, t) => s + t.questions.length, 0);
@@ -382,6 +398,9 @@ export async function run(argv, io) {
       ask: io.ask,
       model: io.config.model,
       onProgress: (d, n) => (d % 25 === 0 || d === n ? io.stdout(`  asked ${d}/${n}\n`) : null),
+      persist: () => {
+        for (const c of candidates) if (cache[c.hash]) io.writeCache(c.hash, cache[c.hash]);
+      },
     });
     for (const c of candidates) if (cache[c.hash]) io.writeCache(c.hash, cache[c.hash]);
     if (failed.length) {
@@ -405,8 +424,12 @@ export async function run(argv, io) {
     ...candidates.map((c) => ({
       ...c,
       answersFor: (fx) => {
-        const needs = draftQuestions(fx, target.id, c.question).length;
-        return needs ? (cache[c.hash]?.answers?.[fx.id] ?? null) : {};
+        const needs = draftQuestions(fx, target.id, c.question);
+        if (!needs.length) return {};
+        const entry = cache[c.hash]?.answers?.[fx.id];
+        // Never score a gap: a missing answer would fail the judge's whole chunk and read as a regex fallback.
+        if (!covers(entry, needs)) throw new Error(`${c.name}/${fx.id}: the cache does not cover this draft`);
+        return entry;
       },
     })),
   ];

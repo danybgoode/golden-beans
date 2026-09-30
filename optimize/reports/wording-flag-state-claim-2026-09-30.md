@@ -1,6 +1,6 @@
 # Wording run — `flag-state-claim` (live), 2026-09-30
 
-Model `jev-1.13.0`, claim threshold 0.8 (configured), 163 labelled prose drafts on the spike's 5 seeded folds (`optimize/folds.json`). Every wording scored through the real `judgeProse`, the other three families replayed from the recordings. This run sent 0 request(s); 5 candidate(s) were already cached.
+Model `jev-1.13.0`, claim threshold 0.8 (configured), 163 labelled prose drafts on the spike's 5 seeded folds (`optimize/folds.json`). Every wording scored through the real `judgeProse`, the other three families replayed from the recordings. Candidate answers come from the wording cache (this invocation sent 0 request(s); 5 candidate(s) were fully cached). This file is REGENERATED on every run — commentary belongs in a sibling file.
 
 **The rule (D6):** a candidate wins only if its held-out total beats the current wording by ≥ 2 drafts and it is worse on no more than 1 fold. The refit column is information only.
 
@@ -77,30 +77,3 @@ _Why:_ Puts the judgement in the reader's head — would a stakeholder reading t
 >
 > **false:** No: they would only learn that work was done, merged or shipped, what the code does, what someone did, or what is planned — or they would read it as off, dark or not yet available; a template or heading tells them nothing.
 
-
-## Read this before adopting: the win is mostly leakage (analysis added by the run's author)
-
-The run followed D6 mechanically, and `examples-extended` passes it: +5 held out, and worse on no fold. **But the
-held-out folds can't protect this candidate.** Its new TRUE and FALSE examples were written *after* reading the 19
-errors on all 163 drafts, and several are lifted almost word for word from the missed sentences. Comparing it with
-the current wording draft by draft:
-
-| | Drafts | Contain a phrase the candidate borrowed |
-|---|---|---|
-| **Fixed** (wrong → right) | 10: retro-42, 51, 60, 62, 64, 68, 83, 99, 140, 141 | **9 of 10** ("100% traffic", "redeemable", "default-ON", "Shipped:", "minted the live coupon", "loads across every…") |
-| **Broken** (right → wrong) | 5: retro-16, 23, 36, 116, rx-shipped-to-prod | 4 of 5 |
-
-What the breaks show about the labels: **"shipped" alone is not a release claim, but "shipped *to prod*" and
-"flag … ON *in prod*" are.** "**Shipped:** 2026-06-23" is labelled clean, while "Shipped to prod 2026-06-06" and
-"Flag `…` ON in prod from day one" are labelled flag-state claims. The candidate's blanket "a shipped/status line is
-FALSE" example contradicts that. So the real signal is the *production* qualifier, not the vocabulary.
-
-**Verdict: a win on paper, not evidence of a better question.** Every other wording that reframes the question
-without borrowed examples (runtime, needs-production-proof, short contrastive, reader belief) **loses by 8 to 13**.
-That supports the spike's other hypothesis for this family: the fix is evidence and labels rather than wording.
-Adopting `examples-extended` would probably score better on these 163 drafts and no better on new ones.
-
-**To make it a real test:** label drafts the wordings never saw (the disagreements `jev-report --json` finds in
-`.jev/decisions.jsonl` and the `<!-- jev: -->` markers), then score `current` against a new candidate written
-without reading them. A candidate that encodes the "to prod / in prod" rule, not borrowed phrases, is the one
-worth writing.
