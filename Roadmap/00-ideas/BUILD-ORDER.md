@@ -15,7 +15,7 @@
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
-- [Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 0/6 stories · risk: Low · single-product-wave-C
+- [Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 3/6 stories · risk: Low · single-product-wave-C
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 

@@ -99,6 +99,8 @@ export function renderSketch(surfaces, { title = 'Sketch' } = {}) {
     .map(
       (surface) =>
         `<section><header>${escape(surface.state)} · ${escape(surface.route)}</header>${surface.blocks
+          // `block.kind` is one of the parser's twelve (an own-property check there), so it is safe as an attribute
+          // and always has a drawing.
           .map((block) => `<div class="block" data-kind="${block.kind}">${DRAW[block.kind](block)}</div>`)
           .join('\n')}</section>`
     )
