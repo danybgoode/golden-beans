@@ -79,6 +79,20 @@ annotation, the `Prototype` pill, the "See this page on day …" picker, and the
 version cards (epic A4 — screenshot upload is deferred). The "Monday 28 Sep, 9:00" start chip is
 dropped until a scheduler exists (epic A6).
 
+## Approved surfaces
+
+*Added 2026-09-30 by `sketch-specs` (epic README D12).* A state can be approved as a `surface` block instead of a
+prototype drawing: the file lives in `surfaces/<state>.surface` and its approval is a line here with the first 16 hex
+of the file's SHA-256. `state-contract.mjs --check` and `surface-contract.test.ts` fail on a surface with no line, a
+line whose hash no longer matches the file, and a line for a file that does not exist. **Unlike the prototype lines
+above, this hash is checked by code** — nothing compares the two prototypes' hashes (lock C2).
+
+No surface has been approved yet (lock C4, C5). The first state to use this is the first new console state after
+2026-09-30.
+
+| State | File | SHA-256 (first 16) | Approved by | Approved |
+|---|---|---|---|---|
+
 ## Design decisions settled at approval — the lock does NOT reopen these
 
 Each was put to the product owner and answered. A builder cites them; the architecture lock verifies

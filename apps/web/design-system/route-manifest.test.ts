@@ -11,6 +11,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ALL_STATE_IDS } from './approved-states.mjs'
+import { BLOCK_KINDS } from './state-contract-core.mjs'
+import { approvedSurfaces } from './surface-contract.mjs'
 import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory.ts'
 import {
   OUT_OF_SCOPE_PAGES,
@@ -100,7 +102,13 @@ test('every reference state is one of the approved ids (38: 33 console + 5 exper
   // "Adding a state without an approval line is the thing Rail 2 forbids." The inverse matters
   // just as much: citing a state id that was never approved gives a route a contract nobody agreed
   // to, and it fails as a typo rather than as a decision.
-  const approved = new Set(ALL_STATE_IDS)
+  //
+  // An approved SURFACE is an approved state too (sketch-specs D12): its id is admitted only while its APPROVED.md hash
+  // line matches, through the same call the contract generator makes — so a route can cite exactly what the contract
+  // holds, no more.
+  const { entries, problems } = approvedSurfaces(HERE, { kinds: BLOCK_KINDS, prototypeIds: ALL_STATE_IDS })
+  assert.deepEqual(problems, [], 'the approved surfaces do not make a contract')
+  const approved = new Set([...ALL_STATE_IDS, ...Object.keys(entries)])
   for (const row of ROUTE_MANIFEST) {
     if (row.referenceState === null) continue
     assert.ok(
