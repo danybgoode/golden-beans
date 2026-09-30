@@ -10,6 +10,7 @@ import {
   ROUTES,
   band,
   frontmatterOf,
+  FENCE_RE,
   buildRequest,
   buildRouteRequest,
   judgeItem,
@@ -525,4 +526,10 @@ test('the groom seed template parses: placeholder teach-back is unanswered, Visu
   assert.match(p.pitch, /```surface/, 'the Visuals stay in the pitch Jev reads');
   assert.match(frontmatterOf(text).intent_ask, /^verbatim$/);
   assert.equal(frontmatterOf(text).intent_match, 'null');
+});
+
+test('FENCE_RE follows CommonMark: up to three spaces of indent is a fence, four is code', () => {
+  assert.equal(FENCE_RE.test('```'), true);
+  assert.equal(FENCE_RE.test('   ~~~'), true);
+  assert.equal(FENCE_RE.test('    ```'), false);
 });
