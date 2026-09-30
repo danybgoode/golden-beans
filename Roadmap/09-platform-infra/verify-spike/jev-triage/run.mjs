@@ -38,6 +38,7 @@ const PATHS = [
   'apps/web/supabase/migrations/*deliver*',
   'apps/web/supabase/migrations/*fanout*',
   'apps/web/supabase/migrations/*destination*',
+  'apps/web/app/api/internal/dispatch-deliveries/route.ts', // maxDuration + TICK_BUDGET_MS (F3)
   'apps/web/lib/delivery-dispatch.ts',
   'apps/web/lib/deliveries.ts',
   'apps/web/lib/webhook-delivery.ts',

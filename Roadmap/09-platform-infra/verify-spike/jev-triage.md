@@ -14,15 +14,21 @@ diff, and it is the reference Jev is measured against.
 
 | PR             | What it changed on the specified paths                      | touches spec (Jev p / B) | counterexample class (Jev / B)    | obligation (Jev / B)       | verify depth (Jev / B)  |
 | -------------- | ----------------------------------------------------------- | ------------------------ | --------------------------------- | -------------------------- | ----------------------- |
-| `7f81540` #167 | adds `rulePriority` to the verdict                          | 0.40 / yes               | explain-verdict / explain-verdict | update spec / new property | **standard / standard** |
-| `20cecfb` #137 | read-side select of `destination_id` in `deliveries.ts`     | 0.22 / no                | none / none                       | none / none                | light / off             |
+| `7f81540` #167 | adds `rulePriority` to the verdict                          | 0.45 / yes               | explain-verdict / explain-verdict | update spec / new property | **standard / standard** |
+| `20cecfb` #137 | read-side select of `destination_id` in `deliveries.ts`     | 0.20 / no                | none / none                       | none / none                | light / off             |
 | `0a0beb0` #96  | a one-line rename in `flags.ts`                             | 0.08 / no                | none / none                       | none / none                | **off / off**           |
-| `b473d13` #90  | splits the matcher, adds `explainFlagEvaluation`            | 0.54 / yes               | explain-verdict / explain-verdict | update spec / new property | standard / deep         |
-| `c258a18` #58  | webhook transport moved to `guarded-http` (DNS pinning)     | 0.22 / no                | other / none                      | update spec / rerun        | standard / light        |
-| `bc1abba` #39  | introduces `evaluateFlag`                                   | 0.47 / yes               | explain-verdict / explain-verdict | update spec / new property | **deep / deep**         |
+| `b473d13` #90  | splits the matcher, adds `explainFlagEvaluation`            | 0.56 / yes               | explain-verdict / explain-verdict | update spec / new property | standard / deep         |
+| `c258a18` #58  | webhook transport moved to `guarded-http` (DNS pinning)     | 0.21 / no                | stuck row / none                      | update spec / rerun        | standard / light        |
+| `bc1abba` #39  | introduces `evaluateFlag`                                   | 0.48 / yes               | explain-verdict / explain-verdict | update spec / new property | **deep / deep**         |
 | `9977c5a`      | comment-only edit to a migration                            | 0.18 / no                | none / none                       | none / none                | light / off             |
-| `015eae4` #16  | claim, settle, retry, replay, health, fan-out serialization | 0.70 / yes               | **stuck row** / duplicate send    | update spec / new property | **deep / deep**         |
-| `ce65993` #15  | creates the outbox and the dispatcher                       | 0.59 / yes               | stuck row / stuck row             | update spec / new property | **deep / deep**         |
+| `015eae4` #16  | claim, settle, retry, replay, health, fan-out serialization | 0.79 / yes               | **stuck row** / duplicate send    | update spec / new property | **deep / deep**         |
+| `ce65993` #15  | creates the outbox and the dispatcher                       | 0.58 / yes               | stuck row / stuck row             | update spec / new property | **deep / deep**         |
+
+**Two runs, same answers where it matters.** The table is from the second run (2026-09-29), after the
+dispatch route (`maxDuration`, `TICK_BUDGET_MS`) was added to the paths. That changed what Jev saw of
+`015eae4`, whose diff is cut at 60 KB. The PR set was unchanged. **`verify_depth` was identical on
+all 9 PRs across both runs.** `touches_spec` moved by at most 0.09, and one counterexample class
+changed (`c258a18`: other → stuck row).
 
 ## Verdict — usable for ONE of the four questions
 
@@ -30,8 +36,8 @@ diff, and it is the reference Jev is measured against.
   other 4, and was never two levels off. It never rated a protocol-changing PR below `standard`. Three
   of the four misses over-called, which is the safe direction for a router. One under-called: `b473d13`
   (#90) got `standard` where the builder said `deep`. That one should be watched in shadow.
-- **`touches_spec` ranks correctly but is not calibrated.** Every spec-changing PR scored 0.40–0.70
-  and every other PR scored 0.08–0.22, so a threshold near 0.35 separates this sample perfectly. No
+- **`touches_spec` ranks correctly but is not calibrated.** Every spec-changing PR scored 0.45–0.79
+  and every other PR scored 0.08–0.21, so a threshold near 0.35 separates this sample perfectly. No
   PR came near the review rail's 0.85 bar, though, so it cannot gate at the existing thresholds. Nine
   PRs are too few to set a threshold. The next step is to label more PRs, as the review rail did
   (74/76 on its fixtures).
