@@ -5,17 +5,19 @@
 // This runs each entry through a symlinked directory with an argument that must produce output, so the
 // class fails here instead of in a stranger's symlinked checkout.
 
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const LINK = join(mkdtempSync(join(tmpdir(), 'rail-link-')), 'scripts');
+const TMP = mkdtempSync(join(tmpdir(), 'rail-link-'));
+const LINK = join(TMP, 'scripts');
 symlinkSync(HERE, LINK);
+after(() => rmSync(TMP, { recursive: true, force: true }));
 
 // [entry, args, output that proves main() ran]
 const ENTRIES = [
@@ -23,6 +25,7 @@ const ENTRIES = [
   ['cross-review.mjs', ['--help'], /cross-review\.mjs/],
   ['cross-agent-doctor.mjs', ['bogus-family'], /unknown family/],
   ['session-note.mjs', [], /usage|kind|note/i],
+  ['session-resume.mjs', ['--help'], /session-resume\.mjs/],
 ];
 
 for (const [entry, args, proof] of ENTRIES) {
