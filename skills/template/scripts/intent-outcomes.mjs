@@ -3,7 +3,7 @@
 // S3.2, D18).
 //
 //   node scripts/intent-outcomes.mjs                                  this repo
-//   node scripts/intent-outcomes.mjs --repo . --repo ../medusa-bonsai  every repo on the same Roadmap layout
+//   node scripts/intent-outcomes.mjs --repo . --repo ../other-project  every repo on the same Roadmap layout
 //   node scripts/intent-outcomes.mjs --json                           the rows as JSON
 //
 // Each row joins three things, all read from files:
