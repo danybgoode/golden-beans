@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: semantic-lint
 title: "Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow)"
@@ -37,10 +37,83 @@ under `skills/` is a plugin release.
 - **D3 — One committed switch.** `lib/jev.mjs` `RAILS` gains `lint`; `jev.rails.lint` holds `mode`, per-rule
   `threshold` and `shadowExpires`, so `scripts-guard.yml`'s expiry step covers it unchanged.
 - **D4 — Rules are data** in a `lint` section of `golden-frijoles.config.json` (`rules[]`: id, globs, patterns,
-  allowlist, question, severity), plus one config-registry row so `gf doctor` shows it (no CLI change).
+  allowlist, question, severity), plus one config-registry row so `gf doctor` shows it (no CLI change). *(The doctor
+  half is disproved — see C2.)*
 - **D5 — Local only in v1.** The advisory pre-push hook runs it on changed files; no workflow has `TYPESAFE_API_KEY`,
   and adding it is a production-secret decision left for promotion.
 - **D6 — Only candidate hunks leave the machine**, under the existing `jev.egress` answer.
+
+## Architecture lock (2026-09-30, against `main` @ 7f6d416)
+
+Verified against live code and data before any code. Where the live system disproved the groomed scope, the correction
+is stated here, out loud; builders cite these, never a paraphrase.
+
+**Scope corrected by the lock**
+
+- **C1 — `jev.rails.lint` lives in `jev.config.json`, not `golden-frijoles.config.json`.** `readSection` lays the new
+  file's *top-level keys* over the legacy file's (`lib/config.mjs`, "the NEW FILE WINNING PER TOP-LEVEL KEY"), so a
+  `jev.rails` in the new file would replace the legacy `rails` object whole and silently put the promoted `review` and
+  `prose` rails back to `off`. The switch stays in the file that already holds the other two.
+- **C2 — `gf doctor` cannot show a `lint.rules` line.** It prints one line per *module* (`packages/cli/src/modules.ts`
+  `moduleLines`), skips `never-yet` rows, and loads the *published* kit. The registry row still lands (it declares the
+  section); the visible check is `node scripts/config.mjs get lint.rules` (`gf-kit config get lint.rules`). Smoke step 5
+  is rewritten to that.
+- **C3 — 30 labelled fixtures, not 10–20.** `jev-eval.mjs` fails any judge with fewer than `MIN_FIXTURES = 30`. Lowering
+  the floor for one rail would weaken a guard, so rule 1 gets 30.
+- **C4 — Not in the kit closure.** The kit ships only what some `SKILL.md` declares in `requires_scripts:`
+  (`build-kit.mjs`); no skill runs the lint — the hook does. It ships in `skills/template/scripts/` like `jev-eval.mjs`
+  and `jev-report.mjs` (also not in the kit). Its imports (`lib/jev.mjs`, `lib/config.mjs`) are already in the closure,
+  and they change, so this is still a plugin release: **0.12.1 → 0.13.0**.
+- **C5 — `jev-report.mjs` gains a `lint` summary.** It reads only `review`/`prose` rows today, so the promote/tune/drop
+  decision owed on `shadowExpires` would have no report. Minimal: per `lint:<id>`, decisions and raise / uncertain /
+  clear / not-checked counts.
+- **C6 — The pre-push hook is not "advisory" end to end.** Both hooks have a BLOCKING section (build-order, scripts
+  unit tests). The lint goes in the ADVISORY section and is called `… || true`; it never contributes to the exit code.
+- **C7 — Globs.** Migrations are `apps/web/supabase/migrations/**`, already inside `apps/web/**`; the rule's glob is
+  just `apps/web/**`.
+
+**Decisions (the build contract cites these)**
+
+- **D1 — Candidate = one hunk.** From `git diff -U3 --no-color --diff-filter=d <range>`: a hunk in a file that matches a
+  rule's `globs` and none of its `allowlist`, with at least one ADDED line matching one of its `patterns` (JS RegExp
+  source, compiled with `i`). One Noul per candidate per rule, question id `violates`. No candidate → no Jev call and
+  no log line.
+- **D2 — Four outcomes, one statistic.** `p ≥ threshold` → **raise**; `p ≤ 1 − threshold` → **clear**; between →
+  **uncertain**; anything else → **not checked** with the reason: no key, egress false/null, timeout or any
+  could-not-look, a `noul` that is not a number in [0,1], a hunk over `HUNK_CHAR_LIMIT` (6,000), past `MAX_CANDIDATES`
+  (20) or the run's time budget (60 s). Not-checked is logged and printed; it is never counted as clear.
+- **D3 — The switch.** `RAILS = ['review', 'prose', 'lint']`; `DEFAULT_CONFIG.rails.lint = { mode: 'off', thresholds:
+  { default: 0.8 }, shadowExpires: null }`. For `lint` only, a threshold key is `default` or a rule id
+  (`/^[a-z0-9][a-z0-9-]*$/`), each 0…1; unknown keys stay refused for the other rails. This repo's `jev.config.json`:
+  `lint: { mode: 'shadow', thresholds: { default: <measured> }, shadowExpires: '2026-10-14' }`. The template's
+  `jev.config.json` is unchanged (defaults = off).
+- **D4 — Rules are data.** `SECTIONS` gains `lint`. This repo gets its first `golden-frijoles.config.json`, holding only
+  `{ "lint": { "rules": [...] } }` (verified: a section the new file lacks still reads from its legacy file alone). A
+  rule is `{ id, source, severity: blocking|should-fix|nit, globs[], allowlist[], patterns[], question: {
+  instructions, criteria: { true, false } } }`; `semantic-lint.mjs` owns the parser (the config core never validates a
+  section) and a malformed rule throws, loud. Registry row `lint.rules`: module Build, `askWhen: 'never-yet'`,
+  `default: null` (the `routines` precedent).
+- **D5 — Local only.** Both pre-push hooks pass the pushed ranges as `--range <base>...<head>` (repeatable), read from
+  the refs git gives the hook on stdin; with no `--range`, `@{upstream}...HEAD`, then `origin/main...HEAD`.
+- **D6 — Egress.** The state sent is `{ rule, source, file, hunk }` for one candidate. Mode `off` or no rules exits
+  before `jevContext`, so an off rail never fires the `jev.egress` ask on a stranger's push.
+- **D7 — The log.** One `logDecision` per candidate: `rail: 'lint:<id>'`, `mode`, `decider: 'jev' | 'not-checked'`,
+  `regex: null`, `jev: outcome === 'raise'` (null when not checked), `confidence: p`, `text: hunk`, `source:
+  '<file>@<head sha>'`, `evidence: { file, outcome }`, `error`.
+- **D8 — Eval.** `lint` fixtures live in the shared `jev-eval.fixtures.json`: `{ id, rule, file, hunk, label, origin:
+  'history:<sha>' | 'constructed', recorded: { model, questionHash, answers }, decision }`. Replay runs the real judge
+  with the rule from the project's `lint` config and fails when the question's hash differs from the recording's
+  (wording changed → `--live`). A fixture whose rule the project lacks (the template's own run) is skipped, loudly.
+  Reported like `intent`: decided (raise or clear) and how many of those were right. `scripts-guard.yml` also triggers on
+  `golden-frijoles.config.json`.
+- **D9 — Output.** One summary line per run, e.g. `semantic-lint (shadow): lint:rule-1 — 2 candidate(s): 1 would raise
+  (p=0.93 apps/web/app/api/x/route.ts), 1 clear · logged, not shown as findings`. `nothing to judge` when there are no
+  candidates, `not checked (<reason>)` when Jev could not look. In `jev` mode raised candidates print as findings with
+  their severity. Exit 0 always, except 2 for a malformed config (which the hook still ignores). No blocking mode in v1.
+
+**Routing (amended at the lock).** All three stories are built by the architect (Claude), in place — one builder, the
+only session in this checkout; 1.1 is shared surface (`lib/jev.mjs`, `lib/config.mjs`) anyway. Review per
+`review-route.mjs --builder claude`.
 
 ## What already exists (reuse, don't rebuild)
 - `skills/template/scripts/lib/jev.mjs` (`askJev`, `effectiveMode`, `logDecision`, `parseJevConfig`, `RAILS`).
@@ -60,7 +133,7 @@ under `skills/` is a plugin release.
 
 ## Routing
 1.2 (question wording) on the strongest tier; 1.1 and 1.3 to a builder against the locked contract. Review per the
-router.
+router. *(Amended at the lock: the architect builds all three — see the lock's Routing line.)*
 
 ## Kill switch (Stage 6b)
 Not required (`risk: low`). The rail is `off | shadow | jev` in one committed file; shadow is advisory by construction.
