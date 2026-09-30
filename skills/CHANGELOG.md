@@ -7,6 +7,15 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-09-30
+
+### Fixed
+
+- **The build view no longer errors when a session starts.** With function hooks on, 0.14.0 could log
+  `golden-frijoles: ui.render hook skipped: threw TypeError: … evaluating '$.state.get'`. The engine can draw the
+  band before the session's `$.state` exists. The band now draws nothing for that draw, and logs why under
+  `claude --debug`. The same guard covers `turn.start`'s error path, which would otherwise have thrown into the turn.
+
 ## [0.14.0] - 2026-09-30
 
 ### Added

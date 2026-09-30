@@ -80,7 +80,13 @@ export const register: Register = (on) => {
       await $.state.set(VIEW, text || null);
     } catch (err) {
       $.ui.log(`build view: ${String(err)}`);
-      await $.state.set(VIEW, null).catch(() => {});
+      // Its own try: when `$.state` itself is missing (see the render hook), the failure above IS that, and an
+      // unguarded clear would throw out of this catch into the turn.
+      try {
+        await $.state.set(VIEW, null);
+      } catch {
+        /* nothing to clear */
+      }
     }
     return next(e);
   });
@@ -125,7 +131,17 @@ export const register: Register = (on) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e);
-    const { value } = await $.state.get(VIEW);
+    // At session start the engine can draw this band on a `$` with no `state` noun yet: 0.14.0 logged
+    // "ui.render hook skipped: threw TypeError: … evaluating '$.state.get'" (the product owner, 2026-09-30). Draw
+    // nothing for that draw rather than throw; a later draw reads the view as usual. (`$` may only be spelled at a call
+    // site, so the guard is a try, not a presence check.)
+    let value: string | null | undefined;
+    try {
+      ({ value } = await $.state.get(VIEW));
+    } catch (err) {
+      $.ui.log(`build view: no state to draw from yet (${String(err)})`);
+      return next(e);
+    }
     const rows = bandRowsFrom(value ?? null);
     if (!rows.length) return next(e);
     const { Box, Text } = $.ui.resolve(e);
