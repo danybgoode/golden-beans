@@ -27,8 +27,9 @@ diff, and it is the reference Jev is measured against.
 ## Verdict — usable for ONE of the four questions
 
 - **Verify depth is usable as a router.** It matched exactly on 5 of 9 PRs, was one level off on the
-  other 4, and was never two levels off. It never rated a protocol-changing PR `off` or `light`. Every
-  miss erred toward **more** verification, which is the safe direction for a router.
+  other 4, and was never two levels off. It never rated a protocol-changing PR below `standard`. Three
+  of the four misses over-called, which is the safe direction for a router. One under-called: `b473d13`
+  (#90) got `standard` where the builder said `deep`. That one should be watched in shadow.
 - **`touches_spec` ranks correctly but is not calibrated.** Every spec-changing PR scored 0.40–0.70
   and every other PR scored 0.08–0.22, so a threshold near 0.35 separates this sample perfectly. No
   PR came near the review rail's 0.85 bar, though, so it cannot gate at the existing thresholds. Nine

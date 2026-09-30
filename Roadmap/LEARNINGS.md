@@ -1854,7 +1854,7 @@ one-liner + why + date shape.
   uses JS `trim()` disagreed with production on 8% of inputs, and every theorem still held.
 - **Random simulation and bounded exhaustive search find different bugs. Run both.** Quint's simulator
   found a stranded row in 1 s and never found the 12-step unbounded-resend trace that Apalache found in
-  107 s. Use simulation per PR (fast) and exhaustive search nightly (slow).
+  about 2 minutes. Use simulation per PR (fast) and exhaustive search nightly (slow).
 - **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
   feeds "what did this PR change" to a model or reviewer must diff against the first parent
   (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.

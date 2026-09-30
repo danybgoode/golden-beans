@@ -21,7 +21,9 @@ QUINT=/path/to/quint bash Roadmap/09-platform-infra/verify-spike/quint/check.sh 
 QUINT=/path/to/quint bash Roadmap/09-platform-infra/verify-spike/quint/check.sh         # + the exhaustive runs
 ```
 
-Expected output is the table in `DECISION.md` § S1.1. The four counterexample traces are in
+Each row prints the result `DECISION.md` § Evidence records next to the result it got. The script
+exits 1 if any row differs **or produces no result** (a missing tool or a checker crash), so a blank
+row can never read as a pass. The four counterexample traces are in
 `quint/traces/*.itf.json`. Print any of them one step per line with
 `node Roadmap/09-platform-infra/verify-spike/quint/summarize-itf.mjs <trace>`.
 
@@ -32,7 +34,7 @@ cd Roadmap/09-platform-infra/verify-spike/lean
 lake build                        # model + proofs + the diff-test executable (~5 s)
 lake env lean Axioms.lean         # each theorem uses only propext, Classical.choice, Quot.sound; no sorryAx
 cd -
-node Roadmap/09-platform-infra/verify-spike/diff-test/run.mjs 2000 1   # also seeds 2 and 3
+for seed in 1 2 3; do node Roadmap/09-platform-infra/verify-spike/diff-test/run.mjs 2000 $seed || break; done
 ```
 
 Expected: `"disagreements": 0` for seeds 1, 2 and 3 (2,000 cases each, the Lean model ~65 ms per

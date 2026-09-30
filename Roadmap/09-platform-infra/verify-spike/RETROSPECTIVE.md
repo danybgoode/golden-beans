@@ -18,7 +18,7 @@ _Closed: 2026-09-29_
 
 ## What went well
 - **The model found what review hadn't.** The outbox had been through two dozen cross-review rounds.
-  The model still found a stranded row in 1 s, and an unbounded, unlogged resend in 107 s of
+  The model still found a stranded row in 1 s, and an unbounded, unlogged resend in about 2 minutes of
   exhaustive search.
 - **Stating the theorem was itself a finding.** "The explanation agrees with the verdict" is only true
   for a type-correct call. Writing it as a Lean statement forced that caveat into words.

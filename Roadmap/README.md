@@ -354,7 +354,8 @@ independently shippable slice of value.
   flag explanation agrees with the served value for every type-correct call, and a differential test ties
   the model to the shipped code (0/6,000 disagreements). **Decision:** Quint + Lean, per-PR simulation,
   nightly exhaustive checks, and no proof without a differential test. **Shipped 2026-09-29.** No landing
-  claim yet (audit D7).
+  claim yet (audit D7). ⚠️ **Owed to Daniel (F7):** confirm the delivery cron is registered in production
+  (Vercel → Settings → Cron Jobs). Root Directory is `.`, but the `crons` entry lives only in `apps/web/vercel.json`.
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
