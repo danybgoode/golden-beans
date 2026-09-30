@@ -152,10 +152,16 @@ export async function askAll({ todo, cache, ask, model, onProgress = () => {}, p
   const failed = [];
   let done = 0;
   await pool(todo, CONCURRENCY, async ({ candidate, fixture, questions }) => {
-    const r = await ask({
-      state: { report_draft: String(fixture.draft) },
-      questions: Object.fromEntries(questions.map((q) => [q.id, q.question])),
-    });
+    // askJev never throws, but the client is injectable: a throw is one failed draft, never a lost batch of paid answers.
+    let r;
+    try {
+      r = await ask({
+        state: { report_draft: String(fixture.draft) },
+        questions: Object.fromEntries(questions.map((q) => [q.id, q.question])),
+      });
+    } catch (e) {
+      r = { ok: false, error: `ask threw: ${e?.message || e}` };
+    }
     const answers = r.ok ? r.answers : null;
     const valid = answers && questions.every((q) => typeof answers[q.id]?.noul === 'number');
     if (!valid) failed.push(`${candidate.name}/${fixture.id}: ${r.ok ? 'an answer was missing' : r.error}`);

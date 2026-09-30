@@ -245,3 +245,22 @@ test('a cache from another model is a miss, and a partial cache re-asks exactly 
   assert.equal(await run([...ARGS, '--yes'], edited.io), 0);
   assert.equal(edited.asked.length, n, 'only the edited draft is re-asked');
 });
+
+test('a client that throws mid-run loses no paid answers: the rest are cached, and a re-run asks only the failures', async () => {
+  const h = harness();
+  const ok = h.io.ask;
+  let n = 0;
+  h.io.ask = async (req) => {
+    n += 1;
+    if (n % 10 === 0) throw new Error('socket hang up');
+    return ok(req);
+  };
+  assert.equal(await run([...ARGS, '--yes'], h.io), 1);
+  assert.match(h.err, /could not look at \d+ draft/);
+  const [hash] = Object.keys(h.cache);
+  const cachedDrafts = Object.keys(h.cache[hash].answers).length;
+  assert.ok(cachedDrafts > 100, `${cachedDrafts} drafts kept`);
+  const again = harness({ cache: h.cache });
+  assert.equal(await run([...ARGS, '--yes'], again.io), 0);
+  assert.ok(again.asked.length < 40, `only the failed drafts re-asked (${again.asked.length})`);
+});
