@@ -3,7 +3,7 @@ epic: session-budget
 sprint: 1
 title: "The rule and the line"
 risk: low
-phase: Shaping
+phase: In review
 stories_total: 3
 stories:
   - id: S1.1
@@ -12,25 +12,25 @@ stories:
     i_want: "\"one deep ask per approval gate\" written the same way in every place the old rule lived"
     so_that: "my decisions set the pace, and no file contradicts another"
     risk: low
-    status: planned
+    status: built
   - id: S1.2
     title: "The session line"
     as_a: "the product owner"
     i_want: "a status line under the build view saying how full the session is and whether to keep going"
     so_that: "I know when to checkpoint or hand off without guessing"
     risk: low
-    status: planned
+    status: built
   - id: S1.3
     title: "The line at each groom gate in Cowork"
     as_a: "the product owner"
     i_want: "each approval gate in a Cowork planning session to end with the same line"
     so_that: "I see my decision load where planning happens, too"
     risk: low
-    status: planned
+    status: built
 ---
 # Session budget — one deep ask per approval gate, plus a measured line — Sprint 1: The rule and the line
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 

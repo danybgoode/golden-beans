@@ -1,6 +1,6 @@
 ---
 status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+phase: In review     # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: session-budget
 title: "Session budget — one deep ask per approval gate, plus a measured line"
