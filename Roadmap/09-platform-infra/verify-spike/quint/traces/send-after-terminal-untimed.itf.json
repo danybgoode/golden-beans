@@ -1,0 +1,1529 @@
+{
+  "#meta": {
+    "format": "ITF",
+    "format-description": "https://apalache-mc.org/docs/adr/015adr-trace.html",
+    "source": "outbox.qnt",
+    "status": "violation",
+    "description": "Created by Quint on Tue Sep 29 2026 19:30:47 GMT-0600 (Central Standard Time)",
+    "timestamp": 1790731847627
+  },
+  "vars": [
+    "mbt::actionTaken",
+    "mbt::nondetPicks",
+    "outbox_untimed::outbox::deadByExhaustion",
+    "outbox_untimed::outbox::dests",
+    "outbox_untimed::outbox::expected",
+    "outbox_untimed::outbox::ingested",
+    "outbox_untimed::outbox::nextToken",
+    "outbox_untimed::outbox::replays",
+    "outbox_untimed::outbox::rows",
+    "outbox_untimed::outbox::sends",
+    "outbox_untimed::outbox::sentAfterTerminal",
+    "outbox_untimed::outbox::strandedInFlight",
+    "outbox_untimed::outbox::workers",
+    "mbt::actionTaken",
+    "mbt::nondetPicks"
+  ],
+  "states": [
+    {
+      "#meta": { "index": 0 },
+      "mbt::actionTaken": "init",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": false, "enabled": true, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": { "#set": [] },
+      "outbox_untimed::outbox::ingested": { "#set": [] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "1" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 1 },
+      "mbt::actionTaken": "ingest",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "Some", "value": "e1" },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": false, "enabled": true, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [{ "#tup": ["e1", "d1"] }, { "#tup": ["e1", "d2"] }]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "1" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "none", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 2 },
+      "mbt::actionTaken": "ingest",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "Some", "value": "e2" },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": false, "enabled": true, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "1" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 3 },
+      "mbt::actionTaken": "claim",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "Some", "value": { "#tup": ["e1", "d2"] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": false, "enabled": true, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "2" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "1" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d2"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "1" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 4 },
+      "mbt::actionTaken": "deleteDest",
+      "mbt::nondetPicks": {
+        "d": { "tag": "Some", "value": "d2" },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "2" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "1" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d2"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "1" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 5 },
+      "mbt::actionTaken": "skipOrRelease",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "2" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 6 },
+      "mbt::actionTaken": "claim",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "Some", "value": { "#tup": ["e1", "d1"] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w2" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "3" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "2" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 7 },
+      "mbt::actionTaken": "send",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "Some", "value": "delivered" },
+        "w": { "tag": "Some", "value": "w2" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "3" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "sent",
+              "result": "delivered",
+              "token": { "#bigint": "2" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 8 },
+      "mbt::actionTaken": "claim",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "Some", "value": { "#tup": ["e2", "d1"] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "4" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "3" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e2", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "3" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "sent",
+              "result": "delivered",
+              "token": { "#bigint": "2" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 9 },
+      "mbt::actionTaken": "skipOrRelease",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "4" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "sent",
+              "result": "delivered",
+              "token": { "#bigint": "2" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 10 },
+      "mbt::actionTaken": "crash",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w2" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "4" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 11 },
+      "mbt::actionTaken": "toggleSink",
+      "mbt::nondetPicks": {
+        "d": { "tag": "Some", "value": "d2" },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": false }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "4" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "2" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 12 },
+      "mbt::actionTaken": "claim",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "Some", "value": { "#tup": ["e1", "d1"] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w2" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": false }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "5" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "4" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 13 },
+      "mbt::actionTaken": "toggleSink",
+      "mbt::nondetPicks": {
+        "d": { "tag": "Some", "value": "d2" },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "None", "value": { "#tup": [] } }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "5" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "4" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 14 },
+      "mbt::actionTaken": "claim",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "Some", "value": { "#tup": ["e1", "d1"] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "6" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "5" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "1" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "5" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 15 },
+      "mbt::actionTaken": "send",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "Some", "value": "delivered" },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "6" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "in_flight", "token": { "#bigint": "5" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "2" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "sent",
+              "result": "delivered",
+              "token": { "#bigint": "5" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 16 },
+      "mbt::actionTaken": "settle",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "None", "value": { "#tup": [] } },
+        "w": { "tag": "Some", "value": "w1" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "6" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "1" }, "status": "delivered", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "2" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": false,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "claimed",
+              "result": "",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "#meta": { "index": 17 },
+      "mbt::actionTaken": "send",
+      "mbt::nondetPicks": {
+        "d": { "tag": "None", "value": { "#tup": [] } },
+        "e": { "tag": "None", "value": { "#tup": [] } },
+        "k": { "tag": "None", "value": { "#tup": [] } },
+        "on": { "tag": "None", "value": { "#tup": [] } },
+        "res": { "tag": "Some", "value": "delivered" },
+        "w": { "tag": "Some", "value": "w2" }
+      },
+      "outbox_untimed::outbox::deadByExhaustion": false,
+      "outbox_untimed::outbox::dests": {
+        "#map": [
+          ["d1", { "deleted": false, "enabled": true, "up": true }],
+          ["d2", { "deleted": true, "enabled": false, "up": true }]
+        ]
+      },
+      "outbox_untimed::outbox::expected": {
+        "#set": [
+          { "#tup": ["e1", "d1"] },
+          { "#tup": ["e1", "d2"] },
+          { "#tup": ["e2", "d1"] },
+          { "#tup": ["e2", "d2"] }
+        ]
+      },
+      "outbox_untimed::outbox::ingested": { "#set": ["e1", "e2"] },
+      "outbox_untimed::outbox::nextToken": { "#bigint": "6" },
+      "outbox_untimed::outbox::replays": { "#bigint": "0" },
+      "outbox_untimed::outbox::rows": {
+        "#map": [
+          [
+            { "#tup": ["e1", "d1"] },
+            { "attempts": { "#bigint": "1" }, "status": "delivered", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e1", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d1"] },
+            { "attempts": { "#bigint": "0" }, "status": "pending", "token": { "#bigint": "0" } }
+          ],
+          [
+            { "#tup": ["e2", "d2"] },
+            { "attempts": { "#bigint": "0" }, "status": "dead", "token": { "#bigint": "0" } }
+          ]
+        ]
+      },
+      "outbox_untimed::outbox::sends": {
+        "#map": [
+          [{ "#tup": ["e1", "d1"] }, { "#bigint": "3" }],
+          [{ "#tup": ["e1", "d2"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d1"] }, { "#bigint": "0" }],
+          [{ "#tup": ["e2", "d2"] }, { "#bigint": "0" }]
+        ]
+      },
+      "outbox_untimed::outbox::sentAfterTerminal": true,
+      "outbox_untimed::outbox::strandedInFlight": false,
+      "outbox_untimed::outbox::workers": {
+        "#map": [
+          [
+            "w1",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "idle",
+              "result": "",
+              "token": { "#bigint": "0" }
+            }
+          ],
+          [
+            "w2",
+            {
+              "claimedAttempts": { "#bigint": "0" },
+              "key": { "#tup": ["e1", "d1"] },
+              "phase": "sent",
+              "result": "delivered",
+              "token": { "#bigint": "4" }
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

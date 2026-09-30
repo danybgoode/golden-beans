@@ -1,0 +1,10 @@
+name = "flageval"
+version = "0.1.0"
+defaultTargets = ["flageval"]
+
+[[lean_lib]]
+name = "Flageval"
+
+[[lean_exe]]
+name = "flageval"
+root = "Main"

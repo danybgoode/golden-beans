@@ -348,6 +348,14 @@ independently shippable slice of value.
   publishes the kit. Release 0.5.3 went out that way. The repo is now `danybgoode/golden-frijoles`, and sensitive docs
   live in the private `golden-frijoles/internal`. Per-folder licences apply: Apache-2.0 for `skills/`, the CLI and the SDK, and FSL-1.1-ALv2 for
   the engine (#184). **Shipped 2026-09-28 except** the local folder move (owed to Daniel).
+- ✅ [Verify spike](09-platform-infra/verify-spike/README.md): formal verification, measured on our own code
+  in one session. A Quint model of the delivery outbox found a stranded row, an unbounded unlogged resend
+  (bug seed, fix already model-checked) and an unenforced timing order (guard test, #194). Lean proves the
+  flag explanation agrees with the served value for every type-correct call, and a differential test ties
+  the model to the shipped code (0/6,000 disagreements). **Decision:** Quint + Lean, per-PR simulation,
+  nightly exhaustive checks, and no proof without a differential test. **Shipped 2026-09-29.** No landing
+  claim yet (audit D7). ⚠️ **Owed to Daniel (F7):** confirm the delivery cron is registered in production
+  (Vercel → Settings → Cron Jobs). Root Directory is `.`, but the `crons` entry lives only in `apps/web/vercel.json`.
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -368,6 +376,11 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-29**: `verify-spike` **shipped**: one session, one decision (`DECISION.md`).
+  - The outbox model found three things two dozen review rounds had not; one is fixed (#194), one is a
+    bug seed with its fix already model-checked, one is an accepted residual.
+  - The lesson for `verify-module`: model checking pays outright, and a proof pays only with a
+    differential test against the real code.
 - **2026-09-30**: `distribute-what-we-use` **shipped**: four sprints, four kit releases (0.6.0–0.9.0).
   - The review rail's three forks became one, and it is locked down. #188 took seven fresh review rounds; the
     one residual no code can close was accepted and documented.

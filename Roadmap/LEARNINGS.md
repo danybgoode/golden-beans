@@ -1846,3 +1846,19 @@ one-liner + why + date shape.
   each scoped pass's coverage exactly: an overclaimed coverage line was itself a review finding.
 - **Retargeting a PR's base does not trigger CI.** After squash-merging the base of a stack, force-push the
   child (or push a commit), or the PR reads green with no run on its head.
+
+### Formal verification on our own code (verify-spike, 2026-09-29)
+
+- **A proof verifies the model, not the code.** Ship a proof tier only with a differential test
+  against the real implementation. A Lean model that used Lean's own whitespace rule where the code
+  uses JS `trim()` disagreed with production on 8% of inputs, and every theorem still held.
+- **Random simulation and bounded exhaustive search find different bugs. Run both.** Quint's simulator
+  found a stranded row in 1 s and never found the 12-step unbounded-resend trace that Apalache found in
+  about 2 minutes. Use simulation per PR (fast) and exhaustive search nightly (slow).
+- **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
+  feeds "what did this PR change" to a model or reviewer must diff against the first parent
+  (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.
+- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** A loop over "module invariant depth"
+  strings ran nine model checks with empty arguments and printed nine blank results that looked
+  like output. Put such loops in a `bash` script, which the reproduce doc needs anyway.
+

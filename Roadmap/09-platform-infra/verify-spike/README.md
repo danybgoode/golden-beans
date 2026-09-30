@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: verify-spike
 title: "Verify spike: Quint on the outbox, Lean on the flag evaluator"
@@ -48,13 +48,21 @@ CI minutes are estimated from local timings, and productizing is `verify-module`
 - Local stack (stretch trace validation): the local CI gate recipe (`supabase start` + fresh server)
 - Jev rail as it stands today (egress already an explicit choice)
 
+## Outcome (2026-09-29)
+**Decision:** [`DECISION.md`](DECISION.md). Quint for protocols, Lean 4 (core) for pure functions. Productize
+simulation per PR, Apalache nightly, Lean only together with a differential test, and Jev routing by
+verify depth in shadow. **Findings:** F1 is an accepted residual. F2 is the bug seed
+[`delivery-stale-reclaim-uncounted`](../../00-ideas/seeds/delivery-stale-reclaim-uncounted.md), with its
+fix already model-checked. F3 is fixed by the guard test in PR #194. F4 and F5 are stated behaviour. F6
+is a modelling lesson. Reproduce: [`REPRODUCE.md`](REPRODUCE.md).
+
 ## Scope — stories
 | Sprint | Story | Risk |
 |---|---|---|
-| 1 | 1.1 Quint spec of the delivery outbox + bounded model check | low |
-| 1 | 1.2 Lean model of the evaluator: explanation ⇔ verdict agreement + differential test | low |
-| 1 | 1.3 Jev triage in shadow over ~10 merged PRs | low |
-| 1 | 1.4 The written decision (`DECISION.md`) | low |
+| 1 | 1.1 Quint spec of the delivery outbox + bounded model check ✅ | low |
+| 1 | 1.2 Lean model of the evaluator: explanation ⇔ verdict agreement + differential test ✅ | low |
+| 1 | 1.3 Jev triage in shadow over ~10 merged PRs ✅ | low |
+| 1 | 1.4 The written decision (`DECISION.md`) ✅ | low |
 
 Stretch (not a story, and not counted): trace validation against local Supabase. A bug fix PR, if any, is
 tiered by its own paths (delivery SQL/dispatcher → **high**).
