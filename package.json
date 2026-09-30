@@ -14,8 +14,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write",
     "format:changed": "node scripts/format-changed.mjs",
-    "test:unit": "npm run build --workspace=@golden-frijoles/sdk && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/design-system/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
-    "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/design-system/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit": "npm run build --workspace=@golden-frijoles/sdk && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'optimize/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/design-system/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'optimize/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/design-system/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:local": "node scripts/run-local-e2e.mjs",
     "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web",
@@ -24,7 +24,8 @@
     "seed:self": "node scripts/seed-self-project.mjs",
     "check:template-drift": "node scripts/check-template-drift.mjs",
     "check:script-parity": "node scripts/check-script-parity.mjs",
-    "check:design-drift": "node scripts/check-design-drift.mjs"
+    "check:design-drift": "node scripts/check-design-drift.mjs",
+    "optimize:refit": "node optimize/extract.mjs && optimize/.venv/bin/python optimize/refit.py"
   },
   "dependencies": {
     "pg": "^8.22.0"

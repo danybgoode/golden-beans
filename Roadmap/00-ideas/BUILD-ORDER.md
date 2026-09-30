@@ -10,9 +10,10 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured](../../09-platform-infra/compiled-prompts/README.md) — 09 Platform Infra · 0/6 stories · risk: Low · single-product-wave-C
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
@@ -62,7 +63,7 @@
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (18)
+## ⬜ Funnel — seeds not yet scaffolded (17)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
@@ -72,7 +73,6 @@
 - [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
-- [Compiled prompts: the kickoff and build/QA prompts assembled from measured parts](seeds/compiled-prompts.md) — Raw · Feature · appetite L · single-product-wave-C
 - [Sketch specs: approved specs render the wireframe and become the build contract](seeds/sketch-specs.md) — Raw · Feature · appetite L · single-product-wave-C
 - [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — Raw · Chore · unranked
@@ -96,4 +96,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 43 · seeds in funnel: 18 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 44 · seeds in funnel: 17 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
