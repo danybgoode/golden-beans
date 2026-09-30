@@ -77,7 +77,11 @@ test('greys only: every colour in the page has R = G = B', () => {
 
 test('imports only node:* and the parser — never the design system (D4)', () => {
   const source = readFileSync(SCRIPT, 'utf8');
-  const specifiers = [...source.matchAll(/\bimport\s*(?:[^'"()]*?\bfrom\s*)?\(?\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+  // `import … from`, bare `import '…'`, `import('…')` and `export … from` — every way an ES module pulls another in.
+  const specifiers = [
+    ...source.matchAll(/\b(?:import|export)\s*(?:[^'"();]*?\bfrom\s*)?\(?\s*['"]([^'"]+)['"]/g),
+  ].map((m) => m[1]);
+  assert.doesNotMatch(source, /\bcreateRequire\b|\brequire\(/, 'a CommonJS escape hatch around the import scan');
   assert.ok(specifiers.includes('./lib/surface.mjs'), `the scan found ${JSON.stringify(specifiers)}`);
   for (const specifier of specifiers) {
     assert.ok(

@@ -41,6 +41,10 @@ export const SURFACE_KINDS = Object.freeze({
 export const SURFACE_FACTS = Object.freeze(['action', 'count', 'columns']);
 
 const KIND_NAMES = Object.keys(SURFACE_KINDS);
+
+// OWN properties only. `kind in SURFACE_KINDS` also answers true for `toString`, `constructor` and `__proto__`, which
+// then parsed as kinds and crashed the renderer with a raw TypeError instead of a line-numbered error (#210 review).
+const isKind = (name) => Object.hasOwn(SURFACE_KINDS, name);
 const STATE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HEADER = /^([A-Za-z][\w-]*):\s*(.*)$/;
 
@@ -134,7 +138,7 @@ function parseBlockLine(rest) {
   const first = tokens.shift();
   if (first === undefined || first.quoted) throw 'a block line starts with its kind: `- <kind> …`';
   const kind = first.value;
-  if (!(kind in SURFACE_KINDS)) throw unknownKind(kind);
+  if (!isKind(kind)) throw unknownKind(kind);
 
   const block = { kind, words: null };
   if (tokens[0]?.quoted) block.words = tokens.shift().value;
@@ -155,11 +159,14 @@ function parseBlockLine(rest) {
         (carries.length > 0 ? ` (it carries: ${carries.join(', ')})` : ' (it carries no facts)')
       );
     }
-    if (name.value in block) throw `\`${name.value}\` given twice`;
+    if (Object.hasOwn(block, name.value)) throw `\`${name.value}\` given twice`;
     const value = tokens.shift();
     if (value === undefined) throw `\`${name.value}\` needs a value`;
     if (name.value === 'count') {
-      if (value.quoted || !/^\d+$/.test(value.value)) throw `\`count\` is a whole number, got \`${value.value}\``;
+      // No leading zeros and no number past exact integers: `1e23` would be compared with a count read off a page.
+      if (value.quoted || !/^(0|[1-9]\d*)$/.test(value.value) || !Number.isSafeInteger(Number(value.value))) {
+        throw `\`count\` is a whole number, got \`${value.value}\``;
+      }
       block.count = Number(value.value);
     } else {
       if (!value.quoted) throw `\`${name.value}\` takes a quoted string, got \`${value.value}\``;
@@ -263,12 +270,18 @@ export function parseSurfaces(markdown, file = '<markdown>') {
  * project can say, so that half of the check lives with the project.
  */
 export function validateMap(map) {
-  if (map === null || typeof map !== 'object' || map.kinds === null || typeof map.kinds !== 'object') {
+  if (
+    map === null ||
+    typeof map !== 'object' ||
+    map.kinds === null ||
+    typeof map.kinds !== 'object' ||
+    Array.isArray(map.kinds)
+  ) {
     return ['the map has no `kinds` object'];
   }
   const problems = [];
   for (const [generic, target] of Object.entries(map.kinds)) {
-    if (!(generic in SURFACE_KINDS)) problems.push(unknownKind(generic));
+    if (!isKind(generic)) problems.push(unknownKind(generic));
     if (typeof target !== 'string' || target.trim() === '') {
       problems.push(`\`${generic}\` maps to ${JSON.stringify(target)}, not a kind name`);
     }

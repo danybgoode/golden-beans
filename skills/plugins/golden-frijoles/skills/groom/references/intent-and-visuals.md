@@ -71,8 +71,8 @@ Mermaid renders on GitHub and diffs as text.
 
 ### The `surface` block
 
-One fenced block per state. `state:` is a lower-case hyphenated id ending in the state's name from the ten
-(`orders-empty`); `route:` is the path. Then one line per block, in order:
+One fenced block per state. `state:` is a lower-case hyphenated id; for any state but the default, end it in the
+state's name from the ten (`orders-empty`). `route:` is the path. Then one line per block, in order:
 `- <kind> ["the words"] [action "…"] [count N] [columns "a | b | …"]`.
 
 ```surface
