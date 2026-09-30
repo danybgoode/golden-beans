@@ -160,6 +160,11 @@ test('a shipped script importing from optimize/ or spawning python fails the gua
     "spawnSync('python3', ['optimize/refit.py']);",
     'execFileSync("python", ["x.py"]);',
     "spawn('uv', ['run', 'refit.py']);",
+    "const m = require('../optimize/a.cjs');",
+    "const u = new URL('../optimize/a.mjs', import.meta.url);",
+    "spawnSync('/usr/bin/python3', ['x']);",
+    "spawnSync('py', ['-3', 'x']);",
+    "execFileSync('python3.12', ['x']);",
   ])
     assert.deepEqual(names(scan(file(line, 'template/scripts/jev-eval.mjs'), { allow: [] })), [PY], line);
 });
@@ -169,6 +174,8 @@ test('prose that merely names optimize/ or Python is not a leak', () => {
     'Re-measure a wording with `node optimize/wording.mjs` in the monorepo.',
     'The kit never needs Python.',
     "import { loadQuestions } from './lib/jev-questions.mjs';",
+    "spawnSync('pyright-langserver');",
+    'The plugin never spawns `python3`.',
   ])
     assert.deepEqual(names(scan(file(line), { allow: [] })), [], line);
 });
@@ -180,9 +187,20 @@ test('scanPaths names every Python or optimize/ file among the shipped paths, an
       'plugins/golden-frijoles/skills/groom/helper.py',
       'template/__pycache__/x.pyc',
       'kit/requirements.lock',
+      'template/pyproject.toml',
+      'template/uv.lock',
+      'template/notes.ipynb',
       'template/scripts/lib/jev-questions/prose.json',
       'template/scripts/optimizer.mjs',
     ]),
-    ['template/scripts/optimize/refit.py', 'plugins/golden-frijoles/skills/groom/helper.py', 'template/__pycache__/x.pyc', 'kit/requirements.lock']
+    [
+      'template/scripts/optimize/refit.py',
+      'plugins/golden-frijoles/skills/groom/helper.py',
+      'template/__pycache__/x.pyc',
+      'kit/requirements.lock',
+      'template/pyproject.toml',
+      'template/uv.lock',
+      'template/notes.ipynb',
+    ]
   );
 });

@@ -1,5 +1,5 @@
 {
-  "$comment": "The review rail's Jev questions (compiled-prompts D2) — exactly what askJev sends, plus `measured`. Loaded by lib/review-guard.mjs. A recording pins each question by hash (D3): change a word and `node scripts/jev-eval.mjs` fails until `--live` re-records. Measure a new wording with `node optimize/wording.mjs` before proposing it.",
+  "$comment": "The review rail's Jev questions (compiled-prompts D2) — exactly what askJev sends, plus `measured`. Loaded by lib/review-guard.mjs. A recording pins each question by hash (D3): change a word and `node scripts/jev-eval.mjs` fails until `--live` re-records. A new wording is measured on held-out folds before it is proposed (in the golden-frijoles monorepo: optimize/wording.mjs).",
   "questions": [
     {
       "id": "is_real_review",

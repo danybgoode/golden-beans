@@ -91,8 +91,11 @@ export const RULES = [
     // must never need Python. The PATH half lives in `scanPaths` below — a stray `.py` is not a text file this
     // sweep reads. This half catches shipped CODE reaching for it; prose that merely names optimize/ is fine.
     name: 'python or optimize/ reached a shipped script',
+    // Every way a module reaches a file (import, require, new URL(…, import.meta.url)) and every way a script
+    // starts an interpreter by name or by path. A string held in a variable first is still out of reach of a
+    // line sweep — the PATH rule and the packed-kit assertion are the backstop for that.
     pattern:
-      /\b(?:from|import)\s*\(?\s*['"`][^'"`]*\boptimize\/|\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*['"`](?:python3?|pip3?|uv)\b/,
+      /\b(?:from|import|require|URL)\s*\(?\s*['"`][^'"`]*\boptimize\/|\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|execa)\s*\(\s*['"`](?:[^'"`]*\/)?(?:python[\d.]*|pip\d*|uv|uvx|py|pipx|conda)['"`\s]/,
     why: 'The kit, the plugin and the skills mirror are zero-dependency Node. `optimize/` is the monorepo\'s '
        + 'dev-only Python workspace (compiled-prompts D4): what it produces reaches the kit as a reviewed '
        + 'data diff (a question file, a jev.config.json threshold), never as an import or a python call.',
@@ -202,7 +205,8 @@ export function scan(files, { rules = RULES, allow = ALLOW } = {}) {
  * directory, a `.py`/`.pyc`, or a `requirements*` file. kit-tarball.test.mjs applies the same regex to the packed
  * kit's file list, so it lives here, once.
  */
-export const OPTIMIZE_PATH = /(^|\/)optimize\/|\.pyc?$|(^|\/)requirements[^/]*$/;
+export const OPTIMIZE_PATH =
+  /(^|\/)optimize\/|\.(?:pyc?|pyi|ipynb)$|(^|\/)(?:requirements[^/]*|pyproject\.toml|uv\.lock|Pipfile(?:\.lock)?|setup\.py|\.python-version)$/;
 
 /** Every file under `dir`, text or not — the path rule must see the files the text sweep skips. */
 function walkAll(dir, out = []) {
@@ -213,8 +217,9 @@ function walkAll(dir, out = []) {
     return out;
   }
   for (const name of entries) {
-    if (name === '.git' || name === 'node_modules' || name === 'dist') continue; // kit/dist is a build, gitignored
     const full = join(dir, name);
+    // kit/dist is the kit's build output (gitignored, rebuilt by build-kit) — only THAT dist, never any directory so named.
+    if (name === '.git' || name === 'node_modules' || relative(repoRoot, full) === join('kit', 'dist')) continue;
     if (statSync(full).isDirectory()) walkAll(full, out);
     else out.push(full);
   }
