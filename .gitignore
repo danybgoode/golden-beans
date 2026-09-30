@@ -78,3 +78,7 @@ Claude outputs
 
 # references
 /references/
+# compiled-prompts D4: optimize/ is dev-only Python; its venv and live-answer cache never get committed.
+optimize/.venv/
+optimize/.cache/
+__pycache__/

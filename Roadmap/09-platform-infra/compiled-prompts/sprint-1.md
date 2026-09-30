@@ -3,7 +3,7 @@ epic: compiled-prompts
 sprint: 1
 title: "Questions as data, optimize/ committed"
 risk: low
-phase: Shaping
+phase: Building
 stories_total: 4
 stories:
   - id: S1.1
@@ -60,6 +60,38 @@ stories:
 **As** a plugin user, **I want** nothing from `optimize/` in what I install, **so that** I never need Python.
 **Acceptance:** `kit-tarball.test.mjs` and `check-plugin-leaks.mjs` fail if any `optimize/` path or a Python import reaches the kit, the plugin or the skills mirror.
 **Risk:** low
+
+## Build contract (locked by the architect before the builder started)
+
+Cites the epic README's D1–D12; nothing here restates a rule that lives there.
+
+1. **Commit order is the proof (D3).** First commit: add `lib/jev-questions.mjs` with `questionHash` only, and
+   add the stale hook to review, prose and intent in `jev-eval.mjs`. Stamp every existing recording from the
+   **current JS constants**, with no Jev call. Second commit: move the constants into the JSON (D2), with no
+   fixture change. Offline `node scripts/jev-eval.mjs` stays `310/310` across both commits, and
+   `git diff scripts/jev-eval.fixtures.json` in the second commit is empty.
+2. **Files (both trees, byte-identical, D8):** `lib/jev-questions.mjs`, `lib/jev-questions/{review,prose,intent}.json`,
+   `lib/jev-questions.test.mjs`; the edited `lib/review-guard.mjs`, `lib/prose-guard.mjs`, `intent-match.mjs`,
+   `jev-eval.mjs`, `jev-eval.test.mjs`, `jev-eval.fixtures.json`.
+3. **Loader rules:** `loadQuestions('review'|'prose'|'intent')` reads the JSON next to it (`import.meta.url`), and
+   throws on an unknown set, an unknown key, a duplicate id, the wrong `criteria` shape for its `type`, or a
+   missing `measured` without an `unmeasured` reason. The guards' exported constants deep-equal their
+   pre-move values: a test pins this by hashing each loaded question against the recordings' stamps.
+4. **Kit (D9):** the six SKILL.md `requires_scripts` lists gain `lib/jev-questions.mjs` + the JSON each one needs
+   (review and prose files for the guard skills; intent for `groom` and `golden-frijoles`, which carry
+   `intent-match.mjs`). `kit-tarball.test.mjs` asserts the four files are in the packed kit.
+5. **`optimize/` (D4, D6):** `requirements.lock`, `extract.mjs` (drives `loadRails()` + `replayAsk()` from the
+   **root** `scripts/jev-eval.mjs`, emits per-fixture statistics, and runs the parity check over a threshold
+   grid), `extract.test.mjs` (the Node half, run by `test:unit`), `refit.py` (ReAnchor on a replay client with
+   `require_cache=False`, review as two `Noul` fields with the `nextafter` shim, prose as four; writes
+   `optimize/folds.json` from DSPy's `_folds`, plus a no-DSPy grid control), a `README.md` with the one-time
+   setup, and `npm run optimize:refit`. The report goes to `optimize/reports/refit-<date>.md`. It proposes a
+   `jev.config.json` diff only if held-out improves.
+6. **Leak guard (1.4):** `check-plugin-leaks.mjs` gains a path rule (no shipped file under an `optimize/`
+   directory, and no `.py`, `.pyc` or `requirements*` file) and a line rule (no shipped JS importing from an
+   `optimize/` path or spawning `python`). Prose that mentions them stays allowed. `kit-tarball.test.mjs`
+   asserts the packed file list has neither. Each new rule is observed failing once on a planted file.
+7. **Release (D11):** plugin + kit `0.15.0`, CHANGELOG section.
 
 ## Sprint QA
 - `node --test` (guards, `jev-eval`, parity half); `jev-eval` offline replay green with zero re-recordings.
