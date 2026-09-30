@@ -12,28 +12,28 @@ stories:
     i_want: "every Jev question in one JSON file per rail, with its measurement beside it"
     so_that: "the kit and DSPy read one copy, and a wording change is a data diff with evidence"
     risk: low
-    status: done  # e467a1e
+    status: done  # #207 (dfdfaa4)
   - id: S1.2
     title: "A recording remembers its wording"
     as_a: "a maintainer"
     i_want: "offline replay to fail when a question's text differs from the one its answers were recorded against"
     so_that: "an edited question can't pass CI on stale answers"
     risk: low
-    status: done  # 1271b68
+    status: done  # #207 (dfdfaa4)
   - id: S1.3
     title: "`optimize/`, reproducing the spike"
     as_a: "a maintainer"
     i_want: "the ReAnchor harness committed and runnable with one command"
     so_that: "a refit on a model bump or doubled fixtures costs minutes, not a rebuild"
     risk: low
-    status: done  # 9a56836
+    status: done  # #207 (dfdfaa4)
   - id: S1.4
     title: "The leak guard"
     as_a: "a plugin user"
     i_want: "nothing from `optimize/` in what I install"
     so_that: "I never need Python"
     risk: low
-    status: done  # 3e5010f
+    status: done  # #207 (dfdfaa4)
 ---
 # Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured — Sprint 1: Questions as data, optimize/ committed
 
@@ -111,7 +111,7 @@ Cites the epic README's D1–D12; nothing here restates a rule that lives there.
 
 If any step fails, note the step number + what you saw — that's the bug report.
 
-### Smoke results (2026-09-30, local checkout on `feat/compiled-prompts` @ 9a56836)
+### Smoke results (2026-09-30, local checkout on `feat/compiled-prompts` @ #207)
 
 1. ✅ `node scripts/jev-eval.mjs` → `offline: 310/310 fixtures match recordings`; `git status` clean (0 files).
 2. ✅ `SWITCHED ON` → `TURNED ON` in `scripts/lib/jev-questions/prose.json` → exit 1, every line reading

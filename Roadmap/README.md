@@ -372,6 +372,13 @@ independently shippable slice of value.
   measured: 31/33 labelled hunks decided, all right. 🚧 = **in shadow until 2026-10-14**, logging and printing but
   never shown as findings; the promote / tune / drop decision is owed to Daniel on that date. **Shipped 2026-09-30**
   (#200, kit 0.13.0).
+- ✅ [Compiled prompts, wave 1](09-platform-infra/compiled-prompts/README.md): **every Jev question is data**
+  (`scripts/lib/jev-questions/*.json`, Jev's own shape plus a `measured` block), and **every recording stamps the
+  wording it answered**, so an edited question fails CI until it is re-measured. `optimize/` (dev-only Python, never
+  shipped, with a leak guard) refits thresholds with DSPy ReAnchor in one command, and `optimize/wording.mjs` measures
+  a new wording on held-out folds. Its first run, on `flag-state-claim`, produced a win on paper that was **not
+  adopted**: the win was leakage from the drafts the candidate was written against. **Shipped 2026-09-30** (#207,
+  kit 0.15.0; #208).
 - ✅ [Session budget](09-platform-infra/session-budget/README.md): **one deep ask per approval gate; keep going while
   the budget line says so.** It replaces "one per run" and "fresh session per sprint". In Claude Code a status row
   under the prompt reads the engine's own figures, for example `Session 48% · 5h 23% · 7d 9% → keep going`, and
@@ -398,6 +405,10 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-30**: `compiled-prompts` wave 1 **shipped**: two sprints, kit 0.15.0.
+  - Jev's questions moved to data without changing a verdict; the stamp-then-move commit order is the proof.
+  - The first wording test passed its own held-out rule and was still rejected: the winning examples were lifted
+    from the drafts they fixed. Wording tests now need drafts the author has never seen.
 - **2026-09-30**: `session-budget` **shipped**: one sprint, kit 0.14.0.
   - The product owner's decision bandwidth, not a stamina rule, now sets session length. Every approval gate ends
     with a keep going / checkpoint / hand off line, in Claude Code and in Cowork.

@@ -3,7 +3,7 @@ epic: compiled-prompts
 sprint: 2
 title: "Measure a wording"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 2
 stories:
   - id: S2.1
@@ -12,18 +12,18 @@ stories:
     i_want: "to test candidate wordings for one question against the current one on held-out data"
     so_that: "a question changes only when it measurably decides better"
     risk: low
-    status: done  # 3d9b988
+    status: done  # #208 (4b4368a)
   - id: S2.2
     title: "First run: `flag-state-claim`"
     as_a: "the product owner"
     i_want: "the prose rail's worst question tested against 3 to 5 better-argued wordings"
     so_that: "the 19 errors it causes shrink, or we learn the fix is evidence rather than wording"
     risk: low
-    status: done  # 9964ef1 candidates · fd3126b run + report · not adopted (product owner, 2026-09-30)
+    status: done  # #208 (4b4368a)
 ---
 # Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured — Sprint 2: Measure a wording
 
-**Status:** 🟡 built, in review — 3d9b988 (2.1), 9964ef1 + fd3126b (2.2); winner not adopted by the product owner
+**Status:** ✅ shipped 2026-09-30: PR #208, squash-merged as `4b4368a`. Dev tooling only, with no plugin release (D11). Four codex rounds; the fourth was clean. The winner was not adopted (the product owner, 2026-09-30).
 
 ## Stories
 

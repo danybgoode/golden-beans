@@ -10,10 +10,9 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (4)
+## 🏗️ Building now (3)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured](../../09-platform-infra/compiled-prompts/README.md) — 09 Platform Infra · 4/6 stories · risk: Low · single-product-wave-C
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
@@ -21,7 +20,7 @@
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (39)
+## ✅ Shipped (40)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -49,6 +48,7 @@
 - [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 17/17 stories · risk: Low · wave-2026-08-20
 - [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 18/18 stories · risk: High
 - [The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL](../../02-commercial/agentic-pm-public-surface/README.md) — 02 Commercial · 12/12 stories · risk: Low · wave-2026-08-20
+- [✅ Epic: Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured](../../09-platform-infra/compiled-prompts/README.md) — 09 Platform Infra · 6/6 stories · risk: Low · single-product-wave-C
 - [✅ Epic: Golden Frijoles by default — a spawned project already carries the flag provider](../../09-platform-infra/golden-flags-by-default/README.md) — 09 Platform Infra · 6/6 stories · risk: High · wave-2026-09-16-plugin
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
