@@ -34,7 +34,7 @@ cd Roadmap/09-platform-infra/verify-spike/lean
 lake build                        # model + proofs + the diff-test executable (~5 s)
 lake env lean Axioms.lean         # each theorem uses only propext, Classical.choice, Quot.sound; no sorryAx
 cd -
-for seed in 1 2 3; do node Roadmap/09-platform-infra/verify-spike/diff-test/run.mjs 2000 $seed || break; done
+( for seed in 1 2 3; do node Roadmap/09-platform-infra/verify-spike/diff-test/run.mjs 2000 $seed || exit 1; done )   # exits 1 on the first failing seed
 ```
 
 Expected: `"disagreements": 0` for seeds 1, 2 and 3 (2,000 cases each, the Lean model ~65 ms per
