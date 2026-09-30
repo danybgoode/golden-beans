@@ -1572,7 +1572,9 @@ one-liner + why + date shape.
   worth as much as the rule: **(a) a fix deserves the same suspicion as the code it replaces** — one
   derivation here was corrected three times in three rounds, each time for a *different* wrong
   statement about the same data, and the third fix moved a guard behind a filter and broke a fourth
-  thing; **(b) when several findings share one cause, the cause is the finding** — four separate
+  thing. Again in `intent-match` (2026-09-30): indenting a model reply to stop its fences breaking a section made
+  the scanner's `\s*` fence rule treat the indented fences as real, and an odd one then deleted every later
+  section — only a fresh round caught it; **(b) when several findings share one cause, the cause is the finding** — four separate
   "guard this shape" reports on a JSONB-backed seam were one sentence (*a TypeScript type over a
   JSONB column is a promise the database does not make*), and guarding each field by hand was
   building a second validator, always one review finding behind. Ask the existing authority once.
@@ -1858,7 +1860,28 @@ one-liner + why + date shape.
 - **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
   feeds "what did this PR change" to a model or reviewer must diff against the first parent
   (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.
-- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** A loop over "module invariant depth"
+- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** The same trap bit `git add $FILES` in
+  `intent-match` (2026-09-30): use `${=FILES}` or an array (`(${(f)"$(…)"})`).
+- **A backticked commit message in double quotes is a zsh parse error, or worse, command substitution.**
+  (`intent-match`, 2026-09-30.) Commit and PR bodies go through a quoted heredoc (`-F - <<'EOF'`), always.
+ A loop over "module invariant depth"
   strings ran nine model checks with empty arguments and printed nine blank results that looked
   like output. Put such loops in a `bash` script, which the reproduce doc needs anyway.
 
+### Scoring a plan against its ask (intent-match, 2026-09-30)
+
+- **Change what a guard counts and its limit in the same commit.** Excluding a forced declaration list from the groom
+  SKILL.md line budget was right; leaving the limit at 220 while the measure fell by 10 handed out 10 lines, and the
+  next sprint used exactly those ten. The fresh reviewer caught it. A guard corrected is one whose strength is equal
+  before and after, measured on `main`.
+- **Model output written into a document must be inert.** A reader's reply carried its own `## ` headings and fences;
+  a re-run ended the section early and stacked a stale copy in a README, while the walkthrough said "replaced". Indent
+  it (never fence it), use CommonMark's fence rule (0–3 spaces) in every scanner, and run the secret guard before the
+  text leaves the process — to a model or to a public file.
+- **An unanchored ignore rule hides new files in every folder of that name.** `references/`, meant for one local-only
+  folder, silently hid a new skill reference. Run `git check-ignore -v <new file>` when a new file "didn't show up".
+- **A score needs the ask, and old plans rarely kept it.** Only 12 of 63 shipped medusa-bonsai seeds carry a
+  recoverable ask (a Problem section or a mirror-back); the rest open with status blocks. Store the ask verbatim from
+  now on; a proxy ask is flagged, never mixed in silently.
+- **Regenerate the board with every sprint's doc commit.** The pre-push hook refused two pushes because a plan or
+  tick commit left `BUILD-ORDER.md` stale.
