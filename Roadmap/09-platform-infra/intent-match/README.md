@@ -78,7 +78,8 @@ No engine data, route or table (rule #1 n/a). Kit scripts, groom skill text and 
   anonymised (the `jev-eval` precedent: "consuming project A"), and medusa-bonsai's backfill record lives in
   medusa-bonsai, not here.
 - **Pre-existing, not this epic's:** `doc-format --check` fails on 6 files at `main` (`experiments-for-humans` ×5,
-  `public-monorepo` retro) and `BUILD-ORDER.md` is stale. Neither is touched to make this epic look green.
+  `public-monorepo` retro); not touched to make this epic look green. *(Corrected at the S1 push: the stale
+  `BUILD-ORDER.md` noted here WAS this epic's — its plan commits never regenerated the board. Regenerated in S1.)*
 
 ### Decisions (D9…D19 — the builder cites these; D1…D8 above stand)
 - **D9 — The seed format is the parser's contract.** `## The ask, as given` holds the product owner's words (a
