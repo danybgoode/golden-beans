@@ -12,6 +12,10 @@ permissions:
   contents: read
   pull-requests: read
   actions: read
+  # The PR CI signal reads commit statuses and check runs. Without these, on a private repo those calls fail
+  # and a red PR would read as healthy (#191 review).
+  checks: read
+  statuses: read
 
 jobs:
   standup-preview:

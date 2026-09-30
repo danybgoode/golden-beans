@@ -65,7 +65,7 @@ Builds **D10** (README → *Architecture lock*). Builder: Codex.
 - **Release 0.9.0.**
 
 ## Sprint QA
-- `routines.test.mjs` extended (fill from config, refuse on a leftover placeholder).
+- `routine-bootstrap.test.mjs` covers fill from config, refusal on a leftover placeholder, and runtime-token passthrough (`routines.test.mjs` keeps the house-format checks).
 - Owed to Daniel: stand up one routine from the bootstrap at https://claude.ai/code/routines.
 - **deterministic gate:** root `npm run typecheck` + `npm run build` + Playwright `api`, and the skills checks (`skills-ci` on the split), green before merge.
 
