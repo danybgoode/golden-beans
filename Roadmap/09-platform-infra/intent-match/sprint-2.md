@@ -72,6 +72,13 @@ Stage 7 now points at the template's frontmatter instead of hand-copying a key l
 lacked the two new keys) and Stage 8 no longer restates what the generated kickoff says. `skills/.gitignore`'s
 unanchored `references/` rule silently hid the new file; it now ignores only the root folder (it hid nothing else).
 
+**Review round 1 (#197, fresh reviewer; external families dark):** the stacked README above; a `~~~` in a reply
+could break the section (replies are now indented); the reply went to Jev and into a public README with no secret
+check (now `lib/secret-guard.mjs` first, one skip line, nothing sent or written — as cross-review does); the root
+`.gitignore` had the same unanchored `references/` rule (anchored). Nits: the seed template's table pointer, an
+orphaned `execAgy` comment, `ENOBUFS` reported as "could not start", a 0.5 s timeout printed as "1s", and Stage 8's
+"a test pins each" (the Stack line is now pinned too). Each fix has a spec seen failing without it.
+
 **Deviations, named:** the agreement question joined `INTENT_QUESTIONS` (D13's one object) and is not measured —
 there is no labelled set of reader replies yet. `writeIntoSeed`'s frontmatter and section writers were extracted
 (`setFrontmatterKey`, `upsertIntentSection`) so the reader reuses them.
@@ -94,7 +101,10 @@ there is no labelled set of reader replies yet. `writeIntoSeed`'s frontmatter an
    command again, then `rm golden-frijoles.config.json`
    → `intent reader: codex read the pitch — agreement 0.7x; total 8x (seed 89), written to …/README.md`, and the
    epic README's `## Intent match` shows the agreement, the reader's reply and the new total. *Ran 2026-09-30: codex in
-   ~10 s, agreement 0.75 then 0.70 on a re-run (the section is replaced, not stacked).*
+   ~10 s, agreement 0.75 then 0.70 on a re-run.* **Correction (fresh review of #197):** that re-run did **stack** —
+   it ran before S1's fence-aware section lookup had merged in, and the reply's own `## ` headings inside the fence
+   ended the section early. The stale copy was removed by hand; replies are now indented, never fenced, and a spec
+   rewrites a fence-carrying reply three times and finds one section.
 5. Same, with `--timeout 0.5` → `reader skipped: codex: timed out after 1s`, exit 0. *Ran 2026-09-30.*
 6. **Owed to Daniel:** read this epic's scored pitch and its reader reply, and say whether the gaps (none) and the
    diagram are right. The reader's first question — who answers the 20–30 backfill labels, and by when — is S3's.

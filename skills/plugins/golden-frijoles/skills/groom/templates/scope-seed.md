@@ -72,7 +72,7 @@ intent_match: null     # written by `node scripts/intent-match.mjs <this seed> -
 ## Visuals
 <!-- Stage 4.6 — drawn from the SHAPE of the ask, not from taste. Every shaped bet (appetite M or L) gets a system
      context: actors, systems and the data flow between them. Add whatever the ask's shape triggers (the table in
-     SKILL.md → Stage 4.6): a flow, a state machine, a sequence or a container diagram in Mermaid; a data sample as a
+     the groom skill's references/intent-and-visuals.md): a flow, a state machine, a sequence or a container diagram in Mermaid; a data sample as a
      table of three real-looking rows; a screen as a `surface` block. Fixed-scope work (appetite S) draws only when a
      trigger fires. Delete the examples you don't use. -->
 

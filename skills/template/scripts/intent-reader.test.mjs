@@ -59,6 +59,7 @@ function makeIo(over = {}) {
     setting: () => ('setting' in over ? over.setting : 'on'),
     config: () => ({ egress: 'egress' in over ? over.egress : true, model: 'jev-1.13.0' }),
     key: () => ('key' in over ? over.key : 'k'),
+    secrets: over.secrets ?? (() => ({ leaks: [] })),
     has: (bin) => {
       log.has.push(bin);
       return (over.installed ?? ['codex', 'agy', 'vibe']).includes(bin);
@@ -264,4 +265,56 @@ test('isStructured: the three headings, any heading level, either apostrophe', (
   assert.equal(isStructured(REPLY), true);
   assert.equal(isStructured(REPLY.replace("Won't", 'Won’t').replace(/## /g, '### ')), true);
   assert.equal(isStructured('## Will build\n- x\n## First question\n- y'), false);
+});
+
+// ── fresh review of #197 ─────────────────────────────────────────────────────────────────────────────────────
+
+test('a reply carrying fences (``` or ~~~) and its own ## headings never escapes the section, run after run', async () => {
+  const nasty = `## Will build\n- x\n~~~\n## Won't build\n\`\`\`\n- y\n## First question\n- z?`;
+  const { io, readme } = makeIo({ spawnResult: { status: 0, stdout: nasty, stderr: '' } });
+  await run(['--epic', 'demo'], io);
+  await run(['--epic', 'demo'], io);
+  await run(['--epic', 'demo'], io);
+  const after = readFileSync(readme, 'utf8');
+  assert.equal(after.match(/^## Intent match$/gm).length, 1);
+  assert.equal(after.match(/^## /gm).length, 2, 'the only headings are Decisions and Intent match');
+  assert.equal(after.match(/<!-- intent-match: /g).length, 1);
+  assert.match(after, /^ {4}~~~$/m, 'the reply is kept, indented');
+});
+
+test('a secret-shaped reply is skipped before Jev is asked or anything is written', async () => {
+  const { io, log, readme } = makeIo({
+    secrets: () => ({ leaks: [{ kind: 'shape', name: 'a GitHub token' }] }),
+  });
+  assert.equal(await run(['--epic', 'demo'], io), 0);
+  oneSkip(
+    log,
+    /codex: the reply carried secret-shaped text \(a GitHub token\); nothing sent, nothing written/
+  );
+  assert.equal(log.asked.length, 0);
+  assert.equal(readFileSync(readme, 'utf8'), README);
+});
+
+test('the real secret guard is wired: a token-shaped reply from the CLI is caught', async () => {
+  const { findSecretLeaks } = await import('./lib/secret-guard.mjs');
+  const token = `ghp_${'a1B2c3D4e5'.repeat(4)}`;
+  const { io, log } = makeIo({
+    spawnResult: { status: 0, stdout: `${REPLY}\n${token}`, stderr: '' },
+    secrets: (t) => findSecretLeaks(t),
+  });
+  await run(['--epic', 'demo'], io);
+  oneSkip(log, /secret-shaped text/);
+});
+
+test('a sub-second timeout is reported as given, and an oversize reply is not "could not start"', () => {
+  const err = (code) => Object.assign(new Error(code), { code });
+  const codex = FAMILIES[0];
+  assert.match(
+    askReader(codex, 'p', { spawn: () => ({ error: err('ETIMEDOUT') }), timeoutMs: 500 }).why,
+    /timed out after 0\.5s/
+  );
+  assert.match(
+    askReader(codex, 'p', { spawn: () => ({ error: err('ENOBUFS') }), timeoutMs: 500 }).why,
+    /over 16 MB/
+  );
 });

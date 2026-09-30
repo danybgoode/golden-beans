@@ -24,6 +24,8 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   under a hard timeout (120 s), Jev scores whether it would build what the plan builds, and the agreement and the
   new total go into the epic README. Any failure is one `reader skipped: <why>` line and exit 0. The epic kickoff's
   lock step names it.
+- The reader's reply passes `lib/secret-guard.mjs` before it is sent to Jev or written into a README, and is
+  written indented (never fenced), so a reply's own fences or headings cannot break the section.
 - `lib/cross-agent-cli.mjs` exports `agyArgs` and `vibeArgs`, so a caller with its own spawn builds the same argv.
 - `lib/config.mjs`: an `intent` section and the `intent.reader` setting.
 
