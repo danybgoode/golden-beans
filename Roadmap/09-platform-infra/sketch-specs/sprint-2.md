@@ -3,7 +3,7 @@ epic: sketch-specs
 sprint: 2
 title: "The spec becomes the contract"
 risk: low
-phase: Locking architecture
+phase: In review
 stories_total: 3
 stories:
   - id: S2.1
@@ -12,14 +12,14 @@ stories:
     i_want: "an approved surface to be the contract CI checks the built route against"
     so_that: "what I approved is exactly what's enforced"
     risk: low
-    status: planned
+    status: done
   - id: S2.2
     title: "Parity on three approved states"
     as_a: "a maintainer"
     i_want: "proof the format loses nothing"
     so_that: "we trust it before a new state depends on it"
     risk: low
-    status: planned
+    status: done
   - id: S2.3
     title: "First state built from a spec"
     as_a: "the product owner"
@@ -30,7 +30,7 @@ stories:
 ---
 # Sketch specs — a surface spec renders the grey wireframe and becomes the state contract — Sprint 2: The spec becomes the contract
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review (2.1, 2.2 built; 2.3 ⏭ deferred — README C5)
 
 ## Stories
 

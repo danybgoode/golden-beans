@@ -1,0 +1,6 @@
+# Parity fixture (sketch-specs D14) — NOT an approval and NOT a contract input. A head with no primary action and a
+# list with no header row: both facts are null in the contract, which is what an absent fact must become.
+state: ship-activity
+route: /app/flag-audit/[projectSlug]
+- head "Activity"
+- list

@@ -1,0 +1,10 @@
+# Parity fixture (sketch-specs D14) — NOT an approval and NOT a contract input. The approved prototype defines this
+# state; surface-parity.test.ts proves this block turns into its STATE-CONTRACT.json entry byte for byte.
+state: ship-features
+route: /app/flags/[projectSlug]
+- head "Features" action "+ New feature"
+- answer "Which features are live, and which are dark?"
+- summary count 4
+- toolbar
+- list columns "Feature | State in production | Type & risk | On / off"
+- note "Showing 2 rows for 42 features"

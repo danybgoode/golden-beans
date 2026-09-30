@@ -40,13 +40,31 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { openPrototype, HERE } from './_harness.mjs';
 import { ALL_STATE_IDS, STATE_SOURCES } from './approved-states.mjs';
-import { extractSignature, signatureArgs } from './state-contract-core.mjs';
+import { BLOCK_KINDS, extractSignature, signatureArgs } from './state-contract-core.mjs';
+import { specContract } from './surface-contract.mjs';
 
 // The vocabulary and the comparison live in `state-contract-core.mjs` — see its header for why the
 // split exists. Re-exported so the one import path keeps working for anything that can take it.
 export * from './state-contract-core.mjs';
 
 const OUT = 'STATE-CONTRACT.json';
+
+/**
+ * The approved SURFACES, as entries (sketch-specs D12, D13): `surfaces/<state>.surface`, each approved by a hash line
+ * in `APPROVED.md`. Pure and browser-free, so it runs first: a bad surface fails before Chromium is opened.
+ */
+export function readSpecContract() {
+  const { entries, problems } = specContract(join(HERE, 'surfaces'), {
+    approvedMd: readFileSync(join(HERE, 'APPROVED.md'), 'utf8'),
+    map: JSON.parse(readFileSync(join(HERE, 'surface.map.json'), 'utf8')),
+    kinds: BLOCK_KINDS,
+    prototypeIds: ALL_STATE_IDS,
+  });
+  if (problems.length > 0) {
+    throw new Error(`the approved surfaces do not make a contract:\n  ${problems.join('\n  ')}`);
+  }
+  return entries;
+}
 
 /** Read every approved state's signature out of the prototype. */
 export async function readContract() {
@@ -115,7 +133,8 @@ function serialise(contract) {
   return `${JSON.stringify(
     {
       _: 'GENERATED — do not hand-edit. Run: node apps/web/design-system/state-contract.mjs',
-      _source: 'console-prototype.html + approved-prototype.html — the states approved in APPROVED.md',
+      _source:
+        'console-prototype.html + approved-prototype.html + surfaces/*.surface — the states approved in APPROVED.md',
       states: contract,
     },
     null,
@@ -126,14 +145,25 @@ function serialise(contract) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const check = process.argv.includes('--check');
   const target = join(HERE, OUT);
-  const next = serialise(await readContract());
+  let spec;
+  try {
+    spec = readSpecContract();
+  } catch (error) {
+    // Printed as the list it is: a stack trace here buries the one line the product owner has to act on.
+    console.error(error.message);
+    process.exit(1);
+  }
+  const counted = `${ALL_STATE_IDS.length} states, ${Object.keys(spec).length} approved surfaces`;
+  // Prototype states first, in approval order; spec states after, sorted by id (D13). `readSpecContract` has already
+  // refused any spec id the prototype defines, so this spread can never overwrite one.
+  const next = serialise({ ...(await readContract()), ...spec });
   if (!check) {
     writeFileSync(target, next);
-    console.log(`wrote ${relative(process.cwd(), target)} — ${ALL_STATE_IDS.length} approved states`);
+    console.log(`wrote ${relative(process.cwd(), target)} — ${counted}`);
   } else {
     const current = readFileSync(target, 'utf8');
     if (current === next) {
-      console.log(`${OUT} reproduces from the approved prototypes (${ALL_STATE_IDS.length} states).`);
+      console.log(`${OUT} reproduces from the approved prototypes and surfaces (${counted}).`);
     } else {
       console.error(
         `${OUT} does not reproduce from the approved prototype.\n` +

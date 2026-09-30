@@ -1,6 +1,6 @@
 {
   "_": "GENERATED — do not hand-edit. Run: node apps/web/design-system/state-contract.mjs",
-  "_source": "console-prototype.html + approved-prototype.html — the states approved in APPROVED.md",
+  "_source": "console-prototype.html + approved-prototype.html + surfaces/*.surface — the states approved in APPROVED.md",
   "states": {
     "ship-features": {
       "missing": false,
