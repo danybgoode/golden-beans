@@ -69,11 +69,8 @@ once the domain is known, and team memory if the project keeps one. State in one
 
 ## Stage 1 — Capture
 Take the brain-dump as given (or read it from `seeds/`). Mirror it back in one sentence — *"You want \<X\>
-so that \<Y\>. Right?"* — before refining it. **Keep three things for the seed** (`templates/scope-seed.md` →
-*The ask, as given*): the ask **word for word**, never tidied; its **claims**, the separate things it asks for, split
-by you, one numbered line each, which the product owner may edit; and the product owner's **teach-back** answer to the
-mirror: yes, partly or no. The intent score (Stage 3.5) compares the pitch against these, so a paraphrase here
-would score the pitch against itself.
+so that \<Y\>. Right?"* — before refining it. Keep the ask **word for word**, its numbered **claims** (split by you,
+editable by them) and their **teach-back** answer in the seed's *The ask, as given*: Stage 3.5 scores against them.
 
 ## Stage 1.5 — Appetite (fix the budget before the solution)
 Ask the inverted estimation question: **how much is this problem worth?** Set `appetite: S | M | L`
@@ -105,15 +102,8 @@ anything recent or changing. The core bank — role & job, outcome & signal, sco
 `references/question-bank.md`.
 
 ## Stage 3.5 — Intent match (advisory)
-Once the pitch has its acceptance criteria, score it against the ask:
-`node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write`. It prints how many questions it will ask,
-then coverage in (does the pitch deliver each claim), coverage out (does each criterion trace to the ask), clarity
-(could two builders test each criterion the same way), the teach-back, a total marked **uncalibrated**, and a band
-(80+ build · 60–79 resolve the follow-ups first · below 60 sketch or spike first). Each gap names the one artifact
-that would close it; make it (Stage 4.6 draws most of them) or say why not, then re-run. `--write` records
-`intent_match:` and an `## Intent match` section in the seed. **It never gates:** it can add a step, never block the
-scaffold or replace the product owner's approval. No `TYPESAFE_API_KEY`, or `jev.egress` not `true`, prints
-"could not look" and no number; say so, and carry on.
+With criteria written, run `node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write` and make or answer
+the artifact each gap is routed to — advisory, never a gate; how to read it: `references/intent-and-visuals.md`.
 
 ## Stage 4 — Platform-first reframe (the step that shrinks the epic)
 Read the backend model + route **before** slicing — it repeatedly re-scopes work smaller. Produce the
@@ -128,22 +118,8 @@ product owner to edit — a Why neither of you can defend is a part you cut. The
 and the **no-gos**. All three land in the pitch. Fixed-scope work skips this stage.
 
 ## Stage 4.6 — Visuals (drawn from the shape of the ask)
-Every shaped bet (appetite M or L) gets a **system context** in the seed's `## Visuals`: the actors, the systems and
-the data flow between them, in Mermaid. Then draw what the ask's shape triggers — no more:
-
-| The ask has… | Draw | Format |
-|---|---|---|
-| a screen or a page someone uses | wireframe: low fidelity, the words that matter | a `surface` block: route, the state shown, blocks in order by kind with their words |
-| a journey of several steps | flow | Mermaid `flowchart` |
-| a new table, record or payload | data sample: three real-looking rows | a table in the seed |
-| a lifecycle or statuses | state machine | Mermaid `stateDiagram` |
-| calls across services, async work or retries | sequence | Mermaid `sequenceDiagram` |
-| a new repo, package or deploy boundary | container diagram | Mermaid `flowchart` with subgraphs |
-
-Name a screen's states from the ten: **idle · hover · focus · pressed · loading · success · error · empty · disabled ·
-unbuilt** (`disabled` comes back; `unbuilt` means not built yet, and must look different). Fixed-scope work (appetite
-S) draws only when a row fires. These are the same words Stage 3.5 routes a gap to (plus *copy deck*, *spike* and
-*think chain*), so a routed gap is usually a row here. Mermaid renders on GitHub and diffs as text.
+Every shaped bet gets a system context (actors, systems, data flow) in the seed's `## Visuals`, then only what the ask's
+shape triggers: the table, the formats and the ten state names are in `references/intent-and-visuals.md`.
 
 ## Stage 5 — Slice
 Define the thinnest end-to-end slice that actually works and ships, then each increment. Every slice is a
@@ -190,10 +166,9 @@ fix is to re-install from the `.skill` archive, not to work around it here.)
 1. Write the **pitch** to `Roadmap/00-ideas/seeds/<slug>.md` — the Definition-of-Ready
    artifact (problem · appetite · bill of materials · rabbit holes · no-gos, plus UX heuristics ·
    acceptance criteria · the reuse list · open risks · any research citations · the Stage-2.5
-   bucket). It **must start with the seed frontmatter block**
-   (`title · slug · status · area · type · priority · appetite · underwritten_by · risk · epic ·
-   build_order · updated` — see `Roadmap/00-ideas/README.md`); set `status: ready` here.
-   `underwritten_by` stays `null` until the betting table funds it at a wave boundary. **This is the gate: nothing scaffolds until the product owner approves it.**
+   bucket), starting from `templates/scope-seed.md` and its frontmatter block (never a hand-typed key list:
+   one drifts); set `status: ready`. `underwritten_by` stays `null` until the betting table funds it.
+   **This is the gate: nothing scaffolds until the product owner approves it.**
 2. On approval, **run the scaffolder** instead of hand-rendering structure:
    ```
    node "$GROOM/scaffold-epic.mjs" --slug <epic-slug> --area <NN> \
@@ -205,17 +180,12 @@ fix is to re-install from the `.skill` archive, not to work around it here.)
    + `sprint-1..N.md` + a `RETROSPECTIVE.md` stub from the skill's own `templates/`, and prints the exact
    path-scoped commit command. Fill the generated files with the real stories / reuse list / QA stages —
    the script makes the skeleton, you make the content.
-3. **Update the seed:** set its frontmatter `epic: "<NN-macro>/<epic-slug>"` (and `status: scaffolded` for
-   tidiness). **Once `epic:` is set the seed is funnel-only** — the **epic README frontmatter `status:`** (the
-   scaffolder writes it `scaffolded`) is now the authoritative status, advanced to `shipped` at epic close.
-   **Never move the seed between folders** — frontmatter carries lifecycle (this is what stopped 00-ideas drifting).
-4. **Commit it.** `Roadmap/` is tracked in git — commit the scaffold so a fresh worktree/agent inherits the
-   product context. **Commit only your own paths** — never `git add Roadmap/` or `git add -A` (a shared
-   planning worktree races the index → "another git process is running" / index lock). Use the command the
-   scaffolder prints, e.g.:
-   `git add <the files you scaffolded> <the seed> && git commit -- <those paths> -m "plan(<epic-slug>): scaffold epic + sprints"`.
-   For parallel planning, run in your own `git worktree`, or let one **scribe** own shared files like
-   `BUILD-ORDER.md`. Docs are low-risk tier.
+3. **Update the seed:** `epic: "<NN-macro>/<epic-slug>"`, `status: scaffolded`. From then on the seed is funnel-only
+   and the **epic README's `status:`** is authoritative (advanced to `shipped` at close). **Never move the seed
+   between folders** — frontmatter carries lifecycle.
+4. **Commit it**, with the path-scoped command the scaffolder prints — **only your own paths**, never
+   `git add Roadmap/` or `-A` (a shared planning worktree races the index). Parallel planners take their own
+   `git worktree`, or one **scribe** owns shared files like `BUILD-ORDER.md`. Docs are low-risk tier.
 
 ## Stage 8 — Emit the builder kickoff
 
@@ -232,11 +202,8 @@ node "$GROOM/emit-epic-kickoff.mjs" --epic <epic-slug>                 # epic mo
 node "$GROOM/emit-kickoff.mjs" --epic <epic-slug> --sprint <N>         # per-sprint (exception)
 ```
 
-The prompt is short on purpose: it POINTS at WAYS-OF-WORKING for the process (a test fails if a section it
-names is missing) and states only this run's non-negotiables — **lock `D1…Dn` against live code and data
-first**, **stack the branches**, **review through `review-route.mjs`**, **merge on green**, **done means
-shipped** — plus rules picked from the epic's docs (high risk, a migration, a flag). Worktree or in place is
-the orchestrator's call (*Epic-mode builds*). Per-sprint fallback: `references/per-sprint-kickoff.md`.
+The prompt points at WAYS-OF-WORKING for the process and states only the run's non-negotiables (read them in its
+output; a test pins each) plus rules picked from the epic's docs. Per-sprint fallback: `references/per-sprint-kickoff.md`.
 
 **Every sprint closes with a smoke walkthrough** the product owner can follow blind — numbered steps, real
 URLs, one action and one observable result each, money/auth steps owed by name. Format:
@@ -247,9 +214,8 @@ For a **spike**: a short investigation prompt ending in a written decision — n
 ## Stage 9 — Close the loop
 Agree and **persist** the build order in seed frontmatter (`build_order`, `priority`), deep-groom only the
 front-of-queue item, **regenerate the board** (`node scripts/build-order.mjs`, never hand-tick it), and
-emit a next-session handoff for the next ⬜ item. The full cadence and the handoff template:
-`references/backlog-cadence.md`. Call the compaction point yourself when the durable state makes re-entry
-cheap.
+emit a next-session handoff for the next ⬜ item. The cadence, the handoff template and when to call the compaction
+point yourself: `references/backlog-cadence.md`.
 
 ## Guardrails
 - **Planning only.** Never edit code or `tasks/`. Only `Roadmap/` docs.
@@ -267,8 +233,7 @@ cheap.
 - Stage-2.5 bucket named (already-possible / light / new).
 - v1 in/out boundary written; research cited where relevant.
 - Reuse list produced (platform-first reframe done).
-- The ask kept verbatim with its claims and teach-back (Stage 1); the intent score run or its "could not look" said
-  (Stage 3.5 — advisory, never a gate); for a shaped bet, a system context plus what the ask's shape triggers (4.6).
+- The ask kept verbatim (Stage 1), scored or "could not look" said (3.5), the visuals its shape calls for (4.6).
 - Each story risk-tiered; QA stage named; smoke-walkthrough owner identified.
 - **For a `risk: high` epic: the kill-switch decision is recorded** (Stage 6b) — either a recommended Golden Frijoles flag story (polarity · seam · **activation** · placement) or a one-line carve-out reason.
 - the product owner approved the scope doc.

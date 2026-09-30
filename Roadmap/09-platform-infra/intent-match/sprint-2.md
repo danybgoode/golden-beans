@@ -65,6 +65,13 @@ stories:
   `agyArgs`/`vibeArgs` (C4); `intent.reader` is a registry row in a new `intent` section (C1). The kickoff's step 1
   names the command.
 
+**The prose ceiling (from S1 round 3):** groom `SKILL.md` must fit **210** hand-written prose lines (the
+`requires_scripts` list no longer counts, and the limit dropped 220 → 210 with it). S2's stages are pointers; the table,
+the formats and the ten states live in `references/intent-and-visuals.md`. To make room without loosening anything,
+Stage 7 now points at the template's frontmatter instead of hand-copying a key list (the copy was already stale: it
+lacked the two new keys) and Stage 8 no longer restates what the generated kickoff says. `skills/.gitignore`'s
+unanchored `references/` rule silently hid the new file; it now ignores only the root folder (it hid nothing else).
+
 **Deviations, named:** the agreement question joined `INTENT_QUESTIONS` (D13's one object) and is not measured —
 there is no labelled set of reader replies yet. `writeIntoSeed`'s frontmatter and section writers were extracted
 (`setFrontmatterKey`, `upsertIntentSection`) so the reader reuses them.

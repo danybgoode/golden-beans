@@ -3,7 +3,7 @@ epic: intent-match
 sprint: 1
 title: "The scorer"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals — Sprint 1: The scorer
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — danybgoode/golden-frijoles#196, squash `1eec939` (plugin + kit 0.10.0)
 
 ## Stories
 
@@ -72,8 +72,17 @@ stories:
 - This epic's own seed had no verbatim ask (groomed before the template kept one). It now carries a **proxy** ask
   (`intent_ask: proxy`, D8): the groomed user stories moved into `## The ask, as given`, split into seven claims by the
   builder. It scored **89** (build band) with no gaps; teach-back absent (never recorded).
-- `.prettierignore` gains the two root copies: the template's copy is formatted under the template's config, and a
-  byte-identical root copy cannot satisfy both (the `config.mjs` precedent).
+- **Review round 1 (#196), all fixed with a spec each, each spec observed failing:** the epic README's scaffold
+  comment was never closed, hiding most of it on GitHub (codex + fresh reviewer); an answer whose `type` did not match
+  its question was still read as a number (codex); a `**Teach-back:**` line directly under the last claim folded
+  into that claim; the format string `yes | partly | no` parsed as "yes"; `--write` took a fenced example
+  `## Intent match` for the section and deleted text; a CRLF seed parsed to no claims (fresh reviewer).
+
+**Review, as it ran:** codex round 1 (2 Should-fix) then capped; the fresh `pr-reviewer` four rounds (round 1: 4 Should-fix
++ nits; round 2: 1 Blocking — the groom prose budget — + 1 Should-fix, CRLF on `--write`; round 3: the budget fix had
+loosened the ceiling by 10 lines; round 4: clean). Rounds 2–4 had **no external family**: codex capped to 2026-10-19,
+agy out of quota on every model (~160 h), vibe unconfigured — said on the PR, the `cross-review/*` statuses set to
+`error` ("DARK") rather than left pending.
 
 ## Sprint QA
 - `node --test` with a replay client (no key, no egress); one `--live` record of the fixtures.
