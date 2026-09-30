@@ -9,6 +9,7 @@ import {
   INTENT_QUESTIONS,
   ROUTES,
   band,
+  frontmatterOf,
   buildRequest,
   buildRouteRequest,
   judgeItem,
@@ -84,7 +85,10 @@ const replay = (answers, { routes = {} } = {}) => {
     calls.push(req);
     const ids = Object.keys(req.questions);
     if (ids[0].startsWith('route_'))
-      return { ok: true, answers: Object.fromEntries(ids.map((id) => [id, { type: 'choice', choice: routes[id] }])) };
+      return {
+        ok: true,
+        answers: Object.fromEntries(ids.map((id) => [id, { type: 'choice', choice: routes[id] }])),
+      };
     return { ok: true, answers: Object.fromEntries(ids.map((id) => [id, answers[id]])), model: 'jev-1.13.0' };
   };
   return { ask, calls };
@@ -161,7 +165,17 @@ test('listItems: a heading inside a fence is not a list, and a blank line closes
 
 test('buildRequest: one Noul per claim, a Noul and a Score per criterion, each naming its item by path', () => {
   const { state, questions } = buildRequest(parseSeed(SEED));
-  assert.deepEqual(Object.keys(questions), ['in_c1', 'in_c2', 'in_c3', 'out_a1', 'clar_a1', 'out_a2', 'clar_a2', 'out_a3', 'clar_a3']);
+  assert.deepEqual(Object.keys(questions), [
+    'in_c1',
+    'in_c2',
+    'in_c3',
+    'out_a1',
+    'clar_a1',
+    'out_a2',
+    'clar_a2',
+    'out_a3',
+    'clar_a3',
+  ]);
   assert.equal(questions.in_c2.type, 'noul');
   assert.equal(questions.clar_a1.type, 'score');
   assert.match(questions.in_c2.instructions, /`claims\.c2`/);
@@ -172,13 +186,24 @@ test('buildRequest: one Noul per claim, a Noul and a Score per criterion, each n
 });
 
 test('INTENT_QUESTIONS: every question set in one object, in the shapes Jev takes (D13)', () => {
-  assert.deepEqual(Object.keys(INTENT_QUESTIONS).sort(), ['clarity', 'coverage_in', 'coverage_out', 'route']);
+  assert.deepEqual(Object.keys(INTENT_QUESTIONS).sort(), [
+    'agreement',
+    'clarity',
+    'coverage_in',
+    'coverage_out',
+    'route',
+  ]);
+  assert.equal(INTENT_QUESTIONS.agreement.type, 'noul');
   for (const id of ['coverage_in', 'coverage_out']) {
     assert.equal(INTENT_QUESTIONS[id].type, 'noul');
     assert.deepEqual(Object.keys(INTENT_QUESTIONS[id].criteria), ['true', 'false']);
   }
   assert.equal(INTENT_QUESTIONS.clarity.criteria.length, 4, 'clarity ÷ 3 assumes four levels');
-  assert.deepEqual(Object.keys(INTENT_QUESTIONS.route.criteria), Object.keys(ROUTES), 'the route vocabulary is D14');
+  assert.deepEqual(
+    Object.keys(INTENT_QUESTIONS.route.criteria),
+    Object.keys(ROUTES),
+    'the route vocabulary is D14'
+  );
 });
 
 // ── scoring ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -191,7 +216,9 @@ test('scoreAnswers: each signal is one mean, the total the mean of the signals p
   close(r.signals.coverage_out, (0.9 + 0.8 + 0.2) / 3);
   close(r.signals.clarity, (3 + 2.4 + 0.3) / 3 / 3);
   assert.equal(r.signals.teach_back, 0.5);
-  const want = Math.round((100 * (r.signals.coverage_in + r.signals.coverage_out + r.signals.clarity + 0.5)) / 4);
+  const want = Math.round(
+    (100 * (r.signals.coverage_in + r.signals.coverage_out + r.signals.clarity + 0.5)) / 4
+  );
   assert.equal(r.total, want);
   assert.deepEqual(r.present, ['coverage_in', 'coverage_out', 'clarity', 'teach_back']);
   assert.deepEqual(
@@ -208,7 +235,13 @@ test('scoreAnswers: each signal is one mean, the total the mean of the signals p
 });
 
 test('scoreAnswers: a malformed answer is could-not-look for the whole score, never a coerced number', () => {
-  for (const bad of [{ type: 'noul', noul: true }, { type: 'noul', noul: '0.9' }, { type: 'noul', noul: 1.2 }, null, undefined]) {
+  for (const bad of [
+    { type: 'noul', noul: true },
+    { type: 'noul', noul: '0.9' },
+    { type: 'noul', noul: 1.2 },
+    null,
+    undefined,
+  ]) {
     const r = scoreAnswers(parseSeed(SEED), { ...ANSWERS, in_c1: bad });
     assert.equal(r.ok, false, JSON.stringify(bad));
     assert.match(r.error, /in_c1/);
@@ -217,19 +250,18 @@ test('scoreAnswers: a malformed answer is could-not-look for the whole score, ne
 });
 
 test('totalOf: signals that are absent do not count, and none at all is no total', () => {
-  assert.deepEqual(totalOf({ coverage_in: 0.8, clarity: null, teach_back: 1 }), { total: 90, present: ['coverage_in', 'teach_back'] });
+  assert.deepEqual(totalOf({ coverage_in: 0.8, clarity: null, teach_back: 1 }), {
+    total: 90,
+    present: ['coverage_in', 'teach_back'],
+  });
   assert.equal(totalOf({ coverage_in: null }), null);
 });
 
 test('band: the placeholder edges are 80 and 60', () => {
-  assert.deepEqual([band(100), band(80), band(79), band(60), band(59), band(0)], [
-    BANDS[0].label,
-    BANDS[0].label,
-    BANDS[1].label,
-    BANDS[1].label,
-    BANDS[2].label,
-    BANDS[2].label,
-  ]);
+  assert.deepEqual(
+    [band(100), band(80), band(79), band(60), band(59), band(0)],
+    [BANDS[0].label, BANDS[0].label, BANDS[1].label, BANDS[1].label, BANDS[2].label, BANDS[2].label]
+  );
 });
 
 test('buildRouteRequest: one Choice per gap, over the D14 vocabulary', () => {
@@ -247,7 +279,15 @@ test('buildRouteRequest: one Choice per gap, over the D14 vocabulary', () => {
 test('run: prints four components, an uncalibrated total, a band and a route per gap', async () => {
   const { io, out } = makeIo({ routes: { route_c3: 'spike', route_a3: 'copy_deck' } });
   assert.equal(await run(['seed.md'], io), EXIT_SCORED);
-  for (const line of ['coverage in', 'coverage out', 'clarity', 'teach-back', 'agreement     pending', 'uncalibrated', 'Band:'])
+  for (const line of [
+    'coverage in',
+    'coverage out',
+    'clarity',
+    'teach-back',
+    'agreement     pending',
+    'uncalibrated',
+    'Band:',
+  ])
     assert.ok(out.stdout.includes(line), `missing "${line}"`);
   assert.match(out.stdout, /signals: coverage in, coverage out, clarity, teach-back/);
   assert.match(out.stdout, /teach-back {4}0\.50  \(partly\)/);
@@ -319,7 +359,9 @@ test('could not look: a pitch over the state budget is refused, never truncated'
 });
 
 test('could not look: Jev unreachable, or a malformed answer', async () => {
-  const down = makeIo({ ask: async () => ({ ok: false, state: 'could-not-look', error: 'timeout after 30000ms' }) });
+  const down = makeIo({
+    ask: async () => ({ ok: false, state: 'could-not-look', error: 'timeout after 30000ms' }),
+  });
   assert.equal(await run(['seed.md'], down.io), EXIT_COULD_NOT_LOOK);
   assertCouldNotLook(down.out, 'timeout');
   const bad = makeIo({ answers: { ...ANSWERS, out_a2: { type: 'noul', noul: true } } });
@@ -387,8 +429,38 @@ test('judgeItem: asks exactly the question the scorer asks, and reads only a val
     },
   });
   assert.deepEqual(Object.keys(seen.questions), ['clar_a1']);
-  assert.deepEqual(seen.questions.clar_a1, buildRequest({ claims: [], criteria: ['It feels fast.'], pitch: 'p' }).questions.clar_a1);
+  assert.deepEqual(
+    seen.questions.clar_a1,
+    buildRequest({ claims: [], criteria: ['It feels fast.'], pitch: 'p' }).questions.clar_a1
+  );
   assert.deepEqual(d, { value: false, p: 0.2, decider: 'jev' });
   const nope = await judgeItem(fx, { ask: async () => ({ ok: true, answers: { clar_a1: { score: '2' } } }) });
   assert.deepEqual(nope, { value: null, p: null, decider: 'could-not-look' });
+});
+
+// ── the seed template (intent-match S2.1) is the parser's contract ───────────────────────────────────────────
+
+test('the groom seed template parses: placeholder teach-back is unanswered, Visuals never leak into criteria', async (t) => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const here = dirname(fileURLToPath(import.meta.url));
+  // This spec runs from skills/template/scripts/ and from this repo's scripts/ copy; a kit consumer has neither path.
+  const tpl = [
+    join(here, '..', '..', 'plugins', 'golden-frijoles', 'skills', 'groom', 'templates', 'scope-seed.md'),
+    join(here, '..', 'skills', 'plugins', 'golden-frijoles', 'skills', 'groom', 'templates', 'scope-seed.md'),
+  ].find((p) => existsSync(p));
+  if (!tpl) return t.skip('groom template not in this checkout');
+  const text = readFileSync(tpl, 'utf8').replace(
+    '## Acceptance criteria',
+    '## Acceptance criteria\n- the one real check'
+  );
+  const p = parseSeed(text);
+  assert.equal(p.teachBack, null, 'the "<yes | partly | no>" placeholder is not an answer');
+  assert.equal(p.claims.length, 2);
+  assert.deepEqual(p.criteria, ['the one real check']);
+  assert.doesNotMatch(p.pitch, /paste the ask here/, 'the ask section never reaches Jev');
+  assert.match(p.pitch, /```surface/, 'the Visuals stay in the pitch Jev reads');
+  assert.match(frontmatterOf(text).intent_ask, /^verbatim$/);
+  assert.equal(frontmatterOf(text).intent_match, 'null');
 });

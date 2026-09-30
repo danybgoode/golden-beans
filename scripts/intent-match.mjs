@@ -34,7 +34,15 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { askJev, loadJevConfig, logDecision, readApiKey, repoRoot, stateSize, STATE_CHAR_BUDGET } from './lib/jev.mjs';
+import {
+  askJev,
+  loadJevConfig,
+  logDecision,
+  readApiKey,
+  repoRoot,
+  stateSize,
+  STATE_CHAR_BUDGET,
+} from './lib/jev.mjs';
 import { needSetting } from './lib/config.mjs';
 
 export const EXIT_SCORED = 0;
@@ -113,20 +121,39 @@ export const INTENT_QUESTIONS = Object.freeze({
       'Yes: it names the action, where to do it and the exact result to observe, so two testers would agree.',
     ],
   },
+  agreement: {
+    // Asked by intent-reader.mjs at the architecture lock (D16), once per epic, only when `intent.reader` is on.
+    // Not measured: there is no labelled set of reader replies yet. Its answer is one signal among five, advisory.
+    type: 'noul',
+    instructions:
+      '`plan` is the architecture lock a builder wrote for this work. `reading` is what a second reader, given only the pitch, says they would build, would not build, and would ask first. Would the two of them build the same thing?',
+    criteria: {
+      true: 'Yes: the reading describes the same product and the same scope as the plan; the differences are wording, order, or detail the plan already settles.',
+      false:
+        'No: the reading would build something the plan does not, leave out something the plan builds, or its first question exposes a decision the plan has not made.',
+    },
+  },
   route: {
     type: 'choice',
     instructions:
       '`{item}` is a gap between the request and the plan in `pitch`: {gap}. Which ONE artifact, made next, would close this gap fastest?',
     criteria: {
-      copy_deck: 'The exact words a person will read (labels, messages, names, an email) are what is missing or unclear.',
+      copy_deck:
+        'The exact words a person will read (labels, messages, names, an email) are what is missing or unclear.',
       wireframe: 'A screen or page someone uses: what is on it, in what order, and what they can do there.',
       flow: 'A journey of several steps: the order of the steps and the branches between them.',
-      data_sample: 'A new record, table, file or payload: three real-looking rows would settle what it holds.',
-      state_machine: 'A lifecycle: the statuses something moves through and what moves it from one to the next.',
-      sequence: 'Calls between services, background work or retries: who calls whom, in what order, and what happens on failure.',
-      container_diagram: 'A new repo, package, service or deploy boundary: what runs where and what talks to what.',
-      spike: 'A technical unknown: nobody knows yet whether or how it can be done, and a short experiment would answer it.',
-      think_chain: 'A judgement or trade-off that needs reasoning through in writing, which none of the other artifacts would settle.',
+      data_sample:
+        'A new record, table, file or payload: three real-looking rows would settle what it holds.',
+      state_machine:
+        'A lifecycle: the statuses something moves through and what moves it from one to the next.',
+      sequence:
+        'Calls between services, background work or retries: who calls whom, in what order, and what happens on failure.',
+      container_diagram:
+        'A new repo, package, service or deploy boundary: what runs where and what talks to what.',
+      spike:
+        'A technical unknown: nobody knows yet whether or how it can be done, and a short experiment would answer it.',
+      think_chain:
+        'A judgement or trade-off that needs reasoning through in writing, which none of the other artifacts would settle.',
     },
   },
 });
@@ -331,10 +358,16 @@ export function scoreAnswers(parsed, answers) {
   };
   const { total, present } = totalOf(signals);
   const gaps = [
-    ...claims.filter((c) => c.p < 0.5).map((c) => ({ id: c.id, kind: 'uncovered', value: c.p, text: c.text })),
-    ...criteria.filter((a) => a.clarity < 0.5).map((a) => ({ id: a.id, kind: 'unclear', value: a.clarity, text: a.text })),
+    ...claims
+      .filter((c) => c.p < 0.5)
+      .map((c) => ({ id: c.id, kind: 'uncovered', value: c.p, text: c.text })),
+    ...criteria
+      .filter((a) => a.clarity < 0.5)
+      .map((a) => ({ id: a.id, kind: 'unclear', value: a.clarity, text: a.text })),
   ];
-  const untraced = criteria.filter((a) => a.traced < 0.5).map((a) => ({ id: a.id, value: a.traced, text: a.text }));
+  const untraced = criteria
+    .filter((a) => a.traced < 0.5)
+    .map((a) => ({ id: a.id, value: a.traced, text: a.text }));
   return { ok: true, signals, total, present, band: band(total), claims, criteria, gaps, untraced };
 }
 
@@ -373,10 +406,26 @@ export function formatReport(result, { source = 'the seed', agreement, reader } 
   const row = (name, v, detail) => `  ${name.padEnd(13)} ${v == null ? '—   ' : f2(v)}  ${detail}`;
   const lines = [
     `Intent match — ${source}`,
-    row('coverage in', s.coverage_in, `(${result.claims.length} claim${result.claims.length === 1 ? '' : 's'})`),
-    row('coverage out', s.coverage_out, result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'),
-    row('clarity', s.clarity, result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'),
-    row('teach-back', s.teach_back, s.teach_back == null ? '(not recorded)' : `(${{ 1: 'yes', 0.5: 'partly', 0: 'no' }[s.teach_back]})`),
+    row(
+      'coverage in',
+      s.coverage_in,
+      `(${result.claims.length} claim${result.claims.length === 1 ? '' : 's'})`
+    ),
+    row(
+      'coverage out',
+      s.coverage_out,
+      result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'
+    ),
+    row(
+      'clarity',
+      s.clarity,
+      result.criteria.length ? `(${result.criteria.length} criteria)` : '(no acceptance list)'
+    ),
+    row(
+      'teach-back',
+      s.teach_back,
+      s.teach_back == null ? '(not recorded)' : `(${{ 1: 'yes', 0.5: 'partly', 0: 'no' }[s.teach_back]})`
+    ),
     agreement == null
       ? '  agreement     pending  (the optional reader at the architecture lock)'
       : row('agreement', agreement, reader ? `(reader: ${reader})` : ''),
@@ -403,6 +452,24 @@ export function componentsOf(result) {
   return Object.fromEntries(Object.entries(result.signals).map(([k, v]) => [k, round(v)]));
 }
 
+/**
+ * The components a `--write` stored in a seed's `<!-- intent-match: {…} -->` comment, or null. Pure. Only unit
+ * numbers survive, so a hand-edited comment can never smuggle a non-number into a total.
+ */
+export function componentsFrom(text) {
+  const m = /<!-- intent-match: (\{[^\n]*?\}) -->/.exec(String(text ?? ''));
+  if (!m) return null;
+  let raw;
+  try {
+    raw = JSON.parse(m[1]);
+  } catch {
+    return null;
+  }
+  const out = {};
+  for (const k of Object.keys(SIGNAL_NAMES)) if (isUnit(raw?.[k])) out[k] = raw[k];
+  return Object.keys(out).length ? out : null;
+}
+
 /** The `## Intent match` section `--write` puts in the seed. Pure. */
 export function intentSection(result, opts = {}) {
   return [
@@ -419,27 +486,22 @@ export function intentSection(result, opts = {}) {
   ].join('\n');
 }
 
-/**
- * Put the score into the seed text. Pure. `intent_match:` goes into the frontmatter (replaced, or added before the
- * closing fence), `intent_ask: verbatim` is added when the seed has an ask and no `intent_ask:` yet, and
- * `## Intent match` replaces any earlier one or is appended.
- */
-export function writeIntoSeed(text, result, opts = {}) {
-  let src = String(text);
+/** Set `key: value` in a document's frontmatter — replaced, or added before the closing fence. Pure. */
+export function setFrontmatterKey(text, key, value, { onlyIfAbsent = false } = {}) {
+  const src = String(text);
   const fm = FRONTMATTER_RE.exec(src);
-  if (fm) {
-    let block = fm[0];
-    const set = (key, value, { onlyIfAbsent = false } = {}) => {
-      const re = new RegExp(`^${key}:.*$`, 'm');
-      if (re.test(block)) {
-        if (!onlyIfAbsent) block = block.replace(re, `${key}: ${value}`);
-      } else block = block.replace(/\n---\n?$/, `\n${key}: ${value}\n---\n`);
-    };
-    set('intent_match', result.total);
-    if (opts.hasAsk) set('intent_ask', 'verbatim', { onlyIfAbsent: true });
-    src = block + src.slice(fm[0].length);
-  }
-  const section = intentSection(result, opts);
+  if (!fm) return src;
+  let block = fm[0];
+  const re = new RegExp(`^${key}:.*$`, 'm');
+  if (re.test(block)) {
+    if (!onlyIfAbsent) block = block.replace(re, `${key}: ${value}`);
+  } else block = block.replace(/\n---\n?$/, `\n${key}: ${value}\n---\n`);
+  return block + src.slice(fm[0].length);
+}
+
+/** Replace the `## Intent match` section (up to the next `## `), or append it. Pure. */
+export function upsertIntentSection(text, section) {
+  const src = String(text);
   const lines = src.split('\n');
   const start = lines.findIndex((l) => /^## /.test(l) && INTENT_HEADING.test(l.slice(3).trim()));
   if (start < 0) return `${src.replace(/\s*$/, '')}\n\n${section}`;
@@ -448,6 +510,16 @@ export function writeIntoSeed(text, result, opts = {}) {
   return [...lines.slice(0, start), ...section.replace(/\n$/, '').split('\n'), '', ...lines.slice(end)]
     .join('\n')
     .replace(/\n{3,}/g, '\n\n');
+}
+
+/**
+ * Put the score into the seed text. Pure. `intent_match:` goes into the frontmatter, `intent_ask: verbatim` is added
+ * when the seed has an ask and no `intent_ask:` yet, and `## Intent match` replaces any earlier one or is appended.
+ */
+export function writeIntoSeed(text, result, opts = {}) {
+  let src = setFrontmatterKey(text, 'intent_match', result.total);
+  if (opts.hasAsk) src = setFrontmatterKey(src, 'intent_ask', 'verbatim', { onlyIfAbsent: true });
+  return upsertIntentSection(src, intentSection(result, opts));
 }
 
 // ── The run, every side effect injected ───────────────────────────────────────────────────────────────────────
@@ -462,20 +534,25 @@ export async function scoreSeed(text, deps) {
   const { config, key, ask, route = true, onCount = () => {} } = deps;
   const parsed = parseSeed(text);
   if (!parsed.claims.length)
-    return couldNotLook('no claims to match against — the seed needs `## The ask, as given` with a `### Claims` list');
+    return couldNotLook(
+      'no claims to match against — the seed needs `## The ask, as given` with a `### Claims` list'
+    );
   if (config.egress !== true)
     return couldNotLook(`jev.egress is ${JSON.stringify(config.egress)}, not true — nothing is sent to Jev`);
   if (!key) return couldNotLook('no TYPESAFE_API_KEY');
   const req = buildRequest(parsed);
   // Checked here as well as in askJev so the refusal names the pitch, and happens before the count is printed.
   if (stateSize(req.state) > STATE_CHAR_BUDGET)
-    return couldNotLook(`the pitch is over Jev's state budget (${stateSize(req.state)} > ${STATE_CHAR_BUDGET} chars); it is never truncated`);
+    return couldNotLook(
+      `the pitch is over Jev's state budget (${stateSize(req.state)} > ${STATE_CHAR_BUDGET} chars); it is never truncated`
+    );
   onCount(Object.keys(req.questions).length, parsed);
   const res = await ask(req);
   if (!res?.ok) return couldNotLook(`jev: ${res?.error ?? 'no answer'}`);
   const result = scoreAnswers(parsed, res.answers);
   if (!result.ok) return couldNotLook(`jev: ${result.error}`);
-  if (route && result.gaps.length) result.gaps = applyRoutes(result.gaps, await ask(buildRouteRequest(parsed, result.gaps)));
+  if (route && result.gaps.length)
+    result.gaps = applyRoutes(result.gaps, await ask(buildRouteRequest(parsed, result.gaps)));
   else result.gaps = result.gaps.map((g) => ({ ...g, route: null }));
   return { state: 'scored', result, parsed, model: res.model ?? null };
 }
@@ -542,7 +619,9 @@ export async function run(argv, io) {
   const { result, parsed } = out;
   const report = formatReport(result, { source: path });
   if (flags.has('--json')) {
-    io.stdout(`${JSON.stringify({ state: 'scored', total: result.total, band: result.band, signals: componentsOf(result), present: result.present, gaps: result.gaps, untraced: result.untraced, uncalibrated: true, model: out.model })}\n`);
+    io.stdout(
+      `${JSON.stringify({ state: 'scored', total: result.total, band: result.band, signals: componentsOf(result), present: result.present, gaps: result.gaps, untraced: result.untraced, uncalibrated: true, model: out.model })}\n`
+    );
     io.stderr(`${report}\n`);
   } else io.stdout(`${report}\n`);
   if (flags.has('--write')) {
@@ -556,7 +635,12 @@ export async function run(argv, io) {
     confidence: result.total / 100,
     text: path,
     source: path,
-    evidence: { signals: componentsOf(result), present: result.present, gaps: result.gaps.length, untraced: result.untraced.length },
+    evidence: {
+      signals: componentsOf(result),
+      present: result.present,
+      gaps: result.gaps.length,
+      untraced: result.untraced.length,
+    },
   });
   return EXIT_SCORED;
 }

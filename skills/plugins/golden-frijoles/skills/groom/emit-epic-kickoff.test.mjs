@@ -126,6 +126,9 @@ test('the real template renders with no leftover placeholders', async () => {
   assert.match(out, /review-route\.mjs/);
   assert.match(out, /Merge on green/);
   assert.match(out, /Done means shipped/);
+  // intent-match D16: the lock step names the optional reader for THIS epic, and says it never waits.
+  assert.match(out, /node scripts\/intent-reader\.mjs --epic demo\b/);
+  assert.match(out, /reader skipped/);
   assert.ok(out.split(/\s+/).length < 450, 'the prompt stays lean — the doctrine lives in WAYS-OF-WORKING');
 });
 
