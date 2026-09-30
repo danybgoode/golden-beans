@@ -16,6 +16,8 @@ on:
       - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
       - 'jev.config.json'
+      # lint.rules' questions are what the jev replay below re-checks (semantic-lint D8): a wording edit must run it.
+      - 'golden-frijoles.config.json'
   pull_request:
     paths:
       - 'skills/template/scripts/**'
@@ -23,6 +25,7 @@ on:
       - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
       - 'jev.config.json'
+      - 'golden-frijoles.config.json'
 
 jobs:
   cli-tests:
