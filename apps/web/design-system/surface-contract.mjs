@@ -55,7 +55,8 @@ export function readSurfaces(dir) {
 export function surfaceEntry(surface, map, kinds, file = `${surface.state}.surface`) {
   const blocks = surface.blocks.map((block) => {
     const fail = (reason) => new SurfaceError(file, block.line, reason);
-    const target = map.kinds[block.kind];
+    // Own properties only, the parser's rule (#210 review): an inherited name is never a mapping.
+    const target = Object.hasOwn(map.kinds, block.kind) ? map.kinds[block.kind] : undefined;
     if (target === undefined) throw fail(`this project's surface.map.json maps no \`${block.kind}\``);
     const kind = kinds.find((entry) => entry.kind === target);
     if (kind === undefined) throw fail(`surface.map.json maps \`${block.kind}\` to \`${target}\`, which BLOCK_KINDS lacks`);
