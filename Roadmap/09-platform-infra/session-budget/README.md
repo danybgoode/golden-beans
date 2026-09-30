@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: session-budget
 title: "Session budget — one deep ask per approval gate, plus a measured line"
@@ -42,6 +42,60 @@ change under `skills/` is a plugin release.
 - **D6 — Cowork prints the line at each groom approval gate** from what it can count, with "context: not measured here".
 - **D7 — Figures go to a local gitignored log** (`.golden-frijoles/session-budget.jsonl`); the session journal stays
   intent-only (`session-journal.mjs` D2) and records only the verdict acted on.
+
+## Architecture lock (verified against live code, `main` @ 476cdd1, 2026-09-30)
+
+The branch was 14 commits behind `main` when the run started; `main` was merged first, and the lock is
+against the merged tree. Two things `main` had changed since grooming: the build view is no longer a
+`$.ui.status` row but a **band above the prompt** (#199, `hooks/index.tsx`), and the plugin is at **0.13.0**.
+
+- **D1 — The rule, verbatim:** "**One deep ask per approval gate; keep going while the budget line says
+  so.**" An *approval gate* is any point where groom stops for the product owner's sign-off (the scope-doc
+  gate, Stage 7.1). **Correction to the seed — nine files, not four:** the old rule ("one *deep* ask per
+  run" and "fresh session per sprint") also lives in the shared `WAYS-OF-WORKING.template.md` (three
+  copies: `Roadmap/`, `skills/Roadmap/`, `skills/template/Roadmap/`, each re-rendered) and in the
+  template's `LEARNINGS.md`. All of them change; `grep -rn "one \*deep\* ask per run\|fresh session per
+  sprint" skills Roadmap` (seeds and this epic excepted) must find nothing.
+- **D2 — Figures come from the `session.measure` event's own payload** (`context.percent`,
+  `rateLimits[].{kind,percentUsed}` for `five_hour` / `seven_day`) — the same figures `$.session.usage()`
+  answers, pushed, so the mod never polls. **Correction:** the sprint's "reads `$.session.usage()`" is
+  replaced by the event payload; calling the op again inside its own event is a redundant read.
+- **D3 — One pure `sessionVerdict()`** in `skills/groom/session-budget.mjs` (no Node imports, so both the
+  mod and the Cowork CLI import the same file); thresholds live in its one `THRESHOLDS` table:
+  checkpoint at context ≥ 60 or questions waiting ≥ 3; hand off at context ≥ 80 or 5-hour ≥ 90. Hand off
+  wins over checkpoint.
+- **D4 — Unknown is not zero.** A null/absent figure is left out of the line *and* the verdict.
+- **D5 — Advise, never act.** Nothing calls `$.session.compact()`, `/clear` or ends a session.
+- **D6 — Cowork:** `node "$GROOM/session-line.mjs" --asks-open N --questions-waiting N --gates-passed N`
+  prints the line with "context: not measured here", using D3's function. Groom runs it at each approval
+  gate; on hand off, groom emits `backlog-cadence.md`'s next-session prompt.
+- **D7 — The log:** `.golden-frijoles/session-budget.jsonl` at the repo root (the mod: one row per verdict
+  change; the CLI: one row per gate). It is gitignored by a `.golden-frijoles/.gitignore` of `*` that the
+  writer creates, so every consuming project is covered without editing its root `.gitignore`. The
+  journal stays intent-only: groom journals only the verdict acted on, with `scripts/session-note.mjs`
+  where the project has it.
+- **D8 — Where the line draws: `$.ui.status`**, one row under the prompt, free since #199 moved the build
+  view to the band. Format: `Session 48% · 5h 23% · 7d 9% → keep going` (+ `· 1 question waiting` when
+  non-zero). **Correction — "asks open" is not observable by the mod**, so in Claude Code it is left out
+  (D4), not guessed. "Questions waiting" is the count of in-flight `AskUserQuestion` calls, seen by a
+  `tool.call` hook; the engine shows at most one at a time, so the 3+ threshold bites in Cowork, not here.
+- **D9 — One release:** plugin + kit 0.13.0 → **0.14.0**, one `CHANGELOG.md` section.
+- **D10 — Found, not fixed here:** `scripts/session-resume.mjs` and `scripts/session-note.mjs` exist only
+  in `skills/template/scripts/`, not at this repo's root, although the kickoff and WAYS-OF-WORKING name
+  the root path. This run used the template copy. Recorded for the retro; it is not this epic's scope.
+
+### Build contract — Sprint 1 (locked by the architect before the builder started)
+- `skills/plugins/golden-frijoles/skills/groom/session-budget.mjs` — pure: `THRESHOLDS`, `sessionVerdict({
+  contextPct, fiveHourPct, questionsWaiting })` → `{ verdict: 'keep going'|'checkpoint'|'hand off',
+  reasons[] }`, `figuresFromMeasure(e)`, `sessionLine(figures, verdict)`, `coworkLine(counts, verdict)`,
+  `budgetRow(...)`. `session-budget.test.mjs` covers every threshold edge (59/60, 79/80, 89/90, 2/3) and
+  null figures.
+- `session-line.mjs` (same dir) — the Cowork CLI; appends its row per D7.
+- `hooks/index.tsx` — adds `session.measure` → status + log on change, and `tool.call` on
+  `AskUserQuestion` → the waiting count. The build view band is untouched.
+- Rewording per D1; `render-ways-of-working --check` green for all three rendered copies.
+- Routing: one builder (Claude, this session) for all three stories; review through `review-route.mjs
+  --builder claude`.
 
 ## What already exists (reuse, don't rebuild)
 - `skills/plugins/golden-frijoles/hooks/index.ts` + `build-view.mjs` + `build-view.test.mjs` (the build view mod).

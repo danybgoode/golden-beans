@@ -10,11 +10,12 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
+- [Session budget — one deep ask per approval gate, plus a measured line](../../09-platform-infra/session-budget/README.md) — 09 Platform Infra · 0/3 stories · risk: Low · single-product-wave-B
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
@@ -61,7 +62,7 @@
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (19)
+## ⬜ Funnel — seeds not yet scaffolded (18)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
@@ -71,7 +72,6 @@
 - [Workspaces become the tenant: one person, many products, one boundary](seeds/workspaces.md) — Raw · Feature · appetite L · audit-wave-C
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
-- [Session budget: replace 'one deep ask per run' with a measured line](seeds/session-budget.md) — Raw · Chore · appetite S · single-product-wave-B
 - [Compiled prompts: the kickoff and build/QA prompts assembled from measured parts](seeds/compiled-prompts.md) — Raw · Feature · appetite L · single-product-wave-C
 - [Sketch specs: approved specs render the wireframe and become the build contract](seeds/sketch-specs.md) — Raw · Feature · appetite L · single-product-wave-C
 - [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
@@ -83,7 +83,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (4)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -94,6 +94,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
+| Session budget — one deep ask per approval gate, plus a measured line | In progress | Scaffolded |
 
 ---
-_Epics: 42 · seeds in funnel: 19 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 43 · seeds in funnel: 18 · status drift: 4. Regenerate with `node scripts/build-order.mjs`._
