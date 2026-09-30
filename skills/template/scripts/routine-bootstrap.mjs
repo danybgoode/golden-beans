@@ -70,6 +70,8 @@ export const ROUTINE_TOKENS = Object.freeze([
 ]);
 
 export function routineNames(dir = ROUTINES_DIR, readDir = readdirSync) {
+  // A missing routines/ is "no routines", reported by the CLI's usage line — never a stack trace (agy on #191).
+  if (!existsSync(dir)) return [];
   return readDir(dir)
     .filter((name) => name.endsWith('.prompt.md'))
     .map((name) => name.replace(/\.prompt\.md$/, ''))
@@ -137,7 +139,8 @@ export function runRoutineBootstrap(
     return 2;
   }
 
-  const body = loadBody(promptPath(name, routinesDir));
+  // CRLF-safe: the multi-line fill-in markers are matched with \n (agy on #191).
+  const body = loadBody(promptPath(name, routinesDir)).replace(/\r\n/g, '\n');
   let values;
   try {
     const section = readSectionFor('routines', root === undefined ? {} : { root });

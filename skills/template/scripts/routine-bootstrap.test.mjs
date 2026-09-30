@@ -148,3 +148,20 @@ test('#191 review: run from a SUBDIRECTORY, the project root config is read', as
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /acme\/root/);
 });
+
+test('agy on #191: a missing routines/ is an empty list, not a crash; CRLF prompts still fill', async () => {
+  const { routineNames, runRoutineBootstrap } = await import('./routine-bootstrap.mjs');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  assert.deepEqual(routineNames(join(tmpdir(), 'no-such-routines-dir-xyz')), []);
+  let out = '';
+  const code = runRoutineBootstrap(['r'], {
+    names: ['r'],
+    loadBody: () => 'Repo <root-repo>\r\non <date>\r\n',
+    readSectionFor: () => ({ raw: { 'root-repo': 'acme/root' } }),
+    out: (t) => (out += t),
+    err: () => {},
+  });
+  assert.equal(code, 0);
+  assert.match(out, /Repo acme\/root\non <date>/);
+});
