@@ -24,8 +24,11 @@ const RULE = {
   severity: 'should-fix',
   globs: ['apps/web/**'],
   allowlist: ['apps/web/app/api/v1/track/route.ts', 'apps/web/e2e/**'],
-  patterns: ['\\banalytics\\s*\\.', "\\.from\\(\\s*['\"]events['\"]"],
-  question: { instructions: 'Does this hunk build a parallel telemetry pipeline?', criteria: { true: 'Yes', false: 'No' } },
+  patterns: ['\\banalytics\\s*\\.', '\\.from\\(\\s*[\'"]events[\'"]'],
+  question: {
+    instructions: 'Does this hunk build a parallel telemetry pipeline?',
+    criteria: { true: 'Yes', false: 'No' },
+  },
 };
 const rules = (over = {}) => parseLintRules({ rules: [{ ...RULE, ...over }] });
 
@@ -95,7 +98,9 @@ test('parseDiff: added lines per hunk; a deleted file adds nothing; `++ ` conten
 });
 
 test('candidateText: the header plus a window around each hit, merged, gaps marked — never the whole new file', () => {
-  const body = Array.from({ length: 100 }, (_, i) => (i === 10 || i === 20 || i === 90 ? `analytics.track(${i})` : `line ${i}`));
+  const body = Array.from({ length: 100 }, (_, i) =>
+    i === 10 || i === 20 || i === 90 ? `analytics.track(${i})` : `line ${i}`
+  );
   const [c] = selectCandidates(parseDiff(diffOf('apps/web/new.ts', body)), rules());
   const lines = c.hunk.split('\n');
   assert.equal(lines[0], '@@ -1,2 +1,3 @@');
@@ -119,7 +124,10 @@ test('the allowlist, the globs and removed/context lines never select', () => {
     diffOf('apps/web/app/api/v1/track/route.ts', ["analytics.track('x')"]), // allowlisted file
     diffOf('apps/web/e2e/funnel.spec.ts', [".from('events').insert(row)"]), // allowlisted glob
     diffOf('packages/sdk/src/index.ts', ["analytics.track('x')"]), // outside the globs
-    diffOf('apps/web/lib/a.ts', ['const x = 1'], { removed: ["analytics.track('x')"], context: ["analytics.track('y')"] }),
+    diffOf('apps/web/lib/a.ts', ['const x = 1'], {
+      removed: ["analytics.track('x')"],
+      context: ["analytics.track('y')"],
+    }),
   ];
   for (const d of none) assert.deepEqual(selectCandidates(parseDiff(d), rules()), [], d.split('\n')[0]);
 });
@@ -131,14 +139,18 @@ test('outcomeOf: one threshold, three bands; only a probability is a verdict', (
   assert.equal(outcomeOf(0.79, 0.8), 'uncertain');
   assert.equal(outcomeOf(0.2, 0.8), 'clear');
   assert.equal(outcomeOf(0.21, 0.8), 'uncertain');
-  for (const bad of [true, '1', null, undefined, 1.2, -0.1, Number.NaN]) assert.equal(outcomeOf(bad, 0.8), null);
+  for (const bad of [true, '1', null, undefined, 1.2, -0.1, Number.NaN])
+    assert.equal(outcomeOf(bad, 0.8), null);
 });
 
 const answer = (noul) => async () => ({ ok: true, answers: { violates: { noul } } });
 
 test('judgeCandidate: could-not-look and a non-probability are NOT CHECKED, never clear', async () => {
   const [c] = selectCandidates(parseDiff(VIOLATION), rules());
-  const down = await judgeCandidate(c, { ask: async () => ({ ok: false, error: 'timeout after 8000ms' }), threshold: 0.8 });
+  const down = await judgeCandidate(c, {
+    ask: async () => ({ ok: false, error: 'timeout after 8000ms' }),
+    threshold: 0.8,
+  });
   assert.deepEqual(down, { outcome: 'not-checked', p: null, error: 'timeout after 8000ms' });
   const junk = await judgeCandidate(c, { ask: answer(true), threshold: 0.8 });
   assert.equal(junk.outcome, 'not-checked');
@@ -178,7 +190,13 @@ test('judgeAll: the cap, the hunk limit and the budget are not-checked, logged, 
     return { ok: true, answers: { violates: { noul: 0.9 } } };
   };
   const rail = { thresholds: { default: 0.8 } };
-  const over = await judgeAll(manyCandidates(MAX_CANDIDATES + 2), { ask, log: (e) => logged.push(e), rail, mode: 'shadow', sha: 'abc' });
+  const over = await judgeAll(manyCandidates(MAX_CANDIDATES + 2), {
+    ask,
+    log: (e) => logged.push(e),
+    rail,
+    mode: 'shadow',
+    sha: 'abc',
+  });
   assert.equal(asked, MAX_CANDIDATES);
   assert.deepEqual(
     over.slice(MAX_CANDIDATES).map((r) => r.outcome),
@@ -198,14 +216,25 @@ test('judgeAll: the cap, the hunk limit and the budget are not-checked, logged, 
   assert.match(big[0].error, /hunk over/);
 
   let t = 0;
-  const late = await judgeAll(manyCandidates(2), { ask, log: () => {}, rail, mode: 'shadow', now: () => (t += 70_000) });
+  const late = await judgeAll(manyCandidates(2), {
+    ask,
+    log: () => {},
+    rail,
+    mode: 'shadow',
+    now: () => (t += 70_000),
+  });
   assert.equal(asked, 0);
   assert.match(late[0].error, /time budget/);
 });
 
 test('a per-rule threshold overrides the default', async () => {
   const c = manyCandidates(1);
-  const [r] = await judgeAll(c, { ask: answer(0.7), log: () => {}, rail: { thresholds: { default: 0.8, 'rule-1': 0.65 } }, mode: 'shadow' });
+  const [r] = await judgeAll(c, {
+    ask: answer(0.7),
+    log: () => {},
+    rail: { thresholds: { default: 0.8, 'rule-1': 0.65 } },
+    mode: 'shadow',
+  });
   assert.equal(r.outcome, 'raise');
 });
 
@@ -216,17 +245,27 @@ test('summarize: shadow says "would raise" with p; jev prints the finding; all-n
     { outcome: 'not-checked', p: null, error: 'timeout after 8000ms' },
   ];
   const [shadow] = summarize(c, res, { mode: 'shadow' });
-  assert.match(shadow, /^semantic-lint \(shadow\): lint:rule-1 — 2 candidate\(s\): 1 would raise \(p=0\.93 apps\/web\/f0\.ts\), 1 not checked \(timeout after 8000ms\) · logged, not shown as findings$/);
+  assert.match(
+    shadow,
+    /^semantic-lint \(shadow\): lint:rule-1 — 2 candidate\(s\): 1 would raise \(p=0\.93 apps\/web\/f0\.ts\), 1 not checked \(timeout after 8000ms\) · logged, not shown as findings$/
+  );
   const jev = summarize(c, res, { mode: 'jev' });
   assert.equal(jev.length, 2);
   assert.match(jev[1], /\[should-fix\] apps\/web\/f0\.ts: p=0\.93 — may break AGENTS\.md rule 1/);
-  const none = summarize(c, res.map(() => ({ outcome: 'not-checked', p: null, error: 'no TYPESAFE_API_KEY' })), { mode: 'shadow' });
-  assert.deepEqual(none, ['semantic-lint: not checked (no key) — lint:rule-1, 2 candidate(s) logged, none judged']);
+  const none = summarize(
+    c,
+    res.map(() => ({ outcome: 'not-checked', p: null, error: 'no TYPESAFE_API_KEY' })),
+    { mode: 'shadow' }
+  );
+  assert.deepEqual(none, [
+    'semantic-lint: not checked (no key) — lint:rule-1, 2 candidate(s) logged, none judged',
+  ]);
 });
 
 // ── the CLI ─────────────────────────────────────────────────────────────────────────────────────
 
-const jevCfg = (lint = { mode: 'shadow', shadowExpires: '2026-10-14' }) => parseJevConfig({ egress: true, rails: { lint } });
+const jevCfg = (lint = { mode: 'shadow', shadowExpires: '2026-10-14' }) =>
+  parseJevConfig({ egress: true, rails: { lint } });
 
 function harness({ config = jevCfg(), section = { rules: [RULE] }, diff = VIOLATION, ctx = {} } = {}) {
   const out = [];
@@ -262,7 +301,10 @@ test('run: shadow, one violation → one line naming lint:rule-1 with p, logged,
   const h = harness();
   assert.equal(await run([], h.io), 0);
   assert.equal(h.out.length, 1);
-  assert.match(h.out[0], /lint:rule-1 — 1 candidate\(s\): 1 would raise \(p=0\.93 apps\/web\/app\/api\/x\/route\.ts\)/);
+  assert.match(
+    h.out[0],
+    /lint:rule-1 — 1 candidate\(s\): 1 would raise \(p=0\.93 apps\/web\/app\/api\/x\/route\.ts\)/
+  );
   assert.equal(h.logged.length, 1);
   assert.equal(h.logged[0].rail, 'lint:rule-1');
   assert.equal(h.logged[0].source, 'apps/web/app/api/x/route.ts@abc123');
@@ -285,7 +327,7 @@ test('run: no key → "semantic-lint: not checked (no key)", logged per candidat
   assert.equal(h.logged[0].decider, 'not-checked');
 });
 
-test('run: off exits before reading rules or building a context (no egress ask on a stranger\'s push)', async () => {
+test("run: off exits before reading rules or building a context (no egress ask on a stranger's push)", async () => {
   const h = harness({ config: jevCfg({ mode: 'off' }), section: 'not even valid' });
   assert.equal(await run([], h.io), 0);
   assert.deepEqual(h.out, ['semantic-lint: off (jev.rails.lint.mode)\n']);
@@ -308,7 +350,9 @@ test('run: an unreadable diff is "not checked", never a pass', async () => {
     },
   });
   assert.equal(await run(['--range', 'nope...HEAD'], h.io), 0);
-  assert.deepEqual(h.out, ["semantic-lint: not checked (could not read the diff: fatal: bad revision 'nope')\n"]);
+  assert.deepEqual(h.out, [
+    "semantic-lint: not checked (could not read the diff: fatal: bad revision 'nope')\n",
+  ]);
 });
 
 test('run: every --range is read; usage errors are exit 2', async () => {

@@ -7,9 +7,7 @@
         "id": "rule-1",
         "source": "AGENTS.md rule 1 (the growth engine owns telemetry; never build a parallel pipeline)",
         "severity": "should-fix",
-        "globs": [
-          "apps/web/**"
-        ],
+        "globs": ["apps/web/**"],
         "allowlist": [
           "apps/web/app/api/v1/track/route.ts",
           "apps/web/app/api/v1/features/sync/route.ts",

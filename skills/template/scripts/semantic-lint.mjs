@@ -60,7 +60,8 @@ export function parseLintRules(raw) {
   if (!Array.isArray(raw.rules)) fail('rules must be an array');
   const seen = new Set();
   const strings = (v, where, { nonEmpty }) => {
-    if (!Array.isArray(v) || v.some((x) => typeof x !== 'string' || !x)) fail(`${where} must be an array of strings`);
+    if (!Array.isArray(v) || v.some((x) => typeof x !== 'string' || !x))
+      fail(`${where} must be an array of strings`);
     if (nonEmpty && !v.length) fail(`${where} must not be empty`);
     return v;
   };
@@ -99,7 +100,10 @@ export function parseLintRules(raw) {
       id: r.id,
       source: r.source,
       severity: r.severity,
-      question: { instructions: q.instructions, criteria: { true: q.criteria.true, false: q.criteria.false } },
+      question: {
+        instructions: q.instructions,
+        criteria: { true: q.criteria.true, false: q.criteria.false },
+      },
       match: { globs: globs.map(globToRegExp), allow: allowlist.map(globToRegExp), patterns },
     };
   });
@@ -187,7 +191,9 @@ export function selectCandidates(files, rules) {
       if (!rule.match.globs.some((re) => re.test(file))) continue;
       if (rule.match.allow.some((re) => re.test(file))) continue;
       for (const h of hunks) {
-        const hits = rule.match.patterns.filter((re) => h.added.some((l) => re.test(l))).map((re) => re.source);
+        const hits = rule.match.patterns
+          .filter((re) => h.added.some((l) => re.test(l)))
+          .map((re) => re.source);
         if (!hits.length) continue;
         const text = candidateText(h, (l) => rule.match.patterns.some((re) => re.test(l)));
         const key = `${rule.id}\0${file}\0${textHash(text)}`;
@@ -234,17 +240,22 @@ const reasonFor = (why) => (why === 'no TYPESAFE_API_KEY' ? 'no key' : why);
  * Judge every candidate under the caps and the budget (D2), log each decision (D7). Returns the results in candidate
  * order. `notChecked` (a reason) short-circuits every call: Jev could not legitimately be asked at all.
  */
-export async function judgeAll(candidates, { ask, log, rail, mode, sha, notChecked = null, now = Date.now, budgetMs = TIME_BUDGET_MS }) {
+export async function judgeAll(
+  candidates,
+  { ask, log, rail, mode, sha, notChecked = null, now = Date.now, budgetMs = TIME_BUDGET_MS }
+) {
   const deadline = now() + budgetMs;
   const results = new Array(candidates.length);
   const judgeOne = async (i) => {
     const c = candidates[i];
     let r;
     if (notChecked) r = { outcome: 'not-checked', p: null, error: notChecked };
-    else if (i >= MAX_CANDIDATES) r = { outcome: 'not-checked', p: null, error: `over the ${MAX_CANDIDATES}-candidate cap` };
+    else if (i >= MAX_CANDIDATES)
+      r = { outcome: 'not-checked', p: null, error: `over the ${MAX_CANDIDATES}-candidate cap` };
     else if (c.hunk.length > HUNK_CHAR_LIMIT)
       r = { outcome: 'not-checked', p: null, error: `hunk over ${HUNK_CHAR_LIMIT} chars (${c.hunk.length})` };
-    else if (now() >= deadline) r = { outcome: 'not-checked', p: null, error: `time budget (${budgetMs / 1000}s) spent` };
+    else if (now() >= deadline)
+      r = { outcome: 'not-checked', p: null, error: `time budget (${budgetMs / 1000}s) spent` };
     else r = await judgeCandidate(c, { ask, threshold: thresholdFor(rail, c.rule.id) });
     results[i] = r;
     log({
@@ -293,9 +304,14 @@ export function summarize(candidates, results, { mode }) {
         `${raised.length} ${mode === 'jev' ? 'raised' : 'would raise'} (${raised.map((x) => `p=${x.r.p} ${x.c.file}`).join(', ')})`
       );
     for (const o of ['uncertain', 'clear']) if (of(o).length) parts.push(`${of(o).length} ${o}`);
-    if (nc.length) parts.push(`${nc.length} not checked (${[...new Set(nc.map((x) => reasonFor(x.r.error)))].join('; ')})`);
+    if (nc.length)
+      parts.push(
+        `${nc.length} not checked (${[...new Set(nc.map((x) => reasonFor(x.r.error)))].join('; ')})`
+      );
     const tail = mode === 'jev' ? 'logged' : 'logged, not shown as findings';
-    lines.push(`semantic-lint (${mode}): lint:${id} — ${rows.length} candidate(s): ${parts.join(', ')} · ${tail}`);
+    lines.push(
+      `semantic-lint (${mode}): lint:${id} — ${rows.length} candidate(s): ${parts.join(', ')} · ${tail}`
+    );
     if (mode === 'jev')
       for (const { c, r } of raised)
         lines.push(`  [${c.rule.severity}] ${c.file}: p=${r.p} — may break ${c.rule.source}`);
@@ -373,7 +389,12 @@ export async function run(argv, io) {
 }
 
 const git = (root, args) =>
-  execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+  execFileSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
 async function main() {
   const root = repoRoot();
