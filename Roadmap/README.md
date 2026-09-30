@@ -372,6 +372,12 @@ independently shippable slice of value.
   measured: 31/33 labelled hunks decided, all right. 🚧 = **in shadow until 2026-10-14**, logging and printing but
   never shown as findings; the promote / tune / drop decision is owed to Daniel on that date. **Shipped 2026-09-30**
   (#200, kit 0.13.0).
+- ✅ [Session budget](09-platform-infra/session-budget/README.md): **one deep ask per approval gate; keep going while
+  the budget line says so.** It replaces "one per run" and "fresh session per sprint". In Claude Code a status row
+  under the prompt reads the engine's own figures, for example `Session 48% · 5h 23% · 7d 9% → keep going`, and
+  turns to checkpoint or hand off. Groom prints the same verdict at every approval gate in Cowork, with "context: not
+  measured here". There is one `THRESHOLDS` table, nothing is shown as 0% when it's unknown, and the line never acts
+  on its own. **Shipped 2026-09-30** (#202, kit 0.14.0). The live walkthrough is owed to Daniel.
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -392,6 +398,11 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-30**: `session-budget` **shipped**: one sprint, kit 0.14.0.
+  - The product owner's decision bandwidth, not a stamina rule, now sets session length. Every approval gate ends
+    with a keep going / checkpoint / hand off line, in Claude Code and in Cowork.
+  - The lock corrected the seed out loud: nine files, not four; no "asks open" in Claude Code; and the line took the
+    status row that #199 had just freed.
 - **2026-09-30**: `semantic-lint` **shipped** in shadow: one sprint, kit 0.13.0.
   - Jev now judges only what deterministic selectors pick, starting with AGENTS rule 1 (no parallel telemetry
     pipeline). The measured wording decides 31/33 labelled hunks, every one right.
