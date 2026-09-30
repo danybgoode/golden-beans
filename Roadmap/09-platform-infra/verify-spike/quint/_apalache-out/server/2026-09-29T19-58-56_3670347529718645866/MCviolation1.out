@@ -1,0 +1,464 @@
+@!@!@STARTMSG 2262:0 @!@!@
+Created by Apalache on Tue Sep 29 20:01:05 CST 2026
+@!@!@ENDMSG 2262 @!@!@
+@!@!@STARTMSG 2110:1 @!@!@
+Invariant is violated.
+@!@!@ENDMSG 2110 @!@!@
+@!@!@STARTMSG 2121:1 @!@!@
+The behavior up to this point is:
+@!@!@ENDMSG 2121 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+1: <Initial predicate>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = {}
+/\ outbox_timed::outbox::ingested = {}
+/\ outbox_timed::outbox::nextToken = 1
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 0>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+2: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 1
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "pending", token |-> 0]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 0>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+3: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 2
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 1]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 0>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "claimed",
+      result |-> "",
+      token |-> 1]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+4: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 2
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 1]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 1>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "sent",
+      result |-> "delivered",
+      token |-> 1]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+5: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 2
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 1]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 1>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+6: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 3
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 2]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 1>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "claimed",
+      result |-> "",
+      token |-> 2]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+7: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 3
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 2]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 2>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "sent",
+      result |-> "permanent",
+      token |-> 2]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+8: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 3
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 2]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 2>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+9: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 4
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 3]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 2>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "claimed",
+      result |-> "",
+      token |-> 3]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+10: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 4
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 3]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 3>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "sent",
+      result |-> "delivered",
+      token |-> 3]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+11: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 4
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 3]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 3>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+12: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 5
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 4]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 3>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "claimed",
+      result |-> "",
+      token |-> 4]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
+@!@!@STARTMSG 2217:4 @!@!@
+13: <Next>
+/\ outbox_timed::outbox::deadByExhaustion = FALSE
+/\ outbox_timed::outbox::dests = SetAsFun({ <<"d1", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>>,
+  <<"d2", [deleted |-> FALSE, enabled |-> TRUE, up |-> TRUE]>> })
+/\ outbox_timed::outbox::expected = { <<"e2", "d1">>, <<"e2", "d2">> }
+/\ outbox_timed::outbox::ingested = {"e2"}
+/\ outbox_timed::outbox::nextToken = 5
+/\ outbox_timed::outbox::replays = 0
+/\ outbox_timed::outbox::rows = SetAsFun({ <<<<"e1", "d1">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e1", "d2">>, [attempts |-> 0, status |-> "none", token |-> 0]>>,
+  <<<<"e2", "d1">>, [attempts |-> 0, status |-> "pending", token |-> 0]>>,
+  <<<<"e2", "d2">>, [attempts |-> 0, status |-> "in_flight", token |-> 4]>> })
+/\ outbox_timed::outbox::sends = SetAsFun({ <<<<"e1", "d1">>, 0>>,
+  <<<<"e1", "d2">>, 0>>,
+  <<<<"e2", "d1">>, 0>>,
+  <<<<"e2", "d2">>, 4>> })
+/\ outbox_timed::outbox::sentAfterTerminal = FALSE
+/\ outbox_timed::outbox::strandedInFlight = FALSE
+/\ outbox_timed::outbox::workers = SetAsFun({ <<
+    "w1", [claimedAttempts |-> 0,
+      key |-> <<"e2", "d2">>,
+      phase |-> "sent",
+      result |-> "delivered",
+      token |-> 4]
+  >>,
+  <<
+    "w2", [claimedAttempts |-> 0,
+      key |-> <<"e1", "d1">>,
+      phase |-> "idle",
+      result |-> "",
+      token |-> 0]
+  >> })
+
+@!@!@ENDMSG 2217 @!@!@
