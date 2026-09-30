@@ -10,18 +10,17 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (4)
+## 🏗️ Building now (3)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
-- [Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 3/6 stories · risk: Low · single-product-wave-C
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (40)
+## ✅ Shipped (41)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -54,6 +53,7 @@
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
 - [✅ Epic: Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow)](../../09-platform-infra/semantic-lint/README.md) — 09 Platform Infra · 3/3 stories · risk: Low · single-product-wave-B
+- [✅ Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 5/5 stories · risk: Low · single-product-wave-C
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 11/11 stories · unranked
 - [Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals](../../09-platform-infra/intent-match/README.md) — 09 Platform Infra · 9/9 stories · risk: Low · single-product-wave-B

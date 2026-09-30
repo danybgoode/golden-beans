@@ -615,6 +615,10 @@ one-liner + why + date shape.
   the **CLI had errored**. Listing each environment and counting its rows (32 / 11 / 10) is what
   caught it. A grep over a failed command is a false green, and it is indistinguishable from a true
   one. *(2026-09-01, design-system-rails S6.)*
+  **Grepping for a VALUE is the same trap one layer down:** a lock recorded "nothing checks the prototype's hash"
+  because `git grep 5bc7e24ed5e3d0aa` hit only `APPROVED.md`, while `tokens.test.ts` had pinned it since #128 by reading
+  it OUT of `APPROVED.md` with a regex. The claim reached five docs and a code comment before the close-out audit broke
+  it by mutating the file. To prove nothing checks X, change X and watch what goes red. *(2026-09-30, sketch-specs.)*
 - **Relaxing an assertion to admit a new case can make it certify the wrong page.** Adding a
   legitimately-404 route to a mobile sweep meant accepting `[200, 404]` everywhere — and a
   gate-dependent route that 404s in that harness was then certified "mobile-clean" under a test named
@@ -1076,6 +1080,12 @@ one-liner + why + date shape.
   starting grep, not the scope. session-budget's seed listed four; the grep found nine, because shared
   templates hold byte-identical copies (three `WAYS-OF-WORKING.template.md` files and the template's own
   LEARNINGS). *(2026-09-30, session-budget.)*
+  **And for a new SOURCE of a thing:** adding a second place state ids come from (approved `surface` files beside the
+  prototype) meant widening every place that validates membership in the set. The contract generator was widened; the
+  route manifest's "is this an approved id?" test was not, so an approved surface could never have reached the gate —
+  the epic's headline claim, false under a green CI. `git grep` the constant that enumerates the set
+  (`ALL_STATE_IDS`) and read every hit. The same epic fixed `kind in OBJ` → `Object.hasOwn` in one PR and left the
+  identical `state in entries` in the next. *(2026-09-30, sketch-specs; both found by the fresh reviewer.)*
 - **`onConflict` + `ignoreDuplicates` on a GLOBALLY-unique credential column is a silent cross-tenant
   bind, not idempotency.** Two seed scripts upserted an `api_keys` row with `{ onConflict: 'key_hash',
   ignoreDuplicates: true }` to be "safely re-runnable." Because `key_hash` is unique *across all
@@ -1500,6 +1510,11 @@ one-liner + why + date shape.
   runtime type. **Invoke CI's own npm scripts, never a hand-written approximation of them**, and run
   them in CI's order so the cheapest fails first. Especially where Actions minutes are the scarce
   account-wide resource they are in this repo.
+  **Derive the step list from the workflow file every time, never from memory — each red step hides the next.**
+  sketch-specs paid for this rule a second time in the same order: lint went red, and once fixed, the Format step
+  behind it went red on the next push (CI stops at the first failure, so a reviewer cannot see past it either). The
+  fix that held was listing the job's `run:` lines from `.github/workflows/ci.yml` and replaying all of them locally
+  before the push. *(2026-09-30, sketch-specs.)*
 - **Re-derive a handover's status from the artifact, never from the previous session's summary.**
   pod-report Sprint 2's close-out said all four stories were built. Two claims did not survive a check
   against `origin/main`, the production database and the live site: `--push` printed "not wired yet"

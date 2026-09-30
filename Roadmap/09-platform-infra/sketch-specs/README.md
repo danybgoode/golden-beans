@@ -1,6 +1,6 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: In review # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: sketch-specs
 title: "Sketch specs — a surface spec renders the grey wireframe and becomes the state contract"
@@ -8,13 +8,13 @@ area: 09-platform-infra
 risk: low
 type: feature
 sprints_total: 2
-stories_total: 6   # the sum of every sprint's stories_total — keep it in step when a story is added
+stories_total: 5   # 6 groomed; S2.3 moved out at the lock (C5) — the sum of every sprint's stories_total — keep it in step when a story is added
 build_order: 52  # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
 ---
 
-# Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract
+# ✅ Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract
 
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/sketch-specs.md`](../../00-ideas/seeds/sketch-specs.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
@@ -45,6 +45,11 @@ Builders cite these; the sprint files' build contracts cite them in turn and res
   script or test compares it with the file. D6's "as for the prototype" describes a rule, not a check. The surface
   hash check (D12) is the **first mechanical approval check** in the repo. Extending it to the two prototypes is out
   of scope (a follow-up, named in the retro).
+  **⚠️ Corrected 2026-09-30 at close-out — C2 was WRONG.** `apps/web/design-system/tokens.test.ts` has compared both
+  prototypes' SHA-256 with `APPROVED.md` since #128 (2026-08-29), in `test:unit`. It reads the hash out of
+  `APPROVED.md` by regex, so a grep for the literal value found nothing. D12 is the first hash check on a *spec*
+  surface, alongside those two prototype pins, not the first in the repo, and there is no follow-up. Found by the
+  close-out audit (#212); the lesson is in LEARNINGS.
 - **C3 — The seed template already ships an incompatible `surface` shape.** `groom/templates/scope-seed.md` writes
   `route:` / `state: empty` / `blocks:` / `  - heading: "…"` / `  - empty-state:` / `  - primary-action:`: a YAML-ish
   list with other kind names, and `state:` holding a taxonomy word instead of an id. D7 only holds if S1 rewrites
@@ -168,17 +173,17 @@ Not required (`risk: low`): planning tooling and a CI gate's input; no runtime s
 Stacked branches `feat/sketch-specs` → `-s2`, merged in order. S1 is a plugin release; S2 is this repo only. Builds after `intent-match` S2 (its visuals rule writes the blocks).
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed) — #210 `307999c`, #211 `e7e5f5f`, both deployed; owed to Daniel: whether a wireframe reads, and the signed-in `/app/flags` look (S2 step 4)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
 - [ ] ~~Kill-switch~~ n/a — `risk: low`, none planned at grooming. **(only if one was planned at grooming — Stage 6b):** the flag slice shipped, the flag
       exists **in Golden Frijoles, in every env**, with the stated polarity, **and is ACTIVATED there** —
       `gf flags get <key>` must not print `—` in its PRODUCTION row. Creating a definition is not
       turning it on, and a flag that is synced but never activated serves compile-time defaults while
       every dashboard says it exists. *Verify-only — not a new gate; whether a high-risk epic needs one
       is decided at grooming, not here.*
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)

@@ -3,8 +3,8 @@ epic: sketch-specs
 sprint: 2
 title: "The spec becomes the contract"
 risk: low
-phase: In review
-stories_total: 3
+phase: Shipped
+stories_total: 2  # was 3 — S2.3 moved out at the lock (README C5); its record stays below
 stories:
   - id: S2.1
     title: "Approved surfaces feed the state contract"
@@ -20,31 +20,24 @@ stories:
     so_that: "we trust it before a new state depends on it"
     risk: low
     status: done
-  - id: S2.3
-    title: "First state built from a spec"
-    as_a: "the product owner"
-    i_want: "the next new console state approved as a surface and built against it, with no prototype edit"
-    so_that: "the arrow runs spec \u2192 build for real"
-    risk: low
-    status: planned  # ⏭ deferred at the lock — README C5 (no epic adds a console state yet)
 ---
 # Sketch specs — a surface spec renders the grey wireframe and becomes the state contract — Sprint 2: The spec becomes the contract
 
-**Status:** 🟦 In review (2.1, 2.2 built; 2.3 ⏭ deferred — README C5)
+**Status:** ✅ Shipped — #211 (`e7e5f5f`), deployed to production 2026-09-30 (2.1, 2.2; 2.3 ⏭ deferred — README C5)
 
 ## Stories
 
-### Story 2.1 — Approved surfaces feed the state contract
+### Story 2.1 — Approved surfaces feed the state contract ✅
 **As** the product owner, **I want** an approved surface to be the contract CI checks the built route against, **so that** what I approved is exactly what's enforced.
 **Acceptance:** `state-contract.mjs` also reads `apps/web/design-system/surfaces/*.surface` through the project map, emits their entries with `source: spec`, fails on a state id defined twice, and `--check` fails when a surface's SHA-256 doesn't match its `APPROVED.md` line.
 **Risk:** low
 
-### Story 2.2 — Parity on three approved states
+### Story 2.2 — Parity on three approved states ✅
 **As** a maintainer, **I want** proof the format loses nothing, **so that** we trust it before a new state depends on it.
-**Acceptance:** Three of the 33 approved states, chosen from those the grammar covers, written as surfaces produce entries byte-identical to their prototype-derived ones (a test compares them). `console-visual.authed.spec.ts` stays green.
+**Acceptance:** Three of the approved states (38 — lock C1), chosen from those the grammar covers, written as surfaces produce entries byte-identical to their prototype-derived ones (a test compares them). `console-visual.authed.spec.ts` stays green.
 **Risk:** low
 
-### Story 2.3 — First state built from a spec
+### ⏭ Moved out of this epic — Story 2.3: First state built from a spec
 **As** the product owner, **I want** the next new console state approved as a surface and built against it, with no prototype edit, **so that** the arrow runs spec → build for real.
 **Acceptance:** One new state has a surface, an `APPROVED.md` line and a built route that passes the gate. Waits for an epic that adds a console state.
 **⏭ Deferred at the lock (2026-09-30, README C5):** no scaffolded or queued epic adds a console state; the first one that does carries this story.
@@ -98,3 +91,18 @@ walkthrough exercises the two refusals instead of reading three entries that D5 
    → the page is unchanged from before this epic (nothing on a route moved; the gate reads the same 38 entries).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-09-30, `main` @ `e7e5f5f`)
+
+1. ✅ `node apps/web/design-system/state-contract.mjs --check` → `STATE-CONTRACT.json reproduces from the approved prototypes
+   and surfaces (38 states, 0 approved surfaces).`
+2. ✅ `ship-activity.surface` copied into `surfaces/` → exit 1: `` `ship-activity` is already defined by the approved
+   prototype — one source per state id`` (plus its missing approval line).
+3. ✅ Renamed to `ship-activity-spec` → exit 1: `` `surfaces/ship-activity-spec.surface` has no APPROVED.md line … the line
+   is: | ship-activity-spec | `surfaces/ship-activity-spec.surface` | <its 16-hex hash> | <who> | <date> |``. Copy deleted;
+   `git status` clean.
+4. ⬜ **Owed to Daniel (signed in):** `/app/flags/<your-project>` unchanged. Proxy already green: the authed Playwright gate
+   (`console-visual.authed.spec.ts`, unchanged by this epic) passed on #211 against the same 38 entries, and
+   `STATE-CONTRACT.json`'s only diff was its `_source` line.
+- ✅ **Beyond the walkthrough, found in review:** a route can now cite an approved surface's id. Probed end to end before
+  merge (a temporary approved surface, cited by a real manifest row → green; approval line removed → red).
