@@ -21,6 +21,9 @@ requires_scripts:
   - lib/project-root.mjs
   - intent-match.mjs
   - lib/jev.mjs
+  # compiled-prompts D9: the Jev questions are data the guards read (not an import edge, so declared by hand).
+  - lib/jev-questions.mjs
+  - lib/jev-questions/intent.json
   - lib/config.mjs
   - lib/config-registry.mjs
   - intent-reader.mjs

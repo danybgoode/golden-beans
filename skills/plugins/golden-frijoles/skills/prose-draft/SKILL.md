@@ -20,6 +20,9 @@ requires_scripts:
   - lib/prose-writer.mjs
   - lib/prose-guard.mjs
   - lib/jev.mjs
+  # compiled-prompts D9: the Jev questions are data the guards read (not an import edge, so declared by hand).
+  - lib/jev-questions.mjs
+  - lib/jev-questions/prose.json
   - lib/reporting-config.mjs
   - prose/cpo-persona.md
   - prose/internal.task.md

@@ -25,6 +25,11 @@ requires_scripts:
   - lib/review-guard.mjs
   - lib/cross-agent-cli.mjs
   - lib/jev.mjs
+  # compiled-prompts D9: the Jev questions are data the guards read (not an import edge, so declared by hand).
+  - lib/jev-questions.mjs
+  - lib/jev-questions/review.json
+  - lib/jev-questions/prose.json
+  - lib/jev-questions/intent.json
   - lib/secret-guard.mjs
   - cross-agent-doctor.mjs
   - session-resume.mjs
