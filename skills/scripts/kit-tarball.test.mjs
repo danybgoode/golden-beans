@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpath
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { stageKit } from './build-kit.mjs';
+import { OPTIMIZE_PATH } from './check-plugin-leaks.mjs';
 
 // git exports GIT_DIR & co. into hooks, and from a worktree they point at the REAL repo (LEARNINGS, 2026-09-23).
 function sealedEnv() {
@@ -93,7 +94,6 @@ test('the packed kit, installed in a stranger repo, runs build-order from a subd
 // declared by hand), and `optimize/` is dev-only Python a plugin user must never receive. Both are properties of
 // the TARBALL, so both are asserted on the packed file list — and the guards are loaded from the INSTALLED package,
 // the one place a missing JSON would throw.
-export const OPTIMIZE_LEAK = /(^|\/)optimize\/|\.pyc?$|(^|\/)requirements[^/]*$/;
 
 test('the packed kit carries the Jev question files and nothing from optimize/ or Python', { skip: !hasNpm && 'npm not found — could not look' }, () => {
   const kitDir = realpathSync(mkdtempSync(join(tmpdir(), 'kit-stage-')));
@@ -104,7 +104,7 @@ test('the packed kit carries the Jev question files and nothing from optimize/ o
   const files = JSON.parse(pack.stdout)[0].files.map((f) => f.path);
   for (const f of ['lib/jev-questions.mjs', 'lib/jev-questions/review.json', 'lib/jev-questions/prose.json', 'lib/jev-questions/intent.json'])
     assert.ok(files.includes(`dist/${f}`), `the packed kit lacks dist/${f}`);
-  assert.deepEqual(files.filter((f) => OPTIMIZE_LEAK.test(f)), [], 'optimize/ or Python reached the kit');
+  assert.deepEqual(files.filter((f) => OPTIMIZE_PATH.test(f)), [], 'optimize/ or Python reached the kit');
 
   const tools = realpathSync(mkdtempSync(join(tmpdir(), 'kit-tools-')));
   const tgz = readdirSync(packDir).find((f) => f.endsWith('.tgz'));
@@ -120,11 +120,11 @@ test('the packed kit carries the Jev question files and nothing from optimize/ o
   assert.equal(load.stdout.trim(), '4 is_real_review,severity');
 });
 
-test('OPTIMIZE_LEAK names the paths a Python workspace would leave, and not the kit\'s own names', () => {
+test('OPTIMIZE_PATH names the paths a Python workspace would leave, and not the kit\'s own names', () => {
   for (const bad of ['dist/optimize/refit.py', 'optimize/README.md', 'dist/x.py', 'dist/x.pyc', 'dist/requirements.lock'])
-    assert.ok(OPTIMIZE_LEAK.test(bad), bad);
+    assert.ok(OPTIMIZE_PATH.test(bad), bad);
   for (const ok of ['dist/lib/jev-questions/prose.json', 'dist/jev-eval.mjs', 'dist/optimizer-notes.md'])
-    assert.ok(!OPTIMIZE_LEAK.test(ok), ok);
+    assert.ok(!OPTIMIZE_PATH.test(ok), ok);
 });
 
 // distribute-what-we-use S2.1: the kickoff's review/session commands run from the PACKED kit, not a
