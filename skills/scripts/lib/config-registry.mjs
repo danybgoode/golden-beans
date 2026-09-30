@@ -116,7 +116,17 @@ export const REGISTRY = Object.freeze([
     module: 'Operate',
     askWhen: 'first-report',
     default: null,
-    question: 'Where should standups and recaps go (Telegram, Slack, or print to the terminal)? Secrets stay in .env.local.',
+    question: 'Where should standups and recaps go: Telegram (the scheduled reports post there), or print to the terminal? Slack works for test and ad-hoc messages only, not the scheduled reports. Secrets stay in .env.local.',
+  },
+  {
+    key: 'routines',
+    module: 'Operate',
+    // never-yet: declares the section so readSection accepts it, while `gf doctor` (which skips never-yet
+    // rows) never reports Operate unconfigured for it — its values are per-routine fill-ins that
+    // routine-bootstrap.mjs names itself when one is missing (#191 review).
+    askWhen: 'never-yet',
+    default: null,
+    question: 'Which project values should routine prompts fill before you schedule them?',
   },
   {
     key: 'deploy.vercelProject',
@@ -131,6 +141,16 @@ export const REGISTRY = Object.freeze([
     askWhen: 'first-high-risk-groom',
     default: 'every-risk-high-story-names-its-flag',
     question: 'Should every risk:high story name its kill-switch flag?',
+  },
+  {
+    // intent-match D4/D16: an optional second-family read of the pitch at the architecture lock. OFF unless a person
+    // turns it on — never asked (`never-yet`), because a reader that runs by default is the stall D4 rules out.
+    key: 'intent.reader',
+    module: 'Plan',
+    askWhen: 'never-yet',
+    default: 'off',
+    choices: ['off', 'on'],
+    question: 'At the architecture lock, ask one other model family (codex, agy or vibe) to read the pitch and score whether it would build the same thing? Off by default; any failure is skipped.',
   },
   {
     key: 'spend.telemetry',

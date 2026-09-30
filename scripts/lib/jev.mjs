@@ -34,7 +34,7 @@ import { needSetting, readSection } from './config.mjs';
 export const JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 export const DEFAULT_MODEL = 'jev-1.13.0';
 export const MODES = ['off', 'shadow', 'jev'];
-export const RAILS = ['review', 'prose'];
+export const RAILS = ['review', 'prose', 'lint'];
 
 /** 32k tokens covers state + the longest question. ~4 chars/token, with headroom for the question. */
 export const STATE_CHAR_BUDGET = 110_000;
@@ -53,10 +53,18 @@ export const DEFAULT_CONFIG = Object.freeze({
     // thresholds are the MEASURED ones (jev-semantic-guards S5.2, sprint-5.md), not the pitch's starting guesses.
     review: { mode: 'off', thresholds: { real: 0.85, notReal: 0.3 }, shadowExpires: null },
     prose: { mode: 'off', thresholds: { claim: 0.8 }, shadowExpires: null },
+    // semantic-lint D3: `default` plus one optional key per rule id (see LINT_THRESHOLD_KEY below).
+    lint: { mode: 'off', thresholds: { default: 0.8 }, shadowExpires: null },
   },
 });
 
 export class JevConfigError extends Error {}
+
+/**
+ * The lint rail's threshold keys are OPEN — `default` or any rule id — because rules are data (semantic-lint D3/D4):
+ * a new rule must not need a code change here to get its own threshold. Every other rail's keys stay a closed set.
+ */
+export const LINT_THRESHOLD_KEY = /^[a-z0-9][a-z0-9-]*$/;
 
 const isUnit = (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1;
 
@@ -105,10 +113,21 @@ export function parseJevConfig(json) {
       throw new JevConfigError(`jev.config.json: rails.${name}.mode must be one of ${MODES.join(' | ')}`);
     if (r.thresholds !== undefined && !isObj(r.thresholds))
       throw new JevConfigError(`jev.config.json: rails.${name}.thresholds must be an object`);
-    refuseUnknown(r.thresholds ?? {}, Object.keys(d.thresholds), `rails.${name}.thresholds`);
+    if (name === 'lint') {
+      const bad = Object.keys(r.thresholds ?? {}).filter((k) => !LINT_THRESHOLD_KEY.test(k));
+      if (bad.length)
+        throw new JevConfigError(
+          `jev.config.json: rails.lint.thresholds: ${bad.join(', ')} is not \`default\` or a rule id (a-z, 0-9, -)`
+        );
+    } else refuseUnknown(r.thresholds ?? {}, Object.keys(d.thresholds), `rails.${name}.thresholds`);
     const thresholds = { ...d.thresholds, ...(r.thresholds ?? {}) };
     for (const [k, v] of Object.entries(thresholds))
       if (!isUnit(v)) throw new JevConfigError(`jev.config.json: rails.${name}.thresholds.${k} must be 0…1`);
+    // lint raises at p ≥ t and clears at p ≤ 1 − t (semantic-lint D2): below 0.5 those bands overlap, and one
+    // answer would be both a finding and a pass.
+    if (name === 'lint')
+      for (const [k, v] of Object.entries(thresholds))
+        if (v < 0.5) throw new JevConfigError(`jev.config.json: rails.lint.thresholds.${k} must be 0.5…1`);
     if (name === 'review' && thresholds.notReal >= thresholds.real)
       throw new JevConfigError('jev.config.json: rails.review.thresholds.notReal must be below .real');
     const shadowExpires = r.shadowExpires ?? null;
@@ -136,7 +155,10 @@ export function loadJevConfig({ root = repoRoot(), read = readFileSync, exists =
   });
   // Absent everywhere → the defaults (every rail off). A PRESENT legacy file holding JSON null is malformed: the
   // parser throws.
-  if (!present) return parseJevConfig({});
+  // No config at all is UNANSWERED, not "yes" (distribute-what-we-use D7). parseJevConfig({}) keeps
+  // egress:true for a legacy FILE that never mentions it, but a stranger with no file has told us nothing,
+  // and D12's promise is that nothing leaves the machine before an explicit `egress: true`.
+  if (!present) return parseJevConfig({ egress: null });
   // D12: a section that never gives egress a non-null value is UNANSWERED, never `true`. readSection treats a
   // `null` in golden-frijoles.config.json as unset, so without this a new-file `egress: null` (or a migrated
   // template config) reached parseJevConfig as a MISSING key and became `true` — sending with nobody's yes
@@ -147,7 +169,7 @@ export function loadJevConfig({ root = repoRoot(), read = readFileSync, exists =
 }
 
 /** Parse `KEY=value` lines. Enough for .env.local; quotes stripped. */
-function envFileValue(text, key) {
+export function envFileValue(text, key) {
   for (const line of String(text).split('\n')) {
     const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
     if (m && m[1] === key) return m[2].trim().replace(/^(['"])(.*)\1$/, '$2') || null;
@@ -155,7 +177,12 @@ function envFileValue(text, key) {
   return null;
 }
 
-/** The API key: env first, then `.env.local` at the repo root, then the cwd. null when none. */
+/**
+ * The API key: env first, then `.env.local` at the repo root, then the cwd. null when none. A variable that is SET
+ * but empty (`TYPESAFE_API_KEY= node scripts/…`) means "no key" and stops the lookup: that is how a person turns Jev
+ * off for one command, and falling through to `.env.local` made the command quietly use the key they had just
+ * blanked (intent-match S1 smoke, 2026-09-29).
+ */
 export function readApiKey({
   env = process.env,
   root = repoRoot(),
@@ -163,7 +190,7 @@ export function readApiKey({
   read = readFileSync,
   exists = existsSync,
 } = {}) {
-  if (env.TYPESAFE_API_KEY) return env.TYPESAFE_API_KEY;
+  if (env.TYPESAFE_API_KEY !== undefined) return env.TYPESAFE_API_KEY.trim() || null;
   for (const dir of [root, cwd]) {
     const p = join(dir, '.env.local');
     if (!exists(p)) continue;
@@ -183,10 +210,12 @@ export function readApiKey({
  */
 export function effectiveMode(config, rail, { key } = {}) {
   const configured = config.rails[rail].mode;
-  if (configured === 'off') return { mode: 'off', configured, why: 'configured off' };
-  // Unanswered (D12): distinct from a deliberate `false` so the caller can ask once instead of
-  // staying silently off forever. `unanswered: true` is jevContext's cue to fire the D11 protocol.
+  // Unanswered (D12) is decided FIRST, before the rail's mode: every rail defaults to `off`, so checking
+  // the mode first made the ask unreachable for exactly the user it was written for (D7). Distinct from a
+  // deliberate `false` so the caller can ask once instead of staying silently off forever;
+  // `unanswered: true` is jevContext's cue to fire the D11 protocol. Nothing is sent either way.
   if (config.egress === null) return { mode: 'off', configured, why: 'egress not answered', unanswered: true };
+  if (configured === 'off') return { mode: 'off', configured, why: 'configured off' };
   if (!config.egress) return { mode: 'off', configured, why: 'egress disabled (jev.egress: false)' };
   if (!key) return { mode: 'off', configured, why: 'no TYPESAFE_API_KEY' };
   return { mode: configured, configured, why: `configured ${configured}` };

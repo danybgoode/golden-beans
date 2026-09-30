@@ -23,6 +23,7 @@
     "seed:demo": "node scripts/seed-demo-project.mjs",
     "seed:self": "node scripts/seed-self-project.mjs",
     "check:template-drift": "node scripts/check-template-drift.mjs",
+    "check:script-parity": "node scripts/check-script-parity.mjs",
     "check:design-drift": "node scripts/check-design-drift.mjs"
   },
   "dependencies": {

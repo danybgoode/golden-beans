@@ -17,6 +17,7 @@
     "scripts/review-route.mjs",
     "scripts/review-config.json",
     "scripts/cross-review.mjs",
-    "scripts/lib/review-guard.mjs"
+    "scripts/lib/review-guard.mjs",
+    "skills/plugins/golden-frijoles/hooks/**"
   ]
 }

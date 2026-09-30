@@ -1072,6 +1072,10 @@ one-liner + why + date shape.
   the *migration* that does the same backfill was left untouched, and round 2 flagged it as Blocking.
   The fix is cheap at the time you're already in the mental model; it's a whole extra review cycle
   later. *(2026-07-20, multi-tenant-activation S1.)*
+  **The same holds for a rule's wording:** a seed that lists "the N places this rule lives" gives you a
+  starting grep, not the scope. session-budget's seed listed four; the grep found nine, because shared
+  templates hold byte-identical copies (three `WAYS-OF-WORKING.template.md` files and the template's own
+  LEARNINGS). *(2026-09-30, session-budget.)*
 - **`onConflict` + `ignoreDuplicates` on a GLOBALLY-unique credential column is a silent cross-tenant
   bind, not idempotency.** Two seed scripts upserted an `api_keys` row with `{ onConflict: 'key_hash',
   ignoreDuplicates: true }` to be "safely re-runnable." Because `key_hash` is unique *across all
@@ -1481,9 +1485,12 @@ one-liner + why + date shape.
   found by eye. Both were closed the next day precisely because they were named. **An unstated gap is
   indistinguishable from an oversight** — and the honest sentence costs one line, while the
   alternative is a reader who assumes the green gate covered it. *(2026-08-07, app-shell-and-agent-rail.)*
-- **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
-  state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
-  sprint/PR boundary, and for big epics consider a fresh session per sprint.
+- **Session length is set by a measured line, not a stamina rule.** A whole epic in one session is the
+  main context-cost driver, and the durable state (the plan file, sprint docs, team memory) makes
+  re-entry cheap by design — so checkpoint or hand off when the budget line says so (its thresholds
+  live in one table, `THRESHOLDS` in groom's `session-budget.mjs`), not per sprint. Groom's twin rule is "one deep ask
+  per approval gate". *(Sharpened 2026-09-30, session-budget: "fresh session per sprint" was set for
+  earlier models.)*
 - **A local gate that is a SUBSET of CI's gate is worse than no local gate, because it produces a
   green that does not mean what CI means by green.** pod-report S3 burned three push-and-wait round
   trips on static checks that run in seconds locally — lint, then prettier's changed-files check, then
@@ -1572,7 +1579,9 @@ one-liner + why + date shape.
   worth as much as the rule: **(a) a fix deserves the same suspicion as the code it replaces** — one
   derivation here was corrected three times in three rounds, each time for a *different* wrong
   statement about the same data, and the third fix moved a guard behind a filter and broke a fourth
-  thing; **(b) when several findings share one cause, the cause is the finding** — four separate
+  thing. Again in `intent-match` (2026-09-30): indenting a model reply to stop its fences breaking a section made
+  the scanner's `\s*` fence rule treat the indented fences as real, and an odd one then deleted every later
+  section — only a fresh round caught it; **(b) when several findings share one cause, the cause is the finding** — four separate
   "guard this shape" reports on a JSONB-backed seam were one sentence (*a TypeScript type over a
   JSONB column is a promise the database does not make*), and guarding each field by hand was
   building a second validator, always one review finding behind. Ask the existing authority once.
@@ -1662,7 +1671,11 @@ one-liner + why + date shape.
 - **Replacing a file with the shared copy? Run the consumer's OLD tests against the NEW code.** The shared
   copy can be weaker than the local one it replaces. A consumer's stricter prose guard was silently undone
   that way, and the tests that pinned it were deleted as "superseded". `git show origin/main:<test>` into a
-  temp file, run it, and read every failure.
+  temp file, run it, and read every failure. **Merging N forks: build the superset from the strongest copy,
+  import the others' features BY NAME, and let the stricter copy win any safety property.** Then apply that
+  property to EVERY runner, not the one in front of you. distribute-what-we-use locked Vibe down and
+  re-admitted devin with the same host-read hole in the same round, and then the *default* reviewer (codex)
+  turned out to have it too, with MCP servers loaded. *(2026-09-29)*
 - **A review that skips "copies" cannot see a regression against the file the copy replaced.** Review the
   consumer's adoption against the consumer's previous version too, not only against the template.
 - **"Could not look" is its own exit code, never the failure one.** A watchdog's missing, unloadable or
@@ -1765,6 +1778,14 @@ one-liner + why + date shape.
 
 ### A model as a guard's judge (jev-semantic-guards, 2026-09-23)
 
+- **Measure what you SEND as well as what you ask, on real history.** semantic-lint first sent whole diff hunks; a
+  new file is one hunk, so 33 of 60 real candidates from 220 commits were over the size limit and would have been
+  "not checked" — invisible on constructed fixtures, which are all small. A ±15-line window around each hit: 3 of 40.
+  And re-asking identical text moves p by up to 0.04, so don't fit a threshold to one recording. *(semantic-lint, 2026-09-30)*
+- **Labels for a rule that is project DATA are project data too.** Shipping this repo's rule fixtures in the template's
+  shared fixtures file would have failed any consumer that reused the id, and — once coverage was per configured rule —
+  every consumer that added one. Skipping fixtures for an unknown rule was worse: a renamed rule replayed green with
+  zero cases scored. Unknown-rule fixtures FAIL; coverage counts what is scored, not what is committed. *(semantic-lint, 2026-09-30)*
 - **Measure the question before trusting the model. The first wording is a guess.** Every first question
   underperformed the regex it was replacing, or barely beat it: a real review scored 0.73, and liveness
   scored 48/62. Keep a labelled fixture set **with recorded answers**. Then wording and thresholds become an
@@ -1806,7 +1827,10 @@ one-liner + why + date shape.
   moved command's before/after output. It kept one skill local that byte parity would have moved.
 - **Automatic behaviour must not run repo-supplied code.** "The project's own `scripts/<x>` wins" suits a command
   the user explicitly invokes. First-contact detection and setup call the trusted package directly: `init.mjs`
-  and `preflight.mjs` are names a stranger's repo can own.
+  and `preflight.mjs` are names a stranger's repo can own. **The build-view hook violated this for weeks,
+  running `<repo>/scripts/build-state.mjs` on every turn**, and it was found only by a lock that read the
+  hook. The fix is a byte-checked bundle inside the plugin, located from the module's own `import.meta.url`
+  (probed live), and always used. *(2026-09-29)*
 - **`$CLAUDE_PLUGIN_ROOT` is not set in a skill's shell** (measured, Claude Code 2.1.280). Locate a skill from its
   own base directory, which the host shows when the skill is invoked.
 - **A local runner that mirrors CI must sandbox CI's global installs.** One `npm i -g <pinned CLI>` step, run
@@ -1823,3 +1847,55 @@ one-liner + why + date shape.
   change.
 - **Copy the shared rails into a consumer before calling the wave done.** The consumers' own lint, Prettier and
   reviews found five defects the source repo's gates couldn't see. The copy-in is a gate, not a chore.
+
+### Reviewing a security guard, and reviewing through a partial lens (distribute-what-we-use, 2026-09-29)
+
+- **A security guard's review converges on the guard.** #188 took 7 fresh rounds. From round 4 on, each round
+  found one small defect in the *new* secret guard, introduced by the previous round's fix. The stop signal is
+  a clean round, not a count. The residual no code can close (a reviewer that can read the host can be told to
+  encode what it reads) is a risk-acceptance question for the product owner, asked once, with a recommendation.
+- **A reviewer's output is a publishing path, and so is everything that quotes it.** The secret guard ran before
+  the comment post but *after* the output guard, whose failing status quoted the reply's first line into a
+  PUBLIC commit status. Put the egress check where the text first leaves the process, not where you think it's
+  posted.
+- **A `--paths`-scoped external pass files findings about what it didn't see.** agy's scoped pass on #189 called
+  committed files "missing" (one Blocking, two Should-fix). Verify every finding against the tree, and state
+  each scoped pass's coverage exactly: an overclaimed coverage line was itself a review finding.
+- **Retargeting a PR's base does not trigger CI.** After squash-merging the base of a stack, force-push the
+  child (or push a commit), or the PR reads green with no run on its head.
+
+### Formal verification on our own code (verify-spike, 2026-09-29)
+
+- **A proof verifies the model, not the code.** Ship a proof tier only with a differential test
+  against the real implementation. A Lean model that used Lean's own whitespace rule where the code
+  uses JS `trim()` disagreed with production on 8% of inputs, and every theorem still held.
+- **Random simulation and bounded exhaustive search find different bugs. Run both.** Quint's simulator
+  found a stranded row in 1 s and never found the 12-step unbounded-resend trace that Apalache found in
+  about 2 minutes. Use simulation per PR (fast) and exhaustive search nightly (slow).
+- **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
+  feeds "what did this PR change" to a model or reviewer must diff against the first parent
+  (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.
+- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** A loop over "module invariant depth"
+  strings ran nine model checks with empty arguments and printed nine blank results that looked
+  like output. Put such loops in a `bash` script, which the reproduce doc needs anyway. The same trap bit
+  `git add $FILES` in `intent-match` (2026-09-30): use `${=FILES}` or an array (`(${(f)"$(…)"})`).
+- **A backticked commit message in double quotes is a zsh parse error, or worse, command substitution.**
+  (`intent-match`, 2026-09-30.) Commit and PR bodies go through a quoted heredoc (`-F - <<'EOF'`), always.
+
+### Scoring a plan against its ask (intent-match, 2026-09-30)
+
+- **Change what a guard counts and its limit in the same commit.** Excluding a forced declaration list from the groom
+  SKILL.md line budget was right; leaving the limit at 220 while the measure fell by 10 handed out 10 lines, and the
+  next sprint used exactly those ten. The fresh reviewer caught it. A guard corrected is one whose strength is equal
+  before and after, measured on `main`.
+- **Model output written into a document must be inert.** A reader's reply carried its own `## ` headings and fences;
+  a re-run ended the section early and stacked a stale copy in a README, while the walkthrough said "replaced". Indent
+  it (never fence it), use CommonMark's fence rule (0–3 spaces) in every scanner, and run the secret guard before the
+  text leaves the process — to a model or to a public file.
+- **An unanchored ignore rule hides new files in every folder of that name.** `references/`, meant for one local-only
+  folder, silently hid a new skill reference. Run `git check-ignore -v <new file>` when a new file "didn't show up".
+- **A score needs the ask, and old plans rarely kept it.** Only 12 of 63 shipped medusa-bonsai seeds carry a
+  recoverable ask (a Problem section or a mirror-back); the rest open with status blocks. Store the ask verbatim from
+  now on; a proxy ask is flagged, never mixed in silently.
+- **Regenerate the board with every sprint's doc commit.** The pre-push hook refused two pushes because a plan or
+  tick commit left `BUILD-ORDER.md` stale.

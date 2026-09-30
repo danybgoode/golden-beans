@@ -53,10 +53,10 @@ export const AGENT_BIN = {
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-09-28 against 1.2.12.
-//   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
+// agy-doctor: last verified 2026-09-30 against 1.2.14.
+//   ^ machine-managed marker — `node scripts/cross-agent-doctor.mjs agy --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.2.12';
+export const AGY_PINNED = '1.2.14';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -70,18 +70,18 @@ export const AGY_PINNED = '1.2.12';
 // which models review. The Gemini-family primary is what gives this gate its model-family contrast
 // with Codex; the GPT-OSS fallback is GPT-lineage (so it costs that contrast) and exists only
 // because it draws on a separate quota pool when Gemini is exhausted.
-// Daniel's call (2026-07-26): agy REVIEWS on the **current Gemini Flash generation at HIGH effort**.
+// The product owner's call (2026-07-26): agy REVIEWS on the **current Gemini Flash generation at HIGH effort**.
 // This was `gemini-3.1-pro-high`, then `gemini-3.6-flash-high`, and is now `gemini-3.8-flash-high`.
 //
 // ⚠️ **A retired slug fails as a QUOTA CAP, which is the wrong diagnosis and costs a review pass.**
 // On 2026-09-09 a review returned no output on the primary AND the fallback, and the CLI's advice
 // was "likely a quota cap (RESOURCE_EXHAUSTED 429)" — so the honest report was going to be "agy is
-// capped, the second cross-family pass is missing". Daniel's answer was one line: *"agy is not
+// capped, the second cross-family pass is missing". The product owner's answer was one line: *"agy is not
 // exhausted. the model is 3.8 flash."* `agy models` confirmed it: 3.8 is listed, 3.6 is still listed
 // too, and an unavailable-but-valid slug answers with silence rather than an error.
 //
 // The generation moves under this constant and nothing in the repo notices, because both the old and
-// the new slug parse. `agy-doctor.mjs` validates AGY_MODELS_IN_USE against `agy models`, which
+// the new slug parse. `cross-agent-doctor.mjs agy` validates AGY_MODELS_IN_USE against `agy models`, which
 // catches a slug that has been REMOVED — it cannot catch one that is merely a generation behind and
 // out of quota. Re-check this line when a review comes back empty on both models before believing
 // the cap.
@@ -100,14 +100,14 @@ export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120
 // these two lived somewhere it never looked.
 //
 // The fix is structural, not a re-typing: every agy model this repo configures is now declared in
-// THIS file, and `agy-doctor` validates AGY_MODELS_IN_USE (below) against `agy models` in one
+// THIS file, and `cross-agent-doctor.mjs agy` validates AGY_MODELS_IN_USE (below) against `agy models` in one
 // pass. A new consumer that wants its own pair adds it here and inherits the check for free.
 //
 // Flash (not Pro) for prose is deliberate and unchanged in intent: prose doesn't need Pro-tier
 // reasoning and the coordinating agent is the editor. Moved 3.5 → 3.6 because 3.6 shipped and is
 // listed; same tier, current generation.
 // ── Prose: agy is the FALLBACK behind Devin, and when it runs it runs GPT-OSS only ─────────────
-// The division of labour (Daniel, 2026-07-26): **Devin is the dedicated, specialized prose writer**,
+// The division of labour (the product owner, 2026-07-26): **Devin is the dedicated, specialized prose writer**,
 // so agy's and Codex's quota stays free for review and building. agy is prose's fallback, and it runs
 // the GPT lineage — the register the brief asked for ("an executive-level product-manager report")
 // and the one both accepted drafts carried.
@@ -115,7 +115,7 @@ export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120
 // ── Why there is NO model-level fallback here, deliberately ────────────────────────────────────
 // This used to be a pair: Gemini Flash primary, GPT-OSS fallback. Two silent consequences. Every
 // draft came from Gemini unless its quota happened to be exhausted — which is exactly when the two
-// drafts Daniel accepted were produced, so the output he liked was the ACCIDENT and the default was
+// drafts the product owner accepted were produced, so the output they liked was the ACCIDENT and the default was
 // the regression. And a fallback between two models with very different registers changed the voice
 // of the report with no error, no warning, and a footer that said only "agy".
 //
@@ -136,7 +136,7 @@ export const PROSE_MODEL = process.env.PROSE_MODEL || 'gpt-oss-120b-medium';
 // and still misunderstood, and anyone "fixing" the register by editing COMMIT_REPORT_MODEL would have
 // seen no effect at all. Deleted rather than wired up: one prose model, in one place.
 
-// Every agy model name this repo pins, as {constant, value} — the list agy-doctor walks. Keeping it
+// Every agy model name this repo pins, as {constant, value} — the list cross-agent-doctor walks. Keeping it
 // adjacent to the declarations (rather than rebuilt in the doctor) means adding a model and
 // forgetting to register it is a one-line miss in ONE file, visible in review.
 export const AGY_MODELS_IN_USE = [
@@ -146,7 +146,7 @@ export const AGY_MODELS_IN_USE = [
 ];
 
 // ── The CODEX pair, pinned here for the same reason the agy models are ───────────────────────────
-// Daniel's call (2026-07-26): codex reviews on **gpt-5.6-terra at HIGH reasoning effort**.
+// The product owner's call (2026-07-26): codex reviews on **gpt-5.6-terra at HIGH reasoning effort**.
 //
 // Until now `execCodex` passed NO --model at all, so every codex review silently inherited whatever
 // `~/.codex/config.toml` happened to say. That is the identical shape as the PROSE_MODEL incident
@@ -163,17 +163,31 @@ export const AGY_MODELS_IN_USE = [
 // own session banner and returns real output. Reasoning effort rides `-c` because `codex exec` has
 // no dedicated flag for it (checked with `codex exec --help`, not from memory — LEARNINGS: never
 // build against a documented flag from memory on a young foreign CLI).
-export const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.6-terra';
+//
+// `CODEX_MODEL=default` opts OUT of the pin and lets codex pick its BUILT-IN default model. Not the user's
+// configured one: reviews run `--ignore-user-config` (see CODEX_REVIEW_FLAGS), so ~/.codex/config.toml —
+// its model, and any custom model_provider/base URL — is not read. A setup that needs a custom provider
+// cannot use the codex reviewer through this rail; route past it (`review-route.mjs --exclude codex`). It exists for a stranger whose codex
+// account is not entitled to the pinned model: that fails loud rather than silently (see execCodex), and
+// this is the one-word escape from it. It is an explicit choice, never the fallback for an unset var.
+export const CODEX_MODEL = codexModelFrom(process.env.CODEX_MODEL);
 export const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'high';
 
+/** `CODEX_MODEL`'s value: the pin when unset, `null` (codex's built-in default) for `default`. Pure, for tests. */
+export function codexModelFrom(raw) {
+  const v = String(raw ?? '').trim();
+  if (!v) return 'gpt-5.6-terra';
+  return v.toLowerCase() === 'default' ? null : v;
+}
+
 // ── The BUILD tiers (2026-07-26) — Codex as a delegation target, not only a reviewer ────────────
-// Daniel moved Codex onto a paid account and asked for it to carry delegated BUILD work, so the
+// The product owner moved Codex onto a paid account and asked for it to carry delegated BUILD work, so the
 // architect stays an architect. That makes "which model" a routing decision per task rather than
 // one constant, and routing decisions belong in the repo for the same reason the review pin does:
 // an ambient choice differs per machine and changes without a signal.
 //
 // ── The tier axis is EFFORT, not model — and the first draft of this table got that wrong ──────
-// Probed live 2026-07-26 against codex-cli 0.144.6 on Daniel's paid ChatGPT account. `codex models
+// Probed live 2026-07-26 against codex-cli 0.144.6 on the product owner's paid ChatGPT account. `codex models
 // list` does not exist in this version, so the roster had to be established by running it.
 //
 // **Exactly ONE model is entitled: `gpt-5.6-terra`.** Every other plausible slug —
@@ -225,7 +239,7 @@ export function resolveCodexTier(tier) {
 }
 
 // ── WHO MAY REVIEW WHAT: builder family ≠ reviewer family ───────────────────────────────────────
-// Daniel's rule (2026-07-26), and it is a sharpening of what LEARNINGS already argues rather than a
+// The product owner's rule (2026-07-26), and it is a sharpening of what LEARNINGS already argues rather than a
 // new policy: *"if a builder was from codex then reviewers could be from claude or agy; if the
 // builder was claude then reviewers would be codex and/or agy."*
 //
@@ -242,10 +256,10 @@ export function resolveCodexTier(tier) {
 // Encoded as a REFUSAL rather than a convention, because a convention drifts and this one would
 // drift silently — the output looks identical either way. `reviewersFor` is pure and tested.
 //
-// Cost note (Daniel's standing preference): Claude's tokens go to security/money/architecture and to
+// Cost note (the product owner's standing preference): Claude's tokens go to security/money/architecture and to
 // BUILDING, not to routine PR review. So Claude is deliberately NOT in either default reviewer set;
 // it is the escalation, named explicitly when a diff earns it, not the baseline.
-// `vibe` added 2026-08-25 (Daniel: "Agy, codex and vibe should be enabled for cross family
+// `vibe` added 2026-08-25 (the product owner: "Agy, codex and vibe should be enabled for cross family
 // reviews"). It was already a first-class REVIEWER in review-route.mjs's preference order and in
 // AGENT_FLAG, but it was missing here — so `--builder vibe` was refused as an unknown family, and a
 // vibe-built diff could only be reviewed by mislabelling who wrote it. That is the same-family guard
@@ -606,7 +620,7 @@ export function checkAgyVersion(deps = {}) {
   if (m[0] !== pinned)
     return failFn(
       `agy ${m[0]} != pinned ${pinned} — the print/--model contract may have shifted. ` +
-        `Run \`node scripts/agy-doctor.mjs --fix\` (authorized for agents: it re-verifies the live ` +
+        `Run \`node scripts/cross-agent-doctor.mjs agy --fix\` (authorized for agents: it re-verifies the live ` +
         `contract and bumps the pin only on a green probe), then commit the bump. ` +
         `Manual path: re-verify runAntigravity() against \`agy --help\`, then bump AGY_PINNED to ${m[0]}.`
     );
@@ -650,15 +664,42 @@ function execCodex(prompt, stdin) {
   // stderr) rather than substituting a default — verified 2026-07-26 — so a rotted pin here surfaces
   // as a broken review rather than a quietly downgraded one. That is why this needs no doctor probe
   // of its own, where the agy pins do.
-  return spawnSync(
-    'codex',
-    ['exec', '--model', CODEX_MODEL, '-c', `model_reasoning_effort=${CODEX_REASONING_EFFORT}`, prompt],
-    {
-      input: stdin,
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-    }
-  );
+  return spawnSync('codex', codexExecArgs(prompt), {
+    input: stdin,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+/**
+ * The `codex exec` argv. Pure, for tests: `model: null` means codex's built-in default (CODEX_MODEL=default).
+ *
+ * ── The reviewer is locked down, not trusted (distribute-what-we-use S1, pr-reviewer round 2 on #188) ──
+ * Codex reads an attacker-controllable diff. Without these flags it ran with whatever ~/.codex/config.toml
+ * said — observed: `sandbox: workspace-write`, `approval: on-request`, and the user's MCP servers started
+ * (a database one among them). Pinned instead, and observed live with codex-cli 0.158.0:
+ *   --sandbox read-only    no writes and no network from commands the model runs;
+ *   --ignore-user-config   no user MCP servers, no ambient profile (auth still comes from CODEX_HOME);
+ *   --ephemeral            no session file written for a review.
+ * The banner then reads `sandbox: read-only`, `approval: never`, with no MCP worker. What remains is READ
+ * access to the host — no codex flag removes it — which is why cross-review refuses to post a reply that
+ * carries a secret (lib/secret-guard.mjs). Reduced, not closed; said so in the CHANGELOG.
+ * Also used by lib/prose-writer.mjs's codex path, where read-only is equally right.
+ */
+export const CODEX_REVIEW_FLAGS = Object.freeze([
+  '--sandbox',
+  'read-only',
+  '--ignore-user-config',
+  // A hostile PR's checkout is on disk while it is reviewed; its execpolicy `.rules` must not load either.
+  '--ignore-rules',
+  '--ephemeral',
+]);
+
+export function codexExecArgs(prompt, { model = CODEX_MODEL, effort = CODEX_REASONING_EFFORT } = {}) {
+  // Effort is independent of the model: `CODEX_MODEL=default` changes WHICH model, not how hard it thinks
+  // (codex round 4 on #188).
+  const pin = [...(model ? ['--model', model] : []), '-c', `model_reasoning_effort=${effort}`];
+  return ['exec', ...CODEX_REVIEW_FLAGS, ...pin, prompt];
 }
 
 // codex exec wrapper preserving the original contract: returns trimmed stdout, or fail()s (die unless soft).
@@ -682,8 +723,38 @@ export function tryCodex(prompt, stdin) {
     // See stripGeneratedFileDiffs' header comment: checked on both streams because codex's own trailing
     // diagnostics can land on either, depending on the exact failure path.
     contextOverflow: r.status !== 0 && (isContextWindowOverflow(stdout) || isContextWindowOverflow(stderr)),
+    // Stale CLI: the installed codex is too old for the model it is asked to run. Like an auth lapse,
+    // codex cannot run here and agy can, so it triggers the same one-shot fallback. A distinct flag (not
+    // folded into authFailed) so the banner names the real cause and points at the doctor.
+    cliOutdated: r.status !== 0 && isCodexOutdated(`${stdout}\n${stderr}`),
+    capped: r.status !== 0 && isCodexCapped(`${stdout}\n${stderr}`),
     stderr,
   };
+}
+
+// True when codex fails because the INSTALLED CLI is too old for the model it runs — a distinct class from
+// an auth lapse or a context overflow. Confirmed live by a consuming project (2026-07-20, codex-cli 0.142.5):
+//   "The 'gpt-5.6-sol' model requires a newer version of Codex. Please upgrade to the latest app or CLI…"
+// Kept tight to the upgrade signal so a bad-model-name typo (a different 400) is not masked as "upgrade".
+// True when the account cannot use the requested model (an entitlement refusal, not a stale binary).
+export function isCodexModelUnavailable(output) {
+  return /model (?:is )?not (?:supported|available|found)|not supported when using codex|does not have access to (?:the )?model|unknown model/i.test(
+    output || ''
+  );
+}
+
+// True when codex refused because the account hit its usage cap (observed 2026-09-29, codex-cli 0.158.0:
+// "You've hit your usage limit"). Codex cannot run here and agy draws on a different pool, so it heals like
+// an auth lapse or a stale CLI.
+export function isCodexCapped(output) {
+  return /hit your usage limit|usage limit reached|rate limit exceeded for your plan/i.test(output || '');
+}
+
+export function isCodexOutdated(output) {
+  // Also: a codex too old to know the review's lockdown flags (clap: "unexpected argument '--ignore-rules'").
+  return /unexpected argument '--(?:ignore-user-config|ignore-rules|ephemeral|sandbox)'|requires a newer version of codex|upgrade to the latest (?:app or )?cli|update codex|codex (?:is )?out of date/i.test(
+    output || ''
+  );
 }
 
 // True when codex's stderr carries an AUTHENTICATION failure (lapsed/revoked/expired token) — the only
@@ -699,20 +770,33 @@ export function isCodexAuthError(stderr) {
 
 // Pure fallback decision — the unit under test. Given the outcome of a codex attempt and whether agy is
 // available, return the action to take. No I/O, no exit.
-export function decideCodexFallback({ codexOk, authFailed, contextOverflow, agyAvailable }) {
+export function decideCodexFallback({
+  codexOk,
+  authFailed,
+  cliOutdated = false,
+  capped = false,
+  contextOverflow,
+  agyAvailable,
+  fallbackPairingError = null,
+}) {
   if (codexOk) return 'use-codex';
-  // Checked BEFORE authFailed: an overflow is a distinct failure class from auth (retrying with a fallback
-  // model wouldn't help — the input itself is too big, not the credential), so it gets its own clear
-  // message rather than falling through to the generic "(non-auth): <cryptic tail line>" text.
+  // Checked BEFORE the recoverable classes: an overflow is distinct from auth/stale-CLI (retrying with a
+  // fallback model wouldn't help — the input itself is too big), so it gets its own clear message rather
+  // than falling through to the generic "(non-auth): <cryptic tail line>" text.
   if (contextOverflow) return 'fail-context-overflow';
-  if (!authFailed) return 'fail-non-auth'; // codex broke for a non-auth reason — don't mask it behind a fallback
+  // Both an auth lapse AND a too-old CLI mean "codex can't run here, agy can" → the same one-shot fallback.
+  if (!authFailed && !cliOutdated && !capped) return 'fail-non-auth';
   if (!agyAvailable) return 'fail-both-dead';
+  // The fallback CHANGES the reviewing family. When agy built the diff, falling back to agy would be a
+  // same-family review wearing a cross-family label, so it fails loud instead (distribute-what-we-use D1).
+  if (fallbackPairingError) return 'fail-fallback-same-family';
   return 'fallback';
 }
 
-// Orchestrate codex with a one-shot Antigravity fallback on an auth failure. `deps` is injectable so a
-// pure node:test can mock both runners (no network). Returns { findings, fellBack[, from, to] }.
-export function runWithCodexFallback({ prompt, stdin, antigravityArgv }, deps = {}) {
+// Orchestrate codex with a one-shot Antigravity fallback on an auth lapse or a stale CLI. `builder` (who
+// wrote the diff, optional) is re-checked against the FALLBACK family. `deps` is injectable so a pure
+// node:test can mock both runners (no network). Returns { findings, fellBack[, from, to] }.
+export function runWithCodexFallback({ prompt, stdin, antigravityArgv, builder = '' }, deps = {}) {
   const {
     tryCodex: tryCodexFn = tryCodex,
     runAntigravity: runAntigravityFn = runAntigravity,
@@ -722,12 +806,30 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv }, deps = 
   } = deps;
 
   const codex = tryCodexFn(prompt, stdin);
+  const fallbackPairingError = checkReviewerPairing(builder, 'antigravity');
   const action = decideCodexFallback({
     codexOk: codex.ok,
     authFailed: codex.authFailed,
+    cliOutdated: codex.cliOutdated,
+    capped: codex.capped,
     contextOverflow: codex.contextOverflow,
     agyAvailable: hasCmdFn('agy'),
+    fallbackPairingError,
   });
+
+  // The two recoverable causes want different operator guidance — a lapsed token vs a stale binary — so the
+  // banner/fatal text branches on the flag even though the ACTION (fall back to agy) is the same.
+  const cause = codex.capped
+    ? {
+        blurb: 'Codex hit its usage cap',
+        restore: 'wait for the cap to reset, or route past it with --exclude codex',
+      }
+    : codex.cliOutdated
+      ? {
+          blurb: 'Codex CLI is behind its model requirement',
+          restore: 'upgrade codex (see `node scripts/cross-agent-doctor.mjs codex`)',
+        }
+      : { blurb: 'Codex token revoked', restore: '`codex login`' };
 
   switch (action) {
     case 'use-codex':
@@ -741,15 +843,29 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv }, deps = 
           'large hand-written diff that needs splitting.'
       );
     case 'fail-non-auth':
-      return failFn(`codex exec failed (non-auth): ${lastLine(codex.stderr)}`);
+      // A pinned model this codex account cannot use fails here, not as auth — so name the escape. Matched on
+      // the entitlement error itself: codex's banner prints `model: …` on EVERY run, so the bare word would
+      // advise dropping the pin on any failure (pr-reviewer round 2, S2).
+      return failFn(
+        `codex exec failed (non-auth): ${lastLine(codex.stderr)}` +
+          (isCodexModelUnavailable(codex.stderr) && CODEX_MODEL
+            ? ` — if this account cannot use "${CODEX_MODEL}", re-run with CODEX_MODEL=default (codex's built-in default).`
+            : '')
+      );
     case 'fail-both-dead':
       return failFn(
-        'Codex token revoked AND Antigravity unavailable — restore Codex with `codex login`, ' +
+        `${cause.blurb} AND Antigravity unavailable — restore Codex (${cause.restore}), ` +
           'or install + authenticate the Antigravity CLI (agy).'
+      );
+    case 'fail-fallback-same-family':
+      return failFn(
+        `${cause.blurb}, and the only fallback is Antigravity — ${fallbackPairingError} ` +
+          `Restore Codex (${cause.restore}), or re-route past codex with ` +
+          `\`node scripts/review-route.mjs --builder ${builder} --exclude codex <PR#>\`.`
       );
     case 'fallback':
     default:
-      warn('⚠ Codex unavailable (token revoked) → falling back to Antigravity. Restore: `codex login`.');
+      warn(`⚠ ${cause.blurb} → falling back to Antigravity. Restore: ${cause.restore}.`);
       return {
         findings: runAntigravityFn(antigravityArgv),
         fellBack: true,
@@ -759,11 +875,17 @@ export function runWithCodexFallback({ prompt, stdin, antigravityArgv }, deps = 
   }
 }
 
+// The argv for one agy print-mode call. Exported so a caller that needs its OWN spawn (a hard timeout, one model, no
+// fallback line — the intent reader, intent-match C4) builds the identical invocation instead of a second copy of it.
+export function agyArgs(fullArgv, model = AGY_MODEL) {
+  return ['-p', fullArgv, '--model', model];
+}
+
 // One `agy -p "<prompt>" --model "<MODEL>"` invocation. The prompt+framed context ride in `fullArgv` (stdin is
 // NOT the prompt and must be at EOF — input:'' gives an immediate EOF or print mode blocks forever). Returns
 // the raw spawn result; the caller classifies status/stdout.
 function execAgy(fullArgv, model, spawn) {
-  return spawn('agy', ['-p', fullArgv, '--model', model], {
+  return spawn('agy', agyArgs(fullArgv, model), {
     input: '',
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
@@ -777,8 +899,9 @@ function execAgy(fullArgv, model, spawn) {
 // (the source passes one), "imported from a file the diff never creates" (a lower PR creates it).
 // Every one is a reviewer reasoning about code it could not see.
 //
-// vibe got repo ACCESS instead (read_file + grep, scoped by --enabled-tools). **agy cannot have the
-// same treatment**: its only permission lever is `--dangerously-skip-permissions`, which is
+// vibe briefly got repo ACCESS instead (read_file + grep, 2026-08-07); that was removed because it let an
+// injected diff read host files (see VIBE_READ_ONLY_TOOLS), so vibe is attached-to like agy. **agy could
+// never have had it**: its only permission lever is `--dangerously-skip-permissions`, which is
 // all-or-nothing — there is no --enabled-tools equivalent to scope it to reads — and without it agy
 // simply BLOCKS in `-p` mode waiting for an approval that never comes (measured: no output after
 // 9 minutes, with and without `--mode plan`). Granting an external CLI blanket tool approval in this
@@ -1088,23 +1211,25 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
 // client to get a single review out of it. `vibe --prompt` is the scripting/CI path, and it is the one
 // Mistral documents for exactly this.
 export const VIBE_ARG_LIMIT = 256 * 1024;
-// Raised 4 → 12 on 2026-08-07. Four was never a cost ceiling in practice, it was a truncation
-// generator: see VIBE_READ_ONLY_TOOLS below for why every turn was being spent on DENIED tool calls.
-// With the reads actually granted, a turn is productive and the agent stops when it is done — so a
-// higher ceiling costs nothing when it is not needed, and the alternative is an intermittently
-// missing review. `--max-price` / `--max-tokens` exist if a real cost bound is ever wanted.
-export const VIBE_MAX_TURNS = process.env.VIBE_MAX_TURNS || '12';
-// The reviewer's ENTIRE toolset. In programmatic mode `--enabled-tools` disables every tool not
-// listed, which is what makes `--auto-approve` safe to pass alongside it: the only calls that can be
-// approved are these two.
+// 4 → 12 (2026-08-07) → 24 (the template's live-probed budget). With every tool disabled a turn cannot
+// be spent on a tool call, so a higher ceiling costs nothing when it is not needed; the alternative is an
+// intermittently missing review. `--max-price` / `--max-tokens` exist if a real cost bound is ever wanted.
+export const VIBE_MAX_TURNS = process.env.VIBE_MAX_TURNS || '24';
+// The reviewer's ENTIRE toolset: nothing. Kept as an exported (empty) list so the argv contract stays a
+// named, tested fact rather than a literal buried in runVibe.
 //
-// Verified by attempting the write we claim is impossible (CODE-QUALITY rule 3), 2026-08-07:
-//   vibe --prompt "Create a file at /tmp/… containing BREACH" --auto-approve \
-//        --enabled-tools read_file --enabled-tools grep
-//   → "TOOL_UNAVAILABLE", and no file created.
-// vibe's full toolset is: skill, task, web_fetch, bash, edit, grep, read_file, web_search, todo,
-// write_file. Everything except the two below is off — including `bash`, which is a write path.
-export const VIBE_READ_ONLY_TOOLS = ['read_file', 'grep'];
+// ── Why the read-only allow-list was removed (distribute-what-we-use D1, 2026-09-29) ─────────────────
+// From 2026-08-07 this was ['read_file', 'grep'] with `--auto-approve`, which cured a blind reviewer.
+// a consuming project's probe of 2026-08-08 (vibe 2.23.3) found why that is unsafe: vibe checks auto-approval
+// BEFORE its sensitive-file and outside-workdir prompts, and `read_file` takes absolute paths. A malicious
+// PR diff could therefore instruct the reviewer to read `.env.local` or a host key into its findings,
+// which cross-review then POSTS as a comment — on a public repo, to anyone. Where two copies of this
+// rail disagreed on a safety property, the stricter one wins.
+//
+// The blindness this once cured is cured differently now: cross-review attaches the touched files'
+// head-side contents (buildFileContext) to the prompt, so the reviewer sees the surrounding code without
+// being able to ask for any path it likes.
+export const VIBE_READ_ONLY_TOOLS = Object.freeze([]);
 // Optional: pin a model with `VIBE_MODEL`. Left unset by default so vibe uses the account's configured
 // default — unlike agy, an unset model here is not known to blank the output.
 export const VIBE_MODEL = process.env.VIBE_MODEL || null;
@@ -1125,42 +1250,16 @@ export const CLAUDE_REVIEW_MODEL = process.env.CLAUDE_REVIEW_MODEL || 'sonnet';
 
 // One `vibe --prompt "<prompt+context>" --agent plan --output text` invocation. Like agy, vibe takes the
 // whole thing as an argv string, so the same size cap applies (and for the same reason: a clear message
-// beats an opaque E2BIG).
-//
-// ── Why `--auto-approve`, when the old comment here said it must never be passed (2026-08-07) ───────
-// It said: "`--agent plan` is NOT optional — programmatic mode otherwise defaults to auto-approve, and
-// an advisory reviewer must not be able to write." The INSTINCT was right and the implementation
-// inverted it. `--trust` only skips the trust-the-FOLDER prompt; it approves nothing. So every tool
-// call the reviewer made was auto-DENIED, and two things followed:
-//
-//   1. Each denial burned a turn. Against `--max-turns 4` a review of a large diff hit
-//      "<vibe_stop_event>Turn limit of 4 reached</vibe_stop_event>" and cross-review.mjs correctly
-//      treated it as a hard failure — so the review silently dropped out of the layer, intermittently,
-//      depending on how many tool calls that run happened to attempt.
-//   2. Worse: the reviewer was reading the DIFF and could never open a FILE. That is the direct cause
-//      of the wrong findings this rail has produced — "the helper is not defined or imported in this
-//      test file" when it was defined eight lines above the hunk, and "imported from a file the diff
-//      never creates" when a lower PR in the stack creates it. A reviewer that cannot read the
-//      surrounding file will keep inventing that class of finding.
-//
-// The fix keeps the safety property and drops the blindness: `--auto-approve` is scoped by
-// `--enabled-tools`, which in programmatic mode disables every tool not listed. The reviewer gets
-// `read_file` and `grep`; it does not get `bash`, `edit` or `write_file`. `--agent plan` stays, as a
-// second layer rather than the only one.
+// beats an opaque E2BIG). `--agent plan` is NOT optional, and `--disabled-tools '*'` is equally
+// non-optional: plan mode describes intended behaviour, while the tool filter enforces that an injected
+// diff cannot read host files, shell out or mutate anything (see VIBE_READ_ONLY_TOOLS for why the
+// read-only allow-list this used to carry was removed). No `--auto-approve`: there is nothing to approve.
 //
 // Empty stdout is treated as a FAILURE, not as "no findings". Every CLI on this roster can exit 0 having
 // produced nothing when it is quota-capped or misconfigured, and a review that silently becomes empty is
 // worse than one that errors — it reads as a clean pass. `deps.spawn` is injectable for tests.
-export function runVibe(fullArgv, opts = {}, deps = {}) {
-  const { spawn = spawnSync } = deps;
-  if (Buffer.byteLength(fullArgv, 'utf8') > VIBE_ARG_LIMIT) {
-    return fail(
-      opts.soft,
-      `input too large for vibe (${Math.round(Buffer.byteLength(fullArgv) / 1024)} KB > ` +
-        `${VIBE_ARG_LIMIT / 1024} KB; vibe takes the prompt in argv, not stdin) — use --agent codex instead.`
-    );
-  }
-
+// The argv for one vibe call, read-only (every tool disabled). Exported for the same reason as agyArgs (C4).
+export function vibeArgs(fullArgv) {
   const args = [
     '--prompt',
     fullArgv,
@@ -1171,13 +1270,24 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
     '--max-turns',
     String(VIBE_MAX_TURNS),
     '--trust',
-    // Safe ONLY in combination with the --enabled-tools allow-list that follows it.
-    '--auto-approve',
-    ...VIBE_READ_ONLY_TOOLS.flatMap((tool) => ['--enabled-tools', tool]),
+    '--disabled-tools',
+    '*',
   ];
   if (VIBE_MODEL) args.push('--model', VIBE_MODEL);
+  return args;
+}
 
-  const r = spawn('vibe', args, { input: '', encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+export function runVibe(fullArgv, opts = {}, deps = {}) {
+  const { spawn = spawnSync } = deps;
+  if (Buffer.byteLength(fullArgv, 'utf8') > VIBE_ARG_LIMIT) {
+    return fail(
+      opts.soft,
+      `input too large for vibe (${Math.round(Buffer.byteLength(fullArgv) / 1024)} KB > ` +
+        `${VIBE_ARG_LIMIT / 1024} KB; vibe takes the prompt in argv, not stdin) — use --agent codex instead.`
+    );
+  }
+
+  const r = spawn('vibe', vibeArgs(fullArgv), { input: '', encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (r.error)
     return fail(
       opts.soft,
@@ -1214,9 +1324,9 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
   if (isTruncatedReview(out)) {
     return fail(
       opts.soft,
-      `vibe stopped mid-review — its output is a bare tool call or has no findings section, which ` +
-        `means it ran out of turns rather than finishing. Raise VIBE_MAX_TURNS (currently ` +
-        `${VIBE_MAX_TURNS}) and re-run. Posting this would look like a clean pass.`
+      `vibe requested a disabled tool or stopped between turns — no review was produced (its output is a ` +
+        `bare tool call, or has no findings section). Re-run; if it recurs, raise VIBE_MAX_TURNS ` +
+        `(currently ${VIBE_MAX_TURNS}). Posting this would look like a clean pass.`
     );
   }
   return out;
@@ -1226,15 +1336,15 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
  * Does this look like a stopped-mid-review rather than a review?
  *
  * Two signals, both cheap and neither dependent on the model's wording:
- *   1. the output STARTS with a tool call (`read_file{…}`, `grep{…}`) — the literal shape vibe emits
- *      when it is cut off between turns;
+ *   1. the output STARTS with a tool call (`read_file{…}`, `grep {…}`) — the literal shape vibe emits
+ *      when it is cut off between turns, or when it asks for a tool that is disabled;
  *   2. it never mentions Blocking / Should-fix / Nit, which the review prompt requires.
  *
  * Exported for the unit layer: this is the guard whose absence let a non-review reach a PR.
  */
 export function isTruncatedReview(out) {
   const text = String(out || '').trim();
-  if (/^\s*\w+\{\s*"/.test(text)) return true;
+  if (/^\w+\s*\{/.test(text)) return true;
   return !/\b(blocking|should-fix|nit)\b/i.test(text);
 }
 
@@ -1242,10 +1352,11 @@ export function isTruncatedReview(out) {
 // cross-review can hand both runners the identical prompt/stdin pair). Tool-less and MCP-less by
 // construction — see CLAUDE_REVIEW_MODEL's header for why each flag is there.
 //
-// NOTE ON SAME-FAMILY REVIEW: nothing in this function knows or cares who built the diff. Routing a
-// Claude-built diff to a Claude reviewer would be a same-family pass wearing a cross-family label, and
-// preventing that is `review-route.mjs`'s job (rule 1: a family never reviews its own diff). Calling this
-// directly with `--agent claude` on a Claude-authored PR is a deliberate act, and the caller owns it.
+// NOTE ON SAME-FAMILY REVIEW: nothing in this function knows who built the diff. The refusal lives one
+// level up: review-route never routes a family to its own diff, and cross-review refuses `--agent claude`
+// when `--builder claude` is stated (checkReviewerPairing). Without a stated builder, the caller owns it.
+//
+// AUTH NOTE: `--bare` skips keychain/OAuth reads, so this path authenticates with ANTHROPIC_API_KEY.
 export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   const { spawn = spawnSync } = deps;
   const args = [
@@ -1267,7 +1378,7 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
     return fail(
       opts.soft,
       `claude not found or failed to spawn (${r.error.message}) — install Claude Code ` +
-        `(https://claude.com/claude-code) and run \`claude auth login\`, or use --agent codex/antigravity.`
+        `(https://claude.com/claude-code) and set ANTHROPIC_API_KEY (this path runs \`--bare\`), or use --agent codex/antigravity.`
     );
   if (r.status !== 0) return fail(opts.soft, `claude -p failed: ${lastLine(r.stderr)}`);
 
@@ -1275,28 +1386,27 @@ export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   if (!out)
     return fail(
       opts.soft,
-      `claude returned no output — likely a usage cap or an expired session. Check \`claude auth status\`, ` +
+      `claude returned no output — likely a usage cap or a missing ANTHROPIC_API_KEY (this path runs \`--bare\`), ` +
         `or use --agent codex/antigravity/vibe. (An empty result is a failure, never "no findings".)`
     );
   return out;
 }
 
-// ── Devin — a PROSE WRITER here, not a reviewer (independent quota pool) ─────────────────────────────────
-// Ported with the reporting family (plugin-audit-and-extraction S1): lib/prose-writer.mjs drafts with
-// Devin first. It is deliberately NOT in AGENTS/AGENT_BIN — the reviewer roster is review-route.mjs's
-// decision, and this port adds a writer, not a reviewer.
+// ── Devin — a PROSE WRITER here, never a reviewer (independent quota pool) ────────────────────────────────
+// lib/prose-writer.mjs drafts with Devin first (plugin-audit-and-extraction S1). It is deliberately NOT in
+// AGENTS, so `cross-review.mjs --agent devin` is refused. A consuming project used it as a third review pool;
+// distribute-what-we-use S1's security lens found why that is unsafe: `devin -p` auto-approves read-only
+// tools (`--permission-mode auto`), there is no flag that disables them, and even `--sandbox` "can read
+// everything except paths hidden by Deny(Read(...)) rules" (`devin --help`, 3000.11.3). A reviewer fed an
+// attacker's PR diff could be steered into reading `.env.local` into a comment posted on the PR — the same
+// hole closed for Vibe (see VIBE_READ_ONLY_TOOLS). Its prose drafts are fed this repo's own docs and git log.
 // `devin -p --prompt-file <file>` runs non-interactively and prints the response. The prompt (framing +
 // diff) rides in a FILE, not argv, so there is NO size cap to guard — the whole reason to prefer prompt-file
 // over agy's argv path for large diffs. Empty stdout is a failure (a quota-capped devin, like agy, exits 0
 // with nothing). Uses the account default model. `deps` is injectable so a node:test drives it without a
 // real devin binary or touching the real filesystem.
 export function runDevin(prompt, opts = {}, deps = {}) {
-  const {
-    spawn = spawnSync,
-    writeFile = writeFileSync,
-    mkdtemp = mkdtempSync,
-    rm = rmSync,
-  } = deps;
+  const { spawn = spawnSync, writeFile = writeFileSync, mkdtemp = mkdtempSync, rm = rmSync } = deps;
   let dir;
   try {
     dir = mkdtemp(join(tmpdir(), 'xrev-devin-'));
@@ -1306,19 +1416,33 @@ export function runDevin(prompt, opts = {}, deps = {}) {
   const file = join(dir, 'prompt.md');
   try {
     writeFile(file, prompt, 'utf8');
-    const r = spawn('devin', ['-p', '--prompt-file', file], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-    if (r.error) return fail(opts.soft, `devin not found or failed to spawn (${r.error.message}) — install the Devin CLI or use --agent codex/antigravity.`);
+    const r = spawn('devin', ['-p', '--prompt-file', file], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (r.error)
+      return fail(
+        opts.soft,
+        `devin not found or failed to spawn (${r.error.message}) — install the Devin CLI or use --agent codex/antigravity.`
+      );
     if (r.status !== 0) {
       const last = (r.stderr || '').trim().split('\n').filter(Boolean).pop() || 'unknown error';
       return fail(opts.soft, `devin -p failed: ${last}`);
     }
     const out = (r.stdout || '').trim();
     if (!out) {
-      return fail(opts.soft, `devin returned no output — likely a quota cap or auth lapse (run \`devin auth\`), or use --agent codex/antigravity.`);
+      return fail(
+        opts.soft,
+        `devin returned no output — likely a quota cap or auth lapse (run \`devin auth\`), or use --agent codex/antigravity.`
+      );
     }
     return out;
   } finally {
     // Best-effort cleanup — a leaked temp prompt file must never fail the review.
-    try { rm(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+    try {
+      rm(dir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
   }
 }

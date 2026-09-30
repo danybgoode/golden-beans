@@ -158,6 +158,9 @@ for (const [name, json, expect] of [
   ['inverted review band', { rails: { review: { thresholds: { real: 0.1, notReal: 0.9 } } } }, /below/],
   ['shadow without expiry', { rails: { review: { mode: 'shadow' } } }, /shadow must expire/],
   ['egress not boolean', { egress: 'yes' }, /egress/],
+  ['a lint threshold key that is not a rule id', { rails: { lint: { thresholds: { 'Rule 1': 0.8 } } } }, /not `default` or a rule id/],
+  ['a lint threshold below 0.5 (raise and clear would overlap)', { rails: { lint: { thresholds: { default: 0.4 } } } }, /0\.5…1/],
+  ['a rule-id threshold key on a rail that is not lint', { rails: { prose: { thresholds: { 'rule-1': 0.8 } } } }, /unknown key/],
 ]) {
   test(`parseJevConfig: ${name} throws — a malformed config is never silently off`, () => {
     assert.throws(
@@ -166,6 +169,14 @@ for (const [name, json, expect] of [
     );
   });
 }
+
+test('parseJevConfig: the lint rail is off by default, and takes a threshold per rule id (semantic-lint D3)', () => {
+  assert.deepEqual(parseJevConfig({}).rails.lint, { mode: 'off', thresholds: { default: 0.8 }, shadowExpires: null });
+  const c = parseJevConfig({
+    rails: { lint: { mode: 'shadow', thresholds: { 'rule-1': 0.7 }, shadowExpires: '2026-10-14' } },
+  });
+  assert.deepEqual(c.rails.lint.thresholds, { default: 0.8, 'rule-1': 0.7 });
+});
 
 test('loadJevConfig: a missing file is the defaults; an unparseable one throws', () => {
   const dir = mkdtempSync(join(tmpdir(), 'jev-'));
@@ -247,6 +258,9 @@ test('readApiKey: env wins, else .env.local at the root', () => {
   writeFileSync(join(dir, '.env.local'), 'OTHER=1\nTYPESAFE_API_KEY="abc"\n');
   assert.equal(readApiKey({ env: {}, root: dir, cwd: dir }), 'abc');
   assert.equal(readApiKey({ env: { TYPESAFE_API_KEY: 'env' }, root: dir, cwd: dir }), 'env');
+  // Set but empty is "no key", never a fall-through to the .env.local key the person just blanked.
+  assert.equal(readApiKey({ env: { TYPESAFE_API_KEY: '' }, root: dir, cwd: dir }), null);
+  assert.equal(readApiKey({ env: { TYPESAFE_API_KEY: '  ' }, root: dir, cwd: dir }), null);
 });
 
 test('logDecision: one JSONL line with the contract fields, text truncated at 4k', () => {
@@ -412,4 +426,59 @@ test('loadJevConfig: a section that never mentions egress is unanswered too; an 
   assert.equal(loadJevConfig({ root: dir }).egress, null);
   writeFileSync(join(dir, 'jev.config.json'), JSON.stringify({ egress: true, rails: { review: { mode: 'jev' } } }));
   assert.equal(loadJevConfig({ root: dir }).egress, true, 'a consumer committed true: unchanged');
+});
+
+// ── distribute-what-we-use S3.1 (D7): the stranger with NO config is asked, and nothing is sent ─────────
+// Two bugs made D12's ask dead code for exactly that user: (1) no config at all loaded as
+// parseJevConfig({}), whose egress defaults to TRUE; (2) effectiveMode returned "configured off" (every
+// rail's default) before it ever looked at egress. Observed failing on the code before this fix.
+test('D7: no config at all → egress is UNANSWERED (null), not true', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jev-none-'));
+  assert.equal(loadJevConfig({ root: dir }).egress, null);
+});
+
+test('D7: no config at all → the first guarded run asks once, stays off, and never calls fetch', () => {
+  _resetAsked();
+  const dir = mkdtempSync(join(tmpdir(), 'jev-none-'));
+  const writes = [];
+  let fetches = 0;
+  const ctx = jevContext('review', {
+    root: dir,
+    key: 'k',
+    fetch: async () => {
+      fetches += 1;
+      throw new Error('must not send before egress: true');
+    },
+    write: (s) => writes.push(s),
+  });
+  assert.equal(ctx.mode, 'off');
+  assert.equal(writes.length, 1, 'GF-NEEDS-SETTING jev.egress is emitted');
+  assert.equal(JSON.parse(writes[0].slice('GF-NEEDS-SETTING '.length)).key, 'jev.egress');
+  assert.equal(fetches, 0);
+  _resetAsked();
+});
+
+test('D7: egress unanswered + a rail left at its default "off" still asks (the default mode never hides it)', () => {
+  _resetAsked();
+  const writes = [];
+  const ctx = jevContext('prose', {
+    config: parseJevConfig({ egress: null }),
+    key: 'k',
+    root: mkdtempSync(join(tmpdir(), 'jev-')),
+    write: (s) => writes.push(s),
+  });
+  assert.equal(ctx.mode, 'off');
+  assert.equal(writes.length, 1);
+  _resetAsked();
+});
+
+test('D7: egress:false never asks and never sends, whatever the rail mode', () => {
+  for (const mode of ['off', 'jev']) {
+    const ctx = jevContext('review', {
+      config: parseJevConfig({ egress: false, rails: { review: mode === 'jev' ? { mode } : {} } }),
+      key: 'k',
+      write: () => assert.fail('egress:false must never emit GF-NEEDS-SETTING'),
+    });
+    assert.equal(ctx.mode, 'off');
+  }
 });

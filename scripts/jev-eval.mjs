@@ -7,7 +7,14 @@
 //                                             recording, and fail if any rail is in shadow past its expiry.
 //   node scripts/jev-eval.mjs --live          re-ask Jev for every fixture, REWRITE the recordings, and print
 //                                             accuracy against the labels — regex vs Jev, per rail/family.
-//   node scripts/jev-eval.mjs --rail prose    limit to one rail.
+//   node scripts/jev-eval.mjs --rail prose    limit to one rail (or to `intent`, the intent-match question set).
+//   node scripts/jev-eval.mjs --live --limit 10
+//                                             the SETUP PROOF: ask Jev for only the first n fixtures of each
+//                                             rail, print per-rail agreement with the labels, and WRITE
+//                                             NOTHING. A partial run must never rewrite the committed
+//                                             recordings (they would then cover n fixtures, not all), so
+//                                             --limit is refused without --live and never touches the file.
+//                                             It still needs `jev.egress` true and TYPESAFE_API_KEY.
 //
 // Why offline replay exists: a model bump, a threshold change or an edit to a judge's decide logic must
 // show up as a red CI run, not as a quietly different verdict on the next PR. Why --live exists: the
@@ -16,20 +23,39 @@
 // The rot guard: a rail in `shadow` past `shadowExpires` fails this script, so shadow cannot quietly become
 // the permanent "regex and Jev both" the product owner ruled out.
 //
+// The `intent` set (intent-match D15, C2) is evaluated here beside the rails without being one: it measures the
+// wording of intent-match's questions on labelled items, and there is no regex to compare it with, no mode and no
+// threshold. Its report adds how many answers were DECIDED (P ≤ 0.2 or ≥ 0.8) and how many of those were right.
+//
+// The `lint` rail (semantic-lint D8) is reported the same way — its selector picks candidates but has no verdict to
+// compare with — and "decided" means raised or cleared at the rail's own threshold. Its question is project data, so a
+// recording pins the wording's hash, and the fixtures live in the project's own jev-eval.lint.fixtures.json.
+//
 // Zero deps — Node 18+.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readSection } from './lib/config.mjs';
 import { loadJevConfig, parseJevConfig, RAILS, readApiKey, repoRoot } from './lib/jev.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const FIXTURES_PATH = join(__dirname, 'jev-eval.fixtures.json');
+/**
+ * The `lint` set's fixtures are PROJECT data, like the rules they measure (semantic-lint D8, fresh review of #200):
+ * this repo's rule-1 labels shipped in the shared file would fail any consumer whose own rule reused the id, and fail
+ * every consumer with a rule but no such fixtures. So they live beside the script in a file the template never has.
+ */
+export const LINT_FIXTURES_PATH = join(__dirname, 'jev-eval.lint.fixtures.json');
 
 /** Shadow is a short, expiring measurement: at most this many days out, ever. */
 export const MAX_SHADOW_DAYS = 21;
 /** A judge that exists must be proven on at least this many labelled cases (S1.4 acceptance). */
 export const MIN_FIXTURES = 30;
+/** What this harness evaluates: the Jev rails, plus intent-match's question set (not a rail — C2). */
+export const EVAL_SETS = [...RAILS, 'intent'];
+/** An intent answer counts as DECIDED when it sits this far from 0.5 — the band the report counts separately. */
+export const DECIDED_MARGIN = 0.3;
 
 const addDays = (ymd, n) =>
   new Date(Date.parse(`${ymd}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
@@ -58,7 +84,12 @@ export function expiredShadowRails(config, today) {
  */
 export function coverageFailures(fixtures, rails) {
   const out = [];
-  for (const name of RAILS) {
+  for (const name of EVAL_SETS) {
+    // A set that knows its own coverage rule (lint: per configured rule) answers for itself.
+    if (rails[name]?.coverage) {
+      out.push(...rails[name].coverage(fixtures[name] ?? []));
+      continue;
+    }
     const n = (fixtures[name] ?? []).length;
     if (!rails[name] && n)
       out.push(`${name}: ${n} fixture(s) but no judge to replay them — was the judge renamed?`);
@@ -117,7 +148,7 @@ const sortedCodes = (findings) =>
  * The rails this harness can evaluate. Each judge is looked up by name so a rail whose judge has not
  * landed yet is SKIPPED loudly instead of failing the import.
  */
-export async function loadRails() {
+export async function loadRails({ lintRules = [] } = {}) {
   const rails = {};
   const review = await import('./lib/review-guard.mjs');
   if (typeof review.judgeReviewOutput === 'function')
@@ -137,6 +168,52 @@ export async function loadRails() {
       expected: (fx) => [...fx.label].sort(),
       summary: (d) => ({ codes: sortedCodes(d.findings), decider: d.decider }),
     };
+  const intent = await import('./intent-match.mjs');
+  if (typeof intent.judgeItem === 'function')
+    rails.intent = {
+      run: (fx, deps) => intent.judgeItem(fx, deps),
+      regex: null, // no deterministic rule to compare with — the score has none (C2)
+      predicted: (d) => d.value,
+      expected: (fx) => fx.label,
+      summary: (d) => ({ value: d.value, p: d.p, decider: d.decider }),
+    };
+  // semantic-lint D8. The QUESTION is the project's own data (`lint.rules`), so a fixture is replayed against the
+  // rule this project has; one whose rule it lacks (the template's own run) is skipped and counted, never scored.
+  const lint = await import('./semantic-lint.mjs');
+  if (typeof lint.judgeCandidate === 'function') {
+    const byId = new Map(lintRules.map((r) => [r.id, r]));
+    rails.lint = {
+      // Never replayed (there is no question to replay it against) — and `coverage` below fails it, so a renamed or
+      // removed rule cannot go green by skipping every fixture it had (fresh review of #200).
+      skip: (fx) => (byId.has(fx.rule) ? null : `no rule "${fx.rule}" in this project's lint config`),
+      coverage: (cases) => [
+        ...[...new Set(cases.filter((fx) => !byId.has(fx.rule)).map((fx) => fx.rule))].map(
+          (id) => `lint: fixtures for "${id}", which this project's lint config does not define — renamed or removed?`
+        ),
+        ...[...byId.keys()]
+          .map((id) => [id, cases.filter((fx) => fx.rule === id).length])
+          .filter(([, n]) => n < MIN_FIXTURES)
+          .map(([id, n]) => `lint/${id}: only ${n} labelled fixture(s); a rule needs ≥${MIN_FIXTURES}`),
+      ],
+      // A recording answers the wording that produced it: an edited question replaying green would prove nothing.
+      stale: (fx) =>
+        fx.recorded?.questionHash === lint.questionHash(byId.get(fx.rule))
+          ? null
+          : `recorded against another wording of ${fx.rule}'s question — run --live`,
+      recordExtra: (fx) => ({ questionHash: lint.questionHash(byId.get(fx.rule)) }),
+      run: (fx, deps) =>
+        lint.judgeCandidate(
+          { rule: byId.get(fx.rule), file: fx.file, hunk: fx.hunk },
+          { ask: deps.ask, threshold: lint.thresholdFor(deps.config.rails.lint, fx.rule) }
+        ),
+      regex: null, // the selector only picks candidates; it has no verdict of its own to compare with
+      predicted: (d) => (d.outcome === 'raise' ? true : d.outcome === 'clear' ? false : null),
+      expected: (fx) => fx.label,
+      // Decided = raised or cleared at THIS rail's threshold, not intent's fixed margin.
+      decided: (d) => d.outcome === 'raise' || d.outcome === 'clear',
+      summary: (d) => ({ outcome: d.outcome, p: d.p }),
+    };
+  }
   return rails;
 }
 
@@ -165,7 +242,15 @@ const evalConfig = (base, rail) =>
  * Evaluate. Returns { failures, report, fixtures } — pure over its deps apart from the judge calls.
  * live=false replays recordings; live=true re-asks through deps.ask and rewrites them.
  */
-export async function evaluate({ fixtures, rails, config, live = false, ask = null, only = null }) {
+export async function evaluate({
+  fixtures,
+  rails,
+  config,
+  live = false,
+  ask = null,
+  only = null,
+  limit = null,
+}) {
   // Replay forces egress on (evalConfig) because it sends nothing. LIVE sends every fixture to TypeSafe, so it needs
   // the project's explicit yes: `egress: true`, never null (unanswered) or false (D12; cross-review of #50 — the
   // CLI refused this, but a caller of this export did not).
@@ -177,10 +262,19 @@ export async function evaluate({ fixtures, rails, config, live = false, ask = nu
   const report = {};
   for (const [name, rail] of Object.entries(rails)) {
     if (only && only !== name) continue;
-    const cases = fixtures[name] ?? [];
-    const cfg = evalConfig(config, name);
+    const cases = limit == null ? (fixtures[name] ?? []) : (fixtures[name] ?? []).slice(0, limit);
+    // Only a rail has a config entry to force on; the intent set reads nothing from it (C2).
+    const cfg = RAILS.includes(name) ? evalConfig(config, name) : config;
     const tally = { n: cases.length, jevRight: 0, regexRight: 0, disagreements: 0, families: {} };
+    if (!rail.regex) Object.assign(tally, { regexRight: null, disagreements: null, decided: 0, decidedRight: 0 });
     for (const fx of cases) {
+      const skip = rail.skip?.(fx);
+      if (skip) {
+        tally.n--;
+        tally.skipped = (tally.skipped ?? 0) + 1;
+        tally.skipWhy = skip;
+        continue;
+      }
       const sink = { answers: {}, model: null, errors: [] };
       const deps = {
         config: cfg,
@@ -196,6 +290,11 @@ export async function evaluate({ fixtures, rails, config, live = false, ask = nu
         );
         continue;
       }
+      const stale = live ? null : rail.stale?.(fx);
+      if (stale) {
+        failures.push(`${name}/${fx.id}: ${stale}`);
+        continue;
+      }
       const decision = await rail.run(fx, deps);
       const summary = rail.summary(decision);
       if (live && sink.errors.length) {
@@ -208,7 +307,7 @@ export async function evaluate({ fixtures, rails, config, live = false, ask = nu
       if (live) {
         // A draft the judge needed no answers for (e.g. a heading-only unit, which is never asked about) is
         // recorded as answered by the pinned model with no answers — replaying it asks nothing.
-        fx.recorded = { model: sink.model ?? cfg.model, answers: sink.answers };
+        fx.recorded = { model: sink.model ?? cfg.model, answers: sink.answers, ...(rail.recordExtra?.(fx) ?? {}) };
         fx.decision = summary;
       } else if (!same(summary, fx.decision)) {
         failures.push(
@@ -217,8 +316,18 @@ export async function evaluate({ fixtures, rails, config, live = false, ask = nu
       }
       const expected = rail.expected(fx);
       const jevRight = same(rail.predicted(decision), expected);
-      const regexRight = same(rail.regex(fx), expected);
       tally.jevRight += jevRight;
+      if (!rail.regex) {
+        const decided = rail.decided
+          ? rail.decided(decision)
+          : typeof decision.p === 'number' && Math.abs(decision.p - 0.5) >= DECIDED_MARGIN;
+        if (decided) {
+          tally.decided++;
+          tally.decidedRight += jevRight;
+        }
+        continue;
+      }
+      const regexRight = same(rail.regex(fx), expected);
       tally.regexRight += regexRight;
       tally.disagreements += !same(rail.predicted(decision), rail.regex(fx));
       if (name === 'prose')
@@ -240,6 +349,13 @@ const pct = (a, n) => (n ? `${((100 * a) / n).toFixed(1)}%` : 'n/a');
 export function formatReport(report) {
   const lines = [];
   for (const [rail, t] of Object.entries(report)) {
+    if (t.regexRight === null) {
+      lines.push(
+        `${rail}: ${t.n} labelled · jev ${pct(t.jevRight, t.n)} · decided ${t.decided}/${t.n}, ${t.decidedRight} right · no deterministic rule` +
+          (t.skipped ? ` · ${t.skipped} skipped (${t.skipWhy})` : '')
+      );
+      continue;
+    }
     lines.push(
       `${rail}: ${t.n} labelled · jev ${pct(t.jevRight, t.n)} · regex ${pct(t.regexRight, t.n)} · ${t.disagreements} disagreement(s)`
     );
@@ -249,63 +365,109 @@ export function formatReport(report) {
   return lines.join('\n');
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
+/** The one line that refuses a live run, or null when it may go. Egress first, and the key is not even read until the yes is in. */
+export function liveRefusal(config, getKey) {
+  if (config.egress !== true)
+    // false: no text leaves this machine; null: nobody has said yes yet (D12). `--live` sends fixtures.
+    return `jev-eval --live: jev.egress is ${JSON.stringify(config.egress)}, not true — refusing to send fixtures to Jev. Say yes with \`gf-kit config set jev.egress true\` first.`;
+  if (!getKey())
+    return 'jev-eval --live needs TYPESAFE_API_KEY: put TYPESAFE_API_KEY=… in .env.local (or the environment).';
+  return null;
+}
+
+/** Pure — `--limit <n>` as a positive integer, null when absent, or { error } when malformed. */
+export function parseLimit(argv) {
+  const ix = argv.indexOf('--limit');
+  if (ix < 0) return null;
+  const n = Number(argv[ix + 1]);
+  if (!/^\d+$/.test(argv[ix + 1] ?? '') || n < 1) return { error: '--limit needs a positive whole number' };
+  return n;
+}
+
+/**
+ * The CLI, with every side effect injected so a spec can watch it: returns the exit code. `io` carries
+ * { root, config, fixtures, rails, key, makeAsk, writeFixtures, stdout, stderr, today }.
+ */
+export async function run(argv, io = {}) {
+  const { config, fixtures, rails, stdout, stderr } = io;
   const live = argv.includes('--live');
   const railIx = argv.indexOf('--rail');
   const only = railIx >= 0 ? argv[railIx + 1] : null;
-  if (railIx >= 0 && !RAILS.includes(only)) {
-    process.stderr.write(`jev-eval: --rail must be one of ${RAILS.join(', ')}\n`);
-    process.exit(2);
+  if (railIx >= 0 && !EVAL_SETS.includes(only)) {
+    stderr(`jev-eval: --rail must be one of ${EVAL_SETS.join(', ')}\n`);
+    return 2;
   }
-  const root = repoRoot();
-  const config = loadJevConfig({ root });
-
-  const today = new Date().toISOString().slice(0, 10);
-  const expired = expiredShadowRails(config, today);
-
-  const fixtures = JSON.parse(readFileSync(FIXTURES_PATH, 'utf8'));
-  const rails = await loadRails();
+  const limit = parseLimit(argv);
+  if (limit?.error) {
+    stderr(`jev-eval: ${limit.error}\n`);
+    return 2;
+  }
+  if (limit != null && !live) {
+    stderr('jev-eval: --limit only makes sense with --live (a setup proof against real Jev).\n');
+    return 2;
+  }
+  const expired = expiredShadowRails(config, io.today ?? new Date().toISOString().slice(0, 10));
   for (const name of ['review', 'prose'])
-    if (!rails[name]) process.stdout.write(`${name}: no judge in this checkout yet — skipped\n`);
+    if (!rails[name]) stdout(`${name}: no judge in this checkout yet — skipped\n`);
 
   let ask = null;
-  if (live && config.egress !== true) {
-    // false: no text leaves this machine; null: nobody has said yes yet (D12). `--live` sends every fixture.
-    process.stderr.write(
-      `jev-eval --live: jev.egress is ${JSON.stringify(config.egress)}, not true — refusing to send fixtures to Jev. ` +
-        'Say yes with `gf-kit config set jev.egress true` first.\n'
-    );
-    process.exit(2);
-  }
   if (live) {
-    const key = readApiKey({ root });
-    if (!key) {
-      process.stderr.write('jev-eval --live needs TYPESAFE_API_KEY (env or .env.local).\n');
-      process.exit(2);
+    const refusal = liveRefusal(config, io.key);
+    if (refusal) {
+      stderr(`${refusal}\n`);
+      return 2;
     }
-    const { askJev } = await import('./lib/jev.mjs');
-    ask = (req) => askJev(req, { key, model: config.model });
+    ask = io.makeAsk({ key: io.key(), model: config.model });
   }
 
-  const { failures, report } = await evaluate({ fixtures, rails, config, live, ask, only });
-  failures.push(...coverageFailures(fixtures, rails));
+  const { failures, report } = await evaluate({ fixtures, rails, config, live, ask, only, limit });
+  // A partial run is not held to the per-rail fixture floor: that floor is about the committed set.
+  if (limit == null) failures.push(...coverageFailures(fixtures, rails));
   const n = Object.values(report).reduce((s, t) => s + t.n, 0);
-  if (live && failures.length) {
-    process.stderr.write('jev-eval --live: failures below — the recordings were NOT rewritten.\n');
-  } else if (live) {
-    writeFileSync(FIXTURES_PATH, `${JSON.stringify(fixtures, null, 2)}\n`);
-    process.stdout.write(`live: re-scored ${n} fixtures against ${config.model}; recordings rewritten.\n`);
-  } else {
-    process.stdout.write(`offline: ${n - failures.length}/${n} fixtures match recordings\n`);
-  }
-  process.stdout.write(`${formatReport(report)}\n`);
-  for (const f of failures) process.stderr.write(`✗ ${f}\n`);
-  for (const e of expired)
-    process.stderr.write(
-      `✗ rails.${e.rail} is in shadow ${e.why} (${e.shadowExpires}) — promote it to jev or set it off.\n`
+  if (live && limit != null) {
+    stdout(
+      `live proof: asked Jev for the first ${limit} fixture(s) of each rail (${n} scored) against ${config.model}; ` +
+        'nothing written — the committed recordings are untouched.\n'
     );
-  if (failures.length || expired.length) process.exit(1);
+  } else if (live && failures.length) {
+    stderr('jev-eval --live: failures below — the recordings were NOT rewritten.\n');
+  } else if (live) {
+    io.writeFixtures(fixtures);
+    stdout(`live: re-scored ${n} fixtures against ${config.model}; recordings rewritten.\n`);
+  } else {
+    stdout(`offline: ${n - failures.length}/${n} fixtures match recordings\n`);
+  }
+  stdout(`${formatReport(report)}\n`);
+  for (const f of failures) stderr(`✗ ${f}\n`);
+  for (const e of expired)
+    stderr(`✗ rails.${e.rail} is in shadow ${e.why} (${e.shadowExpires}) — promote it to jev or set it off.\n`);
+  return failures.length || expired.length ? 1 : 0;
+}
+
+async function main() {
+  const root = repoRoot();
+  const { askJev } = await import('./lib/jev.mjs');
+  const { parseLintRules } = await import('./semantic-lint.mjs');
+  const code = await run(process.argv.slice(2), {
+    root,
+    config: loadJevConfig({ root }),
+    fixtures: {
+      ...JSON.parse(readFileSync(FIXTURES_PATH, 'utf8')),
+      lint: existsSync(LINT_FIXTURES_PATH) ? JSON.parse(readFileSync(LINT_FIXTURES_PATH, 'utf8')) : [],
+    },
+    // A malformed lint section throws here: CI must go red on it, not replay against no rules.
+    rails: await loadRails({ lintRules: parseLintRules(readSection('lint', { root }).raw) }),
+    key: () => readApiKey({ root }),
+    makeAsk: ({ key, model }) => (req) => askJev(req, { key, model }),
+    writeFixtures: ({ lint, ...shared }) => {
+      writeFileSync(FIXTURES_PATH, `${JSON.stringify(shared, null, 2)}\n`);
+      if (lint.length) writeFileSync(LINT_FIXTURES_PATH, `${JSON.stringify(lint, null, 2)}\n`);
+    },
+    stdout: (t) => process.stdout.write(t),
+    stderr: (t) => process.stderr.write(t),
+    today: new Date().toISOString().slice(0, 10),
+  });
+  if (code) process.exit(code);
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

@@ -1,0 +1,5 @@
+/.lake
+# lake new template leftovers, deliberately not part of the spike
+/.github/
+/README.md
+/Flageval/Basic.lean

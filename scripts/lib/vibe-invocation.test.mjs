@@ -1,15 +1,14 @@
 // The vibe reviewer's INVOCATION contract.
 //
-// Two properties matter and they pull against each other: the reviewer must be able to READ the repo
-// it is reviewing, and it must never be able to WRITE to it. Before 2026-08-07 the code had the
-// second and silently lost the first — `--trust` skips the trust-the-folder prompt but approves no
-// tool calls, so every read was auto-denied, each denial burned a turn against `--max-turns 4`, and
-// the reviewer was left judging a diff it could not open a single file of.
+// The reviewer must never be steerable into reading or writing anything on the host, and it must still
+// see the code it reviews. Since distribute-what-we-use D1 (2026-09-29) both halves are met the same way
+// every consumer meets them: every model-driven tool is disabled (`--disabled-tools '*'`, no
+// `--auto-approve`), and cross-review embeds the diff plus the touched files' head-side contents in the
+// prompt instead. The earlier read-only allow-list (`read_file`/`grep` + `--auto-approve`, 2026-08-07)
+// was removed because vibe checks auto-approval BEFORE its sensitive-file and outside-workdir prompts, and
+// `read_file` takes absolute paths — so a malicious diff could put `.env.local` into a posted comment.
 //
-// These tests pin both halves at the argv level, because that is where the guarantee lives. The
-// runtime half — that a write is genuinely impossible under this flag set — was verified by
-// attempting it (see VIBE_READ_ONLY_TOOLS' comment); this file makes sure the flags that made it
-// impossible cannot quietly disappear.
+// These tests pin the contract at the argv level, because that is where the guarantee lives.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -31,43 +30,45 @@ function argvFor(prompt = 'review this') {
   return captured;
 }
 
-test('the reviewer can read: auto-approve is passed, and scoped by an allow-list', () => {
+test('Vibe receives the bounded diff with every model-driven host tool disabled', () => {
   const args = argvFor();
-  assert.ok(args.includes('--auto-approve'), 'without this every tool call is denied and turns are burned');
-
-  // `--enabled-tools` in programmatic mode disables every tool NOT listed. That is the only reason
-  // --auto-approve is safe here, so the two must always travel together.
-  for (const tool of VIBE_READ_ONLY_TOOLS) {
-    const at = args.indexOf(tool);
-    assert.notEqual(at, -1, `${tool} must be enabled`);
-    assert.equal(args[at - 1], '--enabled-tools', `${tool} must be granted via --enabled-tools`);
-  }
+  assert.ok(!args.includes('--auto-approve'), 'auto-approval bypasses Vibe sensitivity/workdir checks');
+  assert.ok(
+    !args.includes('--enabled-tools'),
+    'no model-driven read or write tool is needed for an embedded diff'
+  );
+  assert.equal(args[args.indexOf('--disabled-tools') + 1], '*');
+  assert.deepEqual([...VIBE_READ_ONLY_TOOLS], [], 'the exported toolset is the empty set');
 });
 
-test('the reviewer cannot write: no write-capable tool is ever enabled', () => {
+test('the reviewer cannot write: no tool is ever enabled by name', () => {
   const args = argvFor();
   // vibe's full toolset: skill, task, web_fetch, bash, edit, grep, read_file, web_search, todo,
-  // write_file. `bash` counts as a write path — a shell can create a file as easily as `write_file`.
-  for (const forbidden of ['bash', 'edit', 'write_file', 'task', 'skill', 'web_fetch', 'web_search']) {
-    assert.ok(!args.includes(forbidden), `${forbidden} must never be enabled for an advisory reviewer`);
+  // write_file. With `--disabled-tools '*'` none of them is reachable; none may reappear by name either.
+  for (const tool of [
+    'bash',
+    'edit',
+    'write_file',
+    'task',
+    'skill',
+    'web_fetch',
+    'web_search',
+    'read_file',
+    'grep',
+  ]) {
+    assert.ok(!args.includes(tool), `${tool} must never be named in the reviewer's argv`);
   }
-  assert.deepEqual(
-    args.filter((a, i) => args[i - 1] === '--enabled-tools').sort(),
-    [...VIBE_READ_ONLY_TOOLS].sort(),
-    'the enabled set must be exactly the read-only allow-list — no additions by accident'
-  );
 });
 
-test('--agent plan stays, as a second layer rather than the only one', () => {
+test('--agent plan stays, as a second layer under the tool filter', () => {
   const args = argvFor();
   assert.equal(args[args.indexOf('--agent') + 1], 'plan');
 });
 
 test('the turn budget is high enough that a real review is not truncated', () => {
   // 4 was the value that produced "<vibe_stop_event>Turn limit of 4 reached</vibe_stop_event>" on
-  // large diffs — intermittently, depending on how many denied calls a run happened to attempt.
-  // With reads granted a turn is productive, and the agent stops on its own when it is done.
-  assert.ok(Number(VIBE_MAX_TURNS) >= 8, `expected a workable budget, got ${VIBE_MAX_TURNS}`);
+  // large diffs. 24 is the template's live-probed budget; with no tools, a turn cannot be wasted.
+  assert.ok(Number(VIBE_MAX_TURNS) >= 24, `expected the live-probed budget, got ${VIBE_MAX_TURNS}`);
   assert.equal(argvFor()[argvFor().indexOf('--max-turns') + 1], String(VIBE_MAX_TURNS));
 });
 
@@ -93,4 +94,25 @@ test('a turn-limit stop is reported as OUR budget, not as a quota cap', () => {
   }
   assert.match(warned, /turns, not quota/i);
   assert.match(warned, /VIBE_MAX_TURNS/);
+});
+
+test('a disabled-tool request is not accepted as a completed review', () => {
+  const spawn = () => ({
+    status: 0,
+    stdout: 'read_file{"path":"/tmp/private-file"}',
+    stderr: '',
+  });
+  const original = process.stderr.write.bind(process.stderr);
+  let warned = '';
+  process.stderr.write = (chunk) => {
+    warned += chunk;
+    return true;
+  };
+  try {
+    assert.equal(runVibe('review this', { soft: true }, { spawn }), null);
+  } finally {
+    process.stderr.write = original;
+  }
+  assert.match(warned, /requested a disabled tool/i);
+  assert.match(warned, /no review was produced/i);
 });
