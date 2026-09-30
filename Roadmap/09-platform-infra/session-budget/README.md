@@ -21,7 +21,9 @@ build_order: 50      # integer position in the ONE global build sequence — the
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Chore · **Scope seed:** [`00-ideas/seeds/session-budget.md`](../../00-ideas/seeds/session-budget.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section, not here). -->
+
+## Why
 Groom's "one deep ask per run" and LEARNINGS' "fresh session per sprint" were set for earlier models; the binding
 constraint now is the product owner's decision bandwidth, and nothing measures it. This epic rewrites the rule as "one
 deep ask per approval gate" (E7) and adds a line that says keep going, checkpoint or hand off, from figures the engine

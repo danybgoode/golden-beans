@@ -19,7 +19,9 @@ build_order: 51  # integer position in the ONE global build sequence — the SSO
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/compiled-prompts.md`](../../00-ideas/seeds/compiled-prompts.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section, not here). -->
+
+## Why
 The Jev guards get better only when someone edits a JS string and re-runs a hand-built harness, and CI can't even tell when a question's wording changed. This wave makes every Jev question a data file with its measurement beside it, makes a recording remember the wording it was made with, commits the ReAnchor harness as `optimize/` (Python, dev-only), and adds the loop the ReAnchor spike said matters most: testing new wordings on held-out data. Its first run targets `flag-state-claim`, where 19 of the 22 prose errors sit. The pitch, measurements and diagram are in the [seed](../../00-ideas/seeds/compiled-prompts.md).
 
 ## Platform-first note

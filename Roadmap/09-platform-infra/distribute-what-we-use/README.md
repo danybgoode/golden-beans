@@ -19,7 +19,9 @@ build_order: 47      # integer position in the ONE global build sequence — the
 > **Area:** 09-platform-infra · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/distribute-what-we-use.md`](../../00-ideas/seeds/distribute-what-we-use.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section, not here). -->
+
+## Why
 A stranger who installs the Golden Frijoles plugin today gets a kickoff whose review step points at a script they
 don't have, a Jev guard that is always off and never asks, a one-line Telegram guide, no routines and a silent build
 view. This epic makes those rails work in their repo the way they work in ours (E3, E4). It also collapses the review

@@ -19,7 +19,9 @@ build_order: 49      # integer position in the ONE global build sequence — the
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/semantic-lint.md`](../../00-ideas/seeds/semantic-lint.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section, not here). -->
+
+## Why
 The rules that cost most have no check. AGENTS rule 1 (no parallel telemetry pipeline) depends on a reviewer noticing
 a paraphrase: a usage table under another name, an analytics route, a vendor SDK call. This epic adds a rail where
 deterministic selectors pick candidate lines and Jev judges only those, raise-only, and proves it on rule 1 in shadow for

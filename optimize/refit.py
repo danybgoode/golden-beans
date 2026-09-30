@@ -199,7 +199,7 @@ def main():
     dspy.settings.configure(disable_history=True)
     if not STATS.exists():
         sys.exit("refit: optimize/.cache/stats.json is missing — run `node optimize/extract.mjs` (or npm run optimize:refit)")
-    stats = json.loads(STATS.read_text())
+    stats = json.loads(STATS.read_text(encoding="utf-8"))
     if stats["parity"]["mismatches"]:
         sys.exit("refit: extract.mjs's parity check failed — the reduction does not match the judge; refusing to fit")
     hand = stats["thresholds"]
@@ -219,7 +219,8 @@ def main():
             },
             indent=2,
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
 
     # Fit on ALL fixtures (what would be proposed), then 5-fold held-out for hand, ReAnchor and the grid.
@@ -296,7 +297,7 @@ def main():
     )
     REPORTS.mkdir(exist_ok=True)
     path = REPORTS / f"refit-{today}.md"
-    path.write_text(report)
+    path.write_text(report, encoding="utf-8")
     print("\n".join(table))
     print()
     print(verdict)
