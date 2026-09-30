@@ -356,6 +356,14 @@ independently shippable slice of value.
   nightly exhaustive checks, and no proof without a differential test. **Shipped 2026-09-29.** No landing
   claim yet (audit D7). ⚠️ **Owed to Daniel (F7):** confirm the delivery cron is registered in production
   (Vercel → Settings → Cron Jobs). Root Directory is `.`, but the `crons` entry lives only in `apps/web/vercel.json`.
+- ✅ [Intent match (wave 1, advisory)](09-platform-infra/intent-match/README.md): every groomed pitch keeps the ask
+  **verbatim** (claims + teach-back) and is **scored against it** by Jev — coverage in and out, clarity, teach-back, a
+  total marked *uncalibrated*, and a routed next artifact per gap; no key means "could not look", never a number.
+  Groom **Stage 4.6** draws from the shape of the ask (a system context for every M/L bet, then only what it
+  triggers). An **optional reader** at the lock (`intent.reader`, off by default, never Claude) adds agreement; every
+  failure is one skip line. Every closed scored epic answers **`_Intent: yes | mostly | no_`** (`epic-dod` checks it),
+  and `intent-outcomes` joins scores and answers across repos: **24 scored, 0 of 20 answered** — the backfill's
+  answers are owed to Daniel. **Shipped 2026-09-30** (#196, #197, S3; kit 0.10.0–0.12.0; medusa-bonsai #198).
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -376,6 +384,12 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-30**: `intent-match` **shipped**: three sprints, three kit releases (0.10.0–0.12.0).
+  - A pitch is now scored against the ask it came from, with measured question wording (37/37 labelled items right)
+    and advisory only. 23 past epics across both projects were scored on their pitch as approved; answering them is
+    the first step to real thresholds.
+  - Review ran with every external family capped; the fresh reviewer's rounds still found real defects each time,
+    including a fix that was worse than the hole it closed.
 - **2026-09-29**: `verify-spike` **shipped**: one session, one decision (`DECISION.md`).
   - The outbox model found three things two dozen review rounds had not; one is fixed (#194), one is a
     bug seed with its fix already model-checked, one is an accepted residual.

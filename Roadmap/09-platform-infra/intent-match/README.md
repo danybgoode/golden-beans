@@ -1,6 +1,6 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped        # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: intent-match
 title: "Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals"
@@ -77,6 +77,14 @@ No engine data, route or table (rule #1 n/a). Kit scripts, groom skill text and 
   149 in medusa-bonsai (**5** with `## Problem`). The proxy ask is `## Problem` when present, else the seed's opening
   prose (between the H1 and the first `##`, which is where the "As the product owner, I want…" lines live).
   Seeds run to 27k characters, well under Jev's 110k state budget.
+- **C6, corrected at the S3 backfill (2026-09-30).** "Problem, else opening prose" was not enough: some seeds open
+  with a status block or an audit pointer, not the ask. The proxy order is **`## Problem` → `## Mirror-back` (the
+  groomed teach-back, the closest thing to the ask) → `## Outcome & signal` → a Mirror-back paragraph → opening
+  prose**. In medusa-bonsai only **12 of 63** shipped seeds with an as-approved copy carry a recoverable ask; the other
+  51 open with boilerplate, and scoring them would label noise, so the medusa half scores only those (six, one
+  being a duplicate of a golden-frijoles epic). Six golden-frijoles seeds were excluded because their "as approved"
+  copy is the seed at the `one-roadmap` move (`3e32454`), and `growth-engine-v1` because its seed is a pointer to
+  another repo's doc.
 - **C7 — medusa-bonsai's plans are its own.** This repo is public. Fixtures drawn from medusa-bonsai pitches are
   anonymised (the `jev-eval` precedent: "consuming project A"), and medusa-bonsai's backfill record lives in
   medusa-bonsai, not here.

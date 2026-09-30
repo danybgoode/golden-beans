@@ -3,7 +3,7 @@ epic: intent-match
 sprint: 2
 title: "Planning captures intent"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S2.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals — Sprint 2: Planning captures intent
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — danybgoode/golden-frijoles#197, squash `c7bba78` (plugin + kit 0.11.0)
 
 ## Stories
 
