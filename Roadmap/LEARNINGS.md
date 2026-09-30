@@ -1882,6 +1882,20 @@ one-liner + why + date shape.
 - **A backticked commit message in double quotes is a zsh parse error, or worse, command substitution.**
   (`intent-match`, 2026-09-30.) Commit and PR bodies go through a quoted heredoc (`-F - <<'EOF'`), always.
 
+### Measuring a question's wording (compiled-prompts, 2026-09-30)
+
+- **Held-out folds guard against fitting, not against an author who read the folds.** A candidate wording passed
+  the rule (+5 held out, no worse fold) because its examples were copied from the drafts it then fixed: 9 of 10
+  fixes. Write candidates against drafts you haven't read, and read the per-draft flips, not the total. The flips
+  are where the real rule shows up.
+- **To prove a data move changed nothing, pin the old values first, then move.** Stamping recordings from the
+  pre-move constants turned "byte-identical" into a check that goes red on one changed character.
+- **A cache of paid answers must key on everything an answer depends on:** the wording, the model, the input text,
+  and survival of a throwing client. Review found these one per round across four rounds.
+- **A template comment that names a heading becomes an edit anchor.** "belongs in ## Why" inside an HTML comment
+  sent the fill-in edit into the comment and hid the section in four epics. Never name the literal anchor text in a
+  scaffold's comments.
+
 ### Scoring a plan against its ask (intent-match, 2026-09-30)
 
 - **Change what a guard counts and its limit in the same commit.** Excluding a forced declaration list from the groom

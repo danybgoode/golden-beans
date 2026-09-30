@@ -1,7 +1,7 @@
 ---
 title: "Compiled prompts, wave 1: Jev questions become data, optimize/ is committed, and wording gets measured"
 slug: compiled-prompts
-status: scaffolded
+status: shipped
 area: "09"
 type: feature
 priority: "single-product-wave-C"
