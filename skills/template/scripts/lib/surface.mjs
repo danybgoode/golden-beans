@@ -99,7 +99,8 @@ function tokenize(text) {
         const char = text[i];
         if (char === '\\') {
           const next = text[i + 1];
-          if (next !== '"' && next !== '\\') throw `unknown escape \`\\${next ?? ''}\` — only \\" and \\\\ are escapes`;
+          if (next !== '"' && next !== '\\')
+            throw `unknown escape \`\\${next ?? ''}\` — only \\" and \\\\ are escapes`;
           value += next;
           i += 2;
         } else if (char === '"') {
@@ -145,7 +146,8 @@ function parseBlockLine(rest) {
 
   while (tokens.length > 0) {
     const name = tokens.shift();
-    if (name.quoted) throw 'a second quoted string — a block has one words string; facts are `name value` pairs';
+    if (name.quoted)
+      throw 'a second quoted string — a block has one words string; facts are `name value` pairs';
     if (name.value === 'when:' || name.value === 'when') {
       throw 'a surface is ONE state, so a block has no `when:` — write that state as its own surface block';
     }
@@ -201,13 +203,16 @@ export function parseSurface(text, file = '<surface>', firstLine = 1) {
         return;
       }
       const header = HEADER.exec(content);
-      if (header === null) throw `expected \`state:\`, \`route:\` or a block line \`- <kind> …\`, got \`${content}\``;
+      if (header === null)
+        throw `expected \`state:\`, \`route:\` or a block line \`- <kind> …\`, got \`${content}\``;
       const [, key, value = ''] = header;
       if (key === 'blocks') {
         throw 'no `blocks:` list — each block is its own line, `- <kind> "words"`, straight after `state:` and `route:`';
       }
-      if (key === 'when') throw 'a surface is ONE state, so it has no `when:` — write each state as its own block';
-      if (key !== 'state' && key !== 'route') throw `unknown header \`${key}:\` — a surface has \`state:\` and \`route:\``;
+      if (key === 'when')
+        throw 'a surface is ONE state, so it has no `when:` — write each state as its own block';
+      if (key !== 'state' && key !== 'route')
+        throw `unknown header \`${key}:\` — a surface has \`state:\` and \`route:\``;
       if (surface.blocks.length > 0) throw `\`${key}:\` comes before the first block line`;
       if (surface[key] !== null) throw `\`${key}:\` given twice`;
       const trimmed = value.trim();
@@ -221,8 +226,10 @@ export function parseSurface(text, file = '<surface>', firstLine = 1) {
       throw new SurfaceError(file, line, reason);
     }
   });
-  if (surface.state === null) throw new SurfaceError(file, firstLine, 'no `state:` line — every surface names its state id');
-  if (surface.route === null) throw new SurfaceError(file, firstLine, 'no `route:` line — every surface names its route');
+  if (surface.state === null)
+    throw new SurfaceError(file, firstLine, 'no `state:` line — every surface names its state id');
+  if (surface.route === null)
+    throw new SurfaceError(file, firstLine, 'no `route:` line — every surface names its route');
   if (surface.blocks.length === 0) {
     throw new SurfaceError(file, firstLine, 'no blocks — a surface lists at least one `- <kind> …` line');
   }
@@ -246,7 +253,13 @@ export function parseSurfaces(markdown, file = '<markdown>') {
       const [, , marks, info] = fence;
       // A backtick fence's info string may not contain a backtick (CommonMark), so ```x``` is inline code.
       if (marks[0] === '`' && info.includes('`')) return;
-      open = { char: marks[0], length: marks.length, surface: info.trim() === 'surface', line: index + 1, body: [] };
+      open = {
+        char: marks[0],
+        length: marks.length,
+        surface: info.trim() === 'surface',
+        line: index + 1,
+        body: [],
+      };
       return;
     }
     const closes =

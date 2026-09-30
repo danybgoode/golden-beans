@@ -56,7 +56,9 @@ test('a trailing bar is an unlabelled column, kept as ""', () => {
 });
 
 test('facts come in any order, header lines in either order, comments and blank lines are skipped', () => {
-  const surface = parseSurface('# a sketch\n\nroute: /r\nstate: s\n\n- head action "Go" \n# between\n- tiles count 0');
+  const surface = parseSurface(
+    '# a sketch\n\nroute: /r\nstate: s\n\n- head action "Go" \n# between\n- tiles count 0'
+  );
   assert.equal(surface.state, 's');
   assert.equal(surface.blocks[0].action, 'Go');
   assert.equal(surface.blocks[0].words, null);
@@ -71,7 +73,11 @@ test('escapes: \\" and \\\\ only', () => {
 
 test('an unknown kind names the nearest kind and lists all twelve', () => {
   refuses(withBlock('- lsit columns "a | b"'), 3, /unknown kind `lsit` — did you mean `list`\?/);
-  refuses(withBlock('- lsit columns "a | b"'), 3, new RegExp(`Known kinds: ${Object.keys(SURFACE_KINDS).join(', ')}\\.`));
+  refuses(
+    withBlock('- lsit columns "a | b"'),
+    3,
+    new RegExp(`Known kinds: ${Object.keys(SURFACE_KINDS).join(', ')}\\.`)
+  );
   // Far from everything: no guess, still the list.
   refuses(withBlock('- carousel'), 3, /^unknown kind `carousel` Known kinds: head,/);
 });
@@ -139,7 +145,8 @@ test('when: is refused — a surface is one state', () => {
 });
 
 test('the old template shape is refused with a pointer to the new one', () => {
-  const legacy = 'route: /orders\nstate: empty\nblocks:\n  - heading: "Orders"\n  - empty-state: "No orders yet."';
+  const legacy =
+    'route: /orders\nstate: empty\nblocks:\n  - heading: "Orders"\n  - empty-state: "No orders yet."';
   refuses(legacy, 3, /no `blocks:` list/);
   refuses(withBlock('  - heading: "Orders"'), 3, /old list shape — write `- <kind> "words"`/);
 });
@@ -201,7 +208,11 @@ test('parseSurfaces: an unclosed surface fence fails at its opening line', () =>
 test('validateMap: keys are generic kinds, values are names', () => {
   assert.deepEqual(validateMap({ kinds: { head: 'head', list: 'listcard' } }), []);
   assert.deepEqual(validateMap({}), ['the map has no `kinds` object']);
-  assert.deepEqual(validateMap({ kinds: [] }), ['the map has no `kinds` object'], 'an array is not a map (#210 review, Codex)');
+  assert.deepEqual(
+    validateMap({ kinds: [] }),
+    ['the map has no `kinds` object'],
+    'an array is not a map (#210 review, Codex)'
+  );
   const problems = validateMap({ kinds: { lsit: 'list', head: '', note: 3 } });
   assert.equal(problems.length, 3);
   assert.match(problems[0], /unknown kind `lsit` — did you mean `list`/);
