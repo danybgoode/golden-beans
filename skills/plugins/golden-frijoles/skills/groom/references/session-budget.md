@@ -10,7 +10,8 @@ measured instead of guessed.
 Count what you can see, then run:
 
 ```
-node "$GROOM/session-line.mjs" --asks-open <n> --questions-waiting <n> --gates-passed <n>
+node "$GROOM/session-line.mjs" --asks-open <n> --questions-waiting <n> --gates-passed <n> \
+  --root "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 ```
 
 - **asks open**: deep asks the product owner has put to this session that have not reached their gate yet.

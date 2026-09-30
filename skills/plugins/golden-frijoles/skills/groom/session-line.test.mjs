@@ -19,6 +19,8 @@ test('parseArgs takes whole-number counts and refuses anything else', () => {
   assert.throws(() => parseArgs(['--asks-open', 'two']), /whole number/);
   assert.throws(() => parseArgs(['--asks-open', '-1']), /whole number/);
   assert.throws(() => parseArgs(['--context', '50']), /unknown argument/);
+  assert.throws(() => parseArgs(['--gates-passed', '1', '--root']), /--root takes a directory/);
+  assert.throws(() => parseArgs(['--root', '--no-log']), /--root takes a directory/, 'a flag is never a directory');
 });
 
 test('the CLI prints the line and appends one row to a self-ignoring log per run', () => {

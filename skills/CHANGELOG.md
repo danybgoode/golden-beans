@@ -22,6 +22,8 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 
 ### Changed
 
+- **The agy pin is 1.2.14** (`cross-agent-cli.mjs`, both copies): the doctor's live probe was green on the
+  primary and fallback models.
 - **"One deep ask per approval gate; keep going while the budget line says so"** replaces "one deep ask per
   run" in groom, and "a fresh session per sprint" in WAYS-OF-WORKING and LEARNINGS. The old rules were set
   for earlier models; the product owner's decision bandwidth is the binding constraint now.

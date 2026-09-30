@@ -19,14 +19,17 @@ import { LOG_DIR, LOG_FILE, LOG_GITIGNORE, budgetRow, coworkLine, sessionVerdict
 
 const FLAGS = { '--asks-open': 'asksOpen', '--questions-waiting': 'questionsWaiting', '--gates-passed': 'gatesPassed' };
 const USAGE =
-  'Usage: node session-line.mjs --asks-open <n> --questions-waiting <n> --gates-passed <n> [--root <dir>] [--no-log]';
+  'Usage: node session-line.mjs [--asks-open <n>] [--questions-waiting <n>] [--gates-passed <n>] [--root <dir>] [--no-log]';
 
 export function parseArgs(argv) {
   const out = { counts: {}, root: process.cwd(), log: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--no-log') out.log = false;
-    else if (a === '--root') out.root = argv[++i];
+    else if (a === '--root') {
+      out.root = argv[++i];
+      if (!out.root || out.root.startsWith('--')) throw new Error('--root takes a directory');
+    }
     else if (a in FLAGS) {
       const raw = argv[++i];
       if (!/^\d+$/.test(String(raw))) throw new Error(`${a} takes a whole number, got ${JSON.stringify(raw)}`);

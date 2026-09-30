@@ -91,9 +91,13 @@ export const register: Register = (on) => {
       const figures = { ...measured, questionsWaiting };
       const verdict = sessionVerdict(figures);
       $.ui.status(sessionLine(figures, verdict) ?? undefined);
-      if (verdict.verdict !== loggedVerdict && sessionLine(figures, verdict)) {
-        // $.fs has no append: read + write the whole (small — one row per verdict change) file.
-        const dir = repoRoot ? `${repoRoot}/` : '';
+      // Only at a known repo root (D7): with no git root — a session outside a repo, or a hot reload before the
+      // next turn.start — the line still draws but nothing is written into whatever directory the session is in.
+      if (repoRoot && verdict.verdict !== loggedVerdict && sessionLine(figures, verdict)) {
+        // $.fs has no append: read + write the whole (small — one row per verdict change) file. Hooks for this
+        // event run one at a time, so this session never races itself; a SECOND session or the Cowork CLI
+        // writing the same file in the same instant can lose one row — accepted for a local, advisory log.
+        const dir = `${repoRoot}/`;
         if (!(await $.fs.exists(`${dir}${LOG_GITIGNORE.path}`))) await $.fs.write(`${dir}${LOG_GITIGNORE.path}`, LOG_GITIGNORE.text);
         const path = `${dir}${LOG_FILE}`;
         const prior = (await $.fs.exists(path)) ? String(await $.fs.read(path)) : '';

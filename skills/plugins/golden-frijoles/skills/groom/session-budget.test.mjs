@@ -1,5 +1,6 @@
 // session-budget.test.mjs — every threshold edge, and unknown figures (session-budget D3, D4).
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import {
   THRESHOLDS,
@@ -116,4 +117,10 @@ test('a log row keeps known figures only, with the verdict and its reasons', () 
     contextPct: 81,
     sevenDayPct: 9,
   });
+});
+
+test('no imports at all — the mod imports this file and its environment has no Node (D3)', () => {
+  const src = readFileSync(new URL('./session-budget.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /^\s*import\b/m);
+  assert.doesNotMatch(src, /\brequire\(|\bimport\(/);
 });

@@ -58,7 +58,7 @@ stories:
 
 1. Open https://github.com/danybgoode/golden-frijoles/blob/main/skills/plugins/golden-frijoles/skills/groom/SKILL.md after the merge.
    → it says "one deep ask per approval gate"; searching the page for "per run" finds nothing about asks.
-2. Update the plugin, then open Claude Code on any `feat/*` branch and send one message.
+2. Update the plugin, then open Claude Code (with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, as this repo's `.claude/settings.json` sets) on any `feat/*` branch and send one message.
    → under the build view, a `Session …%` line appears with a verdict.
 3. Keep working until the session passes 60% context.
    → the verdict changes to checkpoint.

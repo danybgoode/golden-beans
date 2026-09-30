@@ -226,7 +226,8 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
   is evidence, not garbage; **verify by re-deriving repo state, never by trusting a completion report** —
   a rate-limited subagent still returns a plausible-sounding result. Checkpoint and hand
   off when the budget line says so (Claude Code: under the prompt; groom: at each approval gate) —
-  not by sprint count.
+  not by sprint count. Where no line shows (function hooks off, or no figure yet), compact at
+  sprint/PR boundaries.
 - Commit messages end with the `Co-Authored-By: Claude` trailer.
 - **Language.** Docs, comments and PR descriptions are in **English**. **TEMPLATE FILL-IN:** if your user-facing copy has its own policy (a default plus a bilingual allow-list), state it here and in `AGENTS.md`.
 
