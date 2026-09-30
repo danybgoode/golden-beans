@@ -91,8 +91,9 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   The **project-owned** files keep each repo's own content: `cross-review.prompt.md`,
   `cross-review.security.prompt.md`, `cross-panel.prompt.md` (rules slot) and `review-config.json` (security
   paths). Only their shared body is aligned, by hand. See deviation 1.
-- **D4 — The kit closure is the manifest.** The rail enters through the `groom` skill's `requires_scripts`,
-  because groom emits the kickoff that names it. `check-skill-scripts.mjs` holds the declaration to the real
+- **D4 — The kit closure is the manifest.** The rail enters through a skill's `requires_scripts` — *(amended
+  during S2: the umbrella `golden-frijoles` skill, not `groom`, whose 220-line budget could not take the list;
+  the kit is the union of every skill's closure, so nothing else changes)*. `check-skill-scripts.mjs` holds the declaration to the real
   import closure. The files are `cross-review.mjs`, `review-route.mjs`, `lib/review-guard.mjs`,
   `cross-agent-doctor.mjs`, both review prompts and a default `review-config.json`, and the same for
   `session-resume.mjs` and `session-note.mjs` (deviation 4).
@@ -102,7 +103,7 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   executes `<repo>/scripts/build-state.mjs`. The bundle is generated from `template/scripts/`, and a check fails
   when it is not byte-equal. See deviation 2.
 - **D6 — Parity, not deletion.** Measured live: 94 files are byte-identical between `scripts/` and
-  `skills/template/scripts/`, 10 differ, 39 are template-only. After S1, the ones that differ are the four
+  `skills/template/scripts/`, 10 differ, 39 are template-only. After S1, the ones that differ are the three
   project-owned review files, `prose-lessons.md`, `routines/README.md` and `roadmap-extract.mjs`. The guard (S2.3)
   passes when a file is identical or listed with a one-line reason.
 - **D7 — Jev asks before it sends: two bugs, one fix at the loader.** Bug 1: with no config at all, `loadJevConfig`
@@ -127,11 +128,13 @@ corrected. Builders cite these by number; each sprint file's *Build contract* sa
   one, while any fill-in is left, and it never touches a runtime token.
 
 ### Deviations — where the live system disproved the groomed scope (corrected out loud)
-1. **S1.3's "`cmp` of every review-rail file prints nothing" is wrong for four files.** The review prompts and
-   `review-config.json` carry each project's own rules and security paths: ours names AGENTS.md rules 1–5,
-   medusa's names Medusa/Clerk, the template's is a fill-in slot. Byte-equality applies to the **code** (`cross-review.mjs`,
+1. **S1.3's "`cmp` of every review-rail file prints nothing" is wrong for the project-owned files.** The review
+   prompts and `review-config.json` carry each project's own rules and security paths: ours names AGENTS.md rules
+   1–5, medusa's names Medusa/Clerk, the template's is a fill-in slot. *(Measured by S2.3's guard: in this repo
+   `cross-panel.prompt.md` is byte-identical to the template, so here it is three files; medusa's panel prompt is
+   its own.)* Byte-equality applies to the **code** (`cross-review.mjs`,
    `lib/cross-agent-cli.mjs`, `cross-agent-doctor.mjs`, `agy-doctor.mjs`, `cross-panel.mjs`, `review-route.mjs`,
-   `lib/review-guard.mjs` and their tests). The four project-owned files are S2.3's listed exceptions.
+   `lib/review-guard.mjs` and their tests). The project-owned files are S2.3's listed exceptions (three here; see the note above).
 2. **D5 as groomed ("the kit's copy when the project has none") would have kept the hole.** Today
    `hooks/index.ts:34` runs `${root}/scripts/build-state.mjs` from whatever repo is open, on every turn. That is
    the exact LEARNINGS violation. There is also no "kit copy by absolute path" to reach: the installed plugin
