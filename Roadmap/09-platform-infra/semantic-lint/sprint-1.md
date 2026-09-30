@@ -3,7 +3,7 @@ epic: semantic-lint
 sprint: 1
 title: "The rail and rule 1, in shadow"
 risk: low
-phase: Building
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow) — Sprint 1: The rail and rule 1, in shadow
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped 2026-09-30 — [#200](https://github.com/danybgoode/golden-frijoles/pull/200) (`eb8d392`), plugin/kit 0.13.0
 
 ## Build contract (locked by the architect before the builder started)
 
@@ -90,3 +90,24 @@ push), the question-hash replay guard (an edited question still replays green).
    → it prints rule 1 (`"id": "rule-1"`). *(Was `gf doctor`; disproved at the lock — README C2.)*
 
 Delete both scratch branches afterwards. If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results — run 2026-09-30 on `main` @ `eb8d392` (after the merge)
+
+The scratch "branches" were built as loose commit objects (`git commit-tree`, never pushed): creating and pushing
+real scratch branches was denied in this session, and they would have opened Vercel previews for throwaway code.
+Each step ran `node scripts/semantic-lint.mjs --range origin/main...<commit>`, which is exactly the argument the
+hook passes for a new branch. The hook's own wiring is pinned by `pre-push-hook.test.mjs` (the range reaches the lint,
+a failing lint never fails the push, a deletion-only push lints nothing). It was also seen live on each of #200's
+three real pushes, which printed `semantic-lint (shadow): nothing to judge` (none of them touched `apps/web/`).
+
+1. ✅ `analytics.track('x')` appended to `apps/web/app/api/v1/cli/whoami/route.ts` →
+   `semantic-lint (shadow): lint:rule-1 — 1 candidate(s): 1 would raise (p=0.94 apps/web/app/api/v1/cli/whoami/route.ts) · logged, not shown as findings`, exit 0.
+2. ✅ `.jev/decisions.jsonl` went from 290 to 291 lines; the last one has `"rail":"lint:rule-1"`, `"mode":"shadow"`,
+   `"decider":"jev"`, `"confidence":0.94`.
+3. ✅ A new `apps/web/e2e/…spec.ts` inserting into `events` → `nothing to judge`; the log did not grow (no Jev call).
+4. ✅ `TYPESAFE_API_KEY=` on step 1's commit → `semantic-lint: not checked (no key) — lint:rule-1, 1 candidate(s) logged, none judged`;
+   the logged row has `"decider":"not-checked"`, `"error":"no TYPESAFE_API_KEY"`.
+5. ✅ `node scripts/config.mjs get lint.rules` prints rule 1 (`"id":"rule-1"`).
+
+**Owed to Daniel:** read `node scripts/jev-report.mjs` on **2026-10-14** (`shadowExpires`) and decide promote / tune /
+drop for `lint:rule-1`. `scripts-guard` goes red that day if nobody decides.

@@ -364,6 +364,14 @@ independently shippable slice of value.
   failure is one skip line. Every closed scored epic answers **`_Intent: yes | mostly | no_`** (`epic-dod` checks it),
   and `intent-outcomes` joins scores and answers across repos: **24 scored, 0 of 20 answered** — the backfill's
   answers are owed to Daniel. **Shipped 2026-09-30** (#196, #197, S3; kit 0.10.0–0.12.0; medusa-bonsai #198).
+- 🚧 [Semantic lint (v1: AGENTS rule 1, in shadow)](09-platform-infra/semantic-lint/README.md): on every push, the
+  advisory pre-push hook runs `semantic-lint.mjs`. Deterministic selectors (globs, added-line patterns, an allowlist,
+  all data in `golden-frijoles.config.json → lint.rules`) pick candidate hunks, and Jev answers one question per
+  candidate. A push that selects nothing makes no call: 19 of the last 220 commits selected anything. There are four
+  outcomes: raise, clear, uncertain and **not checked**, and not checked never counts as a pass. Rule 1's wording is
+  measured: 31/33 labelled hunks decided, all right. 🚧 = **in shadow until 2026-10-14**, logging and printing but
+  never shown as findings; the promote / tune / drop decision is owed to Daniel on that date. **Shipped 2026-09-30**
+  (#200, kit 0.13.0).
 - ✅ [One Roadmap](09-platform-infra/one-roadmap/README.md): the plugin repo's epics, seeds, bets and LEARNINGS live
   here, `build_order` is one ship history (28–54), and `golden-frijoles/skills`' Roadmap is a pointer. **Shipped
   2026-09-28** (golden-beans #177, skills #56).
@@ -384,6 +392,11 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-30**: `semantic-lint` **shipped** in shadow: one sprint, kit 0.13.0.
+  - Jev now judges only what deterministic selectors pick, starting with AGENTS rule 1 (no parallel telemetry
+    pipeline). The measured wording decides 31/33 labelled hunks, every one right.
+  - Real history changed the design twice. Whole hunks would have left most new routes "not checked", and this repo's
+    labels would have broken any consumer's rules.
 - **2026-09-30**: `intent-match` **shipped**: three sprints, three kit releases (0.10.0–0.12.0).
   - A pitch is now scored against the ask it came from, with measured question wording (37/37 labelled items right)
     and advisory only. 23 past epics across both projects were scored on their pitch as approved; answering them is
