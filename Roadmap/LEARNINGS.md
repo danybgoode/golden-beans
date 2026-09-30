@@ -1481,9 +1481,12 @@ one-liner + why + date shape.
   found by eye. Both were closed the next day precisely because they were named. **An unstated gap is
   indistinguishable from an oversight** — and the honest sentence costs one line, while the
   alternative is a reader who assumes the green gate covered it. *(2026-08-07, app-shell-and-agent-rail.)*
-- **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
-  state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
-  sprint/PR boundary, and for big epics consider a fresh session per sprint.
+- **Session length is set by a measured line, not a stamina rule.** A whole epic in one session is the
+  main context-cost driver, and the durable state (the plan file, sprint docs, team memory) makes
+  re-entry cheap by design — so checkpoint or hand off when the budget line says so (its thresholds
+  live in one table, `THRESHOLDS` in groom's `session-budget.mjs`), not per sprint. Groom's twin rule is "one deep ask
+  per approval gate". *(Sharpened 2026-09-30, session-budget: "fresh session per sprint" was set for
+  earlier models.)*
 - **A local gate that is a SUBSET of CI's gate is worse than no local gate, because it produces a
   green that does not mean what CI means by green.** pod-report S3 burned three push-and-wait round
   trips on static checks that run in seconds locally — lint, then prettier's changed-files check, then

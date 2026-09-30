@@ -233,8 +233,9 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
   degrade gracefully.
 - **Worker death is a normal case.** Each builder on its own worktree; a killed worker's uncommitted tree
   is evidence, not garbage; **verify by re-deriving repo state, never by trusting a completion report** —
-  a rate-limited subagent still returns a plausible-sounding result. Compact at sprint/PR boundaries; for a
-  big epic consider a fresh session per sprint.
+  a rate-limited subagent still returns a plausible-sounding result. Checkpoint and hand
+  off when the budget line says so (Claude Code: under the prompt; groom: at each approval gate) —
+  not by sprint count.
 - Commit messages end with the `Co-Authored-By: Claude` trailer.
 - **Language.** Docs are written in **English** — everything under `Roadmap/`, `tasks/`, code
   comments, and PR descriptions. **App copy is English too** (the landing renders `<html lang="en">`);
@@ -332,8 +333,10 @@ either channel. The guard still labels its model and blocks known unsupported cl
 - **Grooming cadence (updated 2026-07-14):** with a strong planning model (Fable-class), the
   default is a **single-session groom** — one deep Definition-of-Ready groom for the front-of-queue
   epic *plus* a portfolio pass that seeds/resequences the rest of the funnel — rather than one seed
-  per session. The groom skill's discipline (stages, scope-doc gate, one *deep* ask per run) is
-  unchanged; what batches is the funnel bookkeeping. Deep-groom later epics only when they reach
+  per session. The groom skill's discipline is **one deep ask per approval gate; keep going while the
+  budget line says so** (updated 2026-09-30, session-budget): each ask stops at its own scope-doc gate,
+  and the line printed there says keep going, checkpoint or hand off. What batches besides is the funnel
+  bookkeeping. Deep-groom later epics only when they reach
   the front. Build sprints stay session-sized — versions may supersede in the immediately-next
   sprint, so keep per-sprint kickoffs thin and let the epic docs carry state.
 
