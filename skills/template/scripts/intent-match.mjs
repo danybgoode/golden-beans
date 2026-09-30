@@ -162,6 +162,13 @@ export const INTENT_QUESTIONS = Object.freeze({
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n?/;
 
+/**
+ * A fence line, by CommonMark's rule: at most THREE spaces of indent. A line indented four or more is code, never a
+ * fence — and the reader writes its reply indented, so a `\s*` here let an odd fence line in a reply flip the scanner
+ * and make the next write delete every section after `## Intent match` (fresh review round 2, #197).
+ */
+export const FENCE_RE = /^ {0,3}(```|~~~)/;
+
 /** Flat frontmatter → { key: value } (comment-stripped, quotes stripped). The same rule epic-dod uses. */
 export function frontmatterOf(text) {
   const m = /^---\n([\s\S]*?)\n---/.exec(String(text));
@@ -179,7 +186,7 @@ export function sections(body) {
   const out = [{ heading: null, lines: [] }];
   let fence = false;
   for (const line of String(body).split('\n')) {
-    if (/^\s*(```|~~~)/.test(line)) fence = !fence;
+    if (FENCE_RE.test(line)) fence = !fence;
     if (!fence && /^## /.test(line)) out.push({ heading: line.slice(3).trim(), lines: [] });
     else out.at(-1).lines.push(line);
   }
@@ -196,7 +203,7 @@ export function listItems(lines, { numbered = false } = {}) {
   const top = numbered ? /^(\d+)[.)]\s+(.*)$/ : /^(?:[-*+]|\d+[.)])\s+(.*)$/;
   let fence = false;
   for (const raw of lines) {
-    if (/^\s*(```|~~~)/.test(raw)) {
+    if (FENCE_RE.test(raw)) {
       fence = !fence;
       continue;
     }
@@ -518,7 +525,7 @@ export function upsertIntentSection(text, section) {
   const headingAt = [];
   let fence = false;
   lines.forEach((l, i) => {
-    if (/^\s*(```|~~~)/.test(l)) fence = !fence;
+    if (FENCE_RE.test(l)) fence = !fence;
     else if (!fence && /^## /.test(l)) headingAt.push(i);
   });
   const start = headingAt.find((i) => INTENT_HEADING.test(lines[i].slice(3).trim())) ?? -1;
