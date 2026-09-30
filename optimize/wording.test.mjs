@@ -226,4 +226,22 @@ test('a cache from another model is a miss, and a partial cache re-asks exactly 
     gone.reduce((s, id) => s + Object.keys(first.cache[hash].answers[id]).length, 0)
   );
   assert.deepEqual(json(again).results, json(first).results, 'refilled, then scored exactly as before');
+
+  // A draft edited under the same id, with the same sentences asked, is re-asked, not scored on stale answers.
+  const edited = harness({ cache: structuredClone(first.cache) });
+  edited.io.fixtures = structuredClone(fixtures);
+  const fx = edited.io.fixtures.find((f) =>
+    Object.keys(f.recorded.answers).some((id) => id.endsWith('_live'))
+  );
+  fx.draft = fx.draft.replace(/[a-z]/i, (ch) => (ch === 'x' ? 'y' : 'x'));
+  const n = Object.keys(fx.recorded.answers).filter((id) => id.endsWith('_live')).length;
+  const original = fixtures.find((f) => f.id === fx.id).draft;
+  const replay = edited.io.ask;
+  edited.io.ask = (req) =>
+    replay({
+      ...req,
+      state: { report_draft: req.state.report_draft === fx.draft ? original : req.state.report_draft },
+    });
+  assert.equal(await run([...ARGS, '--yes'], edited.io), 0);
+  assert.equal(edited.asked.length, n, 'only the edited draft is re-asked');
 });

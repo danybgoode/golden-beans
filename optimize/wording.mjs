@@ -32,7 +32,7 @@ import { createInterface } from 'node:readline/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FIXTURES_PATH, liveRefusal, loadRails, replayAsk } from '../scripts/jev-eval.mjs';
-import { askJev, loadJevConfig, readApiKey, repoRoot } from '../scripts/lib/jev.mjs';
+import { askJev, loadJevConfig, readApiKey, repoRoot, textHash } from '../scripts/lib/jev.mjs';
 import { loadQuestions, questionHash } from '../scripts/lib/jev-questions.mjs';
 import { proseQuestions, proseUnits } from '../scripts/lib/prose-guard.mjs';
 import { GRID, railConfig } from './extract.mjs';
@@ -113,9 +113,18 @@ export function draftQuestions(fx, key, question) {
     }));
 }
 
-/** Does a cached entry answer EVERY question this draft is asked now? A draft edited under the same id would not. */
-export const covers = (entry, questions) =>
-  Boolean(entry) && questions.every((q) => typeof entry[q.id]?.noul === 'number');
+/** The text a draft's answers were given for: a draft edited under the same id is a different question. */
+export const draftHash = (fx) =>
+  textHash(JSON.stringify({ draft: String(fx.draft), evidence: fx.evidence ?? {} }));
+
+/**
+ * Does the cache answer EVERY question this draft is asked now, for THIS draft text? The answers are pinned to the
+ * draft's hash, so an edited draft (even one with the same sentence count) is re-asked, never scored on stale answers.
+ */
+export const covers = (cached, fx, questions) =>
+  Boolean(cached?.answers?.[fx.id]) &&
+  cached.drafts?.[fx.id] === draftHash(fx) &&
+  questions.every((q) => typeof cached.answers[fx.id][q.id]?.noul === 'number');
 
 /** Pure: what is still to ask — [{ candidate, fixture, questions }] for every draft the cache does not fully cover. */
 export function plan({ fixtures, key, candidates, cache }) {
@@ -123,7 +132,7 @@ export function plan({ fixtures, key, candidates, cache }) {
   for (const c of candidates)
     for (const fx of fixtures) {
       const questions = draftQuestions(fx, key, c.question);
-      if (questions.length && !covers(cache[c.hash]?.answers?.[fx.id], questions))
+      if (questions.length && !covers(cache[c.hash], fx, questions))
         todo.push({ candidate: c, fixture: fx, questions });
     }
   return todo;
@@ -156,7 +165,9 @@ export async function askAll({ todo, cache, ask, model, onProgress = () => {}, p
         question: candidate.question,
         model,
         answers: {},
+        drafts: {},
       });
+      (entry.drafts ??= {})[fixture.id] = draftHash(fixture);
       entry.answers[fixture.id] = Object.fromEntries(
         questions.map((q) => [q.id, { type: 'noul', noul: answers[q.id].noul }])
       );
@@ -426,10 +437,10 @@ export async function run(argv, io) {
       answersFor: (fx) => {
         const needs = draftQuestions(fx, target.id, c.question);
         if (!needs.length) return {};
-        const entry = cache[c.hash]?.answers?.[fx.id];
         // Never score a gap: a missing answer would fail the judge's whole chunk and read as a regex fallback.
-        if (!covers(entry, needs)) throw new Error(`${c.name}/${fx.id}: the cache does not cover this draft`);
-        return entry;
+        if (!covers(cache[c.hash], fx, needs))
+          throw new Error(`${c.name}/${fx.id}: the cache does not cover this draft`);
+        return cache[c.hash].answers[fx.id];
       },
     })),
   ];
