@@ -23,7 +23,7 @@ stories:
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 4: Schedulers
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
@@ -49,8 +49,23 @@ Builds **D10** (README → *Architecture lock*). Builder: Codex.
   `skills/template/.github/workflows/` as `.yml.example`, each with the 60-day-disable note in its header.
 - **Release:** one plugin/kit bump (D9).
 
+## Build notes
+
+- **4.1 + 4.2 (Codex, finished by Claude).** Codex hit its usage cap mid-run (resets 2026-10-29). Its partial apply
+  was read before being kept:
+  - **Kept:** the bootstrap, its token table (it read each token in context and classified 28, beyond D10's
+    list), the `routines` config section and registry row (all three registry copies byte-equal), the kit
+    declaration, the runbook section and the cron templates.
+  - **Removed:** its copies of the template's seven fill-in prompts into THIS repo's `scripts/routines/`, which
+    is project-owned.
+  - **Added by Claude:** a grep-to-zero backstop, so any placeholder the table does not classify refuses, plus a
+    spec that every real prompt is fully classified.
+  - **Live smoke steps 1–2:** with a filled config, `routine-bootstrap.mjs weekly-recap` printed 68 lines with no
+    placeholder left. With one value removed it refused, naming `root-repo`. Mutations were observed red.
+- **Release 0.9.0.**
+
 ## Sprint QA
-- `routines.test.mjs` extended (fill from config, refuse on a leftover placeholder).
+- `routine-bootstrap.test.mjs` covers fill from config, refusal on a leftover placeholder, and runtime-token passthrough (`routines.test.mjs` keeps the house-format checks).
 - Owed to Daniel: stand up one routine from the bootstrap at https://claude.ai/code/routines.
 - **deterministic gate:** root `npm run typecheck` + `npm run build` + Playwright `api`, and the skills checks (`skills-ci` on the split), green before merge.
 
