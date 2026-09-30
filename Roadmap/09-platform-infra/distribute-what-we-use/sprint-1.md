@@ -3,7 +3,7 @@ epic: distribute-what-we-use
 sprint: 1
 title: "One review rail"
 risk: high
-phase: Building
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -12,25 +12,25 @@ stories:
     i_want: "one `cross-agent-cli` + `cross-review` + `cross-review.prompt.md` + `review-config.json` in `skills/template/scripts/`, built as the superset of all three copies"
     so_that: "a reviewer fix is one PR, and no consumer loses behaviour it had"
     risk: high
-    status: planned
+    status: done
   - id: S1.2
     title: "One doctor, and every fix instruction names it"
     as_a: "a user whose `agy` or `codex` moved past the pin"
     i_want: "`node scripts/cross-agent-doctor.mjs --fix` in the template, the same command every fix message prints"
     so_that: "the refused reviewer seat comes back without a hand-edited pin"
     risk: high
-    status: planned
+    status: done
   - id: S1.3
     title: "Copy-back: this repo byte-equal, medusa-bonsai PR"
     as_a: "a maintainer"
     i_want: "this repo's `scripts/` and medusa-bonsai running the same rail bytes"
     so_that: "consumer gates find what the source can't, and the fork can't reopen"
     risk: high
-    status: planned
+    status: done
 ---
 # Distribute what we use — one review rail, Jev and notify setup, schedulers, build view — Sprint 1: One review rail
 
-**Status:** 🟨 in progress
+**Status:** ✅ shipped — merged in https://github.com/danybgoode/golden-frijoles/pull/188 (`8774b44`), kit 0.6.0 live on npm.
 
 ## Stories
 
@@ -70,7 +70,7 @@ Builds **D1, D2, D3** (README → *Architecture lock*). Builder: Claude (orchest
 ## Build notes — what the old tests said, and what was done (S1.1, the D1 evidence)
 
 The three-way byte-compare is in the README (*Architecture lock*). The superset was then run against **every
-consumer's old tests**: ours from `origin/main`, the template's, and medusa-bonsai's from its `main` @ 7a7c709.
+consumer's old tests**: ours from `origin/main`, the template's, and medusa-bonsai's from its `main` at the lock's compare point (README → *Architecture lock*).
 Every failure was read. None was deleted as superseded.
 
 | Old test | Result against the superset | Resolution |
@@ -124,3 +124,9 @@ suite went red, then restored byte-for-byte.
    → one line per reviewer (codex, agy) saying installed version vs pin, and no crash.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Smoke walkthrough — results (2026-09-30, run by Claude)**
+1. ✅ https://github.com/golden-frijoles/skills/tree/main/template/scripts lists `cross-agent-doctor.mjs` and `agy-doctor.mjs`.
+2. ✅ https://github.com/danybgoode/golden-frijoles/pull/188 carries `cross-review/general` and `cross-review/security` statuses posted by the new rail.
+3. ✅ `node scripts/cross-agent-doctor.mjs` prints `codex — installed 0.159.1 · CODEX_MODEL ="gpt-5.6-terra"` / `✓ codex is healthy`, and `agy-doctor — installed 1.2.13 · pinned 1.2.13` / `✓ no drift`. Earlier in the run it correctly reported a signed-out agy and a capped codex, instead of "contract broken".
+- Copy-back: https://github.com/danybgoode/miyagi-product-management/pull/197 (medusa-bonsai), 1272/1272 script tests.
