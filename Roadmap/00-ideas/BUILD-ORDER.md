@@ -53,7 +53,7 @@
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../../09-platform-infra/one-roadmap/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · single-product-wave-A
 - [✅ Epic: Plugin audit + medusa extraction — pay the dark-skill debt, port what's stranded](../../09-platform-infra/plugin-audit-and-extraction/README.md) — 09 Platform Infra · 14/14 stories · risk: Low · wave-2026-09-16-plugin
 - [✅ Epic: Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow)](../../09-platform-infra/semantic-lint/README.md) — 09 Platform Infra · 3/3 stories · risk: Low · single-product-wave-B
-- [✅ Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 6/6 stories · risk: Low · single-product-wave-C
+- [✅ Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract](../../09-platform-infra/sketch-specs/README.md) — 09 Platform Infra · 5/5 stories · risk: Low · single-product-wave-C
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../../09-platform-infra/distribute-what-we-use/README.md) — 09 Platform Infra · 11/11 stories · unranked
 - [Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals](../../09-platform-infra/intent-match/README.md) — 09 Platform Infra · 9/9 stories · risk: Low · single-product-wave-B

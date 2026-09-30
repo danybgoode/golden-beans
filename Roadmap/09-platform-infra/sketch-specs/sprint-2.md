@@ -4,7 +4,7 @@ sprint: 2
 title: "The spec becomes the contract"
 risk: low
 phase: Shipped
-stories_total: 3
+stories_total: 2  # was 3 — S2.3 moved out at the lock (README C5); its record stays below
 stories:
   - id: S2.1
     title: "Approved surfaces feed the state contract"
@@ -20,13 +20,6 @@ stories:
     so_that: "we trust it before a new state depends on it"
     risk: low
     status: done
-  - id: S2.3
-    title: "First state built from a spec"
-    as_a: "the product owner"
-    i_want: "the next new console state approved as a surface and built against it, with no prototype edit"
-    so_that: "the arrow runs spec \u2192 build for real"
-    risk: low
-    status: planned  # ⏭ deferred at the lock — README C5 (no epic adds a console state yet)
 ---
 # Sketch specs — a surface spec renders the grey wireframe and becomes the state contract — Sprint 2: The spec becomes the contract
 
@@ -41,10 +34,10 @@ stories:
 
 ### Story 2.2 — Parity on three approved states ✅
 **As** a maintainer, **I want** proof the format loses nothing, **so that** we trust it before a new state depends on it.
-**Acceptance:** Three of the 33 approved states, chosen from those the grammar covers, written as surfaces produce entries byte-identical to their prototype-derived ones (a test compares them). `console-visual.authed.spec.ts` stays green.
+**Acceptance:** Three of the approved states (38 — lock C1), chosen from those the grammar covers, written as surfaces produce entries byte-identical to their prototype-derived ones (a test compares them). `console-visual.authed.spec.ts` stays green.
 **Risk:** low
 
-### Story 2.3 — First state built from a spec ⏭
+### ⏭ Moved out of this epic — Story 2.3: First state built from a spec
 **As** the product owner, **I want** the next new console state approved as a surface and built against it, with no prototype edit, **so that** the arrow runs spec → build for real.
 **Acceptance:** One new state has a surface, an `APPROVED.md` line and a built route that passes the gate. Waits for an epic that adds a console state.
 **⏭ Deferred at the lock (2026-09-30, README C5):** no scaffolded or queued epic adds a console state; the first one that does carries this story.

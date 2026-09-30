@@ -615,6 +615,10 @@ one-liner + why + date shape.
   the **CLI had errored**. Listing each environment and counting its rows (32 / 11 / 10) is what
   caught it. A grep over a failed command is a false green, and it is indistinguishable from a true
   one. *(2026-09-01, design-system-rails S6.)*
+  **Grepping for a VALUE is the same trap one layer down:** a lock recorded "nothing checks the prototype's hash"
+  because `git grep 5bc7e24ed5e3d0aa` hit only `APPROVED.md`, while `tokens.test.ts` had pinned it since #128 by reading
+  it OUT of `APPROVED.md` with a regex. The claim reached five docs and a code comment before the close-out audit broke
+  it by mutating the file. To prove nothing checks X, change X and watch what goes red. *(2026-09-30, sketch-specs.)*
 - **Relaxing an assertion to admit a new case can make it certify the wrong page.** Adding a
   legitimately-404 route to a mobile sweep meant accepting `[200, 404]` everywhere — and a
   gate-dependent route that 404s in that harness was then certified "mobile-clean" under a test named

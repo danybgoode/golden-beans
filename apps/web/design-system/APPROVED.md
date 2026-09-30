@@ -84,8 +84,8 @@ dropped until a scheduler exists (epic A6).
 *Added 2026-09-30 by `sketch-specs` (epic README D12).* A state can be approved as a `surface` block instead of a
 prototype drawing: the file lives in `surfaces/<state>.surface` and its approval is a line here with the first 16 hex
 of the file's SHA-256. `state-contract.mjs --check` and `surface-contract.test.ts` fail on a surface with no line, a
-line whose hash no longer matches the file, and a line for a file that does not exist. **Unlike the prototype lines
-above, this hash is checked by code** — nothing compares the two prototypes' hashes (lock C2).
+line whose hash no longer matches the file, and a line for a file that does not exist. Like the prototype lines
+above (pinned by `tokens.test.ts`), this hash is checked by code.
 
 No surface has been approved yet (lock C4, C5). The first state to use this is the first new console state after
 2026-09-30.

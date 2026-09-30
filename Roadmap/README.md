@@ -386,7 +386,7 @@ independently shippable slice of value.
   fails with the file, the line and the known kinds. Groom's seed template and visuals rule now write this grammar.
   In this repo, an approved block in `apps/web/design-system/surfaces/` **is** a state contract: `state-contract.mjs`
   turns it into the entry the gate compares, refuses an id the prototype owns, and refuses a file whose SHA-256 is not
-  on an `APPROVED.md` line — **the repo's first approval hash any code checks**. Three prototype states rewritten as
+  on an `APPROVED.md` line, the same kind of hash pin `tokens.test.ts` holds on the two prototypes. Three prototype states rewritten as
   surfaces reproduce their entries byte for byte. **0 surfaces approved yet**: the first new console state is the first
   user (story 2.3, deferred). **Shipped 2026-09-30** (#210, kit 0.16.0; #211). ⚠️ Owed to Daniel: say whether a
   rendered wireframe reads.
@@ -418,7 +418,7 @@ independently shippable slice of value.
 
 - **2026-09-30**: `sketch-specs` **shipped**: two sprints, kit 0.16.0.
   - A screen can now be approved as a grey wireframe drawn from text, and that same text is the state contract CI
-    enforces. Nothing checked an approval hash before; this does.
+    enforces, with its approval pinned by hash like the prototypes'.
   - The lock corrected six things out loud, among them 38 states rather than 33, a seed template that already shipped a
     shape nothing could read, and a walkthrough that asked for the duplicate its own D5 forbids.
 - **2026-09-30**: `compiled-prompts` wave 1 **shipped**: two sprints, kit 0.15.0.

@@ -128,7 +128,7 @@ function approvalRows(approvedMd) {
 }
 
 /**
- * The approval check (D12) — the repo's first MECHANICAL one: nothing compares the prototypes' hashes (lock C2).
+ * The approval check (D12): the spec-surface sibling of `tokens.test.ts`'s pins on the two prototypes' hashes.
  * Returns the problems; empty means every surface is approved exactly as it stands.
  */
 export function checkApprovals(surfaces, approvedMd) {

@@ -8,7 +8,7 @@ area: 09-platform-infra
 risk: low
 type: feature
 sprints_total: 2
-stories_total: 6   # the sum of every sprint's stories_total — keep it in step when a story is added
+stories_total: 5   # 6 groomed; S2.3 moved out at the lock (C5) — the sum of every sprint's stories_total — keep it in step when a story is added
 build_order: 52  # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
@@ -45,6 +45,11 @@ Builders cite these; the sprint files' build contracts cite them in turn and res
   script or test compares it with the file. D6's "as for the prototype" describes a rule, not a check. The surface
   hash check (D12) is the **first mechanical approval check** in the repo. Extending it to the two prototypes is out
   of scope (a follow-up, named in the retro).
+  **⚠️ Corrected 2026-09-30 at close-out — C2 was WRONG.** `apps/web/design-system/tokens.test.ts` has compared both
+  prototypes' SHA-256 with `APPROVED.md` since #128 (2026-08-29), in `test:unit`. It reads the hash out of
+  `APPROVED.md` by regex, so a grep for the literal value found nothing. D12 is the first hash check on a *spec*
+  surface, alongside those two prototype pins, not the first in the repo, and there is no follow-up. Found by the
+  close-out audit (#212); the lesson is in LEARNINGS.
 - **C3 — The seed template already ships an incompatible `surface` shape.** `groom/templates/scope-seed.md` writes
   `route:` / `state: empty` / `blocks:` / `  - heading: "…"` / `  - empty-state:` / `  - primary-action:`: a YAML-ish
   list with other kind names, and `state:` holding a taxonomy word instead of an id. D7 only holds if S1 rewrites

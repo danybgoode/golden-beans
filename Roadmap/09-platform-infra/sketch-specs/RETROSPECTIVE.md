@@ -13,15 +13,16 @@ shape that nothing could read.
 
 **Sprint 2 — the spec becomes the contract** (#211, `e7e5f5f`). An approved `surfaces/<state>.surface` becomes exactly
 the entry `extractSignature` would produce, plus `source: "spec"`. It is refused if the prototype owns the id, if two
-files share it, or if its SHA-256 is not on an `APPROVED.md` row. That is the first approval hash any code in the repo
-checks. A route may cite the id: the generator and the manifest test share one `approvedSurfaces()` call. Three
+files share it, or if its SHA-256 is not on an `APPROVED.md` row. It sits beside the two prototype hash pins that
+`tokens.test.ts` has enforced since #128. A route may cite the id: the generator and the manifest test share one `approvedSurfaces()` call. Three
 prototype states written as surfaces reproduce their entries byte for byte. `STATE-CONTRACT.json` changed by one line
 (`_source`). Story 2.3 was deferred at the lock.
 
 ## What worked
 - **The lock disproved six things before any code**, each said out loud:
   - 38 states, not 33.
-  - Nothing checked the prototype hash.
+  - ~~Nothing checked the prototype hash~~ — **wrong, corrected at close-out**: `tokens.test.ts` has pinned both
+    prototypes since #128. The lock grepped for the literal hash, and the test reads it from `APPROVED.md`.
   - The template already shipped an incompatible shape.
   - The walkthrough asked for three `source: spec` entries, which D5 forbids.
   - 2.3 had no epic to wait on.
@@ -32,8 +33,9 @@ prototype states written as surfaces reproduce their entries byte for byte. `STA
   nothing, and it was caught because an empty result was treated as a failure, not a pass.
 - **Looking at the page.** The snapshot was green while the phone width clipped the list bars and ran a header word
   into the next column. Only the rendered 375px screenshot showed it.
-- **The fresh reviewer earned its place.** Both rounds of cross-family review were clean where the fresh reviewer
-  found:
+- **Two independent reads found different things.** Codex (the one external family routed here) raised one
+  Should-fix on #210 (an array `kinds` accepted by `validateMap`) and was clean on every other round. The fresh
+  `pr-reviewer` found:
   - the lint and Format failures;
   - `Object.prototype` names parsing as kinds;
   - the manifest gap, where an approved surface could never reach the gate.
@@ -55,8 +57,9 @@ prototype states written as surfaces reproduce their entries byte for byte. `STA
 ## Gaps / follow-ups
 - **Story 2.3:** the next epic that adds a console state should draft it as a surface, get Daniel's hash row, and cite
   it in `route-manifest.ts`. Until then the contract holds 0 spec entries.
-- **The prototypes' hashes are still unchecked** (lock C2). Extending D12's check to `console-prototype.html` and
-  `approved-prototype.html` is a small, separate chore.
+- **A lock claim was wrong, and it shipped into five docs before the close-out audit caught it.** Lock C2 said nothing
+  checked the prototypes' hashes; `tokens.test.ts` has since #128. Corrected in the README (dated), the poster,
+  `APPROVED.md`, a code comment and this file. There is no follow-up chore: the check exists.
 - **Words are drawn, not enforced.** A head's title, an answer's sentence and an empty state's copy are approved in the
   picture but not in the contract. The same holds for prototype states (D13 scope), and it is worth knowing before
   someone assumes otherwise.
@@ -71,6 +74,8 @@ prototype states written as surfaces reproduce their entries byte for byte. `STA
 - **A seed's example can be wrapped so that no parser sees it.** The epic's own sketch sat inside a four-backtick fence;
   correct CommonMark handling meant the walkthrough would have rendered nothing. Test the example with the tool it
   demonstrates.
+- **To prove nothing checks a value, change it and watch what goes red.** Lock C2 grepped for the literal hash and
+  missed a test that reads it from the file. Sharpens LEARNINGS' "verify an absence by enumerating".
 
 **Owed to Daniel: did we build what was meant?** Answer on its own line as `_Intent: yes_`, `_mostly_` or `_no_`. The
 builder does not answer this for the product owner. This epic has no `intent_match:` score, so `epic-dod` does not require it.
