@@ -318,3 +318,17 @@ test('a sub-second timeout is reported as given, and an oversize reply is not "c
     /over 16 MB/
   );
 });
+
+test('an ODD fence line in a reply (a clip mid-code-block) never swallows the sections after it', async () => {
+  for (const fence of ['```js', '~~~']) {
+    const { io, readme } = makeIo({
+      spawnResult: { status: 0, stdout: `${REPLY}\n${fence}\nconst x = 1;`, stderr: '' },
+    });
+    await run(['--epic', 'demo'], io);
+    writeFileSync(readme, `${readFileSync(readme, 'utf8')}\n## Retrospective link\n\nkeep me\n`);
+    await run(['--epic', 'demo'], io);
+    const after = readFileSync(readme, 'utf8');
+    assert.match(after, /## Retrospective link\n\nkeep me/, fence);
+    assert.equal(after.match(/^## Intent match$/gm).length, 1, fence);
+  }
+});
