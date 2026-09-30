@@ -35,12 +35,22 @@ fi
 # a hook that skips on the push that needed it.
 push_has_code=0
 saw_any_ref=0
-while read -r _local_ref local_sha _remote_ref _remote_sha; do
+lint_ranges=''
+while read -r _local_ref local_sha _remote_ref remote_sha; do
   [ -z "$local_sha" ] && continue
   saw_any_ref=1
   # A sha containing any character that is not `0` is a real object, i.e. a push of code.
   case "$local_sha" in
-    *[!0]*) push_has_code=1 ;;
+    *[!0]*)
+      push_has_code=1
+      # What THIS ref adds, for semantic-lint below: from the remote's old tip, or from main for a new branch
+      # (the remote sha is all zeros or absent).
+      case "$remote_sha" in
+        *[!0]*) lint_base="$remote_sha" ;;
+        *) lint_base=origin/main ;;
+      esac
+      lint_ranges="$lint_ranges --range $lint_base...$local_sha"
+      ;;
   esac
 done
 
@@ -87,6 +97,16 @@ if [ "$push_fail" -ne 0 ]; then
 fi
 
 # ── ADVISORY section — never blocks (exits 0 regardless), see the header ─────────────────────────
+
+# semantic-lint (Roadmap/09-platform-infra/semantic-lint, D5/C6): selectors pick candidate hunks, Jev judges only
+# those, and in shadow it logs to .jev/decisions.jsonl and prints one line per rule. It runs FIRST here because it is
+# the cheap one (most pushes select nothing and make no call), and `|| true` keeps it out of the exit code by
+# construction. No stdin ranges (a manual run) → it reads @{upstream}...HEAD itself.
+if [ -f scripts/semantic-lint.mjs ]; then
+  # $lint_ranges is unquoted on purpose: it is a list of `--range <base>...<sha>` words, none containing a space.
+  # shellcheck disable=SC2086
+  node scripts/semantic-lint.mjs $lint_ranges >&2 || true
+fi
 
 echo "pre-push: template-drift guard..." >&2
 if ! node scripts/check-template-drift.mjs; then

@@ -249,5 +249,5 @@ test('--rail intent is accepted; a misspelt set is still refused', async () => {
   assert.notEqual(await run(['--rail', 'intent'], io), 2);
   let err = '';
   assert.equal(await run(['--rail', 'intnet'], { ...io, stderr: (t) => (err += t) }), 2);
-  assert.match(err, /review, prose, intent/);
+  assert.match(err, /review, prose, lint, intent/);
 });

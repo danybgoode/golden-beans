@@ -12,25 +12,25 @@ stories:
     i_want: "a rail that runs each rule's selector over a push's added lines and asks Jev only about the candidates"
     so_that: "a paraphrased rule break is caught without a Jev call on every line"
     risk: low
-    status: planned
+    status: done
   - id: S1.2
     title: "Rule 1, measured"
     as_a: "a maintainer"
     i_want: "AGENTS rule 1 expressed as a rule with measured wording"
     so_that: "the judge's answers mean what we think they mean"
     risk: low
-    status: planned
+    status: done
   - id: S1.3
     title: "In shadow on every push"
     as_a: "the product owner"
     i_want: "the pre-push hook to run it on changed files and never block"
     so_that: "we collect two weeks of real decisions before switching anything on"
     risk: low
-    status: planned
+    status: done
 ---
 # Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow) — Sprint 1: The rail and rule 1, in shadow
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Build contract (locked by the architect before the builder started)
 

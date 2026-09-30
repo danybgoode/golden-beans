@@ -1,0 +1,49 @@
+{
+  "$comment": "Non-secret project settings, one section per module (lib/config.mjs). Every other section still reads from its legacy file (jev.config.json, scripts/review-config.json, …): a section this file lacks falls back to that file alone. Do NOT add a `jev.rails` key here — this file wins per TOP-LEVEL key, so it would replace jev.config.json's whole `rails` object and silently turn the promoted review and prose rails off (semantic-lint C1).",
+  "lint": {
+    "$comment": "semantic-lint rules (Roadmap/09-platform-infra/semantic-lint). Each rule's globs, allowlist and patterns SELECT candidate hunks deterministically; Jev is asked one question per selected hunk. Its mode, threshold and shadowExpires live in jev.config.json → rails.lint. Wording measured with `node scripts/jev-eval.mjs --live --rail lint` — see the question's $measured.",
+    "rules": [
+      {
+        "id": "rule-1",
+        "source": "AGENTS.md rule 1 (the growth engine owns telemetry; never build a parallel pipeline)",
+        "severity": "should-fix",
+        "globs": [
+          "apps/web/**"
+        ],
+        "allowlist": [
+          "apps/web/app/api/v1/track/route.ts",
+          "apps/web/app/api/v1/features/sync/route.ts",
+          "apps/web/lib/tars-query.ts",
+          "apps/web/lib/north-star-query.ts",
+          "apps/web/lib/ab-query.ts",
+          "apps/web/lib/event-catalog-query.ts",
+          "apps/web/e2e/**",
+          "apps/web/**/*.test.ts",
+          "scripts/seed-*"
+        ],
+        "patterns": [
+          "\\.from\\(\\s*['\"`](events|features)['\"`]",
+          "\\b(insert\\s+into|update|delete\\s+from)\\s+(public\\.)?(events|features)\\b",
+          "\\bcreate\\s+(table|materialized\\s+view|view)\\b",
+          "\\bexport\\s+(async\\s+)?function\\s+(GET|POST|PUT|PATCH|DELETE)\\b",
+          "\\bexport\\s+const\\s+(GET|POST|PUT|PATCH|DELETE)\\b",
+          "\\b(posthog|mixpanel|amplitude|segment|analytics|heap|rudderstack|umami|fathom|hotjar|plausible|gtag|ga)\\s*\\.\\s*(capture|track|identify|page|screen|init|logEvent|trackEvent|trackPageview|register|alias|group|people)\\s*\\(",
+          "\\b(gtag|plausible)\\s*\\(",
+          "\\bwindow\\.(dataLayer|analytics|posthog|mixpanel|amplitude|heap)\\b",
+          "<Analytics\\b",
+          "from\\s+['\"](posthog-js|posthog-node|mixpanel|mixpanel-browser|@segment/[^'\"]+|@amplitude/[^'\"]+|@vercel/analytics[^'\"]*|react-ga4?|@google-analytics/[^'\"]+)['\"]",
+          "\\bsendBeacon\\s*\\(",
+          "\\bfetch\\s*\\([^)]*(collect|telemetry|analytics)"
+        ],
+        "question": {
+          "$measured": "2026-09-30, jev-1.13.0, the 33 lint fixtures in scripts/jev-eval.fixtures.json (16 real candidates the selector picks from 220 commits of main, all clean; 17 constructed, 14 of them violations), threshold 0.8. v1 (one sentence, generic yes/no criteria): decided 23/33, 23 right; unsure on product code READING events/features, an ops-timing table and <Analytics /> on its own. v2 (this wording: names reads for the product's own screens, ops timings, feature toggles, ad-hoc funnel queries and rendering a vendor component): decided 30/33, 30 right. Undecided: one read (0.22) and two violations (0.73 analytics.track in a server action, 0.70 a features update). Re-asking identical hunks moved p by up to 0.04 between runs. The threshold was NOT fitted to these 33 cases; that is the shadow period's job. Re-measure before changing a word: node scripts/jev-eval.mjs --live --rail lint.",
+          "instructions": "This is one hunk from a git diff in a Next.js + Supabase product whose growth engine owns all product telemetry. Events are ingested only by POST /api/v1/track and features registered only by /api/v1/features/sync (both through the @golden-frijoles/sdk client); funnels, conversion, retention, North Star and experiment results are computed only by the canonical query libraries. Does this hunk start a parallel telemetry pipeline, a second path that collects, stores, ships or analyses product-usage events?",
+          "criteria": {
+            "true": "Yes, any of: a new table, view or migration that stores user actions, clicks, page views, usage or analytics events under any name; an insert, update or delete on the events or features tables (including toggling a feature's enabled flag) outside those two ingest routes; a route or query that computes funnels, conversion, retention or other usage metrics from raw events instead of the canonical query libraries; importing, calling or rendering a third-party analytics SDK or component (PostHog, Segment, Mixpanel, Amplitude, Google Analytics or gtag, dataLayer, Vercel Analytics' <Analytics />, analytics.track and the like); or a beacon or fetch that ships events to any other collector.",
+            "false": "No, when it is any of: tracking through the engine's own SDK client or /api/v1/track; a plain read of the events or features tables that lists, displays or checks them for the product's own screens, catalog, tasks, reports or signals, without computing usage metrics; a table, route or call for another purpose (auth, tokens, billing, flags, deliveries, experiments' own registry and decisions, scenarios, content); operational measurements of the product's own performance, such as query timings; or a comment, string or name that only mentions analytics or tracking."
+          }
+        }
+      }
+    ]
+  }
+}

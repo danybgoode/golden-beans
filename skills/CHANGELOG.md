@@ -7,6 +7,30 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-30
+
+### Added
+
+- **`semantic-lint.mjs`: deterministic selectors pick, Jev judges** (semantic-lint S1). Each rule in
+  `golden-frijoles.config.json` → `lint.rules` (id, source, severity, globs, allowlist, patterns, one question) selects
+  the diff hunks whose ADDED lines match, outside its allowlist; Jev is asked one question per selected hunk. A push
+  that selects nothing makes no call. Four outcomes: raise, clear, uncertain, and **not checked** (no key, egress off,
+  a timeout, a malformed answer, a hunk over 6,000 chars, past 20 candidates or 60 s), which is printed and logged and
+  never counts as clear. Raise-only, never blocking. Ships in `template/scripts/`, not the kit: no skill runs it.
+- **The pre-push hook runs it** in its ADVISORY section, on the ranges git hands the hook, `|| true`. Off by default:
+  an off rail exits before anything that could ask about egress.
+- **`jev-report.mjs` reports lint decisions**: per rule, raise / uncertain / clear / not-checked, and the raised and
+  uncertain hunks to label.
+
+### Changed
+
+- **`lib/jev.mjs`: `RAILS` gains `lint`** (off by default, `thresholds: { default: 0.8 }`). Its threshold keys are
+  `default` or a rule id, each 0.5…1 (below 0.5, raise and clear would overlap); the other rails' keys stay closed.
+- **`lib/config.mjs`: `SECTIONS` gains `lint`**, and the registry declares `lint.rules` (`never-yet`, so `gf doctor`
+  never reports Build unconfigured for it).
+- **`jev-eval.mjs` evaluates the `lint` set**: a recording pins its question's hash, so an edited question fails the
+  replay until `--live` re-measures it; a fixture for a rule the project lacks is skipped and counted.
+
 ## [0.12.1] - 2026-09-30
 
 ### Fixed

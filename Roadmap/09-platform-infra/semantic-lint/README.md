@@ -60,10 +60,11 @@ is stated here, out loud; builders cite these, never a paraphrase.
   is rewritten to that.
 - **C3 — 30 labelled fixtures, not 10–20.** `jev-eval.mjs` fails any judge with fewer than `MIN_FIXTURES = 30`. Lowering
   the floor for one rail would weaken a guard, so rule 1 gets 30.
-- **C4 — Not in the kit closure.** The kit ships only what some `SKILL.md` declares in `requires_scripts:`
-  (`build-kit.mjs`); no skill runs the lint — the hook does. It ships in `skills/template/scripts/` like `jev-eval.mjs`
-  and `jev-report.mjs` (also not in the kit). Its imports (`lib/jev.mjs`, `lib/config.mjs`) are already in the closure,
-  and they change, so this is still a plugin release: **0.12.1 → 0.13.0**.
+- **C4 — In the kit closure, through `jev-eval`** *(corrected during the build)*. The lock first said "not in the
+  closure": `build-kit --list` was read on the pre-rebase tree. On `main` @ 7f6d416 the `golden-frijoles` skill
+  declares `jev-eval.mjs` (the Jev setup proof), and `jev-eval` replays the lint set, so `check-skill-scripts` requires
+  `semantic-lint.mjs` in that skill's `requires_scripts:` — declared, and the kit packs it. A plugin release either way:
+  **0.12.1 → 0.13.0**.
 - **C5 — `jev-report.mjs` gains a `lint` summary.** It reads only `review`/`prose` rows today, so the promote/tune/drop
   decision owed on `shadowExpires` would have no report. Minimal: per `lint:<id>`, decisions and raise / uncertain /
   clear / not-checked counts.
@@ -74,9 +75,12 @@ is stated here, out loud; builders cite these, never a paraphrase.
 
 **Decisions (the build contract cites these)**
 
-- **D1 — Candidate = one hunk.** From `git diff -U3 --no-color --diff-filter=d <range>`: a hunk in a file that matches a
-  rule's `globs` and none of its `allowlist`, with at least one ADDED line matching one of its `patterns` (JS RegExp
-  source, compiled with `i`). One Noul per candidate per rule, question id `violates`. No candidate → no Jev call and
+- **D1 — Candidate = one hunk, sent as a window.** From `git diff -U3 --no-color --diff-filter=d <range>`: a hunk in a
+  file that matches a rule's `globs` and none of its `allowlist`, with at least one ADDED line matching one of its
+  `patterns` (JS RegExp source, compiled with `i`). *Amended during 1.2, measured:* what is sent is the hunk's `@@`
+  header plus ±15 lines around each matching added line (merged, gaps marked `…`), not the whole hunk — a new file is
+  one hunk, and on 220 commits of `main` 33 of 60 whole-hunk candidates were over `HUNK_CHAR_LIMIT`, so nearly every
+  new route and migration would have been "not checked". With windows: 3 of 40. One Noul per candidate per rule, question id `violates`. No candidate → no Jev call and
   no log line.
 - **D2 — Four outcomes, one statistic.** `p ≥ threshold` → **raise**; `p ≤ 1 − threshold` → **clear**; between →
   **uncertain**; anything else → **not checked** with the reason: no key, egress false/null, timeout or any
