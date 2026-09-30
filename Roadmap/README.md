@@ -419,7 +419,8 @@ independently shippable slice of value.
 - **2026-09-30**: `sketch-specs` **shipped**: two sprints, kit 0.16.0.
   - A screen can now be approved as a grey wireframe drawn from text, and that same text is the state contract CI
     enforces, with its approval pinned by hash like the prototypes'.
-  - The lock corrected six things out loud, among them 38 states rather than 33, a seed template that already shipped a
+  - The lock corrected five things out loud (a sixth, "nothing checks the prototype hash", was itself wrong and was
+    corrected at close-out), among them 38 states rather than 33, a seed template that already shipped a
     shape nothing could read, and a walkthrough that asked for the duplicate its own D5 forbids.
 - **2026-09-30**: `compiled-prompts` wave 1 **shipped**: two sprints, kit 0.15.0.
   - Jev's questions moved to data without changing a verdict; the stamp-then-move commit order is the proof.
