@@ -83,7 +83,8 @@ export function parseQuestions(set, raw) {
 
 /** Read and validate one set from the JSON beside this module. A fresh copy per call: callers may not share state. */
 export function loadQuestions(set, { read = readFileSync } = {}) {
-  if (!QUESTION_SETS.includes(set)) throw new Error(`jev-questions: unknown set "${set}" (${QUESTION_SETS.join(', ')})`);
+  if (!QUESTION_SETS.includes(set))
+    throw new Error(`jev-questions: unknown set "${set}" (${QUESTION_SETS.join(', ')})`);
   const raw = JSON.parse(read(new URL(`./jev-questions/${set}.json`, import.meta.url), 'utf8'));
   return parseQuestions(set, raw);
 }

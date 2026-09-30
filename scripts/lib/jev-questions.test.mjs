@@ -2,7 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { loadQuestions, parseQuestions, QUESTION_SETS, questionHash, wireQuestion } from './jev-questions.mjs';
+import {
+  loadQuestions,
+  parseQuestions,
+  QUESTION_SETS,
+  questionHash,
+  wireQuestion,
+} from './jev-questions.mjs';
 
 const fixtures = JSON.parse(readFileSync(new URL('../jev-eval.fixtures.json', import.meta.url), 'utf8'));
 
@@ -39,7 +45,8 @@ test('the guards hold no question text: it lives only in the JSON', () => {
     for (const q of loadQuestions(set)) {
       assert.ok(!holders[set].includes(q.instructions), `${set}.${q.id}'s question is still in code`);
       const texts = Array.isArray(q.criteria) ? q.criteria : Object.values(q.criteria);
-      for (const t of texts) assert.ok(!holders[set].includes(t), `${set}.${q.id}'s criteria are still in code`);
+      for (const t of texts)
+        assert.ok(!holders[set].includes(t), `${set}.${q.id}'s criteria are still in code`);
     }
 });
 
@@ -84,5 +91,8 @@ test('parseQuestions refuses every malformed shape, naming the field', () => {
   refuse('review', file(q({ measured: { ...measured, right: 3 } })), /right ≤ decided ≤ n/);
   refuse('review', file(q({ measured: { ...measured, date: 'Sept 30' } })), /YYYY-MM-DD/);
   refuse('review', file(q({ measured: { ...measured, extra: 1 } })), /must be \{ model/);
-  assert.equal(parseQuestions('review', file(q({ measured: null, unmeasured: 'no labels' })))[0].measured, null);
+  assert.equal(
+    parseQuestions('review', file(q({ measured: null, unmeasured: 'no labels' })))[0].measured,
+    null
+  );
 });
