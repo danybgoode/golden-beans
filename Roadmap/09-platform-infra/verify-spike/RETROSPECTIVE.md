@@ -45,4 +45,5 @@ _Closed: 2026-09-29_
 - **Trace validation was not reached.** It was the stretch goal, and DECISION § 2 records it as not evaluated.
 - **F2** is a `risk: high` bug seed, fix sketch included:
   [`delivery-stale-reclaim-uncounted`](../../00-ideas/seeds/delivery-stale-reclaim-uncounted.md).
+- **F7, needs the product owner:** the delivery cron may not be registered in production (DECISION § 4).
 - **F1** is an accepted residual. It is invisible and loses nothing (DECISION § 4).
