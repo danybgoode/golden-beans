@@ -8,7 +8,12 @@
 //   TICK_BUDGET_MS (route)  <  maxDuration (route, seconds)  <=  STALE_CLAIM_MS (dispatcher)
 //
 // A worker stops sending by the tick budget and is killed by the platform at maxDuration, so by the
-// time a claim is old enough to reclaim, the worker that made it is gone. Nothing enforced the order;
+// time a claim is old enough to reclaim, the worker that made it is gone. Equality (300s = 300s today)
+// is deliberate and safe: `claimed_at` is stamped per project, AFTER the invocation started, so the
+// kill lands no later than claimed_at + maxDuration, while reclaim needs now > claimed_at + STALE
+// (strict `<` in claim_deliveries). The margin that actually protects SENDS is the first test's:
+// the dispatcher stops sending at TICK_BUDGET_MS, 60s before the kill. Equality only leaves a worker
+// hung past its own send timeout at the kill instant, separated by cross-instance clock skew. Nothing enforced the order;
 // raising maxDuration (Vercel allows far more than 300s) would have silently re-opened the window.
 // The route cannot be imported here (Next.js `@/` aliases), so the constants are read as literals, and
 // a missing pattern FAILS rather than passing on a file this test could not read.
