@@ -11,9 +11,33 @@ risk: low
 epic: "09-platform-infra/intent-match"
 build_order: 48
 updated: 2026-09-29
+intent_ask: proxy
+intent_match: 89
 ---
 
 # Seed: Intent match (wave 1, advisory): a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals
+
+## The ask, as given
+
+_Proxy (`intent_ask: proxy`, intent-match D8): groomed before the seed template kept the product owner's words, so
+this is the ask as groomed, not as said. Claims split by the builder at the S1 lock; the teach-back was not recorded._
+
+> **As the product owner, I want** each groomed pitch to show how well it matches what I asked, with the diagram or
+> wireframe its shape calls for, and a named next artifact for each gap, **so that** "that's not what I meant" surfaces
+> before the build instead of after.
+> **As the product owner, I also want** every closed epic to record whether we built what I meant, and the past epics
+> of both my projects to seed that record, **so that** we can tell soon whether the score predicts anything.
+
+### Claims
+1. Each groomed pitch shows how well it matches what I asked.
+2. Each pitch carries the diagram or wireframe its shape calls for.
+3. Each gap between the pitch and the ask names the next artifact to make.
+4. Mismatches surface before the build, not after it.
+5. Every closed epic records whether we built what I meant.
+6. Past epics of both my projects seed that record.
+7. We can tell soon whether the score predicts anything.
+
+## Background
 
 From the [single-product audit](../audits/single-product-and-grooming-2026-09-28.md) §0.6. **Decision:** E6 (advisory
 for the first 20 epics; thresholds decided with data). Groomed 2026-09-29: **feature · shaped bet · appetite M · risk
@@ -21,12 +45,6 @@ low**. Stage-2.5 bucket: **new, built almost entirely from parts we have.** Appr
 log, the cross-family CLI plumbing, groom's teach-back and the epic close check all exist. What's new is one scoring
 script, one groom stage with a visuals rule, an optional reader at the architecture lock, and one question at epic close.
 Wave 2 is [`sketch-specs`](sketch-specs.md).
-
-**As the product owner, I want** each groomed pitch to show how well it matches what I asked, with the diagram or
-wireframe its shape calls for, and a named next artifact for each gap, **so that** "that's not what I meant" surfaces
-before the build instead of after.
-**As the product owner, I also want** every closed epic to record whether we built what I meant, and the past epics of
-both my projects to seed that record, **so that** we can tell soon whether the score predicts anything.
 
 **Product owner's calls at grooming (2026-09-29):**
 1. Pitches need visuals: "at least some diagram or wireframe of the overall system and data flow + actors." No rule
@@ -208,3 +226,21 @@ up by pinning the new plugin version.
 fixtures, `lib/cross-agent-cli.mjs` (`runCodex`, `runAntigravity`, `runVibe`), `review-route.mjs`'s family preference
 order, `cross-panel.mjs`'s single-pass shape, the groom skill + `templates/scope-seed.md` + `RETROSPECTIVE.md`,
 `emit-epic-kickoff.mjs`, `skills/scripts/epic-dod.mjs`, `roadmap-contract.mjs`, and `build-kit`'s closure.
+
+## Intent match
+
+_Advisory and uncalibrated (intent-match D1, D3): it can add a step, never block one. Regenerate with `node scripts/intent-match.mjs <this seed> --write`._
+
+```text
+Intent match — Roadmap/00-ideas/seeds/intent-match.md
+  coverage in   0.95  (7 claims)
+  coverage out  0.87  (6 criteria)
+  clarity       0.84  (6 criteria)
+  teach-back    —     (not recorded)
+  agreement     pending  (the optional reader at the architecture lock)
+Total 89 / 100 — uncalibrated · signals: coverage in, coverage out, clarity
+Band: build (placeholder bands: 80 build · 60 resolve follow-ups · below 60 sketch or spike)
+Gaps: none
+```
+
+<!-- intent-match: {"coverage_in":0.951,"coverage_out":0.873,"clarity":0.836,"teach_back":null,"total":89} -->
