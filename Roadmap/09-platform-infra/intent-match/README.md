@@ -12,6 +12,7 @@ stories_total: 9   # the sum of every sprint's stories_total — keep it in step
 build_order: 48      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+intent_match: 84
 ---
 
 # Epic: Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals
@@ -209,3 +210,37 @@ Stacked branches `feat/intent-match` → `-s2` → `-s3`, merged in order, one p
       every dashboard says it exists. *Verify-only — not a new gate; whether a high-risk epic needs one
       is decided at grooming, not here.*
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+
+## Intent match
+
+_Advisory and uncalibrated (intent-match D1, D3). Agreement written by `intent-reader.mjs` at the architecture lock._
+
+- Seed score: **89** (coverage in 0.95 · coverage out 0.87 · clarity 0.84)
+- Agreement (reader: codex, 2026-09-30): **0.70** — P(the reader, given only the pitch, would build what this plan builds)
+- Total with agreement: **84 / 100** — uncalibrated
+
+<details><summary>The reader's reply</summary>
+
+```text
+## Will build
+
+- Intent scorer, gap routing, and labelled Jev fixtures.
+- Seed/groom intent capture, score section, and visuals rule.
+- Optional non-Claude lock reader that never blocks.
+- Epic-close intent label, outcomes report, and sampled backfill across both repos.
+
+## Won't build
+
+- A gating score, dashboard, engine table, or CLI changes.
+- Claude or multiple/retrying readers.
+- Threshold fitting or visual/spec rendering tooling.
+- Retroactive failure of older epics.
+
+## First question
+
+- Who owns approving the groomed claim split and visual choices before the advisory score is recorded?
+```
+
+</details>
+
+<!-- intent-match: {"coverage_in":0.951,"coverage_out":0.873,"clarity":0.836,"agreement":0.7,"total":84} -->
