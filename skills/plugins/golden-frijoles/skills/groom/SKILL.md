@@ -101,8 +101,8 @@ anything recent or changing. The core bank — role & job, outcome & signal, sco
 `references/question-bank.md`.
 
 ## Stage 3.5 — Intent match (advisory)
-With acceptance criteria written, run `node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write` and make
-(or answer) the artifact each gap is routed to. Never a gate; "could not look" is said, not fixed. `references/intent-and-visuals.md`.
+With criteria written, run `node scripts/intent-match.mjs Roadmap/00-ideas/seeds/<slug>.md --write` and make or answer
+the artifact each gap is routed to — advisory, never a gate; how to read it: `references/intent-and-visuals.md`.
 
 ## Stage 4 — Platform-first reframe (the step that shrinks the epic)
 Read the backend model + route **before** slicing — it repeatedly re-scopes work smaller. Produce the
@@ -165,10 +165,9 @@ fix is to re-install from the `.skill` archive, not to work around it here.)
 1. Write the **pitch** to `Roadmap/00-ideas/seeds/<slug>.md` — the Definition-of-Ready
    artifact (problem · appetite · bill of materials · rabbit holes · no-gos, plus UX heuristics ·
    acceptance criteria · the reuse list · open risks · any research citations · the Stage-2.5
-   bucket). It **must start with the seed frontmatter block**
-   (`title · slug · status · area · type · priority · appetite · underwritten_by · risk · epic ·
-   build_order · updated` — see `Roadmap/00-ideas/README.md`); set `status: ready` here.
-   `underwritten_by` stays `null` until the betting table funds it at a wave boundary. **This is the gate: nothing scaffolds until the product owner approves it.**
+   bucket), starting from `templates/scope-seed.md` and its frontmatter block (never a hand-typed key list:
+   one drifts); set `status: ready`. `underwritten_by` stays `null` until the betting table funds it.
+   **This is the gate: nothing scaffolds until the product owner approves it.**
 2. On approval, **run the scaffolder** instead of hand-rendering structure:
    ```
    node "$GROOM/scaffold-epic.mjs" --slug <epic-slug> --area <NN> \
@@ -180,17 +179,12 @@ fix is to re-install from the `.skill` archive, not to work around it here.)
    + `sprint-1..N.md` + a `RETROSPECTIVE.md` stub from the skill's own `templates/`, and prints the exact
    path-scoped commit command. Fill the generated files with the real stories / reuse list / QA stages —
    the script makes the skeleton, you make the content.
-3. **Update the seed:** set its frontmatter `epic: "<NN-macro>/<epic-slug>"` (and `status: scaffolded` for
-   tidiness). **Once `epic:` is set the seed is funnel-only** — the **epic README frontmatter `status:`** (the
-   scaffolder writes it `scaffolded`) is now the authoritative status, advanced to `shipped` at epic close.
-   **Never move the seed between folders** — frontmatter carries lifecycle (this is what stopped 00-ideas drifting).
-4. **Commit it.** `Roadmap/` is tracked in git — commit the scaffold so a fresh worktree/agent inherits the
-   product context. **Commit only your own paths** — never `git add Roadmap/` or `git add -A` (a shared
-   planning worktree races the index → "another git process is running" / index lock). Use the command the
-   scaffolder prints, e.g.:
-   `git add <the files you scaffolded> <the seed> && git commit -- <those paths> -m "plan(<epic-slug>): scaffold epic + sprints"`.
-   For parallel planning, run in your own `git worktree`, or let one **scribe** own shared files like
-   `BUILD-ORDER.md`. Docs are low-risk tier.
+3. **Update the seed:** `epic: "<NN-macro>/<epic-slug>"`, `status: scaffolded`. From then on the seed is funnel-only
+   and the **epic README's `status:`** is authoritative (advanced to `shipped` at close). **Never move the seed
+   between folders** — frontmatter carries lifecycle.
+4. **Commit it**, with the path-scoped command the scaffolder prints — **only your own paths**, never
+   `git add Roadmap/` or `-A` (a shared planning worktree races the index). Parallel planners take their own
+   `git worktree`, or one **scribe** owns shared files like `BUILD-ORDER.md`. Docs are low-risk tier.
 
 ## Stage 8 — Emit the builder kickoff
 
@@ -207,11 +201,8 @@ node "$GROOM/emit-epic-kickoff.mjs" --epic <epic-slug>                 # epic mo
 node "$GROOM/emit-kickoff.mjs" --epic <epic-slug> --sprint <N>         # per-sprint (exception)
 ```
 
-The prompt is short on purpose: it POINTS at WAYS-OF-WORKING for the process (a test fails if a section it
-names is missing) and states only this run's non-negotiables — **lock `D1…Dn` against live code and data
-first**, **stack the branches**, **review through `review-route.mjs`**, **merge on green**, **done means
-shipped** — plus rules picked from the epic's docs (high risk, a migration, a flag). Worktree or in place is
-the orchestrator's call (*Epic-mode builds*). Per-sprint fallback: `references/per-sprint-kickoff.md`.
+The prompt points at WAYS-OF-WORKING for the process and states only the run's non-negotiables (read them in its
+output; a test pins each) plus rules picked from the epic's docs. Per-sprint fallback: `references/per-sprint-kickoff.md`.
 
 **Every sprint closes with a smoke walkthrough** the product owner can follow blind — numbered steps, real
 URLs, one action and one observable result each, money/auth steps owed by name. Format:
@@ -222,9 +213,8 @@ For a **spike**: a short investigation prompt ending in a written decision — n
 ## Stage 9 — Close the loop
 Agree and **persist** the build order in seed frontmatter (`build_order`, `priority`), deep-groom only the
 front-of-queue item, **regenerate the board** (`node scripts/build-order.mjs`, never hand-tick it), and
-emit a next-session handoff for the next ⬜ item. The full cadence and the handoff template:
-`references/backlog-cadence.md`. Call the compaction point yourself when the durable state makes re-entry
-cheap.
+emit a next-session handoff for the next ⬜ item. The cadence, the handoff template and when to call the compaction
+point yourself: `references/backlog-cadence.md`.
 
 ## Guardrails
 - **Planning only.** Never edit code or `tasks/`. Only `Roadmap/` docs.
