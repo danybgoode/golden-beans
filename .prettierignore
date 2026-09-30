@@ -10,6 +10,9 @@ package-lock.json
 # Machine-written by `node scripts/jev-eval.mjs --live` (recorded Jev answers), and byte-identical to
 # dobby-foundation's template copy — formatting it here would fork a shared rail (jev-semantic-guards).
 scripts/jev-eval.fixtures.json
+# The renderer's golden output (sketch-specs): sketch-render.test.mjs compares renderSketch() with it BYTE for byte,
+# so reformatting it would make the snapshot test fail on a correct renderer.
+scripts/sketch-render.snapshot.html
 # The golden-frijoles-plugin config core, byte-identical to the template (golden-frijoles/skills). The copy-in rule
 # replaces a shared rail only while it is an UNMODIFIED copy; reformatting these here would fork them on the first run.
 scripts/config.mjs
