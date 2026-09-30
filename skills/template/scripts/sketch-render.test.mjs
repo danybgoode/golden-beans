@@ -37,9 +37,14 @@ const ALL_KINDS = parseSurface(
 test('snapshot: all twelve kinds, drawn', () => {
   const html = renderSketch([ALL_KINDS], { title: 'Sketch — every-kind' });
   if (process.env.UPDATE_SNAPSHOT === '1') writeFileSync(SNAPSHOT, html);
-  assert.equal(html, readFileSync(SNAPSHOT, 'utf8'), 'rerun with UPDATE_SNAPSHOT=1 if the change is intended');
+  assert.equal(
+    html,
+    readFileSync(SNAPSHOT, 'utf8'),
+    'rerun with UPDATE_SNAPSHOT=1 if the change is intended'
+  );
   // The snapshot could be regenerated without a kind; this cannot.
-  for (const kind of Object.keys(SURFACE_KINDS)) assert.ok(html.includes(`data-kind="${kind}"`), `no ${kind} drawn`);
+  for (const kind of Object.keys(SURFACE_KINDS))
+    assert.ok(html.includes(`data-kind="${kind}"`), `no ${kind} drawn`);
 });
 
 test('facts are drawn: a count as boxes (capped at 12 with the true number), columns as header words', () => {
@@ -69,8 +74,12 @@ test('greys only: every colour in the page has R = G = B', () => {
   assert.ok(hexes.length > 5, 'found no colours at all — the check is not looking at the style');
   for (const hex of hexes) {
     const digits = hex.slice(1);
-    const [r, g, b] = digits.length === 3 ? [...digits] : [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)];
-    assert.ok(r.toLowerCase() === g.toLowerCase() && g.toLowerCase() === b.toLowerCase(), `${hex} is not a grey`);
+    const [r, g, b] =
+      digits.length === 3 ? [...digits] : [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)];
+    assert.ok(
+      r.toLowerCase() === g.toLowerCase() && g.toLowerCase() === b.toLowerCase(),
+      `${hex} is not a grey`
+    );
   }
   assert.doesNotMatch(html, /rgba?\(|hsla?\(|oklch\(|\b(red|green|blue|orange|yellow|purple|gold|teal)\b/i);
 });
@@ -81,7 +90,11 @@ test('imports only node:* and the parser — never the design system (D4)', () =
   const specifiers = [
     ...source.matchAll(/\b(?:import|export)\s*(?:[^'"();]*?\bfrom\s*)?\(?\s*['"]([^'"]+)['"]/g),
   ].map((m) => m[1]);
-  assert.doesNotMatch(source, /\bcreateRequire\b|\brequire\(/, 'a CommonJS escape hatch around the import scan');
+  assert.doesNotMatch(
+    source,
+    /\bcreateRequire\b|\brequire\(/,
+    'a CommonJS escape hatch around the import scan'
+  );
   assert.ok(specifiers.includes('./lib/surface.mjs'), `the scan found ${JSON.stringify(specifiers)}`);
   for (const specifier of specifiers) {
     assert.ok(
@@ -116,7 +129,10 @@ test('CLI: a seed with two blocks, a bare .surface file, and the default temp ou
 
 test('CLI: a malformed line fails with the file, the line, the suggestion and the known kinds', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sketch-render-'));
-  writeFileSync(join(dir, 'bad.md'), 'intro\n\n```surface\nstate: a\nroute: /a\n- lsit columns "a | b"\n```\n');
+  writeFileSync(
+    join(dir, 'bad.md'),
+    'intro\n\n```surface\nstate: a\nroute: /a\n- lsit columns "a | b"\n```\n'
+  );
   const bad = run(['bad.md', '--out', 'x.html'], dir);
   assert.equal(bad.code, 1);
   assert.match(bad.stderr, /^bad\.md:6: unknown kind `lsit` — did you mean `list`\? Known kinds: head, /);

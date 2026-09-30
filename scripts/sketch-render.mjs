@@ -24,11 +24,16 @@ import { parseSurface, parseSurfaces, SurfaceError } from './lib/surface.mjs';
 const MAX_BOXES = 12;
 
 const escape = (text) =>
-  String(text).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+  String(text).replace(
+    /[&<>"']/g,
+    (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
+  );
 
 // A kind whose words are missing still draws its shape: a grey bar where the words would be.
 const words = (block, tag = 'span', cls = 'w') =>
-  block.words === null ? `<span class="bar"></span>` : `<${tag} class="${cls}">${escape(block.words)}</${tag}>`;
+  block.words === null
+    ? `<span class="bar"></span>`
+    : `<${tag} class="${cls}">${escape(block.words)}</${tag}>`;
 
 function boxes(count, cls, fill = () => '<span class="bar"></span>') {
   const drawn = Math.min(count, MAX_BOXES);
@@ -43,15 +48,19 @@ const DRAW = {
     }</div>`,
   answer: (b) => words(b, 'p', 'answer'),
   summary: (b) => `<div class="row wrap">${boxes(b.count ?? 0, 'stat')}</div>`,
-  tiles: (b) => `<div class="grid">${boxes(b.count ?? 0, 'tile', () => '<span class="bar"></span><span class="bar short"></span>')}</div>`,
+  tiles: (b) =>
+    `<div class="grid">${boxes(b.count ?? 0, 'tile', () => '<span class="bar"></span><span class="bar short"></span>')}</div>`,
   steps: (b) =>
     `<div class="row steps">${boxes(b.count ?? 3, 'step', (i) => `<span class="dot">${i + 1}</span>`)}</div>`,
-  toolbar: () => '<div class="row"><span class="search">Search</span><span class="pill"></span><span class="pill"></span></div>',
+  toolbar: () =>
+    '<div class="row"><span class="search">Search</span><span class="pill"></span><span class="pill"></span></div>',
   list: (b) => {
     const columns = b.columns ?? null;
     const cells = columns === null ? 1 : columns.length;
     const head =
-      columns === null ? '' : `<div class="lrow lhead">${columns.map((c) => `<span>${escape(c)}</span>`).join('')}</div>`;
+      columns === null
+        ? ''
+        : `<div class="lrow lhead">${columns.map((c) => `<span>${escape(c)}</span>`).join('')}</div>`;
     const row = `<div class="lrow">${'<span><span class="bar"></span></span>'.repeat(cells)}</div>`;
     return `<div class="listbox">${head}${row.repeat(3)}</div>`;
   },
@@ -61,7 +70,10 @@ const DRAW = {
   tabs: (b) => {
     const labels = b.words === null ? ['', '', ''] : b.words.split('|').map((t) => t.trim());
     return `<div class="row tabs">${labels
-      .map((t, i) => `<span class="tab${i === 0 ? ' on' : ''}">${t === '' ? '<span class="bar"></span>' : escape(t)}</span>`)
+      .map(
+        (t, i) =>
+          `<span class="tab${i === 0 ? ' on' : ''}">${t === '' ? '<span class="bar"></span>' : escape(t)}</span>`
+      )
       .join('')}</div>`;
   },
   note: (b) => words(b, 'p', 'note'),
@@ -153,7 +165,9 @@ export function main(argv) {
 // nothing (#189 review).
 const isMain = (() => {
   try {
-    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
   } catch {
     return false;
   }

@@ -20,7 +20,10 @@ test('surface.map.json: a usable map whose every value is a BLOCK_KINDS kind', (
   assert.deepEqual(validateMap(MAP), [])
   const known = new Set(BLOCK_KINDS.map((entry) => entry.kind))
   for (const [generic, target] of Object.entries(MAP.kinds as Record<string, string>)) {
-    assert.ok(known.has(target), `surface.map.json maps \`${generic}\` to \`${target}\`, which BLOCK_KINDS does not have`)
+    assert.ok(
+      known.has(target),
+      `surface.map.json maps \`${generic}\` to \`${target}\`, which BLOCK_KINDS does not have`
+    )
   }
 })
 
