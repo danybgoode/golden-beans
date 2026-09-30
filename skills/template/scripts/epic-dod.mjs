@@ -58,11 +58,19 @@ export const ITEMS = [
 
 /** A numeric `intent_match:` is what makes an epic "scored" (intent-match D17). `null`, absent or a typo is not. */
 export const intentScore = (fm) =>
-  /^\d{1,3}$/.test(String(fm?.intent_match ?? '')) ? Number(fm.intent_match) : null;
+  /^\d{1,3}$/.test(String(fm?.intent_match ?? '')) && Number(fm.intent_match) <= 100
+    ? Number(fm.intent_match)
+    : null;
 
-/** The retro's answer: `_Intent: yes_` · `_mostly_` · `_no_`, or null. The template's `yes | mostly | no` is not one. */
+/**
+ * The retro's answer: a line that is EXACTLY `_Intent: yes_` · `_mostly_` · `_no_`, or null. HTML comments are
+ * stripped first and the match is anchored to its own line: an unanchored match read the template's own guidance
+ * ("e.g. `_Intent: mostly_`") as an answer, so every scaffolded retro passed unanswered (fresh review of #198). The
+ * template's `yes | mostly | no` is not one either.
+ */
 export function intentAnswer(retro) {
-  const m = /_Intent:\s*(yes|mostly|no)\s*_/i.exec(String(retro ?? ''));
+  const text = String(retro ?? '').replace(/<!--[\s\S]*?-->/g, '');
+  const m = /^_Intent:\s*(yes|mostly|no)\s*_\s*$/im.exec(text);
   return m ? m[1].toLowerCase() : null;
 }
 

@@ -7,6 +7,8 @@ import {
   evaluate,
   frontmatter,
   isRealClosedDate,
+  intentAnswer,
+  intentScore,
   ITEMS,
   fetchExternal,
   parseTreeUrl,
@@ -465,4 +467,33 @@ test('ITEMS: intent-answered is the sixth derived item', () => {
     'branch-deleted',
     'intent-answered',
   ]);
+});
+
+test('intent-answered: the REAL groom retro template, as scaffolded, is unanswered (fresh review of #198)', async (t) => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const here = dirname(fileURLToPath(import.meta.url));
+  const rel = ['plugins', 'golden-frijoles', 'skills', 'groom', 'templates', 'RETROSPECTIVE.md'];
+  // From scripts/, skills/scripts/ or skills/template/scripts/; a consumer's copy has none of them.
+  const tpl = [
+    join(here, '..', 'skills', ...rel),
+    join(here, '..', ...rel),
+    join(here, '..', '..', ...rel),
+  ].find((p) => existsSync(p));
+  if (!tpl) return t.skip('groom template not in this checkout');
+  const text = readFileSync(tpl, 'utf8').replace('<date>', '2026-09-30');
+  assert.equal(intentAnswer(text), null, 'the template, guidance comment included, is not an answer');
+  const r = evaluate({ ...closedEpic, readme: SCORED_README, retro: text });
+  assert.equal(r.items['intent-answered'].state, 'fail');
+  const answered = text.replace(/^_Intent: yes \| mostly \| no_$/m, '_Intent: no_');
+  assert.equal(intentAnswer(answered), 'no');
+});
+
+test('intent-answered: an answer inside a comment, or mid-sentence, is not an answer; a score over 100 is not a score', () => {
+  assert.equal(intentAnswer('<!-- e.g. `_Intent: mostly_` -->'), null);
+  assert.equal(intentAnswer('Write it like `_Intent: yes_` below.'), null);
+  assert.equal(intentAnswer('_Closed: 2026-09-30_\n_Intent: Yes_ \n'), 'yes');
+  assert.equal(intentScore({ intent_match: '150' }), null);
+  assert.equal(intentScore({ intent_match: '100' }), 100);
 });

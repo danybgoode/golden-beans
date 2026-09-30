@@ -43,9 +43,13 @@ export function frontmatter(text) {
 
 const score = (v) => (/^\d{1,3}$/.test(String(v ?? '')) && Number(v) <= 100 ? Number(v) : null);
 
-/** `_Intent: yes_` · `_mostly_` · `_no_` → the word; the template's `yes | mostly | no` → null. Pure. */
+/**
+ * The answer — the SAME rule as `epic-dod.mjs`'s `intentAnswer` (a spec pins the two together): comments stripped, a
+ * line that is exactly `_Intent: yes_` · `_mostly_` · `_no_`. Pure.
+ */
 export function intentAnswer(retro) {
-  const m = /_Intent:\s*(yes|mostly|no)\s*_/i.exec(String(retro ?? ''));
+  const text = String(retro ?? '').replace(/<!--[\s\S]*?-->/g, '');
+  const m = /^_Intent:\s*(yes|mostly|no)\s*_\s*$/im.exec(text);
   return m ? m[1].toLowerCase() : null;
 }
 
@@ -83,6 +87,13 @@ export function parseBackfill(text, where = BACKFILL_PATH) {
  */
 export function rowsFor(repo, epics, backfill = []) {
   const back = new Map(backfill.map((b) => [b.slug, b]));
+  // A backfill slug with no epic folder (a typo, a renamed epic) would silently shrink the table: fail closed.
+  const known = new Set(epics.map((e) => e.slug));
+  const orphans = backfill.filter((b) => !known.has(b.slug)).map((b) => b.slug);
+  if (orphans.length)
+    throw new Error(
+      `${repo}: intent-backfill.json names epics with no Roadmap folder: ${orphans.join(', ')}`
+    );
   const rows = [];
   for (const e of epics) {
     const rfm = frontmatter(e.readme);

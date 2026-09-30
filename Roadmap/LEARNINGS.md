@@ -1860,13 +1860,12 @@ one-liner + why + date shape.
 - **`git show <merge-commit>` prints a combined diff, which is empty for a clean merge.** Anything that
   feeds "what did this PR change" to a model or reviewer must diff against the first parent
   (`git diff <sha>^1 <sha>`). Two of nine PRs sent Jev no code before this was caught.
-- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** The same trap bit `git add $FILES` in
-  `intent-match` (2026-09-30): use `${=FILES}` or an array (`(${(f)"$(…)"})`).
+- **In zsh, `set -- $spec` and `$PATHS` do not word-split.** A loop over "module invariant depth"
+  strings ran nine model checks with empty arguments and printed nine blank results that looked
+  like output. Put such loops in a `bash` script, which the reproduce doc needs anyway. The same trap bit
+  `git add $FILES` in `intent-match` (2026-09-30): use `${=FILES}` or an array (`(${(f)"$(…)"})`).
 - **A backticked commit message in double quotes is a zsh parse error, or worse, command substitution.**
   (`intent-match`, 2026-09-30.) Commit and PR bodies go through a quoted heredoc (`-F - <<'EOF'`), always.
- A loop over "module invariant depth"
-  strings ran nine model checks with empty arguments and printed nine blank results that looked
-  like output. Put such loops in a `bash` script, which the reproduce doc needs anyway.
 
 ### Scoring a plan against its ask (intent-match, 2026-09-30)
 

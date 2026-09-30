@@ -3,7 +3,7 @@ epic: intent-match
 sprint: 3
 title: "Learning from what shipped"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 3
 stories:
   - id: S3.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals — Sprint 3: Learning from what shipped
 
-**Status:** 🟦 In review
+**Status:** ✅ shipped — https://github.com/danybgoode/golden-frijoles/pull/198 (plugin + kit 0.12.0), with danybgoode/miyagi-product-management#198
 
 ## Stories
 

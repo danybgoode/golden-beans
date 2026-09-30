@@ -56,3 +56,5 @@ _Intent: yes | mostly | no_
 - S2 and S3 had no second model family in review. Put the next reviews through a family when one returns (forward
   reviews only, no backtest).
 - "Stories added" is unknown for epics whose README predates `stories_total`.
+- The "disproved" correction counts every mention of the word, including a README describing the metric; treat it
+  as noisy until it reads a structured marker.

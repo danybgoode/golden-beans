@@ -196,3 +196,25 @@ test('readRepo: epics, seeds and retros are read from the layout', () => {
   assert.equal(epics[0].macro, '09-platform-infra');
   assert.match(epics[0].seed, /verbatim/);
 });
+
+test("the answer rule is the same as epic-dod's, case for case (fresh review of #198)", async () => {
+  const dod = await import('./epic-dod.mjs');
+  for (const text of [
+    '_Intent: mostly_',
+    '_Intent: yes | mostly | no_',
+    '<!-- e.g. `_Intent: mostly_` -->',
+    'like `_Intent: yes_` here',
+    '_Closed: x_\n_Intent: No_\n',
+    null,
+  ])
+    assert.equal(intentAnswer(text), dod.intentAnswer(text), JSON.stringify(text));
+});
+
+test('a backfill slug with no epic folder is could-not-look, never a silently smaller table', () => {
+  const r = repo('orph', [{ slug: 'real', readme: readme() }], {
+    backfill: { epics: [{ slug: 'typo', score: 70 }] },
+  });
+  let err = '';
+  assert.equal(run(['--repo', r], { out: () => {}, err: (t) => (err += t) }), 2);
+  assert.match(err, /no Roadmap folder: typo/);
+});
