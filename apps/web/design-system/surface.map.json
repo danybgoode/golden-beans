@@ -1,0 +1,17 @@
+{
+  "_": "sketch-specs D11 — the kit's twelve generic surface kinds (scripts/lib/surface.mjs SURFACE_KINDS) mapped onto this repo's block vocabulary (state-contract-core.mjs BLOCK_KINDS). Identity: every generic name already exists there. The other 35 BLOCK_KINDS kinds stay prototype-only. surface-map.test.ts fails on a value BLOCK_KINDS does not have.",
+  "kinds": {
+    "head": "head",
+    "answer": "answer",
+    "summary": "summary",
+    "tiles": "tiles",
+    "toolbar": "toolbar",
+    "list": "list",
+    "empty": "empty",
+    "card": "card",
+    "steps": "steps",
+    "field": "field",
+    "tabs": "tabs",
+    "note": "note"
+  }
+}

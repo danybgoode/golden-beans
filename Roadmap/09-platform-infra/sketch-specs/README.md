@@ -1,6 +1,6 @@
 ---
 status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Locking architecture # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+phase: In review # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: sketch-specs
 title: "Sketch specs — a surface spec renders the grey wireframe and becomes the state contract"
@@ -156,6 +156,10 @@ is fixtures against the seam 2.1 defines, so both ride with their contract story
 Sonnet-class builder against D8–D10 and D16, in its own worktree off `feat/sketch-specs`. Built **in place** on the
 stack otherwise: this is the only session in the checkout. Every PR is reviewed via
 `node scripts/review-route.mjs --builder claude <PR#>`.
+
+**Amended 2026-09-30:** the 1.3 builder died on a session rate limit before writing a file (its worktree held a
+branch and nothing else, checked with `git status`); rather than respawn into the same limit, the architect built
+1.3 too. Every story in the epic is therefore Claude-built, which is what the review router is told.
 
 ## Kill switch (Stage 6b)
 Not required (`risk: low`): planning tooling and a CI gate's input; no runtime seam. Rollback is reverting the generator change (S2) or pinning the previous plugin version (S1).

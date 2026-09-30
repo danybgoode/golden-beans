@@ -3,7 +3,7 @@ epic: sketch-specs
 sprint: 1
 title: "The format and the grey wireframe"
 risk: low
-phase: Locking architecture
+phase: In review
 stories_total: 3
 stories:
   - id: S1.1
@@ -12,25 +12,25 @@ stories:
     i_want: "a screen written as a short ordered list of blocks that a script can read"
     so_that: "one description serves the sketch, the review and the contract"
     risk: low
-    status: planned
+    status: done
   - id: S1.2
     title: "Generic vocabulary and project mapping"
     as_a: "a project using the plugin"
     i_want: "a small shared set of block kinds I can map onto my own components"
     so_that: "sketches work in any project, not just this one"
     risk: low
-    status: planned
+    status: done
   - id: S1.3
     title: "The grey renderer"
     as_a: "the product owner"
     i_want: "every `surface` block in a seed drawn as a plain grey wireframe"
     so_that: "I approve a picture, not a text list"
     risk: low
-    status: planned
+    status: done
 ---
 # Sketch specs — a surface spec renders the grey wireframe and becomes the state contract — Sprint 1: The format and the grey wireframe
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 

@@ -51,9 +51,8 @@ epic mode runs a whole epic in one orchestrated session, so a "wave 2 inside the
 boundary. Adding four stories would grow the appetite in flight, which the betting rules forbid. The free supplement
 above gets `intent-match` the part that matters for it (its wireframes become specs); this epic follows it.
 
-## The surface block (proposal; the lock decides the syntax)
+## The surface block (the grammar the lock fixed: epic README D8)
 
-````
 ```surface
 state: ship-features
 route: /app/flags/[projectSlug]
@@ -62,9 +61,11 @@ route: /app/flags/[projectSlug]
 - summary count 4
 - toolbar
 - list columns "feature | state in production | type & risk | on / off"
-- empty "No features yet"   when: empty
 ```
-````
+
+*Amended at the lock (2026-09-30):* the proposal ended with `- empty "No features yet"   when: empty`. A surface is ONE
+state, so the parser refuses `when:`; the empty state is its own block (`state: ship-features-empty`). And the block is
+now a real fence rather than an example inside one, so `sketch-render.mjs` draws it (Sprint 1 walkthrough, step 1).
 
 One block per line, in order, by kind, with only the facts that survive a change of data: the primary action's words,
 a tile or summary count, the list's column words. No values, no row counts, no pixels. That is exactly what a
