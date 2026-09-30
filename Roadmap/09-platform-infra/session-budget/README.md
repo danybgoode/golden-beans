@@ -82,9 +82,10 @@ against the merged tree. Two things `main` had changed since grooming: the build
   (D4), not guessed. "Questions waiting" is the count of in-flight `AskUserQuestion` calls, seen by a
   `tool.call` hook; the engine shows at most one at a time, so the 3+ threshold bites in Cowork, not here.
 - **D9 — One release:** plugin + kit 0.13.0 → **0.14.0**, one `CHANGELOG.md` section.
-- **D10 — Found, not fixed here:** `scripts/session-resume.mjs` and `scripts/session-note.mjs` exist only
-  in `skills/template/scripts/`, not at this repo's root, although the kickoff and WAYS-OF-WORKING name
-  the root path. This run used the template copy. Recorded for the retro; it is not this epic's scope.
+- **D10 — WITHDRAWN (2026-09-30, after close-out):** this claimed `scripts/session-resume.mjs` and
+  `session-note.mjs` were missing at the repo root. They were not: both arrived with #189 and are byte-identical
+  to the template (`check-script-parity`). The claim came from a `find` run on the branch *before* `main` (14
+  commits ahead) was merged in, and it was never re-checked after the merge.
 
 ### Build contract — Sprint 1 (locked by the architect before the builder started)
 - `skills/plugins/golden-frijoles/skills/groom/session-budget.mjs` — pure: `THRESHOLDS`, `sessionVerdict({

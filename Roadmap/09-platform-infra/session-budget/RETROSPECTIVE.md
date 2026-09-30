@@ -37,6 +37,12 @@ _Closed: 2026-09-30_
   - vibe said `Missing MISTRAL_API_KEY`, then worked minutes later after Daniel ran it once with `!`. I routed past it
     instead of asking; Daniel pointed out that vibe is SOP when installed.
 
+- **Re-derive every fact after a merge that moved the base, including the ones you found before it.** I merged
+  `main` into a stale branch and then re-checked the code I was about to change. But a "this file is missing" finding
+  from before the merge went into the lock unchecked, and it was false: the file had arrived in one of the 14 commits
+  I had just merged. A lock that is verified against live code has to be verified against the code *after* the
+  merge.
+
 ## Gaps / follow-ups
 - **Owed to Daniel:** walkthrough steps 2–4 (the line in a real session, the checkpoint flip, a Cowork gate). Only
   the engine raises `session.measure`, so no repo test can show the line drawing.
@@ -44,8 +50,8 @@ _Closed: 2026-09-30_
   The log is local and advisory.
 - **Not verified:** whether the mod's module variables are per session when one engine process hosts several
   sessions.
-- **D10, found and not fixed:** `scripts/session-resume.mjs` and `session-note.mjs` exist only under
-  `skills/template/scripts/`, yet the generated kickoff tells this repo to run the root path.
+- **D10 is withdrawn: there was no gap.** `scripts/session-resume.mjs` and `session-note.mjs` have been at the root
+  since #189. See the learning below.
 - The thresholds are still provisional. They get fitted from the log once real sessions have filled it.
 
 _Intent: yes_
