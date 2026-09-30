@@ -3,7 +3,7 @@ epic: think-skills
 sprint: 2
 title: "Groom reads strategy"
 risk: low
-phase: Shaping
+phase: Building
 stories_total: 3
 stories:
   - id: S2.1
@@ -48,6 +48,23 @@ stories:
 **As** the product owner, **I want** an "is it worth doing?" gap to point at the right coach, **so that** the route leads somewhere real instead of "answer by hand".
 **Acceptance:** The think-chain route's text names `pmf-narrative` / `risk-validation`. Only if `intent-match` S1.2 has shipped; otherwise cut.
 **Risk:** low
+
+## Build contract (locked by the architect before the builder started)
+
+Cites the epic README's C3–C5 and D3, D5, D8, D9 and D10. Nothing here restates a rule that lives there.
+
+1. **2.1 (D5):** `skills/plugins/golden-frijoles/skills/groom/strategy.mjs` plus `strategy.test.mjs`, added to
+   skills-ci's groom test list through `render-skills-ci.mjs`. The test's fixtures are the three S1 templates, read
+   from their skill folders. It covers four cases: folder absent (no output, exit 0), all three present, only one
+   present, and a malformed sync block (the file is named, no crash). Stage 0 in `groom/SKILL.md` gains one sentence.
+   `templates/scope-seed.md` gains the optional line.
+2. **2.2 (D8, C3):** pins only, no walker change. `roadmap-extract` is covered in `skills/template/scripts` and the
+   root, with a fixture root through the extractor's root option or `cwd`, whichever it already supports; the builder
+   checks which. `doc-format` is covered through its exported `checkOneDoc`. Each pin is seen failing once through a
+   walker mutation.
+3. **2.3 (D9):** `ROUTES.think_chain` changes in both copies, `check-script-parity` stays green, and the groom
+   reference line changes with it. `intent.json` is not touched.
+4. **Release (D10):** plugin and kit move to 0.18.0, with a CHANGELOG section.
 
 ## Sprint QA
 - Groom and scaffold tests; a groom dry run with and without `00-strategy/`.

@@ -3,7 +3,7 @@ epic: think-skills
 sprint: 1
 title: "The three skills, with files"
 risk: low
-phase: Shaping
+phase: Building
 stories_total: 3
 stories:
   - id: S1.1
@@ -48,6 +48,26 @@ stories:
 **As** the product owner, **I want** each coach to offer the next, and Risk Validation to use my narrative, **so that** I go from narrative to metric to riskiest bet without retyping.
 **Acceptance:** PMF Narrative ends offering North Star; North Star ends offering Risk Validation (and names `gf north-star set` once S3 ships); Risk Validation reads `pmf-narrative.md` when present and starts from its six dimensions.
 **Risk:** low
+
+## Build contract (locked by the architect before the builder started)
+
+Cites the epic README's C1–C7 and D1–D11. Nothing here restates a rule that lives there.
+
+1. **Files (D2):** `skills/plugins/golden-frijoles/skills/{pmf-narrative,north-star,risk-validation}/SKILL.md` and
+   `…/<name>/templates/<name>.md`. Nothing else under `plugins/` is hand-edited. The adverts are regenerated with
+   `node skills/scripts/render-skill-adverts.mjs`, and `plugin.json` ends up listing 14 skills.
+2. **Text (D1, source per C6):** the account copy's body, verbatim, plus the D1 edits and nothing more.
+   `north-star`'s `description` describes a North Star workshop (its trigger words: "North Star", "input metrics",
+   "leading indicator").
+3. **Contracts (D3):** each template has the D3 frontmatter and headings, and the North Star template's example sync
+   block passes `northStarSyncSchema`. Tests: `skills/scripts/strategy-templates.test.mjs` (added to skills-ci's
+   harness list through `scripts/render-skills-ci.mjs`) and `apps/web/lib/north-star-template.test.ts`. Each is seen
+   failing once by mutating a template.
+4. **Chain (D4):** the offer-next endings. Risk Validation's Step 1 reads the narrative file when it exists. The North
+   Star skill doesn't name `gf north-star set` yet; S3 adds that (D10).
+5. **Release (D10):** plugin and kit move to 0.17.0, with a CHANGELOG section. The gates are `check-release`,
+   `check-skill-scripts`, `check-plugin-leaks`, `render-skill-adverts --check`, `render-skills-ci --check`, and the
+   root CI gate.
 
 ## Sprint QA
 - `render-skill-adverts --check`, `check-skill-scripts`, a template test per contract.

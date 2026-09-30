@@ -10,11 +10,12 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
+- [Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads](../../09-platform-infra/think-skills/README.md) — 09 Platform Infra · 0/7 stories · risk: High · audit-wave-B
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
@@ -64,10 +65,9 @@
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (16)
+## ⬜ Funnel — seeds not yet scaffolded (15)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
-- [Think skills: PMF Narrative → North Star → Deliberate Risk Validation as real, chained skills](seeds/think-skills.md) — Raw · Feature · appetite M · audit-wave-B
 - [Board sinks + scrumban on the Hub: one roadmap projection, many destinations](seeds/board-sinks-and-scrumban.md) — Raw · Feature · appetite M · audit-wave-C
 - [FinOps actuals: agent token and cost usage lands in the engine, attributed to skill and epic](seeds/finops-actuals.md) — Raw · Feature · appetite L · audit-wave-C
 - [Portfolio view: every product in a workspace on the Consider · Operate · Exit loop](seeds/portfolio-view.md) — Raw · Feature · appetite M · audit-wave-C
@@ -83,7 +83,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (4)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -94,6 +94,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
+| Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads | In progress | Scaffolded |
 
 ---
-_Epics: 45 · seeds in funnel: 16 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 46 · seeds in funnel: 15 · status drift: 4. Regenerate with `node scripts/build-order.mjs`._
