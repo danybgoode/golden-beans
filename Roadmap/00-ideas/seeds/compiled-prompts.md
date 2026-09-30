@@ -183,3 +183,26 @@ rails keep their `off | shadow | jev` switch. Every change under `skills/` is a 
 - DSPy 3.4.0 release: https://github.com/stanfordnlp/dspy/releases/tag/3.4.0
 - DSPy, decision-making with Jev types (ReAnchor tunes decision parameters only): https://dspy.ai/current/tutorials/jev_decisions/
 - DSPy ♥ Jev: https://stacktoheap.com/blog/2026/09/25/dspy-heart-jev/
+
+## Wording result (2026-09-30, S2.2; not adopted, by the product owner's call)
+
+The first live run of `optimize/wording.mjs` asked five hand-written candidates for `flag-state-claim`, 795
+questions to `jev-1.13.0`. They were scored on the spike's 5 seeded folds through the real `judgeProse`. The report
+is `optimize/reports/wording-flag-state-claim-2026-09-30.md`.
+
+| Wording | Held-out right | vs current | D6 |
+|---|---|---|---|
+| current | 141/163 | — | — |
+| examples-extended | 146/163 | +5 | passes |
+| running-for-real · needs-production-proof · state-vs-history-short · reader-would-believe | 128–133 | −8 to −13 | lose |
+
+**Not adopted: a win on paper, driven by leakage.** The candidates were written after reading all 163 drafts.
+`examples-extended` passes D6 only because its examples were lifted from the sentences it then fixes: 9 of its 10
+fixes contain a borrowed phrase. Every wording that reframes the question without borrowed examples loses. The
+breaks exposed the rule the labels actually encode: **"shipped" alone is not a release claim; "shipped *to prod*"
+and "ON *in prod*" are.**
+
+**What this means:** the spike's reading holds. This family's error is labels and evidence more than wording. D6
+as written can't stop leakage when the author has seen the folds, so the next attempt needs **drafts the author has
+never seen**. Label the disagreements `jev-report --json` finds, write one candidate that encodes the
+"to/in prod" qualifier without reading those drafts, and score it on them alone.
