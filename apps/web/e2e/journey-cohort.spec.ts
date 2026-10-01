@@ -17,6 +17,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // Entity journeys Sprint 2. The aggregate truth table pins narrowing conversion, current-stage
 // aging, retention and late repair. The HTTP/MCP fixture then proves all external channels call the
@@ -48,7 +49,13 @@ const OPTIONS: JourneyCohortOptions = {
   pageSize: 2,
 }
 
-function fact(subjectId: string, event: string, day: number, tags: Record<string, unknown> = {}, receiptDay = day): JourneyProjectionEvent {
+function fact(
+  subjectId: string,
+  event: string,
+  day: number,
+  tags: Record<string, unknown> = {},
+  receiptDay = day
+): JourneyProjectionEvent {
   return {
     id: crypto.randomUUID(),
     event,
@@ -97,9 +104,33 @@ test('cohort aggregate narrows conversion, computes age percentiles/retention, a
     },
     diagnostics: { relevantEventCount: 10 },
     stages: [
-      { key: 'created', satisfiedCount: 5, atOrBeyondCount: 5, currentCount: 2, missingNextStageCount: 2, medianAgeHours: 120, p90AgeHours: 192 },
-      { key: 'configured', satisfiedCount: 2, atOrBeyondCount: 3, currentCount: 1, missingNextStageCount: 1, medianAgeHours: 168, p90AgeHours: 168 },
-      { key: 'selling', satisfiedCount: 2, atOrBeyondCount: 2, currentCount: 2, missingNextStageCount: null, medianAgeHours: 156, p90AgeHours: 168 },
+      {
+        key: 'created',
+        satisfiedCount: 5,
+        atOrBeyondCount: 5,
+        currentCount: 2,
+        missingNextStageCount: 2,
+        medianAgeHours: 120,
+        p90AgeHours: 192,
+      },
+      {
+        key: 'configured',
+        satisfiedCount: 2,
+        atOrBeyondCount: 3,
+        currentCount: 1,
+        missingNextStageCount: 1,
+        medianAgeHours: 168,
+        p90AgeHours: 168,
+      },
+      {
+        key: 'selling',
+        satisfiedCount: 2,
+        atOrBeyondCount: 2,
+        currentCount: 2,
+        missingNextStageCount: null,
+        medianAgeHours: 156,
+        p90AgeHours: 168,
+      },
     ],
     retention: {
       eligibleCount: 5,
@@ -125,27 +156,38 @@ test('cohort aggregate narrows conversion, computes age percentiles/retention, a
   expect(pageTwo.drilldown).toMatchObject({ subjectIds: ['c', 'd'] })
   expect(pageTwo.drilldown?.nextCursor).not.toBeNull()
 
-  const afterInsertionBeforeCursor = computeJourneyCohort(DEFINITION, [
-    ...truthTableEvents(),
-    fact('aa', 'merchant_created', 2, { source: 'organic' }),
-  ], {
-    ...OPTIONS,
-    cursor: result.drilldown!.nextCursor!,
-  })
+  const afterInsertionBeforeCursor = computeJourneyCohort(
+    DEFINITION,
+    [...truthTableEvents(), fact('aa', 'merchant_created', 2, { source: 'organic' })],
+    {
+      ...OPTIONS,
+      cursor: result.drilldown!.nextCursor!,
+    }
+  )
   expect(afterInsertionBeforeCursor.drilldown?.subjectIds).toEqual(['c', 'd'])
 })
 
 test('late facts repair cohort conversion and retention without a projector', () => {
   const before = computeJourneyCohort(DEFINITION, truthTableEvents(), OPTIONS)
-  const after = computeJourneyCohort(DEFINITION, [
-    ...truthTableEvents(),
-    // Arrives after the cohort window closed, but its effective fact time belongs inside it.
-    fact('b', 'merchant_sold', 5, { region: 'mx' }, 12),
-  ], { ...OPTIONS, asOf: at(13) })
+  const after = computeJourneyCohort(
+    DEFINITION,
+    [
+      ...truthTableEvents(),
+      // Arrives after the cohort window closed, but its effective fact time belongs inside it.
+      fact('b', 'merchant_sold', 5, { region: 'mx' }, 12),
+    ],
+    { ...OPTIONS, asOf: at(13) }
+  )
   expect(before.stages[2].atOrBeyondCount).toBe(2)
   expect(after.stages[2].atOrBeyondCount).toBe(3)
   expect(after.stages[1].missingNextStageCount).toBe(0)
-  expect(after.retention).toMatchObject({ maturedCount: 5, metCount: 3, missedCount: 2, pendingCount: 0, rate: 0.6 })
+  expect(after.retention).toMatchObject({
+    maturedCount: 5,
+    metCount: 3,
+    missedCount: 2,
+    pendingCount: 0,
+    rate: 0.6,
+  })
   expect(after.freshness.latestReceiptAt).toBe(at(12))
 })
 
@@ -198,69 +240,102 @@ test('retention uses exact microsecond deadlines and a matured-only denominator'
 test('no qualifying events, zero cohort subjects, stale source and request failures are distinct', () => {
   const irrelevant = [fact('x', 'merchant_note', 2)]
   expect(computeJourneyCohort(DEFINITION, irrelevant, OPTIONS).populationStatus).toBe('no_qualifying_events')
-  const zeroAndStale = computeJourneyCohort(DEFINITION, [fact('x', 'merchant_created', 1, { source: 'organic' })], {
-    ...OPTIONS,
-    from: at(2),
-    staleAfterHours: 1,
-  })
+  const zeroAndStale = computeJourneyCohort(
+    DEFINITION,
+    [fact('x', 'merchant_created', 1, { source: 'organic' })],
+    {
+      ...OPTIONS,
+      from: at(2),
+      staleAfterHours: 1,
+    }
+  )
   expect(zeroAndStale.populationStatus).toBe('zero_subjects')
   expect(zeroAndStale.freshness.status).toBe('stale')
   const afterWindowOnly = computeJourneyCohort(
     DEFINITION,
     [fact('after', 'merchant_created', 12, { source: 'organic' })],
-    { ...OPTIONS, asOf: at(13) },
+    { ...OPTIONS, asOf: at(13) }
   )
   expect(afterWindowOnly.populationStatus).toBe('no_qualifying_events')
 
   expect(isValidJourneyDrilldown(DEFINITION, 'satisfied:unknown')).toBe(false)
   expect(isValidJourneyDrilldown(DEFINITION, 'missing_next:selling')).toBe(false)
   expect(isValidJourneyDrilldown({ ...DEFINITION, retention: undefined }, 'retention:met')).toBe(false)
-  expect(() => computeJourneyCohort(DEFINITION, truthTableEvents(), {
-    ...OPTIONS,
-    drilldown: 'missing_next:selling',
-  })).toThrow('drilldown is not valid')
+  expect(() =>
+    computeJourneyCohort(DEFINITION, truthTableEvents(), {
+      ...OPTIONS,
+      drilldown: 'missing_next:selling',
+    })
+  ).toThrow('drilldown is not valid')
 
-  expect(parseJourneyCohortRequest({ version: '1', from: at(11), to: at(1), asOf: at(11), timezone: 'UTC' }))
-    .toEqual({ ok: false, error: 'from must be before to' })
-  expect(parseJourneyCohortRequest({ version: '1', from: at(1), to: at(11), asOf: at(11), timezone: 'Not/A_Zone' }).ok)
-    .toBe(false)
-  expect(parseJourneyCohortRequest({ version: '1', from: at(1), to: at(11), asOf: at(11), timezone: 'UTC', cursor: 'garbage' }).ok)
-    .toBe(false)
-  expect(parseJourneyCohortRequest({ version: '1', from: at(1), to: at(11), asOf: at(11), timezone: 'UTC', pageSize: '101' }).ok)
-    .toBe(false)
-  expect(parseJourneyCohortRequest(
-    { version: '1', from: at(1), to: at(12), asOf: at(12), timezone: 'UTC' },
-    Date.parse(at(11)),
-  )).toEqual({ ok: false, error: 'asOf must not be in the future' })
-  expect(parseJourneyCohortRequest(
-    { version: '1', from: at(1), to: at(12), asOf: at(11), timezone: 'UTC' },
-    Date.parse(at(11)),
-  )).toEqual({ ok: false, error: 'to must not be after asOf' })
+  expect(
+    parseJourneyCohortRequest({ version: '1', from: at(11), to: at(1), asOf: at(11), timezone: 'UTC' })
+  ).toEqual({ ok: false, error: 'from must be before to' })
+  expect(
+    parseJourneyCohortRequest({ version: '1', from: at(1), to: at(11), asOf: at(11), timezone: 'Not/A_Zone' })
+      .ok
+  ).toBe(false)
+  expect(
+    parseJourneyCohortRequest({
+      version: '1',
+      from: at(1),
+      to: at(11),
+      asOf: at(11),
+      timezone: 'UTC',
+      cursor: 'garbage',
+    }).ok
+  ).toBe(false)
+  expect(
+    parseJourneyCohortRequest({
+      version: '1',
+      from: at(1),
+      to: at(11),
+      asOf: at(11),
+      timezone: 'UTC',
+      pageSize: '101',
+    }).ok
+  ).toBe(false)
+  expect(
+    parseJourneyCohortRequest(
+      { version: '1', from: at(1), to: at(12), asOf: at(12), timezone: 'UTC' },
+      Date.parse(at(11))
+    )
+  ).toEqual({ ok: false, error: 'asOf must not be in the future' })
+  expect(
+    parseJourneyCohortRequest(
+      { version: '1', from: at(1), to: at(12), asOf: at(11), timezone: 'UTC' },
+      Date.parse(at(11))
+    )
+  ).toEqual({ ok: false, error: 'to must not be after asOf' })
   const serverCaptured = parseJourneyCohortRequest(
     { version: '1', from: at(1), to: at(11), timezone: 'UTC' },
-    Date.parse(at(11)),
+    Date.parse(at(11))
   )
   expect(serverCaptured.ok && serverCaptured.options.asOf).toBe(at(11))
 
   const cursor = computeJourneyCohort(DEFINITION, truthTableEvents(), OPTIONS).drilldown!.nextCursor!
-  expect(parseJourneyCohortRequest({
-    version: '1',
-    from: OPTIONS.from,
-    to: OPTIONS.to,
-    asOf: OPTIONS.asOf,
-    timezone: OPTIONS.timezone,
-    drilldown: 'cohort',
-    cursor,
-  }).ok).toBe(true)
-  expect(parseJourneyCohortRequest({
-    version: '2',
-    from: OPTIONS.from,
-    to: OPTIONS.to,
-    asOf: OPTIONS.asOf,
-    timezone: OPTIONS.timezone,
-    drilldown: 'cohort',
-    cursor,
-  }).ok).toBe(false)
+  expect(
+    parseJourneyCohortRequest({
+      version: '1',
+      from: OPTIONS.from,
+      to: OPTIONS.to,
+      asOf: OPTIONS.asOf,
+      timezone: OPTIONS.timezone,
+      drilldown: 'cohort',
+      cursor,
+    }).ok
+  ).toBe(true)
+  expect(
+    parseJourneyCohortRequest({
+      version: '2',
+      from: OPTIONS.from,
+      to: OPTIONS.to,
+      asOf: OPTIONS.asOf,
+      timezone: OPTIONS.timezone,
+      drilldown: 'cohort',
+      cursor,
+    }).ok
+  ).toBe(false)
 })
 
 function db(): SupabaseClient {
@@ -284,9 +359,15 @@ async function createProject(client: SupabaseClient, label: string) {
   const key = `gb_journey_cohort_${randomBytes(18).toString('hex')}`
   const keyHash = createHash('sha256').update(key).digest('hex')
   const slug = `journey-cohort-${label}-${randomBytes(6).toString('hex')}`
-  const { data, error } = await client.from('projects').insert({ slug, api_key_hash: keyHash }).select('id').single()
+  const { data, error } = await client
+    .from('projects')
+    .insert({ workspace_id: await specWorkspaceId(client), slug, api_key_hash: keyHash })
+    .select('id')
+    .single()
   if (error || !data) throw new Error(`could not create project: ${error?.message}`)
-  const { error: keyError } = await client.from('api_keys').insert({ project_id: data.id, key_hash: keyHash, label: 'cohort spec' })
+  const { error: keyError } = await client
+    .from('api_keys')
+    .insert({ project_id: data.id, key_hash: keyHash, label: 'cohort spec' })
   if (keyError) throw new Error(`could not create key: ${keyError.message}`)
   const token = `gb_connector_${randomBytes(24).toString('base64url')}`
   const { error: tokenError } = await client.from('connector_tokens').insert({ project_id: data.id, token })
@@ -295,7 +376,10 @@ async function createProject(client: SupabaseClient, label: string) {
 }
 
 async function createVersion(client: SupabaseClient, projectId: string, ownerId: string, journeyKey: string) {
-  expect((await client.from('project_members').insert({ project_id: projectId, user_id: ownerId, role: 'owner' })).error).toBeNull()
+  expect(
+    (await client.from('project_members').insert({ project_id: projectId, user_id: ownerId, role: 'owner' }))
+      .error
+  ).toBeNull()
   const { data, error } = await client.rpc('create_journey_version', {
     p_project_id: projectId,
     p_journey_key: journeyKey,
@@ -307,18 +391,20 @@ async function createVersion(client: SupabaseClient, projectId: string, ownerId:
 }
 
 async function insertEvents(client: SupabaseClient, projectId: string, rows: JourneyProjectionEvent[]) {
-  const { error } = await client.from('events').insert(rows.map((row) => ({
-    id: row.id,
-    project_id: projectId,
-    user_id: `journey-cohort-user-${randomBytes(8).toString('hex')}`,
-    event: row.event,
-    tags: row.tags,
-    context_version: 1,
-    subject_type: 'merchant',
-    subject_id: row.subjectId,
-    occurred_at: row.occurredAt,
-    created_at: row.createdAt,
-  })))
+  const { error } = await client.from('events').insert(
+    rows.map((row) => ({
+      id: row.id,
+      project_id: projectId,
+      user_id: `journey-cohort-user-${randomBytes(8).toString('hex')}`,
+      event: row.event,
+      tags: row.tags,
+      context_version: 1,
+      subject_type: 'merchant',
+      subject_id: row.subjectId,
+      occurred_at: row.occurredAt,
+      created_at: row.createdAt,
+    }))
+  )
   if (error) throw new Error(`could not insert events: ${error.message}`)
 }
 
@@ -375,7 +461,7 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
             '2026-01-01T00:00:00Z'::TIMESTAMPTZ + n * INTERVAL '1 microsecond'
           FROM generate_series(1, 50000) AS n
         `,
-        [project.id, shortEvent],
+        [project.id, shortEvent]
       )
     })
 
@@ -397,7 +483,7 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
               created_at = '2026-01-12T00:00:00Z'::TIMESTAMPTZ
           WHERE project_id = $1::UUID
         `,
-        [project.id],
+        [project.id]
       )
     })
     const postWindowOnly = await client.rpc('get_journey_cohort_events', {
@@ -428,7 +514,7 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
               )
           WHERE project_id = $1::UUID
         `,
-        [project.id, longEvent, longSubject],
+        [project.id, longEvent, longSubject]
       )
     })
     const overPayload = await client.rpc('get_journey_cohort_events', {
@@ -453,7 +539,7 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
             'merchant', $3::TEXT, '2026-01-02T00:00:00Z', '2026-01-02T00:00:00Z'
           )
         `,
-        [project.id, longEvent, longSubject],
+        [project.id, longEvent, longSubject]
       )
     })
     const overEvents = await client.rpc('get_journey_cohort_events', {
@@ -467,9 +553,11 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
     expect(overEvents.error?.code).toBe('54000')
     expect(overEvents.error?.message).toContain('event limit exceeded')
 
-    const index = await withMigrationOwner((owner) => owner.query<{ indexdef: string }>(
-      `SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'events_journey_cohort_idx'`,
-    ))
+    const index = await withMigrationOwner((owner) =>
+      owner.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'events_journey_cohort_idx'`
+      )
+    )
     expect(index.rows[0]?.indexdef).toContain('project_id, subject_type, event')
     expect(index.rows[0]?.indexdef).toContain('COALESCE(occurred_at, created_at)')
   } finally {
@@ -477,7 +565,9 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
   }
 })
 
-test('Bearer API and gated MCP return the same isolated versioned cohort with bounded pagination', async ({ request }) => {
+test('Bearer API and gated MCP return the same isolated versioned cohort with bounded pagination', async ({
+  request,
+}) => {
   const client = db()
   const [ownerOne, ownerTwo] = await Promise.all([createOwner(client, 'one'), createOwner(client, 'two')])
   const [one, two] = await Promise.all([createProject(client, 'one'), createProject(client, 'two')])
@@ -565,15 +655,23 @@ test('Bearer API and gated MCP return the same isolated versioned cohort with bo
 
     const wrongVersion = new URLSearchParams(query)
     wrongVersion.set('version', '999')
-    expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?${wrongVersion}`, {
-      headers: { Authorization: `Bearer ${one.key}` },
-    })).status()).toBe(404)
+    expect(
+      (
+        await request.get(`/api/v1/journeys/${journeyKey}/cohort?${wrongVersion}`, {
+          headers: { Authorization: `Bearer ${one.key}` },
+        })
+      ).status()
+    ).toBe(404)
 
     const invalidDrilldown = new URLSearchParams(query)
     invalidDrilldown.set('drilldown', 'satisfied:unknown')
-    expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?${invalidDrilldown}`, {
-      headers: { Authorization: `Bearer ${one.key}` },
-    })).status()).toBe(400)
+    expect(
+      (
+        await request.get(`/api/v1/journeys/${journeyKey}/cohort?${invalidDrilldown}`, {
+          headers: { Authorization: `Bearer ${one.key}` },
+        })
+      ).status()
+    ).toBe(400)
 
     const foreign = await request.get(`/api/v1/journeys/${journeyKey}/cohort?${query}`, {
       headers: { Authorization: `Bearer ${two.key}` },
@@ -585,13 +683,32 @@ test('Bearer API and gated MCP return the same isolated versioned cohort with bo
     expect(unauthedUi.headers().location).toContain('/login')
 
     expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?${query}`)).status()).toBe(401)
-    expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?version=1&from=bad&to=${encodeURIComponent(at(11))}`, {
-      headers: { Authorization: `Bearer ${one.key}` },
-    })).status()).toBe(400)
+    expect(
+      (
+        await request.get(
+          `/api/v1/journeys/${journeyKey}/cohort?version=1&from=bad&to=${encodeURIComponent(at(11))}`,
+          {
+            headers: { Authorization: `Bearer ${one.key}` },
+          }
+        )
+      ).status()
+    ).toBe(400)
 
-    expect((await client.from('connector_tokens').update({ revoked_at: new Date().toISOString() }).eq('token', one.token)).error).toBeNull()
+    expect(
+      (
+        await client
+          .from('connector_tokens')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('token', one.token)
+      ).error
+    ).toBeNull()
     const revoked = await mcpCall(request, one.token, 'get_journey_cohort', {
-      journeyKey, version: versionOne, from: OPTIONS.from, to: OPTIONS.to, asOf: OPTIONS.asOf, timezone: 'UTC',
+      journeyKey,
+      version: versionOne,
+      from: OPTIONS.from,
+      to: OPTIONS.to,
+      asOf: OPTIONS.asOf,
+      timezone: 'UTC',
     })
     expect(revoked.response.status()).toBe(401)
   } finally {

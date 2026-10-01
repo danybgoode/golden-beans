@@ -5,6 +5,7 @@ import { hashCredential } from '@/lib/credential-hash'
 import { readAgentActivity, AGENT_ACTIVITY_ACTIONS } from '@/lib/agent-activity-read'
 import { readPendingConfirmations } from '@/lib/pending-confirmations-read'
 import { requireLocalSupabaseApiUrl, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // app-shell-and-agent-rail · Sprint 1 — the tenancy contract of the two new read seams.
 //
@@ -45,6 +46,7 @@ async function fixtureProject(label: string): Promise<string> {
   const { data, error } = await db()
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(db()),
       slug: `rail-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: hashCredential(`fixture-${crypto.randomUUID()}`),
     })

@@ -1,10 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import {
-  dispatchPendingDeliveries,
-  MAX_CLAIM_BATCH,
-  CLAIMABLE_STATUSES,
-} from '@/lib/delivery-dispatch'
+import { dispatchPendingDeliveries, MAX_CLAIM_BATCH, CLAIMABLE_STATUSES } from '@/lib/delivery-dispatch'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // event-destination-router · Sprint 1, Story 1.2 — transactional outbox + dark delivery gate.
 //
@@ -50,7 +47,7 @@ async function withDestination(
   db: SupabaseClient,
   projectId: string,
   opts: { enabled: boolean; eventFilter: string | null },
-  body: (destinationId: string) => Promise<void>,
+  body: (destinationId: string) => Promise<void>
 ): Promise<void> {
   const name = `spec-dest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   // url+secret always set — an ENABLED destination MUST be deliverable (the enabled⟹deliverable DB
@@ -72,7 +69,10 @@ async function withDestination(
   try {
     await body(data.id as string)
   } finally {
-    await db.from('event_destinations').delete().eq('id', data.id as string)
+    await db
+      .from('event_destinations')
+      .delete()
+      .eq('id', data.id as string)
   }
 }
 
@@ -115,7 +115,11 @@ test('gate ON with no due work → a clean empty pass, not an error', async () =
   const db = dbClient()
   const { data: proj } = await db
     .from('projects')
-    .insert({ slug: `disp-empty-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .insert({
+      workspace_id: await specWorkspaceId(db),
+      slug: `disp-empty-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${Math.random()}`,
+    })
     .select('id')
     .single()
   const pid = proj!.id as string
@@ -139,7 +143,11 @@ test('the DB invariant makes "enabled but undeliverable" impossible — no undra
   const db = dbClient()
   const { data: proj } = await db
     .from('projects')
-    .insert({ slug: `disp-inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .insert({
+      workspace_id: await specWorkspaceId(db),
+      slug: `disp-inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${Math.random()}`,
+    })
     .select('id')
     .single()
   const pid = proj!.id as string
@@ -223,7 +231,11 @@ test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destinati
   const eventName = uniqueEvent('rpc_dedup')
   const { data: proj } = await db
     .from('projects')
-    .insert({ slug: `disp-rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .insert({
+      workspace_id: await specWorkspaceId(db),
+      slug: `disp-rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${Math.random()}`,
+    })
     .select('id')
     .single()
   const pid = proj!.id as string
@@ -247,7 +259,9 @@ test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destinati
     }
 
     // First call: NO destination exists yet, so a fresh insert queues nothing.
-    const first = await db.rpc('ingest_event', args).single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
+    const first = await db
+      .rpc('ingest_event', args)
+      .single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
     expect(first.error).toBeNull()
     expect(first.data!.deduplicated).toBe(false)
     expect(first.data!.queued_count).toBe(0)
@@ -255,30 +269,33 @@ test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destinati
     // NOW enable a matching destination — it did not exist when the event was born. ASSERT the
     // insert succeeded (cross-review, Codex round 10): if it silently failed, "zero deliveries" would
     // be guaranteed and the test would false-pass without ever exercising the re-fan guard.
-    const { error: destErr } = await db
-      .from('event_destinations')
-      .insert({
-        project_id: pid,
-        name: 'rpc-dest',
-        enabled: true,
-        event_filter: eventName,
-        // url+secret required for an ENABLED destination (enabled⟹deliverable invariant).
-        target_url: 'https://receiver.example.test/hook',
-        signing_secret: 'whsec_rpc_dedup_spec_0123456789',
-        secret_set_at: new Date().toISOString(),
-      })
+    const { error: destErr } = await db.from('event_destinations').insert({
+      project_id: pid,
+      name: 'rpc-dest',
+      enabled: true,
+      event_filter: eventName,
+      // url+secret required for an ENABLED destination (enabled⟹deliverable invariant).
+      target_url: 'https://receiver.example.test/hook',
+      signing_secret: 'whsec_rpc_dedup_spec_0123456789',
+      secret_set_at: new Date().toISOString(),
+    })
     expect(destErr).toBeNull()
 
     // Second call, identical key: the RPC's OWN dedup branch. It must NOT re-fan to the new
     // destination — queued_count 0, and ZERO deliveries for the event. Dropping `IF NOT v_dedup`
     // makes this call attach the new destination (a fresh pair, no conflict to mask it) → red.
-    const second = await db.rpc('ingest_event', args).single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
+    const second = await db
+      .rpc('ingest_event', args)
+      .single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
     expect(second.error).toBeNull()
     expect(second.data!.deduplicated).toBe(true)
     expect(second.data!.queued_count).toBe(0)
     expect(second.data!.event_id).toBe(first.data!.event_id)
 
-    const { data: deliveries } = await db.from('event_deliveries').select('id').eq('event_id', first.data!.event_id)
+    const { data: deliveries } = await db
+      .from('event_deliveries')
+      .select('id')
+      .eq('event_id', first.data!.event_id)
     expect(deliveries).toHaveLength(0)
   } finally {
     await db.from('projects').delete().eq('id', pid)
@@ -337,7 +354,10 @@ test('an enabled destination queues exactly one delivery row, atomically with th
   const p1 = await projectIdBySlug(db, 'project-one')
   const eventName = uniqueEvent('one')
   await withDestination(db, p1, { enabled: true, eventFilter: eventName }, async (destId) => {
-    const res = await track(request, PROJECT_ONE_KEY, { userId: `outbox-one-${Date.now()}`, event: eventName })
+    const res = await track(request, PROJECT_ONE_KEY, {
+      userId: `outbox-one-${Date.now()}`,
+      event: eventName,
+    })
     expect(res.status()).toBe(201)
     const { id } = await res.json()
 
@@ -361,7 +381,10 @@ test('a DISABLED destination receives nothing', async ({ request }) => {
   // A disabled destination whose filter WOULD match — proving `enabled` is what gates it, not the
   // filter. The unique name also keeps a concurrent spec's destination out of the assertion.
   await withDestination(db, p1, { enabled: false, eventFilter: eventName }, async () => {
-    const res = await track(request, PROJECT_ONE_KEY, { userId: `outbox-disabled-${Date.now()}`, event: eventName })
+    const res = await track(request, PROJECT_ONE_KEY, {
+      userId: `outbox-disabled-${Date.now()}`,
+      event: eventName,
+    })
     expect(res.status()).toBe(201)
     const { id } = await res.json()
     const { data: deliveries } = await db.from('event_deliveries').select('id').eq('event_id', id)
@@ -436,9 +459,7 @@ test('a replayed ingest converges on the same delivery work, never doubling it',
   })
 })
 
-test('a replay does NOT fan out to a destination enabled AFTER the original ingest', async ({
-  request,
-}) => {
+test('a replay does NOT fan out to a destination enabled AFTER the original ingest', async ({ request }) => {
   // Cross-review round 1 (Codex): the fan-out must run ONLY on a fresh insert. If it re-ran on the
   // dedup path, a client's at-least-once RETRY would retroactively attach the original event to any
   // destination enabled in the meantime — routing it through a filter its canonical event never

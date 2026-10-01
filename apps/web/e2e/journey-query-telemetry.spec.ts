@@ -14,6 +14,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const DEFINITION = {
   entityType: 'merchant',
@@ -39,10 +40,15 @@ async function createOwner(client: SupabaseClient, label: string): Promise<strin
 
 async function createProject(client: SupabaseClient, label: string): Promise<string> {
   const apiKeyHash = createHash('sha256').update(`journey-telemetry-${crypto.randomUUID()}`).digest('hex')
-  const { data, error } = await client.from('projects').insert({
-    slug: `journey-telemetry-${label}-${crypto.randomUUID()}`,
-    api_key_hash: apiKeyHash,
-  }).select('id').single()
+  const { data, error } = await client
+    .from('projects')
+    .insert({
+      workspace_id: await specWorkspaceId(client),
+      slug: `journey-telemetry-${label}-${crypto.randomUUID()}`,
+      api_key_hash: apiKeyHash,
+    })
+    .select('id')
+    .single()
   if (error || !data) throw new Error(`could not create project: ${error?.message}`)
   return data.id as string
 }
@@ -51,7 +57,7 @@ async function createJourney(
   client: SupabaseClient,
   projectId: string,
   ownerId: string,
-  key: string,
+  key: string
 ): Promise<{ journeyId: string; version: number }> {
   const { data, error } = await client.rpc('create_journey_version', {
     p_project_id: projectId,
@@ -75,7 +81,7 @@ async function record(
     kind: 'subject' | 'cohort'
     durationMs: number
     relevantEventCount: number
-  },
+  }
 ) {
   return client.rpc('record_journey_query_observation', {
     p_project_id: input.projectId,
@@ -88,24 +94,26 @@ async function record(
 }
 
 test('materialization tripwires are strict, explicit and fail honest when telemetry is unavailable', () => {
-  expect(assessJourneyMaterialization(
-    JOURNEY_MATERIALIZATION_P95_MS,
-    JOURNEY_MATERIALIZATION_EVENT_COUNT,
-  )).toBe('keep_query_time')
-  expect(assessJourneyMaterialization(
-    JOURNEY_MATERIALIZATION_P95_MS + 0.01,
-    JOURNEY_MATERIALIZATION_EVENT_COUNT,
-  )).toBe('materialization_tripwire_reached')
-  expect(assessJourneyMaterialization(
-    JOURNEY_MATERIALIZATION_P95_MS,
-    JOURNEY_MATERIALIZATION_EVENT_COUNT + 1,
-  )).toBe('materialization_tripwire_reached')
+  expect(
+    assessJourneyMaterialization(JOURNEY_MATERIALIZATION_P95_MS, JOURNEY_MATERIALIZATION_EVENT_COUNT)
+  ).toBe('keep_query_time')
+  expect(
+    assessJourneyMaterialization(JOURNEY_MATERIALIZATION_P95_MS + 0.01, JOURNEY_MATERIALIZATION_EVENT_COUNT)
+  ).toBe('materialization_tripwire_reached')
+  expect(
+    assessJourneyMaterialization(JOURNEY_MATERIALIZATION_P95_MS, JOURNEY_MATERIALIZATION_EVENT_COUNT + 1)
+  ).toBe('materialization_tripwire_reached')
 
-  expect(buildJourneyQueryDiagnostics({
-    queryKind: 'cohort',
-    queryDurationMs: 12.34,
-    relevantEventCount: 13,
-  }, null)).toMatchObject({
+  expect(
+    buildJourneyQueryDiagnostics(
+      {
+        queryKind: 'cohort',
+        queryDurationMs: 12.34,
+        relevantEventCount: 13,
+      },
+      null
+    )
+  ).toMatchObject({
     telemetryStatus: 'unavailable',
     sampleCount: null,
     p50QueryDurationMs: null,
@@ -133,12 +141,7 @@ test('query evidence is project/version-bound, percentile-correct, capped and st
       if (error) throw new Error(`could not create membership: ${error.message}`)
     }
     const journey = await createJourney(client, projectId, owner, 'merchant_activation')
-    const foreignJourney = await createJourney(
-      client,
-      foreignProjectId,
-      foreignOwner,
-      'merchant_activation',
-    )
+    const foreignJourney = await createJourney(client, foreignProjectId, foreignOwner, 'merchant_activation')
 
     let latest: Awaited<ReturnType<typeof record>> | null = null
     for (const durationMs of [100, 200, 300, 400]) {
@@ -193,7 +196,7 @@ test('query evidence is project/version-bound, percentile-correct, capped and st
            FROM public.journey_query_observations
           WHERE project_id = $1 AND journey_id = $2
             AND definition_version = $3 AND query_kind = 'subject'`,
-        [projectId, journey.journeyId, journey.version],
+        [projectId, journey.journeyId, journey.version]
       )
       expect(Number(countRows[0].count)).toBe(JOURNEY_QUERY_SAMPLE_LIMIT)
 
@@ -201,7 +204,7 @@ test('query evidence is project/version-bound, percentile-correct, capped and st
         `SELECT column_name
            FROM information_schema.columns
           WHERE table_schema = 'public' AND table_name = 'journey_query_observations'
-          ORDER BY ordinal_position`,
+          ORDER BY ordinal_position`
       )
       const columns = columnRows.map((row) => row.column_name)
       expect(columns).toEqual([
@@ -222,10 +225,7 @@ test('query evidence is project/version-bound, percentile-correct, capped and st
     try {
       await cleanupJourneyProjects([projectId, foreignProjectId])
     } finally {
-      await Promise.all([
-        client.auth.admin.deleteUser(owner),
-        client.auth.admin.deleteUser(foreignOwner),
-      ])
+      await Promise.all([client.auth.admin.deleteUser(owner), client.auth.admin.deleteUser(foreignOwner)])
     }
   }
 })

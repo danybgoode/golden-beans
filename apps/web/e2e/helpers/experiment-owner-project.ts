@@ -6,6 +6,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './test-db-cleanup'
+import { specWorkspaceId } from './spec-workspace'
 
 // experiments-for-humans — a project of its OWN for an authed experiment spec, with the signed-in
 // fixture user as its owner, one live feature and enough traffic for the planner.
@@ -50,7 +51,7 @@ export async function project(client: SupabaseClient, owner: string): Promise<Fi
   const slug = `results-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const { data, error } = await client
     .from('projects')
-    .insert({ slug, api_key_hash: `h-${crypto.randomUUID()}` })
+    .insert({ workspace_id: await specWorkspaceId(client), slug, api_key_hash: `h-${crypto.randomUUID()}` })
     .select('id')
     .single()
   if (error || !data) throw new Error(`project fixture: ${error?.message}`)

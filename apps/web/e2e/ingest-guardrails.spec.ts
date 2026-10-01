@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createHash, randomBytes } from 'node:crypto'
 import { MAX_TRACK_PAYLOAD_BYTES } from '../lib/quota-window'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // multi-tenant-activation · Sprint 2, Story 2.2 — the isolation guardrails on the shared ingest
 // path: payload cap, per-KEY rate limit, per-PROJECT monthly quota.
@@ -30,12 +31,12 @@ type Tenant = { projectId: string; plaintextKey: string }
 
 async function createTenant(
   db: SupabaseClient,
-  limits: { monthly_event_quota?: number; ingest_rate_per_min?: number } = {},
+  limits: { monthly_event_quota?: number; ingest_rate_per_min?: number } = {}
 ): Promise<Tenant> {
   const slug = `spec-guardrails-${randomBytes(6).toString('hex')}`
   const { data: project, error } = await db
     .from('projects')
-    .insert({ slug, api_key_hash: null, ...limits })
+    .insert({ workspace_id: await specWorkspaceId(db), slug, api_key_hash: null, ...limits })
     .select('id')
     .single()
   if (error || !project) throw new Error(`could not create fixture project: ${error?.message}`)
@@ -216,7 +217,7 @@ test.describe('monthly event quota', () => {
             event: 'big',
             metadata: { blob: 'x'.repeat(MAX_TRACK_PAYLOAD_BYTES + 512) },
           })
-        ).status(),
+        ).status()
       ).toBe(413)
 
       // The tenant's single unit of quota must still be entirely unspent.
@@ -295,7 +296,11 @@ test.describe('one self-serve tenant per creator', () => {
 
     const first = await db
       .from('projects')
-      .insert({ slug: `spec-creator-${randomBytes(6).toString('hex')}`, created_by: creator })
+      .insert({
+        workspace_id: await specWorkspaceId(db),
+        slug: `spec-creator-${randomBytes(6).toString('hex')}`,
+        created_by: creator,
+      })
       .select('id')
       .single()
     expect(first.error, 'the first project for a creator must be allowed').toBeNull()
@@ -303,7 +308,11 @@ test.describe('one self-serve tenant per creator', () => {
     try {
       const second = await db
         .from('projects')
-        .insert({ slug: `spec-creator-${randomBytes(6).toString('hex')}`, created_by: creator })
+        .insert({
+          workspace_id: await specWorkspaceId(db),
+          slug: `spec-creator-${randomBytes(6).toString('hex')}`,
+          created_by: creator,
+        })
         .select('id')
         .single()
       expect(second.error, 'a second project for the same creator must be refused').not.toBeNull()
@@ -318,10 +327,15 @@ test.describe('one self-serve tenant per creator', () => {
     // The three pre-self-serve tenants all carry NULL here. A non-partial unique index would have
     // allowed exactly one of them to exist, which would have broken production on migrate.
     const db = dbClient()
-    const slugs = [`spec-null-${randomBytes(5).toString('hex')}`, `spec-null-${randomBytes(5).toString('hex')}`]
+    const slugs = [
+      `spec-null-${randomBytes(5).toString('hex')}`,
+      `spec-null-${randomBytes(5).toString('hex')}`,
+    ]
     try {
       for (const slug of slugs) {
-        const { error } = await db.from('projects').insert({ slug, created_by: null })
+        const { error } = await db
+          .from('projects')
+          .insert({ workspace_id: await specWorkspaceId(db), slug, created_by: null })
         expect(error, `a second created_by-NULL project must be allowed (${slug})`).toBeNull()
       }
     } finally {

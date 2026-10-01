@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { assertDeliverableUrl, isPrivateOrLoopbackHost } from '@/lib/webhook-url'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // The localhost webhook carve-out is env-gated (off in production). Set/restore around the specs
 // that exercise it, so the "production rejects localhost" spec can observe the OFF behaviour.
@@ -40,7 +41,11 @@ function db(): SupabaseClient {
 async function disposableProject(client: SupabaseClient): Promise<string> {
   const { data, error } = await client
     .from('projects')
-    .insert({ slug: `disp-dest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .insert({
+      workspace_id: await specWorkspaceId(client),
+      slug: `disp-dest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${Math.random()}`,
+    })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create disposable project: ${error?.message}`)
@@ -238,7 +243,7 @@ test('delivery_health() reports counts but NEVER a signing secret or target URL'
   }
 })
 
-test('delivery_health() is scoped to ONE project — another tenant\'s destinations never appear', async () => {
+test("delivery_health() is scoped to ONE project — another tenant's destinations never appear", async () => {
   const client = db()
   const p1 = await disposableProject(client)
   const p2 = await disposableProject(client)
@@ -313,17 +318,42 @@ test('every delivery RPC is service-role-only — the REVOKEs have teeth', async
 
   const zero = '00000000-0000-0000-0000-000000000000'
   const calls: [string, Record<string, unknown>][] = [
-    ['claim_deliveries', { p_project_id: zero, p_limit: 1, p_now: new Date().toISOString(), p_stale_after_ms: 1000 }],
+    [
+      'claim_deliveries',
+      { p_project_id: zero, p_limit: 1, p_now: new Date().toISOString(), p_stale_after_ms: 1000 },
+    ],
     ['projects_with_due_work', { p_now: new Date().toISOString(), p_limit: 1, p_stale_after_ms: 1000 }],
     ['delivery_health', { p_project_id: zero }],
     ['delete_destination', { p_project_id: zero, p_destination_id: zero, p_now: new Date().toISOString() }],
     ['replay_delivery', { p_project_id: zero, p_delivery_id: zero, p_now: new Date().toISOString() }],
-    ['release_deliveries', { p_project_id: zero, p_delivery_ids: [zero], p_claim_token: new Date().toISOString(), p_now: new Date().toISOString() }],
-    ['settle_delivery', {
-      p_delivery_id: zero, p_project_id: zero, p_claim_token: new Date().toISOString(), p_status: 'dead',
-      p_next_attempt_at: null, p_last_error: null, p_attempt_count: 1, p_now: new Date().toISOString(),
-      p_log: false, p_destination_id: zero, p_event_id: zero, p_outcome: 'skipped', p_http_status: null, p_latency_ms: null,
-    }],
+    [
+      'release_deliveries',
+      {
+        p_project_id: zero,
+        p_delivery_ids: [zero],
+        p_claim_token: new Date().toISOString(),
+        p_now: new Date().toISOString(),
+      },
+    ],
+    [
+      'settle_delivery',
+      {
+        p_delivery_id: zero,
+        p_project_id: zero,
+        p_claim_token: new Date().toISOString(),
+        p_status: 'dead',
+        p_next_attempt_at: null,
+        p_last_error: null,
+        p_attempt_count: 1,
+        p_now: new Date().toISOString(),
+        p_log: false,
+        p_destination_id: zero,
+        p_event_id: zero,
+        p_outcome: 'skipped',
+        p_http_status: null,
+        p_latency_ms: null,
+      },
+    ],
   ]
 
   for (const [fn, args] of calls) {
@@ -354,7 +384,9 @@ test('the per-project destination CAP is enforced in-transaction (write-amplific
     const { error: fillErr } = await client.from('event_destinations').insert(rows)
     expect(fillErr).toBeNull()
 
-    const { error } = await client.from('event_destinations').insert({ project_id: pid, name: 'one-too-many' })
+    const { error } = await client
+      .from('event_destinations')
+      .insert({ project_id: pid, name: 'one-too-many' })
     expect(error).not.toBeNull()
     expect(error!.message.toLowerCase()).toContain('destination cap reached')
   } finally {
@@ -371,7 +403,9 @@ test('a soft-deleted destination frees a cap slot and releases its name — the 
     const rows = Array.from({ length: 20 }, (_, i) => ({ project_id: pid, name: `slot-${i}` }))
     expect((await client.from('event_destinations').insert(rows)).error).toBeNull()
     // At the cap.
-    expect((await client.from('event_destinations').insert({ project_id: pid, name: 'blocked' })).error).not.toBeNull()
+    expect(
+      (await client.from('event_destinations').insert({ project_id: pid, name: 'blocked' })).error
+    ).not.toBeNull()
 
     // Soft-delete one — the slot AND the name free up.
     const { error: delErr } = await client
@@ -382,7 +416,9 @@ test('a soft-deleted destination frees a cap slot and releases its name — the 
     expect(delErr).toBeNull()
 
     // A new destination now fits, and can even REUSE the deleted name (live-only uniqueness).
-    expect((await client.from('event_destinations').insert({ project_id: pid, name: 'slot-0' })).error).toBeNull()
+    expect(
+      (await client.from('event_destinations').insert({ project_id: pid, name: 'slot-0' })).error
+    ).toBeNull()
   } finally {
     await client.from('projects').delete().eq('id', pid)
   }

@@ -7,6 +7,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 function db(): SupabaseClient {
   requireTestDatabaseUrl()
@@ -20,7 +21,11 @@ async function createProject(client: SupabaseClient, label: string) {
   const keyHash = createHash('sha256').update(key).digest('hex')
   const { data, error } = await client
     .from('projects')
-    .insert({ slug: `event-catalog-${label}-${randomBytes(6).toString('hex')}`, api_key_hash: keyHash })
+    .insert({
+      workspace_id: await specWorkspaceId(client),
+      slug: `event-catalog-${label}-${randomBytes(6).toString('hex')}`,
+      api_key_hash: keyHash,
+    })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create event catalog project: ${error?.message}`)
