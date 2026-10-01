@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 1
 title: "One stage resolver"
 risk: high
-phase: Shaping
+phase: Building
 stories_total: 5
 stories:
   - id: S1.1
@@ -44,11 +44,23 @@ stories:
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 1: One stage resolver
 
-**Status:** ⬜ not started
+**Status:** 🏗 In progress
 
-## Build contract (to be locked by the architect before the builder starts)
-- D1–D6 from the README, verified against live code: the template extractor (410 lines) vs this repo's delegating one, the branch resolver in `build-state.mjs` (reuse it, don't write a second parser), and the push schema (confirm the envelope isn't `.strict()`).
-- Query the live roadmap: run the resolver over this repo and list every initiative whose new stage differs from today's board, out loud, before S1.5 lands.
+## Build contract (locked by the architect before the builder started — README § Architecture lock)
+- **S1.1** — D13 is the rule, verbatim; D2's placement. `branchCandidates`/`parseBranch` move from `build-state.mjs`
+  to `lib/work-branch.mjs` (build-state re-exports them, so its spec and the vendored hook keep working).
+  `roadmap-status-buckets.mjs` re-exports `STAGES`. Fixtures: one per stage plus every D13 hard case (stacked
+  `-s2` ready + `-s3` no PR, merged-and-kept branch, deleted branch, queued seed, archived epic, shipped epic with a
+  stale branch, merged-not-closed, paused between sprints).
+- **S1.2** — D14 (three fact modes, the snapshot holds facts), D15 (one extractor), D21 (the fields). One `git
+  ls-remote` and one `gh pr list` per run, asserted with stubs. The kickoff comes through D17.
+- **S1.3** — D18 (the workflow), C6 + D21 (`board` in the schema AND stored), D16 (skip an unchanged write).
+  Schema spec: a v1 payload from before this epic and a new one both pass; `board` round-trips.
+- **S1.4** — D17. The template's first step creates and pushes `feat/<slug>`; the per-sprint kickoff pushes
+  `feat/<slug>-s<N>`.
+- **S1.5** — C3 (committed file is docs-only; `--live` prints) and C4 (doc-format is not touched).
+- **Live run, out loud, before S1.5 lands:** the resolver over this repo vs today's BUILD-ORDER.md, every
+  difference listed in this file.
 
 ## Stories
 
@@ -91,7 +103,7 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → Six sections in order: To groom · Grooming · Ready to build · Building · QA · Shipped.
 3. Generate a kickoff: `node skills/plugins/golden-frijoles/skills/groom/emit-epic-kickoff.mjs --epic cms-integration-spike | head -5`.
    → The first step creates and pushes `feat/cms-integration-spike`.
-4. Mark any open epic PR "Ready for review" on GitHub, wait for the `roadmap-push` run to finish, then open https://goldenfrijoles.com/hub/golden-frijoles.
+4. Mark any open epic PR "Ready for review" on GitHub, wait for the `roadmap-push` run to finish, then open https://goldenfrijoles.com/hub/golden-beans-demo.
    → The freshness line shows a push from that event (a minute ago).
 
 If any step fails, note the step number + what you saw — that's the bug report.

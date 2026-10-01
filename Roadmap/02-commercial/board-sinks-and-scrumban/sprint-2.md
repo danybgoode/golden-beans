@@ -39,9 +39,14 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-- D7/D8 from the README. The Board tab is a fourth **hub** tab; DD2 (the hub is not a console section) holds.
-- The `surface` blocks in the seed are the approved design and the contract; register them with the state contract before building the page.
+## Build contract (locked by the architect before the builder started — README § Architecture lock)
+- D7, D8, D19 (the Hub groups, never computes), D21 (the row fields it reads). `HubTab` gains `board`, ordered
+  Roadmap · Board · Horizon · Report; DD2 holds (a fourth *hub* tab, not a console section).
+- D23: `hub-board`, `hub-board-card`, `hub-board-empty` registered as `surfaces/*.surface`; the route-manifest row
+  cites `hub-board`; approval lines are the product owner's.
+- C1/C2: the self-tenant is `golden-beans-demo` and its board is public; gating is asserted on a non-demo slug.
+- C10: share links do not reach the board in v1.
+- Commands: `lib/stage-commands.ts`, one map keyed by stage, the `SESSION-KICKOFFS.md` verbs.
 
 ## Stories
 
@@ -73,7 +78,7 @@ stories:
 ## Sprint 2 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com   (or the preview URL while testing pre-merge)
 
-1. Go to https://goldenfrijoles.com/hub/golden-frijoles/board **(auth path — owed to Daniel by name)**.
+1. Go to https://goldenfrijoles.com/hub/golden-beans-demo/board (the demo project — public by design, C2).
    → Six columns: To groom · Grooming · Ready to build · Building · QA · Shipped, and an answer line naming the next pull.
 2. Click the first card in Ready to build.
    → A drawer opens with its goal, sprints, docs and a "Copy kickoff prompt" button.
@@ -81,7 +86,7 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → The same text `emit-epic-kickoff --epic <slug>` prints.
 4. Click the Spike chip.
    → Only spikes remain; the URL now carries `?type=spike`.
-5. Open https://goldenfrijoles.com/hub/golden-frijoles/board in a private window.
-   → You are asked to sign in (the board is not public).
+5. In a private window, open https://goldenfrijoles.com/hub/golden-beans/board (a project that is NOT the demo).
+   → You are sent to sign in. (The demo's board stays public — C2.)
 
 If any step fails, note the step number + what you saw — that's the bug report.
