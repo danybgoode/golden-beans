@@ -46,7 +46,10 @@ export function section(text, heading) {
   const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
   if (start === -1) return null;
   const end = lines.findIndex((line, i) => i > start && line.startsWith('## '));
-  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim();
+  return lines
+    .slice(start + 1, end === -1 ? undefined : end)
+    .join('\n')
+    .trim();
 }
 
 /** The first column and the second column of each body row of the first table in `body`. */
@@ -54,7 +57,13 @@ function tableRows(body) {
   const rows = body
     .split('\n')
     .filter((line) => line.trim().startsWith('|'))
-    .map((line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim()));
+    .map((line) =>
+      line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((cell) => cell.trim())
+    );
   return rows.slice(2).filter((cells) => cells.length >= 2); // drop the header row and the --- row
 }
 
@@ -64,14 +73,15 @@ function labelled(body, label) {
   return match ? match[1].trim() : null;
 }
 
-/** A placeholder the coach has not filled — `<one of the six…>`, or `High · Low`. */
-const unfilled = (value) => !value || /^<.*>$/.test(value) || value === 'High · Low';
+/** A value the coach has not filled in: missing, or still the template's `<…>` placeholder. */
+const unfilled = (value) => !value || /^<.*>$/.test(value);
 
 export function parseNorthStar(text) {
   const body = section(text, 'Sync payload');
   if (body === null) throw new Error('no "## Sync payload" section');
   const fences = [...body.matchAll(/^```json\n([\s\S]*?)\n```$/gm)];
-  if (fences.length !== 1) throw new Error(`expected one json block under "## Sync payload", found ${fences.length}`);
+  if (fences.length !== 1)
+    throw new Error(`expected one json block under "## Sync payload", found ${fences.length}`);
   let payload;
   try {
     payload = JSON.parse(fences[0][1]);
@@ -83,10 +93,13 @@ export function parseNorthStar(text) {
   if (!metric || typeof metric.key !== 'string' || !Array.isArray(inputs)) {
     throw new Error('the json block has no metric.key or no inputs list');
   }
+  // A draft straight from the template must not turn `<input_key>` into an input a pitch claims to move.
   return {
-    metric: { key: metric.key, name: typeof metric.name === 'string' ? metric.name : metric.key },
+    metric: unfilled(metric.key)
+      ? null
+      : { key: metric.key, name: typeof metric.name === 'string' ? metric.name : metric.key },
     inputs: inputs
-      .filter((input) => input && typeof input.key === 'string')
+      .filter((input) => input && typeof input.key === 'string' && !unfilled(input.key))
       .map((input) => ({ key: input.key, name: typeof input.name === 'string' ? input.name : input.key })),
   };
 }
@@ -98,7 +111,12 @@ export function parseRiskValidation(text) {
   const hypothesis = domino === null ? null : labelled(domino, 'Hypothesis');
   return {
     domino: unfilled(dimension) ? null : { dimension, hypothesis: unfilled(hypothesis) ? null : hypothesis },
-    lowConviction: map === null ? [] : tableRows(map).filter(([, conviction]) => /^low$/i.test(conviction)).map(([d]) => d),
+    lowConviction:
+      map === null
+        ? []
+        : tableRows(map)
+            .filter(([, conviction]) => /^low$/i.test(conviction))
+            .map(([d]) => d),
   };
 }
 
@@ -154,8 +172,12 @@ export function formatStrategy({ files }) {
     if (f.problem) {
       out.push(`${head} — could not read: ${f.problem}`);
     } else if (f.kind === 'north-star') {
-      out.push(`${head} — North Star: ${f.metric.key} ("${f.metric.name}")`);
-      out.push(`    inputs a seed can move: ${f.inputs.map((i) => `${i.key} ("${i.name}")`).join(' · ') || 'none'}`);
+      out.push(
+        `${head} — North Star: ${f.metric ? `${f.metric.key} ("${f.metric.name}")` : 'not filled in yet'}`
+      );
+      out.push(
+        `    inputs a seed can move: ${f.inputs.map((i) => `${i.key} ("${i.name}")`).join(' · ') || 'none'}`
+      );
     } else if (f.kind === 'risk-validation') {
       const domino = f.domino
         ? `${f.domino.dimension}${f.domino.hypothesis ? ` — "${f.domino.hypothesis}"` : ''}`

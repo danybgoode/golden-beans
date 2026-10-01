@@ -62,8 +62,10 @@ Cites the epic README's C3–C5 and D3, D5, D8, D9 and D10. Nothing here restate
    root, with a fixture root through the extractor's root option or `cwd`, whichever it already supports; the builder
    checks which. `doc-format` is covered through its exported `checkOneDoc`. Each pin is seen failing once through a
    walker mutation. **Deviation, said out loud (the build):** no walker mutation exists to observe. A flat file is skipped
-   twice over (it isn't a directory, and it has no README), so no plausible one-line change to a walker picks it up.
-   Each pin is seen failing on the D8 violation instead: a strategy subfolder with a `README.md`. The template's
+   twice over (it isn't a directory, and it has no README), so no plausible one-line change to the extractor's or the
+   board's walk picks it up. Each pin is seen failing on the D8 violation instead: a strategy subfolder with a
+   `README.md`. doc-format's per-file path is the exception: widening its sprint-file match to `/\.md$/` does turn its
+   `--files` pin red (fresh review, #215). The template's
    extractor and doc-format run through `GF_PROJECT_ROOT`. This repo's `roadmap-to-notion.mjs` ignores that variable, so
    it runs from a temp copy (`scripts/roadmap-to-notion.strategy.test.mjs`).
 3. **2.3 (D9):** `ROUTES.think_chain` changes in both copies, `check-script-parity` stays green, and the groom

@@ -6,9 +6,10 @@
 // a flat file is neither a directory nor has a README. These are PINS of that property, not fixes: each runs the real
 // tool against a fixture project twice, with and without the folder, and requires identical output.
 //
-// Why the failing run is a FIXTURE mutation, not a walker mutation: no plausible one-line walker change picks up a
-// flat file — it is skipped twice over (not a directory; no README). What CAN break the property is the contract
-// itself being broken, so the guard is proven with the D8 violation: a strategy SUBFOLDER that carries a README.md.
+// Each pin is proven able to fail on the D8 violation, a strategy SUBFOLDER that carries a README.md, because the
+// extractor and the board skip a flat file twice over (it isn't a directory, and it has no README), so no one-line
+// change to their walk picks it up. doc-format's per-file path is the exception: widening its sprint-file match
+// (`/^sprint-\d+\.md$/` to `/\.md$/`) does turn its `--files` pin red (fresh review, #215).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -122,6 +123,8 @@ test('build-order: the board is byte-identical with a flat Roadmap/00-strategy/'
 test('doc-format: strategy files are not a doc type it checks, in the full walk or by name', () => {
   const report = (root) => tool(root, 'doc-format.mjs').out;
   assert.equal(report(fixture('flat')), report(fixture(null)));
+  // The failing direction: a strategy subfolder with a README is walked as an epic and its doc is checked.
+  assert.notEqual(report(fixture('subfolder')), report(fixture(null)));
   for (const name of Object.keys(STRATEGY)) {
     const root = fixture('flat');
     const { status, out } = tool(root, 'doc-format.mjs', ['--check', '--files', `Roadmap/00-strategy/${name}`]);

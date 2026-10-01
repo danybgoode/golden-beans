@@ -73,10 +73,7 @@ needs it (each stage names its file).
 Read, in order: `Roadmap/README.md` (the poster — **overlap check lives here**), `Roadmap/WAYS-OF-WORKING.md`
 (cadence, DoR/DoD, review, escalate triggers), `Roadmap/LEARNINGS.md`, the relevant macro-section README
 once the domain is known, and team memory if the project keeps one. State in one line what you loaded.
-If the project has a `Roadmap/00-strategy/` folder (left by the `pmf-narrative`, `north-star` and `risk-validation`
-coaches), run `node "$GROOM/strategy.mjs"` (find `$GROOM` with the block under *Locate the generators*) and keep what it
-prints: the pitch gets one line naming the input metric the seed moves and the dimension it tests. If it prints
-nothing, say nothing about strategy and leave the line out.
+With a `Roadmap/00-strategy/` folder, run `node "$GROOM/strategy.mjs"` for the pitch's Moves · Tests line (`references/strategy.md`).
 
 ## Stage 1 — Capture
 Take the brain-dump as given (or read it from `seeds/`). Mirror it back in one sentence — *"You want \<X\>
@@ -140,9 +137,8 @@ user story with plain acceptance checks, grouped into sprints, naming its QA sta
 ## Stage 6 — Risk-tier every story
 **high** = money (payments, checkout, fulfillment), auth and authorization boundaries, tenancy, DB
 migrations, shared infra; **low** = docs/copy, non-commerce UI, additive agent tools behind auth, tests, the
-rest; unsure means high. The tier selects
-the review scope (WAYS-OF-WORKING → *Review & merge*). The builder's escalate triggers are the ONE list in
-WAYS-OF-WORKING → *Escalate, don't guess* — reference it, never restate it here.
+rest; unsure means high. The tier selects the review scope (WAYS-OF-WORKING → *Review & merge*). The builder's
+escalate triggers are the ONE list in WAYS-OF-WORKING → *Escalate, don't guess* — reference it, never restate it here.
 
 ### Stage 6b — Flag decision for a `risk: high` epic
 **Does the product owner want a flag? Default no.** Record the answer in the seed; if yes, follow `references/kill-switch.md` — the mechanism is **Golden Frijoles** (`gf flags create`), with polarity · seam · **activation** · runtime placement. If the project has no provider linked, `node scripts/preflight.mjs` prints the two commands that fix it.

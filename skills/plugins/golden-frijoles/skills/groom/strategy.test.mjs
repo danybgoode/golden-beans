@@ -19,7 +19,8 @@ function project(files = {}) {
   const root = mkdtempSync(join(tmpdir(), 'groom-strategy-'));
   if (files === null) return root; // no Roadmap/00-strategy at all
   mkdirSync(join(root, 'Roadmap', '00-strategy'), { recursive: true });
-  for (const [name, text] of Object.entries(files)) writeFileSync(join(root, 'Roadmap', '00-strategy', name), text);
+  for (const [name, text] of Object.entries(files))
+    writeFileSync(join(root, 'Roadmap', '00-strategy', name), text);
   return root;
 }
 
@@ -34,7 +35,10 @@ const filledNorthStar = () =>
 
 const filledRisk = () =>
   template('risk-validation')
-    .replace('**Dimension:** <one of the six, named exactly as in the tables above>', '**Dimension:** Business model')
+    .replace(
+      '**Dimension:** <one of the six, named exactly as in the tables above>',
+      '**Dimension:** Business model'
+    )
     .replace(/\*\*Hypothesis:\*\* <[^>]+>/, '**Hypothesis:** Teams pay per seat for planning')
     .replace('| Business model | High · Low | |', '| Business model | Low | no pre-sales yet |')
     .replace('| Growth strategy | High · Low | |', '| Growth strategy | Low | |');
@@ -78,7 +82,10 @@ test('all three files: the inputs a seed can move, the highest domino, and the p
 
   const out = run(root);
   assert.equal(out.status, 0);
-  assert.match(out.stdout, /inputs a seed can move: activated_projects \("Activated projects"\) · seeds_groomed/);
+  assert.match(
+    out.stdout,
+    /inputs a seed can move: activated_projects \("Activated projects"\) · seeds_groomed/
+  );
   assert.match(out.stdout, /highest domino: Business model — "Teams pay per seat for planning"/);
   assert.match(out.stdout, /^Pitch line: Moves: <input key> · Tests: <dimension>/m);
 });
@@ -119,4 +126,15 @@ test('an unreadable strategy file is reported, and the others are still read', (
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /north-star\.md — could not read: /);
   assert.match(result.stdout, /highest domino: Business model/);
+});
+
+test('an unfilled north-star template yields no inputs a pitch could claim to move', () => {
+  const root = project({ 'north-star.md': template('north-star') });
+  const [ns] = readStrategy(root).files;
+  assert.equal(ns.metric, null);
+  assert.deepEqual(ns.inputs, []);
+  const out = formatStrategy({ files: [ns] });
+  assert.match(out, /North Star: not filled in yet/);
+  assert.match(out, /inputs a seed can move: none/);
+  assert.doesNotMatch(out, /<input_key>|<metric_key>/);
 });
