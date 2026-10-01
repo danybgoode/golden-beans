@@ -99,11 +99,24 @@ export default async function AppHome({
           // The provisioning empty state. A brand-new user must not meet a wall of zeroes
           // (sprint-3.md, step 6) — Today renders one project's numbers, and with no project there
           // are none to render.
+          // workspaces S2.3 — the approved `switcher-grouped-empty` state. The action is the provisioning RETRY route,
+          // so it is offered only while signup is live: with signup dark that route sends you straight back here,
+          // and a button that goes nowhere is worse than no button.
           <>
-            <PageHead title="Your projects" lede="You are signed in, and not a member of anything yet." />
+            <PageHead
+              title="Today"
+              lede="You are signed in, and not a member of any project yet."
+              actions={
+                isSignupEnabled() ? (
+                  <a className="ds-btn ds-btn--primary" href="/app/provision">
+                    Create your first project
+                  </a>
+                ) : undefined
+              }
+            />
             <Empty
-              title="No project yet"
-              body="Ask an owner to add you to theirs, or create one once self-serve signup is live. Nothing on this page can be shown until there is a project to show it for."
+              title="Your workspace has no projects yet."
+              body="Nothing on this page can be shown until there is a project to show it for. Ask an owner to add you to theirs, or create your own."
             />
           </>
         ) : (

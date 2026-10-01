@@ -69,6 +69,10 @@ export type ConsoleTab = {
 
 export type ConsoleProjectChoice = {
   slug: string
+  /** The viewer's role in THIS project — the switcher's second column (workspaces S2.3, the `switcher-grouped` state). */
+  role: string
+  /** The name of the workspace the project lives in — the switcher groups by it (workspaces S2.3). */
+  workspace: string
   /**
    * Where switching to this project lands you: the SAME section you are reading now, if that
    * project entitles it, and `/app` otherwise.
@@ -121,7 +125,7 @@ export function buildConsoleHeader(input: {
   activeSection: ShellSection
   activeProjectSlug: string
   /** Every project the viewer belongs to, with their role in each — the switcher's contents (D1). */
-  projects: readonly { slug: string; role: string }[]
+  projects: readonly { slug: string; role: string; workspace: { name: string } }[]
   gates: ProjectSurfaceGates
 }): ConsoleHeader {
   const activeProject = input.projects.find((project) => project.slug === input.activeProjectSlug)
@@ -182,10 +186,39 @@ export function buildConsoleHeader(input: {
             }),
             input.activeSection
           )
-    return { slug: project.slug, href: sectionForProject ?? TODAY_HREF, current }
+    return {
+      slug: project.slug,
+      role: project.role,
+      workspace: project.workspace.name,
+      href: sectionForProject ?? TODAY_HREF,
+      current,
+    }
   })
 
   return { tabs, projects }
+}
+
+export type ConsoleProjectGroup = { workspace: string; projects: ConsoleProjectChoice[] }
+
+/**
+ * The switcher's contents, grouped under the workspace each project lives in — workspaces S2.3, the approved
+ * `switcher-grouped` state ("Projects are grouped by workspace").
+ *
+ * Groups are ordered by name so the menu reads the same on every render; projects keep the order they were handed,
+ * which is the order the menu always had. Grouping is a RENDER of the same list, never a second source: every choice
+ * here came from `getUserProjects`, which has already dropped any project outside the viewer's workspaces (lock D9),
+ * and no click is added — each project is still one link.
+ */
+export function groupProjectChoices(projects: readonly ConsoleProjectChoice[]): ConsoleProjectGroup[] {
+  const groups = new Map<string, ConsoleProjectChoice[]>()
+  for (const project of projects) {
+    const group = groups.get(project.workspace)
+    if (group) group.push(project)
+    else groups.set(project.workspace, [project])
+  }
+  return [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([workspace, members]) => ({ workspace, projects: members }))
 }
 
 /**

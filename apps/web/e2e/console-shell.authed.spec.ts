@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory'
+import { createClient } from '@supabase/supabase-js'
+import { randomBytes } from 'node:crypto'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // console-ia-overhaul · Sprint 1. The signed-in shell, in a real browser.
 //
@@ -817,3 +820,66 @@ test.describe('the console shell', () => {
 //
 // **What is therefore still uncovered:** that both call sites actually ASK that predicate. A future
 // edit re-introducing a separate condition on either side would not be caught by any test here.
+
+// ── workspaces S2.3 — the switcher groups projects by workspace (the approved `switcher-grouped` state) ─────────────
+test.describe('the grouped project switcher', () => {
+  test('two projects in two workspaces render as two named groups, each row "Project | Role", one link per project', async ({
+    page,
+  }) => {
+    const tenant = readTenantRecord()
+    if (!tenant?.projectId) throw new Error('the grouped switcher smoke requires the auth-setup project')
+    const url = process.env.SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set')
+    const db = createClient(url, key, { auth: { persistSession: false } })
+
+    const { data: own } = await db
+      .from('projects')
+      .select('slug, workspaces(name)')
+      .eq('id', tenant.projectId)
+      .single()
+    const ownWorkspace = (own?.workspaces as unknown as { name: string } | null)?.name
+    if (!own || !ownWorkspace) throw new Error('the fixture tenant has no workspace')
+
+    const otherWorkspace = await specWorkspaceId(db, 'grouped switcher')
+    const otherSlug = `ws-switcher-${randomBytes(5).toString('hex')}`
+    const { data: other } = await db
+      .from('projects')
+      .insert({ slug: otherSlug, api_key_hash: null, workspace_id: otherWorkspace })
+      .select('id')
+      .single()
+    try {
+      // A MEMBER of the second project — the trigger places them inside its workspace, so it is legitimately theirs.
+      await db
+        .from('project_members')
+        .insert({ user_id: tenant.userId, project_id: other!.id, role: 'member' })
+
+      await page.goto('/app')
+      const switcher = page.locator('.ds-shell-switcher')
+      await switcher.locator('summary').click()
+      const menu = switcher.locator('.ds-shell-menu')
+
+      await expect(menu.locator('section')).toHaveCount(2)
+      const mine = menu.locator('section', { has: page.locator('p', { hasText: ownWorkspace }) })
+      const theirs = menu.locator('section', {
+        has: page.locator('p', { hasText: 'grouped switcher fixtures' }),
+      })
+      await expect(mine.locator('a')).toHaveCount(1)
+      await expect(mine.locator('a')).toContainText(own.slug as string)
+      await expect(mine.locator('.ds-shell-role')).toHaveText('owner')
+      await expect(theirs.locator('a')).toHaveCount(1)
+      await expect(theirs.locator('a')).toContainText(otherSlug)
+      await expect(theirs.locator('.ds-shell-role')).toHaveText('member')
+      await expect(menu.locator('.ds-shell-note')).toHaveText(
+        'Projects are grouped by workspace. A workspace is the boundary your data never crosses.'
+      )
+
+      // No extra click: the row IS the link, straight to that project's Today.
+      await expect(theirs.locator('a')).toHaveAttribute('href', new RegExp(`project=${otherSlug}`))
+    } finally {
+      await db.from('project_members').delete().eq('project_id', other!.id)
+      await db.from('projects').delete().eq('id', other!.id)
+      await db.from('workspaces').delete().eq('id', otherWorkspace)
+    }
+  })
+})

@@ -16,6 +16,8 @@ type WhoamiBody = {
   account: { userId: string; email: string | null }
   credential: { id: string; label: string }
   projects: Array<{ slug: string; role: string }>
+  /** workspaces S2.3. OPTIONAL: a server older than that release does not send it, and this CLI must still work there. */
+  workspaces?: Array<{ name: string; role: string }>
 }
 
 /**
@@ -176,6 +178,7 @@ export const whoamiCommand: Command = {
     }
 
     const { account, credential, projects } = result.body
+    const workspaces = result.body.workspaces ?? []
     context.emit.ok(
       {
         account,
@@ -186,10 +189,13 @@ export const whoamiCommand: Command = {
         tokenSource: context.auth.source,
         activeProject: context.auth.activeProject,
         projects,
+        workspaces,
       },
       [
         `${account.email ?? account.userId}  on ${context.api!.baseUrl}`,
         `credential: ${credential.label} (from ${describeSource(context.auth.source)})`,
+        // The tenant (workspaces S2.3): one line per workspace, so a person in two sees both.
+        ...workspaces.map((workspace) => `workspace: ${workspace.name}`),
         `active project: ${context.auth.activeProject ?? 'none — run `gf projects use <slug>`'}`,
         '',
         table(

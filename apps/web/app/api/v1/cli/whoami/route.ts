@@ -2,6 +2,7 @@ import 'server-only'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { cliError, cliOk, cliUserProjects, requireCliAccount } from '@/lib/cli-auth'
+import { getUserWorkspaces } from '@/lib/workspace'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 
 // golden-frijoles-cli · Sprint 1, Story 1.2 — `gf whoami`.
@@ -41,9 +42,12 @@ export async function GET(req: NextRequest) {
   if (account instanceof NextResponse) return account
 
   try {
-    const [email, projects] = await Promise.all([
+    const [email, projects, workspaces] = await Promise.all([
       accountEmail(account.userId),
       cliUserProjects(account.userId),
+      // workspaces S2.3 — the tenant, where `gf whoami` already looks. getUserWorkspaces THROWS on a query failure
+      // for the same reason getUserProjects does, and lands in the same 500 below.
+      getUserWorkspaces(account.userId),
     ])
     return cliOk({
       account: { userId: account.userId, email },
@@ -51,6 +55,7 @@ export async function GET(req: NextRequest) {
       projects: projects
         .map((project) => ({ slug: project.slug, role: project.role }))
         .sort((left, right) => left.slug.localeCompare(right.slug)),
+      workspaces: workspaces.map((workspace) => ({ name: workspace.name, role: workspace.role })),
     })
   } catch (err) {
     // getUserProjects THROWS on a query failure rather than returning [], deliberately: an empty

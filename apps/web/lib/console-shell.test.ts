@@ -44,8 +44,14 @@ registerHooks({
   },
 })
 
-const { buildConsoleHeader, getSectionEntryHref, railLinksFor, shellRendersAccountMenu, TODAY_HREF } =
-  await import('./console-shell.ts')
+const {
+  buildConsoleHeader,
+  getSectionEntryHref,
+  groupProjectChoices,
+  railLinksFor,
+  shellRendersAccountMenu,
+  TODAY_HREF,
+} = await import('./console-shell.ts')
 type ShellSection = import('./console-shell.ts').ShellSection
 
 const allGatesOpen: ProjectSurfaceGates = {
@@ -71,7 +77,8 @@ const previewGates: ProjectSurfaceGates = {
   // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
 }
 
-const owner = [{ slug: 'miyagisanchez', role: 'owner' }]
+const WORKSPACE = { name: "Daniel's products" }
+const owner = [{ slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE }]
 
 function header(section: ShellSection, gates = allGatesOpen, projects = owner, slug = 'miyagisanchez') {
   return buildConsoleHeader({
@@ -205,7 +212,9 @@ test('a member DOES see Setup now, because Connect your agent is member-readable
     role: 'member',
     gates: allGatesOpen,
   })
-  const tabs = header('home', allGatesOpen, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
+  const tabs = header('home', allGatesOpen, [
+    { slug: 'miyagisanchez', role: 'member', workspace: WORKSPACE },
+  ]).tabs
   assert.deepEqual(
     tabs.map((tab) => tab.id),
     ['today', 'measure', 'ship', 'setup']
@@ -229,7 +238,7 @@ test('Today always renders, even when every gate is closed and the viewer owns n
     'journey-projections': false,
     signals: false,
   }
-  const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
+  const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member', workspace: WORKSPACE }]).tabs
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
   // part of this assertion: Today's presence is not an artefact of everything else surviving too.
   assert.ok(tabs.some((tab) => tab.id === 'today'))
@@ -240,8 +249,8 @@ test('Today always renders, even when every gate is closed and the viewer owns n
 
 test('the switcher lists every project the viewer belongs to, marking the active one', () => {
   const { projects } = header('ship', allGatesOpen, [
-    { slug: 'miyagisanchez', role: 'owner' },
-    { slug: 'acme', role: 'member' },
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
   ])
   assert.deepEqual(
     projects.map((project) => [project.slug, project.current]),
@@ -257,8 +266,8 @@ test('switching project lands on the SAME section, resolved with THAT project’
   // Reading Setup in the first, the switcher must not offer the second project's owner-only Setup
   // landing on the strength of a role held somewhere else. Roles are per project; gates are not.
   const { projects } = header('setup', allGatesOpen, [
-    { slug: 'miyagisanchez', role: 'owner' },
-    { slug: 'acme', role: 'member' },
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
   ])
   const href = (slug: string) => projects.find((project) => project.slug === slug)?.href
 
@@ -271,8 +280,8 @@ test('switching project lands on the SAME section, resolved with THAT project’
 
 test('switching from a section both projects entitle keeps you in that section', () => {
   const { projects } = header('measure', allGatesOpen, [
-    { slug: 'miyagisanchez', role: 'owner' },
-    { slug: 'acme', role: 'member' },
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
   ])
   // Measure's entry, resolved with acme's own role — `/app/north-star` since Story 3.1 made North
   // Star the section's first surface.
@@ -289,8 +298,8 @@ test('from Today, every project switches to THAT PROJECT’s Today', () => {
   // The slug is a VIEW preference, not a route identity: `/app` resolves it against the viewer's
   // own membership list server-side and falls back to their first project when it matches nothing.
   const { projects } = header('home', allGatesOpen, [
-    { slug: 'miyagisanchez', role: 'owner' },
-    { slug: 'acme', role: 'member' },
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
   ])
   assert.deepEqual(
     projects.map((project) => project.href),
@@ -306,7 +315,7 @@ test('a slug with URL-significant characters is encoded, not concatenated', () =
   // Slugs are validated elsewhere, so this is defence rather than a live case — but a switcher that
   // builds a URL by concatenation is one migration away from emitting a broken link, and the
   // encoding is free.
-  const { projects } = header('home', allGatesOpen, [{ slug: 'a b&c', role: 'owner' }])
+  const { projects } = header('home', allGatesOpen, [{ slug: 'a b&c', role: 'owner', workspace: WORKSPACE }])
   assert.equal(projects[0].href, '/app?project=a%20b%26c')
 })
 
@@ -410,9 +419,9 @@ test('the rail and the tab agree about what a member may reach in Setup', () => 
   )
   // Two seams, one answer — the tab exists exactly when the rail has something to put under it.
   assert.equal(
-    header('setup', allGatesOpen, [{ slug: 'miyagisanchez', role: 'member' }]).tabs.some(
-      (tab) => tab.id === 'setup'
-    ),
+    header('setup', allGatesOpen, [
+      { slug: 'miyagisanchez', role: 'member', workspace: WORKSPACE },
+    ]).tabs.some((tab) => tab.id === 'setup'),
     true
   )
 })
@@ -538,4 +547,45 @@ test('with no projects the gates cannot affect the header — EVERY combination 
     ) as ProjectSurfaceGates
     assert.deepEqual(header(gates), allFalse, `gate combination ${mask} produced a different header`)
   }
+})
+
+// ── workspaces S2.3 — the switcher is grouped by workspace (the approved `switcher-grouped` state) ──────────────────
+test('the switcher groups projects under their workspace, groups by name, projects in the order they came', () => {
+  const choice = (slug: string, workspace: string, role = 'owner') => ({
+    slug,
+    role,
+    workspace,
+    href: `/app?project=${slug}`,
+    current: false,
+  })
+  const groups = groupProjectChoices([
+    choice('miyagisanchez', "Daniel's products"),
+    choice('acme-web', 'Acme', 'member'),
+    choice('golden-beans', "Daniel's products"),
+  ])
+  assert.deepEqual(
+    groups.map((group) => [
+      group.workspace,
+      group.projects.map((project) => `${project.slug}:${project.role}`),
+    ]),
+    [
+      ['Acme', ['acme-web:member']],
+      ["Daniel's products", ['miyagisanchez:owner', 'golden-beans:owner']],
+    ]
+  )
+})
+
+test('grouping neither drops nor duplicates a project — every choice is still exactly one link', () => {
+  const header = buildConsoleHeader({
+    activeSection: 'home',
+    activeProjectSlug: 'miyagisanchez',
+    projects: [
+      { slug: 'miyagisanchez', role: 'owner', workspace: { name: "Daniel's products" } },
+      { slug: 'acme', role: 'member', workspace: { name: 'Acme' } },
+    ],
+    gates: allGatesOpen,
+  })
+  const flattened = groupProjectChoices(header.projects).flatMap((group) => group.projects)
+  assert.deepEqual(flattened.map((project) => project.slug).sort(), ['acme', 'miyagisanchez'])
+  assert.equal(flattened.find((project) => project.slug === 'acme')?.workspace, 'Acme')
 })

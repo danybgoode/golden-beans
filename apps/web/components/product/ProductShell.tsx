@@ -3,7 +3,13 @@ import type { ProjectRouteSegment } from '@/lib/project-route-inventory'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
-import { railLinksFor, shellRendersAccountMenu, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
+import {
+  groupProjectChoices,
+  railLinksFor,
+  shellRendersAccountMenu,
+  TODAY_HREF,
+  type ShellSection,
+} from '@/lib/console-shell'
 import { SignOutButton } from './SignOutButton'
 import { AccountName } from './AccountName'
 import { AgentRail } from './AgentRail'
@@ -319,16 +325,29 @@ export async function ProductShell({
                         <Icon name="gauge" />
                         {activeProject.slug}
                       </summary>
+                      {/* workspaces S2.3 — the approved `switcher-grouped` state: one list per workspace, each row
+                        "Project | Role". Grouping is a render of the same list (lib/console-shell.ts →
+                        groupProjectChoices) and adds no click: every project is still one link. */}
                       <div className="ds-shell-menu">
-                        <ul>
-                          {header.projects.map((project) => (
-                            <li key={project.slug}>
-                              <a href={project.href} aria-current={project.current ? 'true' : undefined}>
-                                {project.slug}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
+                        {groupProjectChoices(header.projects).map((group) => (
+                          <section key={group.workspace} aria-label={group.workspace}>
+                            <p>{group.workspace}</p>
+                            <ul>
+                              {group.projects.map((project) => (
+                                <li key={project.slug}>
+                                  <a href={project.href} aria-current={project.current ? 'true' : undefined}>
+                                    <span>{project.slug}</span>
+                                    <span className="ds-shell-role">{project.role}</span>
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        ))}
+                        <p className="ds-shell-note">
+                          Projects are grouped by workspace. A workspace is the boundary your data never
+                          crosses.
+                        </p>
                       </div>
                     </details>
                   ) : (
