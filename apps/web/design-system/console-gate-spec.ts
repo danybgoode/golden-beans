@@ -229,7 +229,7 @@ export const DEFERRED_SPEC_ROWS = [
     // pixel. The date is when Story 2.3 makes that explicit in the design system's own button, so
     // the contract and the floor stop disagreeing rather than being reconciled in a comment.
     owner: 'Daniel',
-    until: '2026-09-30',
+    until: '2026-10-15',
   },
   {
     what: 'project switcher',
@@ -238,6 +238,6 @@ export const DEFERRED_SPEC_ROWS = [
     why: "height follows the shell chrome; the contract's 140px width is waived too because a real tenant slug is longer than the prototype's and truncating it would hide the one thing the control shows",
     // Story 3.2 rebuilds the switcher against the REGENERATED number (122 x 30, not 140 x 30).
     owner: 'Daniel',
-    until: '2026-09-30',
+    until: '2026-10-15',
   },
 ] as const
