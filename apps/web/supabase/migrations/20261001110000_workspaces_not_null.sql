@@ -31,9 +31,10 @@ DROP FUNCTION public.backfill_project_workspaces(UUID[]);
 -- What the re-check still defends is the state this trigger cannot produce: a workspace membership REMOVED while
 -- project memberships inside it remain. The workspace is the outer boundary; removing someone from it cuts them off
 -- from everything inside.
+
 -- The trigger covers every FUTURE grant. Every EXISTING one is placed inside its workspace here, by construction —
 -- so the Sprint 2 re-check can never lock out a member whose row predates this migration (fresh reviewer, PR #221).
--- Production measured 0 such rows before this was applied; on any database where that is not true, this is the fix.
+-- Production measured 0 such rows on 2026-10-01, before applying; on any database where that is not true, this is the fix.
 INSERT INTO public.workspace_members (workspace_id, user_id, role)
   SELECT p.workspace_id, m.user_id, 'member'
     FROM public.project_members m

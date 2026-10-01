@@ -127,8 +127,10 @@ neither.** Every project has exactly one member, and every member is an owner. `
   is written. Without it, D9's re-check would deny every project grant that doesn't come through provisioning:
   today that's specs; one day it's an invite flow. It grants nothing by itself (D1). It also amends D8's "rows only
   from backfill and provisioning": rows now come from the backfill, provisioning, and project membership itself,
-  and never from a workspace invite or UI. What the re-check still defends is a person REMOVED from a workspace,
-  who reaches nothing inside it.
+  and never from a workspace invite or UI. Existing rows get the same guarantee by construction: migration B
+  inserts every current project member into their workspace before it creates the trigger (fresh reviewer, #221;
+  correct by inspection, since a fresh DB has no members when migrations run). What the re-check still defends is a
+  person REMOVED from a workspace, who reaches nothing inside it.
 - **D6, as built:** `getWorkspaceProjects` and `getUserWorkspaces` live in `lib/workspace.ts` (`server-only`, per-request
   `cache`). Their queries are in `lib/workspace-projects.ts`, and the two decisions (the seam predicate and the intersect)
   are in `lib/workspace-access.ts`, which has zero imports and is unit-tested.

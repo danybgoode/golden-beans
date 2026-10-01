@@ -64,19 +64,45 @@ export async function disposableSession(
     return { id: project.id as string, slug, workspaceId }
   }
 
+  const removeRows = async () => {
+    const report = (step: string, error: { message: string } | null) => {
+      if (error) process.stderr.write(`[disposable-session] ${step}: ${error.message}\n`)
+    }
+    if (projects.length) {
+      report('project_members', (await db.from('project_members').delete().in('project_id', projects)).error)
+      report('projects', (await db.from('projects').delete().in('id', projects)).error)
+    }
+    if (workspaces.length)
+      report('workspaces', (await db.from('workspaces').delete().in('id', workspaces)).error)
+    report('auth user', (await db.auth.admin.deleteUser(userId)).error)
+  }
+
   // One project before signing in, so the login's landing on /app never provisions.
-  await addProject(firstProject, 'disposable home')
+  try {
+    await addProject(firstProject, 'disposable home')
+  } catch (error) {
+    await removeRows()
+    throw error
+  }
 
   // EMPTY storage, explicitly: in the authed project a new context inherits the shared fixture user's signed-in
   // storageState, and /login would bounce straight to /app as THAT user.
   const context = await browser.newContext({ storageState: { cookies: [], origins: [] } })
   const page = await context.newPage()
-  await page.goto('/login')
-  await page.getByLabel(/email/i).fill(email)
-  await page.getByLabel(/password/i).fill(password)
-  await page.getByRole('button', { name: /sign in|log in/i }).click()
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 30_000 })
-  await expect(page).not.toHaveURL(/\/login/)
+  try {
+    await page.goto('/login')
+    await page.getByLabel(/email/i).fill(email)
+    await page.getByLabel(/password/i).fill(password)
+    await page.getByRole('button', { name: /sign in|log in/i }).click()
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 30_000 })
+    await expect(page).not.toHaveURL(/\/login/)
+  } catch (error) {
+    // A failed sign-in must not leave the person, project and workspace behind: the orphan sweep removes only the
+    // auth user, and these fixture workspaces carry no creator for it to find.
+    await context.close()
+    await removeRows()
+    throw error
+  }
 
   return {
     page,
@@ -85,12 +111,7 @@ export async function disposableSession(
     addProject,
     cleanup: async () => {
       await context.close()
-      if (projects.length) {
-        await db.from('project_members').delete().in('project_id', projects)
-        await db.from('projects').delete().in('id', projects)
-      }
-      if (workspaces.length) await db.from('workspaces').delete().in('id', workspaces)
-      await db.auth.admin.deleteUser(userId)
+      await removeRows()
     },
   }
 }
