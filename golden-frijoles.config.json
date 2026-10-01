@@ -41,6 +41,38 @@
             "false": "No, when it is any of: tracking through the engine's own SDK client or /api/v1/track; a plain read of the events or features tables that lists, displays or checks them for the product's own screens, catalog, tasks, reports or signals, without computing usage metrics; a table, route or call for another purpose (auth, tokens, billing, flags, deliveries, experiments' own registry and decisions, scenarios, content); operational measurements of the product's own performance, such as query timings; or a comment, string or name that only mentions analytics or tracking."
           }
         }
+      },
+      {
+        "id": "tenancy",
+        "source": "AGENTS.md § The tenancy invariant (workspace level; a request path reads several projects only through getWorkspaceProjects())",
+        "severity": "blocking",
+        "globs": ["apps/web/app/**", "apps/web/lib/**", "apps/web/components/**"],
+        "allowlist": [
+          "apps/web/lib/workspace.ts",
+          "apps/web/lib/workspace-projects.ts",
+          "apps/web/lib/workspace-access.ts",
+          "apps/web/lib/workspace-tenancy.ts",
+          "apps/web/lib/membership.ts",
+          "apps/web/app/api/internal/dispatch-deliveries/**",
+          "apps/web/**/*.test.ts"
+        ],
+        "patterns": [
+          "\\.in\\(\\s*['\"`]project_id['\"`]",
+          "\\bproject_id\\s*=\\s*any\\s*\\(",
+          "\\bproject_id\\s+in\\s*\\(",
+          "\\bfor\\s*\\(\\s*const\\s+\\w+\\s+of\\s+[\\w.]*[Pp]rojects\\b",
+          "\\b\\w*[Pp]rojects\\s*\\.\\s*(map|flatMap|forEach)\\s*\\(\\s*async\\b",
+          "\\bgetUserProjects\\s*\\(",
+          "\\.from\\(\\s*['\"`]projects['\"`]\\s*\\)"
+        ],
+        "question": {
+          "$measured": "2026-10-01, jev-1.13.0, the 34 tenancy fixtures in scripts/jev-eval.lint.fixtures.json (21 real candidates the selector picks from the last 300 first-parent commits of main, all clean: single-project lookups by slug, id or api key and the caller's own membership list; 13 constructed, 8 of them violations: a project-id list, a fan-out over getUserProjects, an unfiltered admin count, a cross-project join, an MCP tool, a SQL ANY), threshold 0.8. v1 (this wording): decided 33/34, every decided one right. Undecided: the legitimate getWorkspaceProjects + .in('project_id', …) read at 0.35 — the same shape as the commonest violation with the one legal helper in front of it, which is exactly the distinction the rule is for. Shadow until measured on real traffic; re-measure before changing a word: node scripts/jev-eval.mjs --live --rail lint (it re-asks rule-1 too — keep its recordings unless its wording changed).",
+          "instructions": "This is one hunk from a git diff in a multi-tenant Next.js + Supabase product. The tenant is the WORKSPACE, and every project lives in exactly one workspace. On a path that serves a request (a page, a route handler, a server action, or library code they call), reading project DATA (events, metrics, flags, tasks, credentials or any other project-scoped rows) from more than one project at once is allowed ONLY through getWorkspaceProjects(userId, workspaceId), which returns the projects of one workspace the caller belongs to. Does this hunk read data from several projects at once on such a path without going through getWorkspaceProjects?",
+          "criteria": {
+            "true": "Yes, any of: a query filtered by a LIST of project ids (.in('project_id', ...), project_id = ANY(...), project_id IN (...)) on a request path; looping or mapping over several projects, such as the caller's project list, and querying each one's data; a query on a project-scoped table with no project filter at all that returns rows for every tenant; a join, count, aggregate or export across projects or workspaces for a dashboard, report or admin screen.",
+            "false": "No, when it is any of: a read scoped to exactly one project id that the code resolved from the session, an API key, a connector token or a membership check; a call to getWorkspaceProjects() and reads scoped to the projects it returned; listing the caller's OWN project memberships (id, slug, role, workspace) for a switcher, a home page or gf projects, without reading data inside those projects; looking up one project by its slug or id; a background scheduler that only returns project ids; or a comment, string or name that only mentions projects."
+          }
+        }
       }
     ]
   }
