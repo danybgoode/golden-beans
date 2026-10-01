@@ -56,6 +56,7 @@ _a PR is ready for review, or merged and waiting for its close-out. Not in this 
 _merged, deployed and closed._
 
 - [Workspaces become the tenant: one person, many products, one boundary ✅](../02-commercial/workspaces/README.md) — #38 · 02 Commercial · 8/8 stories · risk: High · appetite M · _docs: status shipped_
+- [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — 09 Platform Infra · seed · Bug · risk: Low · appetite S · _docs: status shipped_
 - [Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals](../09-platform-infra/intent-match/README.md) — #48 · 09 Platform Infra · 9/9 stories · risk: Low · appetite M · _docs: status shipped_
 - [✅ Epic: Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow)](../09-platform-infra/semantic-lint/README.md) — #49 · 09 Platform Infra · 3/3 stories · risk: Low · appetite S · _docs: status shipped_
 - [Session budget — one deep ask per approval gate, plus a measured line ✅](../09-platform-infra/session-budget/README.md) — #50 · 09 Platform Infra · 3/3 stories · risk: Low · appetite S · _docs: status shipped_
@@ -71,7 +72,6 @@ _merged, deployed and closed._
 - [Jev semantic guards — review-guard and prose-guard decide with Jev, not regex](../09-platform-infra/jev-semantic-guards/README.md) — #33 · 09 Platform Infra · 15/15 stories · risk: High · appetite L · _docs: status shipped_
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../09-platform-infra/one-roadmap/README.md) — #43 · 09 Platform Infra · 4/4 stories · risk: Low · appetite S · _docs: status shipped_
 - [Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures](seeds/jev-reanchor-thresholds.md) — #44 · 09 Platform Infra · seed · Spike · risk: Low · appetite S · _docs: status shipped_
-- [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — 09 Platform Infra · seed · Bug · risk: Low · appetite S · _docs: status shipped_
 - [Experiments for humans](../01-growth-engine/experiments-for-humans/README.md) — #35 · 01 Growth Engine · 11/11 stories · risk: High · appetite L · _docs: status shipped_
 - [Golden Frijoles CLI v1 — the write surface an agent can actually drive](../02-commercial/golden-frijoles-cli/README.md) — #28 · 02 Commercial · 16/16 stories · risk: High · appetite L · _docs: status shipped_
 - [The mockups, as built — delete the disclosures and finish the screens](../02-commercial/mockups-as-built/README.md) — #27 · 02 Commercial · 18/18 stories · risk: High · appetite M · _docs: status shipped_
