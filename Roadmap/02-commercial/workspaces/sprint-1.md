@@ -39,9 +39,27 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-- D1–D5 from the README, verified against live code and **live row counts** (projects by created_by / owner-only / neither).
-- Migration order: S1.1 (expand) applied → S1.2 backfill applied and verified → NOT NULL migration → only then any code that reads `workspace_id` (S2). Never the reverse (LEARNINGS: env → migration → merge).
+## Build contract (locked by the architect before the builder started, 2026-10-01)
+Cite the README's **Architecture lock** (D1–D12); don't restate it. This sprint owns:
+- **Migration A** `20261001100000_workspaces.sql` (expand): the tables (D2), the nullable `projects.workspace_id`,
+  and `backfill_project_workspaces()` (D3: creator → earliest owner → abort; every project member becomes a
+  workspace member). The migration calls it once. The function is `REVOKE ALL … FROM PUBLIC, anon, authenticated` +
+  `GRANT EXECUTE … TO service_role`. No request path calls it (it's not a scheduler exemption: it writes and
+  returns `void`), and migration B drops it.
+- **Applied to prod before S1 merges**, then verified row by row: `miyagisanchez`, `golden-beans-demo` and
+  `golden-beans` → "Daniel's products"; `miyagi` → "miyagi's products"; `0` nulls; one owner membership each.
+- **S1.2's acceptance, as locked:** the rule lives in ONE place, the SQL function, so there's no TS copy that could
+  drift. Its spec (`e2e/workspaces.spec.ts`) inserts projects with a null workspace for each branch (creator,
+  owner-only, two owners, a non-owner member, neither), calls the function, and asserts the outcome. That's
+  possible only while the column is nullable, so the backfill tests are deleted with the function in S2. NOT NULL
+  moves to S2 (D4).
+- **S1.3:** `lib/workspace-tenancy.ts` (no `server-only`; it takes the client as a parameter) holds `claimWorkspace` (reuse
+  by `created_by` or insert; recover from a race on the unique index; ensure the owner membership) and
+  `releaseWorkspace` (deletes only a workspace this call created; RESTRICT protects one that holds projects).
+  `provisionTenantForUser` claims before the project insert, writes `workspace_id`, and releases on every
+  `ok: false` path. The adopt-the-winner path never releases. The api spec drives both helpers against the real
+  local DB, including the failure path.
+- **The auth teardown** deletes the disposable tenant's workspace too.
 - Every function created or re-created re-REVOKEs from `PUBLIC, anon, authenticated` and re-GRANTs `service_role`.
 
 ## Stories
@@ -53,7 +71,7 @@ stories:
 
 ### Story 1.2 — Every project is backfilled into exactly one workspace (contract)
 **As** an existing project owner, **I want** my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → the platform workspace), then `workspace_id` made NOT NULL, **so that** nobody loses or gains access and no project is orphaned.
-**Acceptance:** Before NOT NULL: `select count(*) from projects where workspace_id is null` = 0 in production (recorded in the PR). The rule is a pure function with a unit spec covering all three branches and a two-owner project. A pre-existing API key and a pre-existing connector token still authenticate (api spec).
+**Acceptance:** Before NOT NULL: `select count(*) from projects where workspace_id is null` = 0 in production (recorded in the PR). The rule is ONE SQL function with a spec covering all three branches, a two-owner project and a non-owner member (lock D3; NOT NULL itself lands at the head of S2, lock D4). A pre-existing API key and a pre-existing connector token still authenticate (api spec).
 **Risk:** high — migration on live tenant data
 
 ### Story 1.3 — A new signup is born with a workspace
