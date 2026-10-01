@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveProjectFromAuthHeader } from '@/lib/auth'
 import { getSupabaseServiceClient } from '@/lib/supabase'
-import { parseRoadmapPush, ROADMAP_SCHEMA_VERSION } from '@/lib/roadmap-artifact-schema'
+import { isSameRoadmapPayload, parseRoadmapPush, ROADMAP_SCHEMA_VERSION } from '@/lib/roadmap-artifact-schema'
+import { getLatestArtifact } from '@/lib/report-artifacts'
 
 // pod-report · Sprint 1, Story 1.1 — POST /api/v1/roadmap/push
 //
@@ -36,8 +37,34 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { generatedAt, source, items } = parsed.value
+  const { generatedAt, source, items, board } = parsed.value
+  // `board` (WIP limits, the repo base for doc links) is stored beside the rows. Before it was declared, an extra key
+  // passed validation and was silently stripped here (board-sinks-and-scrumban lock C6).
+  const payload = board ? { items, board } : { items }
   const supabase = getSupabaseServiceClient()
+
+  // D16 — an unchanged board is not a new version. The latest artifact is read for THIS project only (the id came
+  // from the API key above), and a failed read never blocks the push: the worst case is one duplicate version.
+  let latest = null
+  try {
+    latest = await getLatestArtifact(auth.projectId, 'roadmap')
+  } catch {
+    latest = null
+  }
+  if (
+    latest &&
+    latest.schemaVersion === ROADMAP_SCHEMA_VERSION &&
+    isSameRoadmapPayload(latest.payload, payload)
+  ) {
+    return NextResponse.json({
+      ok: true,
+      unchanged: true,
+      artifactId: latest.id,
+      version: latest.version,
+      schemaVersion: ROADMAP_SCHEMA_VERSION,
+      items: items.length,
+    })
+  }
 
   // Version allocation happens inside the RPC under an advisory lock — never here. Reading
   // max(version) in the route and inserting version+1 is the lost-update race two concurrent pushes
@@ -47,7 +74,7 @@ export async function POST(req: NextRequest) {
       p_project_id: auth.projectId,
       p_kind: 'roadmap',
       p_schema_version: ROADMAP_SCHEMA_VERSION,
-      p_payload: { items },
+      p_payload: payload,
       p_generated_at: generatedAt.toISOString(),
       p_source_commit: source?.commit ?? null,
       p_source_ref: source?.ref ?? null,

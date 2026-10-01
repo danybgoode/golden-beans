@@ -1,7 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  canonicalJson,
+  isSameRoadmapPayload,
   parseRoadmapPush,
+  ROADMAP_STAGES,
   summarizeRoadmap,
   isRoadmapStatusShipped,
   ROADMAP_SCHEMA_VERSION,
@@ -187,4 +190,87 @@ test('isRoadmapStatusShipped is case- and whitespace-insensitive, and refuses an
   assert.equal(isRoadmapStatusShipped(null), false)
   assert.equal(isRoadmapStatusShipped(undefined), false)
   assert.equal(isRoadmapStatusShipped(''), false)
+})
+
+// ── board-sinks-and-scrumban S1.3 — the additive contract (D6, D21), no version bump ──────────────────────
+
+const boardRow = (over: Record<string, unknown> = {}) =>
+  row({
+    stage: 'Ready to build',
+    stage_source: 'docs: status scaffolded',
+    goal: 'So that a stranger installs it once.',
+    sprints: [{ n: 1, title: 'One', done: 0, total: 3 }],
+    links: {
+      readme: 'Roadmap/02-commercial/x/README.md',
+      seed: null,
+      sprints: ['Roadmap/02-commercial/x/sprint-1.md'],
+      retro: null,
+    },
+    pr: { number: 12, url: 'https://github.com/o/r/pull/12', state: 'OPEN', draft: false },
+    kickoff: 'Start by pushing the epic branch…',
+    shipped_at: null,
+    ...over,
+  } as Partial<RoadmapRow>)
+
+test('a v1 payload from before the board still parses — no ROADMAP_SCHEMA_VERSION bump (S1.3)', () => {
+  assert.equal(ROADMAP_SCHEMA_VERSION, 1)
+  assert.equal(parseRoadmapPush(push()).ok, true)
+})
+
+test('a payload with the board fields and a board block parses, and the block survives (lock C6)', () => {
+  const r = parseRoadmapPush(
+    push({
+      items: [boardRow()],
+      board: { wip: { Building: 2, QA: 3 }, repo: 'https://github.com/o/r/blob/main/' },
+    })
+  )
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.deepEqual(r.value.board, {
+      wip: { Building: 2, QA: 3 },
+      repo: 'https://github.com/o/r/blob/main/',
+    })
+    assert.equal(r.value.items[0].stage, 'Ready to build')
+    assert.equal((r.value.items[0] as { kickoff?: string }).kickoff, 'Start by pushing the epic branch…')
+  }
+})
+
+test('a stage outside the six words is refused', () => {
+  assert.equal(parseRoadmapPush(push({ items: [boardRow({ stage: 'Verifying' })] })).ok, false)
+  assert.deepEqual(
+    [...ROADMAP_STAGES],
+    ['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped']
+  )
+})
+
+test('a link the hub would render must be https — javascript: and http: are refused', () => {
+  const bad = (pr: unknown) => parseRoadmapPush(push({ items: [boardRow({ pr })] })).ok
+  assert.equal(bad({ number: 1, url: 'javascript:alert(1)', state: 'OPEN', draft: false }), false)
+  assert.equal(bad({ number: 1, url: 'http://github.com/o/r/pull/1', state: 'OPEN', draft: false }), false)
+  assert.equal(parseRoadmapPush(push({ board: { repo: 'javascript:alert(1)//' } })).ok, false)
+})
+
+test('a doc link must stay inside the repo: no scheme, no `..`', () => {
+  const links = (readme: string) => parseRoadmapPush(push({ items: [boardRow({ links: { readme } })] })).ok
+  assert.equal(links('Roadmap/02-commercial/x/README.md'), true)
+  assert.equal(links('../../etc/passwd.md'), false)
+  assert.equal(links('Roadmap/../../x.md'), false)
+  assert.equal(links('https://evil.example/x.md'), false)
+})
+
+test('canonicalJson ignores key order, so a payload read back from jsonb compares equal (D16)', () => {
+  assert.equal(
+    canonicalJson({ b: 1, a: [{ d: 2, c: null }] }),
+    canonicalJson({ a: [{ c: null, d: 2 }], b: 1 })
+  )
+  assert.ok(
+    isSameRoadmapPayload({ items: [{ slug: 'a', stage: 'QA' }] }, { items: [{ stage: 'QA', slug: 'a' }] })
+  )
+  assert.ok(
+    !isSameRoadmapPayload(
+      { items: [{ slug: 'a', stage: 'QA' }] },
+      { items: [{ slug: 'a', stage: 'Building' }] }
+    )
+  )
+  assert.ok(!isSameRoadmapPayload({ items: [] }, { items: [], board: { wip: { Building: 2 } } }))
 })
