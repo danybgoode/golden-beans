@@ -1,6 +1,6 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: workspaces
 title: "Workspaces become the tenant: one person, many products, one boundary"
@@ -15,7 +15,7 @@ build_order: 38      # integer position in the ONE global build sequence — the
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
 ---
 
-# Epic: Workspaces become the tenant: one person, many products, one boundary
+# Epic: Workspaces become the tenant: one person, many products, one boundary ✅
 
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Appetite:** M · **Scope seed:** [`00-ideas/seeds/workspaces.md`](../../00-ideas/seeds/workspaces.md)
 > **Visual review:** https://claude.ai/artifact/A7qv2qeBsmewdCkHXnf2UW (private to the product owner)
@@ -164,12 +164,14 @@ mechanical. Each PR gets the fresh reviewer subagent on top of the routed extern
 3. Unblocks `board-sinks-and-scrumban` S4 and seed `portfolio-view`.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] Kill-switch: none planned (D7 carve-out recorded at grooming)
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — run `node scripts/build-order.mjs`)
+- [x] All sprints merged to `main` + smoke-tested (gaps stated): #220 `4ee9bb1`, #221 `68b9974`. Both migrations were
+      applied to production before their merges and verified live. The signed-in walkthroughs and the CLI publish are
+      owed to Daniel by name (each sprint file).
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs) and dated results
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (sharpened, not appended)
+- [ ] ~~Kill-switch~~ n/a: no flag; the D7 carve-out was recorded at grooming and held (nobody gained or lost access)
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`**

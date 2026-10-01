@@ -312,6 +312,13 @@ independently shippable slice of value.
   tiers show a real "Start free" CTA. **Launched 2026-07-21** — a real user signed up and received a
   working tenant (project, owner membership, API key, connector token, starter feature) with nobody
   touching the database, verified row by row in production.
+- ✅ [Workspaces become the tenant](02-commercial/workspaces/README.md) (one person, many products, one boundary) —
+  **shipped and live in production 2026-10-01** (#220, #221). Every project lives in exactly one workspace, and the
+  workspace is the tenant: AGENTS.md states the invariant at that level. Every console, CLI and MCP user check
+  re-checks it; a project in a foreign workspace is a 404. `getWorkspaceProjects()` is the one legal multi-project
+  read, so the portfolio view and the workspace-wide board are now buildable. The switcher groups projects by workspace,
+  and `gf whoami` prints it (CLI 0.4.0, npm publish owed). A `tenancy` lint rule watches it in shadow. Nobody gained or
+  lost access (access model A; no billing, quotas or invites yet).
 - ✅ [Pod Report + Roadmap Hub](02-commercial/pod-report/README.md) (benchmarks/ROI + live
   roadmap-vs-end-state views · scoped share links) — **shipped and live in production 2026-07-26**
   (PRs #30/#32/#33/#34). The report-rendering primitive became an engine primitive with two consumers
@@ -426,6 +433,13 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-10-01**: `workspaces` **shipped**: two sprints, both migrations applied before their merges, CLI 0.4.0 (the npm
+  publish is owed).
+  - The workspace is the tenant now. Every path re-checks it, one helper may read several projects, and the switcher
+    shows the boundary.
+  - The lock queried the four live projects first. It removed an invented "platform" workspace and moved NOT NULL to
+    after the code that writes the column, because signup is live. The fresh reviewer found a "gone from the
+    switcher" assertion that could never fail; it fails now.
 - **2026-10-01**: `think-skills` **shipped**: three sprints, plugin 0.19.0, CLI 0.3.0 (the npm publish is owed).
   - The strategy coaches left one person's account and now write files that groom reads. The North Star's metric
     reaches the engine with one command, dry run first.

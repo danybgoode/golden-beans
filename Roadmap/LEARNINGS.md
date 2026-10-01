@@ -1029,6 +1029,12 @@ one-liner + why + date shape.
   of reaching it — extract the guard into a **pure, zero-import module** and assert it directly (the
   `lib/flags.ts` precedent already in this repo), rather than assuming end-to-end coverage implies
   branch coverage. *(2026-07-20, multi-tenant-activation S1.)*
+  **Two more shapes of the same trap (workspaces, 2026-10-01):** (a) *"it is gone from the list" against a list of one*.
+  The switcher renders a label, not a link, when there's one project, so `a[href*=slug]` count 0 held either way. Give
+  the fixture two items, assert presence first, and assert a positive on the state you expect afterwards. (b) *An authed
+  spec that adds rows to the SHARED signed-in fixture user* changes what every parallel spec sees (`/app` renders that
+  user's first project). Sign in a disposable person per spec instead, in a context with EMPTY `storageState`: in the
+  authed project a new context inherits the shared session, and `/login` silently bounces to `/app` as that user.
 
   **A spec can also defend exactly HALF of the rule it is named after, and look complete.**
   app-shell-and-agent-rail's `e2e/agent-activity.spec.ts` claimed to cover the decision "the
@@ -1053,6 +1059,10 @@ one-liner + why + date shape.
   two failure modes: an invalid credential returning **401 rather than 500** proves the new table
   exists and resolves, and driving one real end-to-end call with a *pre-existing* credential proves the
   backfill preserved live access.
+  **The CONTRACT step has the mirror-image rule: `SET NOT NULL` lands only after the code that WRITES the column has
+  deployed.** workspaces moved NOT NULL out of the sprint that added the column (2026-10-01): signup was live, and the
+  provisioning code then in production inserted projects without a workspace. So: expand → backfill → merge the writer →
+  re-backfill stragglers + NOT NULL → merge the readers. Every PR still has its migration applied before its own merge.
   **Re-run successfully at the multi-tenant-activation launch (2026-07-21), with one addition worth
   copying: drive that "real credential" check through a route the APP already authenticates for**
   (here `/api/v1/public/self-visit`, which uses the production key server-side) — you get the same
@@ -1070,6 +1080,12 @@ one-liner + why + date shape.
   second review round asked "what is `role` for?" **When a table carries a privilege column, one gate
   per privilege LEVEL is the minimum — and the least-privilege split (read vs. credential-admin) is
   worth designing at the same time as the column, not after.** *(2026-07-20, multi-tenant-activation S1.)*
+- **A new boundary check at an auth seam needs a structural guarantee for every grant path, or it quietly REMOVES
+  access.** workspaces added "the project's workspace must be one of yours" to the membership seam (2026-10-01). Under
+  the old rule a `project_members` row was enough, so any grant that didn't also add a workspace membership (every spec
+  fixture, any future invite flow) would have become a silent 404. The fix was structural, not procedural: a trigger
+  places every future project member inside the workspace, and a catch-up insert covers existing rows. Don't rely on
+  "prod measured 0 today". **When you narrow who passes a seam, enumerate who writes the thing the seam reads.**
 - **When you harden one instance of a class of bug, immediately grep for its siblings — a fix applied
   in only one of two places is a *latent inconsistency* a later reviewer will find.** Round 1 hardened
   both seed scripts against a cross-project credential bind; the identical `ON CONFLICT DO NOTHING` in
