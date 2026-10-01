@@ -87,6 +87,27 @@ function unauthorized() {
   return cliError('unauthorized', 'This CLI credential is not accepted. Run `gf login` again.')
 }
 
+function gateClosed() {
+  return cliError('disabled', 'The CLI API is not available here.')
+}
+
+/**
+ * Gate, THEN the request body, for a POST route. Returns the body as a record, or a `Response` to return verbatim.
+ *
+ * The gate has to come before the body too, not only before the credential. A route that parsed first answered a
+ * malformed body with 400 while the surface was OFF, so OFF stopped being the same 404 for every request (cross-family
+ * review, Codex, think-skills #216). Three routes had that order; all three read their body through here now.
+ */
+export async function readCliBody(req: NextRequest): Promise<Record<string, unknown> | NextResponse> {
+  if (!isCliWriteApiEnabled()) return gateClosed()
+  try {
+    const body: unknown = await req.json()
+    return (body ?? {}) as Record<string, unknown>
+  } catch {
+    return cliError('invalid', 'Invalid request body.')
+  }
+}
+
 export type CliAccount = { userId: string; tokenId: string; tokenLabel: string }
 
 /**
@@ -99,7 +120,7 @@ export type CliAccount = { userId: string; tokenId: string; tokenLabel: string }
 export async function requireCliAccount(req: NextRequest): Promise<CliAccount | NextResponse> {
   // ⚠️ FIRST. See this module's header — moving this below the credential work turns OFF into an
   // oracle for whether a token is valid.
-  if (!isCliWriteApiEnabled()) return cliError('disabled', 'The CLI API is not available here.')
+  if (!isCliWriteApiEnabled()) return gateClosed()
 
   const token = bearer(req)
   if (!token) return unauthorized()

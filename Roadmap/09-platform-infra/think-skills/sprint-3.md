@@ -46,6 +46,10 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
    `CLI_WRITE_API_ENABLED` ON (it's born ON, and `cli-api.spec.ts` pins that), so "gate off gives 404" can't be an e2e case.
    The route enters only through `requireCliMember` / `requireCliOwner`, whose gate-first order belongs to the shared
    `lib/cli-auth.ts` seam, not to this route.
+   **Widened, said out loud (review #216, Codex Blocking):** the route parsed its body before the gate, so with the gate
+   OFF a malformed body answered 400, not 404. `cli/flags/write` and `cli/keys` had the same order. All three now read
+   their body through `readCliBody` in `lib/cli-auth.ts`, which gates first, and `lib/cli-body-order.test.ts` pins that
+   no CLI route reads a body itself.
 3. **The command (D6):** `packages/cli/src/commands/north-star.ts`, registered in `commands/index.ts`, with the
    `--help` golden regenerated. `cli-write.test.ts` covers five cases, each seen failing once: a dry run sends no POST
    (exactly one GET); `--yes` sends exactly one POST; a 400 renders `issues` with a non-zero exit; auth failure gives
@@ -62,7 +66,7 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
 ## Sprint QA
 - `cli.test.ts` / `cli-write.test.ts` against a mocked API.
 - One live run against Golden Frijoles' own project (owed to Daniel: HIGH, Daniel merges).
-- Money/auth path: the command writes production data behind the project key; owed to Daniel by name.
+- Money/auth path: the command writes production data through the CLI route (owner-only, behind `CLI_WRITE_API_ENABLED`; C1); owed to Daniel by name.
 - **deterministic gate:** root `npm run typecheck` + `npm run build` + Playwright `api`, and the skills checks (`skills-ci` on the split), green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)

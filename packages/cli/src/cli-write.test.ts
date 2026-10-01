@@ -778,3 +778,91 @@ test('north-star set: an input whose value source would change is shown as refus
   assert.match(text, /weekly_planned_seeds {2}"Weekly planned seeds" {2}unchanged/)
   assert.match(text, /seeds_groomed +Seeds groomed +refused: value source is external_push/)
 })
+
+test('north-star set: the dry run says when a metric or an input would be updated in place', async () => {
+  const { writer, out } = capture()
+  const current = [
+    {
+      key: 'weekly_planned_seeds',
+      name: 'Weekly seeds (old name)',
+      description: 'seeds groomed per week',
+      inputs: [
+        {
+          key: 'activated_projects',
+          name: 'Activated (old name)',
+          valueSource: 'external_push',
+          sourceEvent: null,
+        },
+      ],
+    },
+  ]
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar(current),
+  })
+  const text = out.join('\n')
+  assert.match(text, /weekly_planned_seeds {2}"Weekly planned seeds" {2}updated/)
+  assert.match(text, /activated_projects +Activated projects +updated/)
+  assert.match(text, /Run again with --yes to send it/)
+})
+
+test('north-star set: a dry run of an unfilled template names the placeholders and does not invite --yes', async () => {
+  const { writer, out } = capture()
+  const template = {
+    metric: { key: '<metric_key>', name: 'Named' },
+    inputs: [{ key: 'real_key', name: 'R', valueSource: 'external_push' }],
+  }
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd: workspace(NORTH_STAR_FILE(template)),
+    fetchImpl: stubNorthStar([]),
+  })
+  assert.equal(code, EXIT.OK)
+  const text = out.join('\n')
+  assert.match(text, /Not filled in yet \(still a template placeholder\): metric\.key\./)
+  assert.match(text, /Fill in the placeholders first/)
+  assert.doesNotMatch(text, /Run again with --yes/)
+})
+
+test("north-star set: a refused input turns the dry run's last line into a warning, not an invitation", async () => {
+  const { writer, out } = capture()
+  const current = [
+    {
+      key: 'other',
+      name: 'Other',
+      description: null,
+      inputs: [
+        { key: 'seeds_groomed', name: 'Seeds groomed', valueSource: 'external_push', sourceEvent: null },
+      ],
+    },
+  ]
+  await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd: workspace(NORTH_STAR_FILE(PROPOSED)),
+    fetchImpl: stubNorthStar(current),
+  })
+  assert.match(out.join('\n'), /--yes would be refused: .*\(seeds_groomed\)/)
+})
+
+test('north-star set: a json block that is not an object is a usage error, never a stack trace', async () => {
+  for (const block of [null, [1, 2], 'text']) {
+    const { writer, err } = capture()
+    const code = await run({
+      argv: ['north-star', 'set', 'north-star.md'],
+      writer,
+      env: sandbox(),
+      cwd: workspace(NORTH_STAR_FILE(block)),
+      fetchImpl: noNetwork,
+    })
+    assert.equal(code, EXIT.USAGE)
+    assert.match(err.join('\n'), /must be an object/)
+  }
+})

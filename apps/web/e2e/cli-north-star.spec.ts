@@ -37,9 +37,16 @@ async function seedAccount(slug: string, role: 'owner' | 'member'): Promise<Seed
   const userId = created.user.id
   const { data: project } = await client.from('projects').select('id').eq('slug', slug).single()
   if (!project) throw new Error(`no seeded project ${slug}`)
-  await client.from('project_members').insert({ user_id: userId, project_id: project.id, role })
+  // Setup failures THROW: a silently missing membership would make every 404 below pass for the wrong reason.
+  const { error: memberError } = await client
+    .from('project_members')
+    .insert({ user_id: userId, project_id: project.id, role })
+  if (memberError) throw new Error(`could not add the test membership: ${memberError.message}`)
   const token = `gf_pat_${randomBytes(32).toString('base64url')}`
-  await client.from('cli_tokens').insert({ user_id: userId, token_hash: sha256(token), label: 'spec' })
+  const { error: tokenError } = await client
+    .from('cli_tokens')
+    .insert({ user_id: userId, token_hash: sha256(token), label: 'spec' })
+  if (tokenError) throw new Error(`could not mint the test CLI token: ${tokenError.message}`)
   return {
     token,
     cleanup: async () => {
@@ -122,6 +129,8 @@ test.describe('the CLI North Star route', () => {
   }) => {
     const owner = await seedAccount('project-one', 'owner')
     try {
+      // The positive anchor: this account CAN reach its own project, so the 404s below are about project-two.
+      expect((await read(request, owner.token, 'project-one')).status).toBe(200)
       expect((await read(request, owner.token, 'project-two')).status).toBe(404)
       const key = `spec_ns_${unique()}`
       const crossed = await sync(request, owner.token, 'project-two', payload(key))

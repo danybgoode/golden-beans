@@ -44,11 +44,17 @@ export function readSyncBlock(markdown: string): unknown {
   if (fences.length !== 1) {
     throw new Error(`expected exactly one \`\`\`json block under "${SECTION}", found ${fences.length}`)
   }
+  let parsed: unknown
   try {
-    return JSON.parse(fences[0][1])
+    parsed = JSON.parse(fences[0][1])
   } catch (err) {
     throw new Error(`the json block does not parse: ${err instanceof Error ? err.message : String(err)}`)
   }
+  // An object, or it is not a North Star at all: `null` or a list would otherwise reach the planner as a stack trace.
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('the json block must be an object with `metric` and `inputs`')
+  }
+  return parsed
 }
 
 /** Every string value still shaped like a template placeholder, as a path: `metric.key`, `inputs[1].sourceEvent`. */
@@ -153,6 +159,16 @@ function issueLines(issues: unknown): string[] {
   return out
 }
 
+/** The dry run's last sentence. It never invites a `--yes` that is certain to be refused. */
+function nextStep(plan: SyncPlan, unfilled: string[]): string {
+  if (unfilled.length > 0) return 'Fill in the placeholders first: --yes refuses a file that still has them.'
+  const refused = plan.inputs.filter((input) => input.change.startsWith('refused'))
+  if (refused.length > 0) {
+    return `--yes would be refused: an existing input's value source never changes (${refused.map((i) => i.key).join(', ')}). Use a new key, or keep its value source.`
+  }
+  return 'Run again with --yes to send it.'
+}
+
 async function readCurrent(context: CommandContext, project: string): Promise<CurrentMetric[] | ExitCode> {
   const response = await context.api!.get<{ metrics: CurrentMetric[] }>('/api/v1/cli/north-star', { project })
   if (response.kind === 'network') {
@@ -227,7 +243,7 @@ export const northStarSetCommand: Command = {
     if (!send) {
       context.emit.ok(
         { dryRun: true, project, ...plan, unfilled },
-        `${describePlan(project, plan, unfilled)}\n\nDry run: nothing was sent. Run again with --yes to send it.`
+        `${describePlan(project, plan, unfilled)}\n\nDry run: nothing was sent. ${nextStep(plan, unfilled)}`
       )
       return EXIT.OK
     }

@@ -1,7 +1,7 @@
 import 'server-only'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { cliError, cliOk, requireCliMember, requireCliOwner } from '@/lib/cli-auth'
+import { cliError, cliOk, requireCliMember, readCliBody, requireCliOwner } from '@/lib/cli-auth'
 import { listNorthStar, syncNorthStar } from '@/lib/north-star-sync'
 
 // think-skills S3 (D6) — `gf north-star set`'s two calls: read the project's North Star, then sync a new one.
@@ -34,13 +34,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return cliError('invalid', 'Invalid request body.')
-  }
-  const input = (body ?? {}) as Record<string, unknown>
+  const input = await readCliBody(req)
+  if (input instanceof NextResponse) return input
 
   const context = await requireCliOwner(req, typeof input.project === 'string' ? input.project : null)
   if (context instanceof NextResponse) return context

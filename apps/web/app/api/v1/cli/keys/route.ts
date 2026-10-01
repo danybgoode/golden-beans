@@ -2,7 +2,7 @@ import 'server-only'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { isFlagEnvironment } from '@golden-frijoles/sdk'
-import { cliError, cliOk, requireCliOwner } from '@/lib/cli-auth'
+import { cliError, cliOk, readCliBody, requireCliOwner } from '@/lib/cli-auth'
 import { issueApiKey, listProjectKeys, revokeApiKey } from '@/lib/api-keys'
 import { listFlagReadKeys, mintFlagReadKey, revokeFlagReadKey } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys, mintFlagSyncKey, revokeFlagSyncKey } from '@/lib/flag-sync-keys'
@@ -98,13 +98,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return cliError('invalid', 'Invalid request body.')
-  }
-  const input = (body ?? {}) as Record<string, unknown>
+  const input = await readCliBody(req)
+  if (input instanceof NextResponse) return input
 
   const context = await requireCliOwner(req, typeof input.project === 'string' ? input.project : null)
   if (context instanceof NextResponse) return context
