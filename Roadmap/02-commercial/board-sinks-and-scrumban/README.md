@@ -124,8 +124,10 @@ in the sprint files.
      number) is OPEN, or it has no PR; MERGED or CLOSED means done or abandoned.
      - Any live branch: take the one with the highest sprint (`-s<N>`, else 1; on a tie, the one without a ready PR).
        Open and not draft → **QA**; otherwise → **Building**.
-     - No live branch but a MERGED PR: the highest merged sprint ≥ the epic's sprint count (seeds: always) → **QA**
-       (merged, close-out owed); otherwise → **Ready to build** (paused between sprints).
+     - No live branch but a MERGED PR → **QA** (merged, close-out owed), unless a sprint AFTER the highest merged
+       one is still Planned by its own docs → **Ready to build** (paused between sprints). *Amended while building
+       S1 (2026-10-01): the lock's "highest merged sprint ≥ the sprint count" read an epic shipped in ONE PR from
+       `feat/<slug>` (scenarios-pm-operable, #98) as paused at S1 — see sprint-1.md.*
   4. **Docs last**: seed `raw` → To groom · `ready` → Grooming · `queued` → Ready to build; epic `scaffolded`,
      `queued` or `in-progress` → Ready to build. `in-progress` is never Building on its own word (D3).
   Every answer carries `stage_source`: `docs: status <x>` · `git: <branch>` · `github: PR #<n> <state>`, suffixed
@@ -169,8 +171,9 @@ in the sprint files.
   (`number, url, state, draft` or null), `kickoff` (Ready to build only: the epic kickoff, or `Build: <slug>` for a
   queued seed), `shipped_at` (the `status_date` once Shipped). New optional envelope field `board`:
   `{ wip?: { Building?, QA? }, repo?: <https blob base> }`. No version bump.
-- **D22 — Two config keys, registered.** `board.wip` (`{ Building, QA }`, default `null` = no advice) and `hub.url`
-  (the project's Hub base, default `null` = no link). This repo sets both.
+- **D22 — Two config keys, registered.** `board.wip` (`{ Building, QA }`, default `null` = no advice) and
+  `board.hubUrl` (the project's Hub base, default `null` = no link). This repo sets both. *(Was `hub.url`; `hub` is
+  not a config section and a new one is a schema change for one string — amended in S1.)*
 - **D23 — The approved surfaces are corrected only where the live system forces it,** then registered: routes per
   C1/C8, the `tabs` line dropped (this repo's `tabs` kind is `.ds-tabs--panel`, a panel tab bar; the hub's tabs are
   the frame's nav, outside the measured `<main>`, so keeping the line would demand a second tab bar), and
