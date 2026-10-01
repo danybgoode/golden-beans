@@ -2,6 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { getSupabaseServiceClient } from './supabase'
 import type { Membership } from './roles'
+import { isInsideViewerWorkspaces } from './workspace-access'
+import { readViewerWorkspaceIds } from './workspace-projects'
 
 export type { Membership } from './roles'
 export { isOwner } from './roles'
@@ -19,26 +21,56 @@ export { isOwner } from './roles'
 // server-side after the session user is resolved (lib/supabase-auth.ts). They never trust a
 // caller-supplied slug alone — the (user, project) pair must actually exist in the join table.
 
-export type MemberProject = { id: string; slug: string; role: string }
+// ── The workspace re-check (workspaces · Sprint 2, Story 2.2 — the Architecture lock, D9) ──────────────────────
+// The workspace is the tenant (AGENTS.md § The tenancy invariant). All three reads below — not just the two
+// authorization lookups — drop a project whose workspace is not one of the viewer's, through ONE predicate,
+// `isInsideViewerWorkspaces`. Re-checking only `getMembership*` would leave the switcher listing projects that 404.
+//
+// Under access model A this changes no live answer: a project membership always comes with the workspace membership
+// (the backfill and the `project_members_join_workspace` trigger put it there). What it defends is the boundary
+// itself — a person removed from a workspace reaches nothing inside it, whatever project rows remain.
+//
+// Each read keeps its own failure contract: getUserProjects THROWS, the two getMembership* return null (fail closed).
+
+/** The viewer's workspace ids, once per request. null = the read failed, which every caller treats as a denial. */
+const getViewerWorkspaceIds = cache((userId: string) =>
+  readViewerWorkspaceIds(getSupabaseServiceClient(), userId)
+)
+
+export type MemberProject = {
+  id: string
+  slug: string
+  role: string
+  /** The tenant this project lives in — the switcher groups by it (Story 2.3). */
+  workspace: { id: string; name: string }
+}
 
 // Every project a user belongs to — backs the /app shell's project list. Throws on a query failure
 // rather than returning [], which would render as "you're not a member of any project" and read as
 // an authorization answer when it's really an outage (cross-review catch, Codex 2026-07-20).
 export const getUserProjects = cache(async (userId: string): Promise<MemberProject[]> => {
   const supabase = getSupabaseServiceClient()
-  const { data, error } = await supabase
-    .from('project_members')
-    .select('role, projects(id, slug)')
-    .eq('user_id', userId)
-  if (error) {
-    console.error('[membership] getUserProjects failed:', error)
+  const [{ data, error }, viewerWorkspaceIds] = await Promise.all([
+    supabase
+      .from('project_members')
+      .select('role, projects(id, slug, workspaces(id, name))')
+      .eq('user_id', userId),
+    getViewerWorkspaceIds(userId),
+  ])
+  if (error || !viewerWorkspaceIds) {
+    console.error('[membership] getUserProjects failed:', error ?? 'workspace membership read failed')
     throw new Error('Could not load your projects')
   }
   return (data ?? []).flatMap((row) => {
     // supabase-js types a to-one embedded relation loosely without a generated Database type —
     // the same cast lib/connector-tokens.ts / lib/tars-query.ts already use.
-    const project = row.projects as unknown as { id: string; slug: string } | null
-    return project ? [{ id: project.id, slug: project.slug, role: String(row.role) }] : []
+    const project = row.projects as unknown as {
+      id: string
+      slug: string
+      workspaces: { id: string; name: string } | null
+    } | null
+    if (!project || !isInsideViewerWorkspaces(project.workspaces?.id, viewerWorkspaceIds)) return []
+    return [{ id: project.id, slug: project.slug, role: String(row.role), workspace: project.workspaces! }]
   })
 })
 
@@ -55,7 +87,7 @@ export const getMembership = cache(async (userId: string, slug: string): Promise
   const supabase = getSupabaseServiceClient()
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id')
+    .select('id, workspace_id')
     .eq('slug', slug)
     .maybeSingle()
   if (projectError) {
@@ -75,6 +107,11 @@ export const getMembership = cache(async (userId: string, slug: string): Promise
     return null
   }
   if (!membership) return null
+
+  // A project in a workspace that is not the viewer's is "not found" — the same null as no membership at all.
+  const viewerWorkspaceIds = await getViewerWorkspaceIds(userId)
+  if (!viewerWorkspaceIds || !isInsideViewerWorkspaces(project.workspace_id, viewerWorkspaceIds)) return null
+
   return { projectId: project.id as string, role: String(membership.role) }
 })
 
@@ -98,7 +135,7 @@ export const getMembershipByProjectId = cache(
   async (userId: string, projectId: string): Promise<Membership | null> => {
     const { data, error } = await getSupabaseServiceClient()
       .from('project_members')
-      .select('role')
+      .select('role, projects(workspace_id)')
       .eq('user_id', userId)
       .eq('project_id', projectId)
       .maybeSingle()
@@ -107,6 +144,13 @@ export const getMembershipByProjectId = cache(
       return null
     }
     if (!data) return null
+
+    // The same workspace re-check as getMembership, against the project the CALLER already resolved (never a slug).
+    const project = data.projects as unknown as { workspace_id: string } | null
+    const viewerWorkspaceIds = await getViewerWorkspaceIds(userId)
+    if (!viewerWorkspaceIds || !isInsideViewerWorkspaces(project?.workspace_id, viewerWorkspaceIds))
+      return null
+
     return { projectId, role: String(data.role) }
   }
 )
