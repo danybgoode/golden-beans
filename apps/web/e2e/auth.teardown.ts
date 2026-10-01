@@ -117,6 +117,9 @@ teardown('remove the disposable tenant and auth user', async () => {
       shouldSweepFixtureUser(u, { now: Date.now(), currentUserId: record.userId })
     )
     for (const orphan of orphans) {
+      // Its workspace first: workspaces.created_by is ON DELETE SET NULL, so it would otherwise outlive its user as an
+      // unattributable tenant. RESTRICT refuses it while a project still sits there, which is the same outcome as before.
+      await db.from('workspaces').delete().eq('created_by', orphan.id)
       const { error } = await db.auth.admin.deleteUser(orphan.id)
       process.stderr.write(
         error

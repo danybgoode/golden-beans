@@ -151,8 +151,14 @@ change that introduced the `workspaces` table, because a comment cannot amend an
 **The rule:** *no tenant (workspace) observes another's data.* Projects inside one workspace may be read
 **together** by that workspace's members, and **only through `getWorkspaceProjects(userId, workspaceId)`**
 (`apps/web/lib/workspace.ts`; it arrives in workspaces Sprint 2 — until it exists, no request path reads several
-projects at all). Every other request path stays single-project: it reads exactly one `project_id`, resolved
+projects' DATA at all). Every other request path stays single-project: it reads exactly one `project_id`, resolved
 server-side, exactly as before.
+
+**One named carve-out, and it is not a data read:** `getUserProjects(userId)` (`lib/membership.ts`) lists the caller's
+OWN memberships — the id, slug and role of each project they belong to (and, from Sprint 2, each one's workspace) — so
+the switcher, `/app` and `gf projects` can offer a choice. It returns nothing FROM inside those projects, and from
+Sprint 2 it drops any project whose workspace is not one of the caller's. Anything that reads events, metrics, flags
+or any other project data from several projects is a multi-project read and goes through `getWorkspaceProjects()`.
 
 - **The workspace is a boundary, not a grant** (access model A). `project_members` is still the access list: a
   workspace member cannot open a project they are not a member of. `workspace_members.role` gates workspace

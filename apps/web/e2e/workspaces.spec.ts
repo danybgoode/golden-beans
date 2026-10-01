@@ -99,9 +99,12 @@ async function cleanup(client: SupabaseClient, fixture: Fixture) {
  * A client whose FIRST `workspaces` select answers "no row", whatever the table holds — the read a racing claim makes
  * before the winner's insert lands. Every other call goes to the real client.
  */
-function staleFirstWorkspaceRead(client: SupabaseClient): SupabaseClient {
+function staleFirstWorkspaceRead(client: SupabaseClient): {
+  client: SupabaseClient
+  consumed: () => boolean
+} {
   let stale = true
-  return new Proxy(client, {
+  const proxy = new Proxy(client, {
     get(target, prop, receiver) {
       if (prop !== 'from') return Reflect.get(target, prop, receiver)
       return (table: string) => {
@@ -112,6 +115,7 @@ function staleFirstWorkspaceRead(client: SupabaseClient): SupabaseClient {
       }
     },
   }) as SupabaseClient
+  return { client: proxy, consumed: () => !stale }
 }
 
 const backfill = (client: SupabaseClient, ids: string[]) =>
@@ -373,7 +377,10 @@ test.describe('S1.3 — provisioning claims a workspace (lib/workspace-tenancy.t
         .single()
       // ...but this claim's FIRST read happened before it was written. A real race only reaches this branch when the
       // timing cooperates; staging the stale read makes it reach it every run (fresh reviewer, PR #220).
-      const claim = await claimWorkspace(staleFirstWorkspaceRead(client), user.id, 'loser')
+      const stale = staleFirstWorkspaceRead(client)
+      const claim = await claimWorkspace(stale.client, user.id, 'loser')
+      // Without the stale read the plain reuse path returns the same object — so prove the stub was what answered.
+      expect(stale.consumed()).toBe(true)
       expect(claim).toEqual({ ok: true, workspaceId: winner!.id, created: false })
     } finally {
       await cleanup(client, fixture)
@@ -407,8 +414,10 @@ test.describe('S1.3 — provisioning claims a workspace (lib/workspace-tenancy.t
       expect(claim).toMatchObject({ ok: true, created: true })
       if (!claim.ok) return
 
-      // provisionTenantForUser releases exactly this claim on every `ok: false` after it (lib/provisioning.ts → fail);
-      // that wiring is asserted end to end by e2e/auth.setup.ts, where the server-only provisioner actually runs.
+      // ⚠️ This drives releaseWorkspace, NOT provisioning's call to it. That `provisionTenantForUser` routes every
+      // post-claim `ok: false` through `fail` → release is verified by inspection only: the provisioner is `server-only`
+      // and no spec can make it fail mid-way (round-2 fresh reviewer, PR #220 — accepted debt, stated in the PR).
+      // e2e/auth.setup.ts covers its SUCCESS path: a real signup lands in its creator's workspace.
       expect(await releaseWorkspace(client, claim)).toBeNull()
       const { data: workspaces } = await client.from('workspaces').select('id').eq('id', claim.workspaceId)
       expect(workspaces).toEqual([])

@@ -96,7 +96,9 @@ neither.** Every project has exactly one member, and every member is an owner. `
   and registry don't change; "tenant" is now defined as the workspace. Rule #2 doesn't change and says so.
 - **D6 — `getWorkspaceProjects(userId, workspaceId)` (`lib/workspace.ts`) is the only multi-project read on a
   request path**: the projects in that workspace ∩ your `project_members` rows, and only if you're a member of that
-  workspace. On a query error it returns empty, so it fails closed.
+  workspace. On a query error it returns empty, so it fails closed. *(Amended after round-2 review of #220:)* the
+  caller's own membership list, `getUserProjects`, is a named carve-out in AGENTS. It returns which projects you
+  belong to, never data from inside them.
 - **D7 — No runtime flag (carve-out, unchanged).** Rollback is expand/contract plus `git revert`.
 - **D8 — No-gos, unchanged.**
 - **D9 — The seam check covers all three reads, not two (scope correction).** `getUserProjects` feeds the switcher,
