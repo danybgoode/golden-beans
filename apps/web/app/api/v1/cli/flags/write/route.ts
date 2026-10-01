@@ -10,7 +10,7 @@ import {
   type FlagValueType,
   type FlagVariant,
 } from '@golden-frijoles/sdk'
-import { cliError, cliOk, requireCliOwner } from '@/lib/cli-auth'
+import { cliError, cliOk, readCliBody, requireCliOwner } from '@/lib/cli-auth'
 import { executeCliFlagWrite, type CliWriteCommand } from '@/lib/cli-flag-write'
 
 // golden-frijoles-cli · Sprint 2 — the ONE write route. Every flag mutation the CLI makes.
@@ -113,13 +113,8 @@ function parseCommand(input: Record<string, unknown>): CliWriteCommand | null {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown
-  try {
-    body = await req.json()
-  } catch {
-    return cliError('invalid', 'Invalid request body.')
-  }
-  const input = (body ?? {}) as Record<string, unknown>
+  const input = await readCliBody(req)
+  if (input instanceof NextResponse) return input
 
   const context = await requireCliOwner(req, typeof input.project === 'string' ? input.project : null)
   if (context instanceof NextResponse) return context

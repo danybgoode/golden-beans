@@ -36,6 +36,9 @@ Commands
   flags history    every version of a flag, and who changed what
   flags sync       publish a flag catalog from source control
 
+  north-star
+  north-star set   send a North Star workshop's metric and inputs to the project
+
   keys
   keys ls          every credential that can reach this project
   keys create      mint a credential — the kind is required, never guessed

@@ -15,7 +15,7 @@
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
-- [Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads](../../09-platform-infra/think-skills/README.md) — 09 Platform Infra · 6/7 stories · risk: High · audit-wave-B
+- [Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads](../../09-platform-infra/think-skills/README.md) — 09 Platform Infra · 7/7 stories · risk: High · audit-wave-B
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 

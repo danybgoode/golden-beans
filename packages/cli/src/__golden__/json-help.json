@@ -412,6 +412,24 @@
         ]
       },
       {
+        "command": "north-star set",
+        "summary": "send a North Star workshop's metric and inputs to the project",
+        "usage": "gf north-star set <file> [--yes] [--project <slug>]",
+        "needsAuth": true,
+        "flags": [
+          {
+            "flag": "--yes",
+            "takesValue": false,
+            "describe": "send it (without this, nothing is sent)"
+          },
+          {
+            "flag": "--project",
+            "takesValue": true,
+            "describe": "the project (default: the remembered one)"
+          }
+        ]
+      },
+      {
         "command": "keys ls",
         "summary": "every credential that can reach this project",
         "usage": "gf keys ls [--project <slug>] [--json]",

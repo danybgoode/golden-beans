@@ -12,15 +12,15 @@ stories:
     i_want: "to send the workshop's metric and inputs to my project with one command, after seeing what changes"
     so_that: "the engine measures what we agreed, without retyping it"
     risk: high
-    status: planned
+    status: done
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 3: The metric reaches the engine
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
-### Story 3.1 — `gf north-star set`
+### Story 3.1 — `gf north-star set` ✅
 **As** the product owner, **I want** to send the workshop's metric and inputs to my project with one command, after seeing what changes, **so that** the engine measures what we agreed, without retyping it.
 **Acceptance:** `gf north-star set <file>` reads the sync block from the file; by default prints the current North Star (`GET /api/v1/north-star`) against the proposed one and sends nothing; `--yes` posts to `POST /api/v1/north-star/sync` exactly once and prints the result; a 400 prints the route's `issues`; the exit code comes from the body (`ok: false` is non-zero). Uses the existing `gf auth` key. `cli-write.test.ts` covers dry run (no request), `--yes` (one request), 400 and auth failure, each observed failing first. The North Star skill names the command.
 **Risk:** high
@@ -42,7 +42,14 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
    behind `requireCliOwner`, inside the `CLI_WRITE_API_ENABLED` gate. `e2e/cli-north-star.spec.ts` covers: gate off
    gives 404 before auth; a bad token gives 401; a non-member gives 404; a member can GET but gets 404 on POST as a
    non-owner, the way `requireCliOwner` answers; an owner's POST syncs and the old route's GET sees it; a 400 carries
-   `issues`; and a project can't be crossed (owner of A, `project: B`, gives 404). The security lens is triggered.
+   `issues`; and a project can't be crossed (owner of A, `project: B`, gives 404). The security lens is triggered. **Deviation, said out loud (the build):** the e2e server always runs with
+   `CLI_WRITE_API_ENABLED` ON (it's born ON, and `cli-api.spec.ts` pins that), so "gate off gives 404" can't be an e2e case.
+   The route enters only through `requireCliMember` / `requireCliOwner`, whose gate-first order belongs to the shared
+   `lib/cli-auth.ts` seam, not to this route.
+   **Widened, said out loud (review #216, Codex Blocking):** the route parsed its body before the gate, so with the gate
+   OFF a malformed body answered 400, not 404. `cli/flags/write` and `cli/keys` had the same order. All three now read
+   their body through `readCliBody` in `lib/cli-auth.ts`, which gates first, and `lib/cli-body-order.test.ts` pins that
+   no CLI route reads a body itself.
 3. **The command (D6):** `packages/cli/src/commands/north-star.ts`, registered in `commands/index.ts`, with the
    `--help` golden regenerated. `cli-write.test.ts` covers five cases, each seen failing once: a dry run sends no POST
    (exactly one GET); `--yes` sends exactly one POST; a 400 renders `issues` with a non-zero exit; auth failure gives
@@ -59,7 +66,7 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
 ## Sprint QA
 - `cli.test.ts` / `cli-write.test.ts` against a mocked API.
 - One live run against Golden Frijoles' own project (owed to Daniel: HIGH, Daniel merges).
-- Money/auth path: the command writes production data behind the project key; owed to Daniel by name.
+- Money/auth path: the command writes production data through the CLI route (owner-only, behind `CLI_WRITE_API_ENABLED`; C1); owed to Daniel by name.
 - **deterministic gate:** root `npm run typecheck` + `npm run build` + Playwright `api`, and the skills checks (`skills-ci` on the split), green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)

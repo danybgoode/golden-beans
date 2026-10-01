@@ -18,6 +18,7 @@ import {
 } from './flags-write'
 import { flagsDiffCommand, flagsHistoryCommand } from './flags-history'
 import { flagsSyncCommand } from './flags-sync'
+import { northStarSetCommand } from './north-star'
 import { keysCreateCommand, keysLsCommand, keysRevokeCommand } from './keys'
 import { doctorCommand } from './doctor'
 import { configGetCommand, configListCommand, configSetCommand, setupCommand } from './config'
@@ -45,6 +46,7 @@ export const COMMANDS: readonly Command[] = [
   flagsDiffCommand,
   flagsHistoryCommand,
   flagsSyncCommand,
+  northStarSetCommand,
   keysLsCommand,
   keysCreateCommand,
   keysRevokeCommand,
