@@ -132,6 +132,7 @@ const WHOAMI = {
   account: { userId: 'user-1', email: 'someone@example.com' },
   credential: { id: 'token-1', label: 'my laptop' },
   projects: [{ slug: 'acme', role: 'owner' }],
+  workspaces: [{ name: "Someone's products", role: 'owner' }],
 }
 
 const FLAGS = {

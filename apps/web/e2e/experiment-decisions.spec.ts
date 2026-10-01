@@ -1,14 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client as PgClient } from 'pg'
-import {
-  requireLocalSupabaseApiUrl,
-  requireTestDatabaseUrl,
-} from './helpers/test-db-cleanup'
-import {
-  mapExperimentDecisionRows,
-  type ExperimentDecisionRow,
-} from '@/lib/experiment-decision-contract'
+import { requireLocalSupabaseApiUrl, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import { mapExperimentDecisionRows, type ExperimentDecisionRow } from '@/lib/experiment-decision-contract'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const DECISION_READ_COLUMNS =
   'id, ordinal, definition_version, record_kind, outcome, chosen_variant_key, rationale, analysis_snapshot, integrity_snapshot, actor_user_id, created_at, supersedes_record_id'
@@ -57,14 +52,16 @@ const ANALYSIS = {
     relativeLift: 0.2,
     directionalStatus: 'favorable',
   },
-  guardrailMetrics: [{
-    event: 'founding_application_abandoned',
-    direction: 'decrease',
-    variants: [],
-    absoluteDelta: 0,
-    relativeLift: 0,
-    directionalStatus: 'no_difference',
-  }],
+  guardrailMetrics: [
+    {
+      event: 'founding_application_abandoned',
+      direction: 'decrease',
+      variants: [],
+      absoluteDelta: 0,
+      relativeLift: 0,
+      directionalStatus: 'no_difference',
+    },
+  ],
   diagnostics: {
     srm: { status: 'clear', alpha: 0.01, chiSquare: 0, pValue: 1 },
     integrity: [],
@@ -101,6 +98,7 @@ async function createProject(client: SupabaseClient, label: string): Promise<str
   const { data, error } = await client
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(client),
       slug: `decision-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: `h-${crypto.randomUUID()}`,
     })
@@ -110,12 +108,7 @@ async function createProject(client: SupabaseClient, label: string): Promise<str
   return data.id as string
 }
 
-async function createStoppedVersion(
-  client: SupabaseClient,
-  projectId: string,
-  ownerId: string,
-  key: string,
-) {
+async function createStoppedVersion(client: SupabaseClient, projectId: string, ownerId: string, key: string) {
   const created = await client.rpc('create_experiment_version', {
     p_project_id: projectId,
     p_experiment_key: key,
@@ -159,7 +152,7 @@ function recordDecision(
     analysis?: unknown
     idempotencyKey?: string
     supersedesId?: string | null
-  },
+  }
 ) {
   return client.rpc('record_experiment_decision', {
     p_project_id: input.projectId,
@@ -184,12 +177,11 @@ async function cleanupRetainedExperimentEvidence(projectIds: string[]): Promise<
     await postgres.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
     await postgres.query(
       'DELETE FROM public.experiment_decision_records WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
+      [projectIds]
     )
-    await postgres.query(
-      'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
-    )
+    await postgres.query('DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [
+      projectIds,
+    ])
     await postgres.query('COMMIT')
   } catch (error) {
     await postgres.query('ROLLBACK')
@@ -211,17 +203,21 @@ test('decision ledger is owner-only, atomic, idempotent and a linear immutable c
     createProject(client, 'foreign'),
   ])
   try {
-    expect((await client.from('project_members').insert([
-      { project_id: projectId, user_id: owner, role: 'owner' },
-      { project_id: projectId, user_id: member, role: 'member' },
-      { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
-    ])).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert([
+          { project_id: projectId, user_id: owner, role: 'owner' },
+          { project_id: projectId, user_id: member, role: 'member' },
+          { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
+        ])
+      ).error
+    ).toBeNull()
     const version = await createStoppedVersion(client, projectId, owner, 'founding-message-decision')
     const foreignVersion = await createStoppedVersion(
       client,
       foreignProjectId,
       foreignOwner,
-      'foreign-decision',
+      'foreign-decision'
     )
 
     for (const actorId of [member, foreignOwner]) {
@@ -265,17 +261,25 @@ test('decision ledger is owner-only, atomic, idempotent and a linear immutable c
       analysis: { decisionReady: true },
     })
     expect(malformedSnapshot.error?.code).toBe('22023')
-    expect((await client
-      .from('experiment_decision_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('version_id', version.version_id)).count).toBe(0)
-    expect((await client
-      .from('experiment_definition_versions')
-      .select('status')
-      .eq('project_id', projectId)
-      .eq('id', version.version_id)
-      .single()).data?.status).toBe('stopped')
+    expect(
+      (
+        await client
+          .from('experiment_decision_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+          .eq('version_id', version.version_id)
+      ).count
+    ).toBe(0)
+    expect(
+      (
+        await client
+          .from('experiment_definition_versions')
+          .select('status')
+          .eq('project_id', projectId)
+          .eq('id', version.version_id)
+          .single()
+      ).data?.status
+    ).toBe('stopped')
 
     const idempotencyKey = crypto.randomUUID()
     const concurrent = await Promise.all([
@@ -320,18 +324,26 @@ test('decision ledger is owner-only, atomic, idempotent and a linear immutable c
       srm: { status: 'clear' },
       diagnostics: [],
     })
-    expect((await client
-      .from('experiment_definition_versions')
-      .select('status')
-      .eq('project_id', projectId)
-      .eq('id', version.version_id)
-      .single()).data?.status).toBe('decided')
-    expect((await client
-      .from('experiment_lifecycle_audit')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('version_id', version.version_id)
-      .eq('action', 'version_decided')).count).toBe(1)
+    expect(
+      (
+        await client
+          .from('experiment_definition_versions')
+          .select('status')
+          .eq('project_id', projectId)
+          .eq('id', version.version_id)
+          .single()
+      ).data?.status
+    ).toBe('decided')
+    expect(
+      (
+        await client
+          .from('experiment_lifecycle_audit')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+          .eq('version_id', version.version_id)
+          .eq('action', 'version_decided')
+      ).count
+    ).toBe(1)
 
     const replay = await recordDecision(client, {
       projectId,
@@ -404,11 +416,15 @@ test('decision ledger is owner-only, atomic, idempotent and a linear immutable c
       supersedesId: initial.id as string,
     })
     expect(staleCorrection.error?.code).toBe('55000')
-    expect((await client
-      .from('experiment_decision_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('version_id', version.version_id)).count).toBe(2)
+    expect(
+      (
+        await client
+          .from('experiment_decision_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+          .eq('version_id', version.version_id)
+      ).count
+    ).toBe(2)
   } finally {
     try {
       await cleanupRetainedExperimentEvidence([projectId, foreignProjectId])
@@ -425,17 +441,25 @@ test('decision records deny direct writes, survive parent cleanup and never muta
   const postgres = new PgClient({ connectionString: requireTestDatabaseUrl() })
   let postgresConnected = false
   try {
-    expect((await client.from('project_members').insert({
-      project_id: projectId,
-      user_id: owner,
-      role: 'owner',
-    })).error).toBeNull()
-    expect((await client.from('features').insert({
-      project_id: projectId,
-      key: 'miyagi-owned-rollout',
-      enabled: true,
-      description: 'Sentinel: the decision ledger must never change this pushed state.',
-    })).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert({
+          project_id: projectId,
+          user_id: owner,
+          role: 'owner',
+        })
+      ).error
+    ).toBeNull()
+    expect(
+      (
+        await client.from('features').insert({
+          project_id: projectId,
+          key: 'miyagi-owned-rollout',
+          enabled: true,
+          description: 'Sentinel: the decision ledger must never change this pushed state.',
+        })
+      ).error
+    ).toBeNull()
     const version = await createStoppedVersion(client, projectId, owner, 'retained-decision')
     const recorded = await recordDecision(client, {
       projectId,
@@ -447,40 +471,48 @@ test('decision records deny direct writes, survive parent cleanup and never muta
     })
     expect(recorded.error).toBeNull()
     const recordId = recorded.data![0].id as string
-    expect((await client
-      .from('features')
-      .select('enabled')
-      .eq('project_id', projectId)
-      .eq('key', 'miyagi-owned-rollout')
-      .single()).data).toEqual({ enabled: true })
+    expect(
+      (
+        await client
+          .from('features')
+          .select('enabled')
+          .eq('project_id', projectId)
+          .eq('key', 'miyagi-owned-rollout')
+          .single()
+      ).data
+    ).toEqual({ enabled: true })
 
-    expect((await client.from('experiment_decision_records').insert({
-      ...recorded.data![0],
-      id: crypto.randomUUID(),
-      idempotency_key: crypto.randomUUID(),
-    })).error).not.toBeNull()
-    expect((await client
-      .from('experiment_decision_records')
-      .update({ rationale: 'rewrite' })
-      .eq('id', recordId)).error).not.toBeNull()
-    expect((await client
-      .from('experiment_decision_records')
-      .delete()
-      .eq('id', recordId)).error).not.toBeNull()
+    expect(
+      (
+        await client.from('experiment_decision_records').insert({
+          ...recorded.data![0],
+          id: crypto.randomUUID(),
+          idempotency_key: crypto.randomUUID(),
+        })
+      ).error
+    ).not.toBeNull()
+    expect(
+      (await client.from('experiment_decision_records').update({ rationale: 'rewrite' }).eq('id', recordId))
+        .error
+    ).not.toBeNull()
+    expect(
+      (await client.from('experiment_decision_records').delete().eq('id', recordId)).error
+    ).not.toBeNull()
 
     await postgres.connect()
     postgresConnected = true
-    await expect(postgres.query(
-      'UPDATE public.experiment_decision_records SET rationale = $1 WHERE id = $2',
-      ['owner rewrite', recordId],
-    )).rejects.toMatchObject({ code: '55000' })
-    await expect(postgres.query(
-      'DELETE FROM public.experiment_decision_records WHERE id = $1',
-      [recordId],
-    )).rejects.toMatchObject({ code: '55000' })
-    await expect(postgres.query(
-      'TRUNCATE public.experiment_decision_records',
-    )).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      postgres.query('UPDATE public.experiment_decision_records SET rationale = $1 WHERE id = $2', [
+        'owner rewrite',
+        recordId,
+      ])
+    ).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      postgres.query('DELETE FROM public.experiment_decision_records WHERE id = $1', [recordId])
+    ).rejects.toMatchObject({ code: '55000' })
+    await expect(postgres.query('TRUNCATE public.experiment_decision_records')).rejects.toMatchObject({
+      code: '55000',
+    })
 
     await postgres.query('BEGIN')
     try {
@@ -508,23 +540,21 @@ test('decision records deny direct writes, survive parent cleanup and never muta
     }
 
     await postgres.query('DELETE FROM public.projects WHERE id = $1', [projectId])
-    expect((await postgres.query(
-      `SELECT project_id, experiment_id, version_id, definition_snapshot, analysis_snapshot
+    expect(
+      (
+        await postgres.query(
+          `SELECT project_id, experiment_id, version_id, definition_snapshot, analysis_snapshot
        FROM public.experiment_decision_records WHERE id = $1`,
-      [recordId],
-    )).rows).toHaveLength(1)
-    expect((await postgres.query(
-      'SELECT id FROM public.experiment_registries WHERE project_id = $1',
-      [projectId],
-    )).rows).toHaveLength(0)
-    await postgres.query(
-      'DELETE FROM public.experiment_decision_records WHERE project_id = $1',
-      [projectId],
-    )
-    await postgres.query(
-      'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = $1',
-      [projectId],
-    )
+          [recordId]
+        )
+      ).rows
+    ).toHaveLength(1)
+    expect(
+      (await postgres.query('SELECT id FROM public.experiment_registries WHERE project_id = $1', [projectId]))
+        .rows
+    ).toHaveLength(0)
+    await postgres.query('DELETE FROM public.experiment_decision_records WHERE project_id = $1', [projectId])
+    await postgres.query('DELETE FROM public.experiment_lifecycle_audit WHERE project_id = $1', [projectId])
   } finally {
     if (postgresConnected) await postgres.end()
     await client.auth.admin.deleteUser(owner)
@@ -536,24 +566,30 @@ test('decision history fails closed before its cumulative analysis payload excee
   const owner = await createUser(client, 'payload-owner')
   const projectId = await createProject(client, 'payload-cap')
   try {
-    expect((await client.from('project_members').insert({
-      project_id: projectId,
-      user_id: owner,
-      role: 'owner',
-    })).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert({
+          project_id: projectId,
+          user_id: owner,
+          role: 'owner',
+        })
+      ).error
+    ).toBeNull()
     const version = await createStoppedVersion(client, projectId, owner, 'payload-bounded-decision')
     // Large enough that 16 records fit below 4 MiB and the 17th crosses it, while every individual
     // snapshot remains below the independent 256 KiB ceiling.
     const largeAnalysis = { ...ANALYSIS, proofPadding: 'x'.repeat(250_000) }
-    let latest = (await recordDecision(client, {
-      projectId,
-      experimentId: version.experiment_id,
-      versionId: version.version_id,
-      actorId: owner,
-      outcome: 'inconclusive',
-      chosenVariant: null,
-      analysis: largeAnalysis,
-    })).data?.[0]
+    let latest = (
+      await recordDecision(client, {
+        projectId,
+        experimentId: version.experiment_id,
+        versionId: version.version_id,
+        actorId: owner,
+        outcome: 'inconclusive',
+        chosenVariant: null,
+        analysis: largeAnalysis,
+      })
+    ).data?.[0]
     expect(latest).toBeTruthy()
 
     for (let ordinal = 2; ordinal <= 16; ordinal += 1) {
@@ -586,11 +622,15 @@ test('decision history fails closed before its cumulative analysis payload excee
       supersedesId: latest!.id,
     })
     expect(overCap.error?.code).toBe('54000')
-    expect((await client
-      .from('experiment_decision_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('version_id', version.version_id)).count).toBe(16)
+    expect(
+      (
+        await client
+          .from('experiment_decision_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+          .eq('version_id', version.version_id)
+      ).count
+    ).toBe(16)
   } finally {
     try {
       await cleanupRetainedExperimentEvidence([projectId])
@@ -611,27 +651,33 @@ test('a long-rationale history accepted by the write cap always maps through the
   const owner = await createUser(client, 'readable-owner')
   const projectId = await createProject(client, 'readable-cap')
   try {
-    expect((await client.from('project_members').insert({
-      project_id: projectId,
-      user_id: owner,
-      role: 'owner',
-    })).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert({
+          project_id: projectId,
+          user_id: owner,
+          role: 'owner',
+        })
+      ).error
+    ).toBeNull()
     const version = await createStoppedVersion(client, projectId, owner, 'readable-bounded-decision')
     // Moderate analysis (~50 KiB) so the payload cap fires well before the 100-record cap, plus a
     // MAX rationale of 2000 emoji code points (8000 UTF-8 bytes) — the exact uncounted term the old
     // cap ignored.
     const analysis = { ...ANALYSIS, proofPadding: 'x'.repeat(50_000) }
     const bigRationale = '😀'.repeat(2_000)
-    let latest = (await recordDecision(client, {
-      projectId,
-      experimentId: version.experiment_id,
-      versionId: version.version_id,
-      actorId: owner,
-      outcome: 'inconclusive',
-      chosenVariant: null,
-      rationale: bigRationale,
-      analysis,
-    })).data?.[0]
+    let latest = (
+      await recordDecision(client, {
+        projectId,
+        experimentId: version.experiment_id,
+        versionId: version.version_id,
+        actorId: owner,
+        outcome: 'inconclusive',
+        chosenVariant: null,
+        rationale: bigRationale,
+        analysis,
+      })
+    ).data?.[0]
     expect(latest).toBeTruthy()
 
     let accepted = 1
@@ -671,9 +717,7 @@ test('a long-rationale history accepted by the write cap always maps through the
     expect(rows?.length).toBe(accepted)
     // The whole accepted history reads back through the exact read-mapping logic without tripping its
     // resource bound: proof that anything the write cap accepts is always readable.
-    expect(() =>
-      mapExperimentDecisionRows(rows as unknown as ExperimentDecisionRow[]),
-    ).not.toThrow()
+    expect(() => mapExperimentDecisionRows(rows as unknown as ExperimentDecisionRow[])).not.toThrow()
   } finally {
     try {
       await cleanupRetainedExperimentEvidence([projectId])

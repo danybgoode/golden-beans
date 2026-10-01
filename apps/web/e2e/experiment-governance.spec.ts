@@ -24,6 +24,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const VALID_DEFINITION: ExperimentDefinition = {
   hypothesis: 'A clearer founding-store promise increases completed applications.',
@@ -69,6 +70,7 @@ async function createProject(client: SupabaseClient, label: string): Promise<str
   const { data, error } = await client
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(client),
       slug: `experiment-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: `h-${crypto.randomUUID()}`,
     })
@@ -83,7 +85,7 @@ async function createVersion(
   projectId: string,
   ownerId: string,
   key: string,
-  definition: unknown = VALID_DEFINITION,
+  definition: unknown = VALID_DEFINITION
 ) {
   return client.rpc('create_experiment_version', {
     p_project_id: projectId,
@@ -99,7 +101,7 @@ async function transition(
   experimentId: string,
   versionId: string,
   target: string | null,
-  ownerId: string,
+  ownerId: string
 ) {
   return client.rpc('transition_experiment_version', {
     p_project_id: projectId,
@@ -133,18 +135,20 @@ test.describe('experiment definition — closed bounded contract', () => {
 
   test('Unicode limits match PostgreSQL code points while NUL and the independent byte cap fail', async () => {
     const emoji = '🚀'
-    expect(parseExperimentDefinition({
-      ...VALID_DEFINITION,
-      hypothesis: emoji.repeat(MAX_EXPERIMENT_DESCRIPTION_LENGTH),
-      eligibility: {
-        description: emoji.repeat(MAX_EXPERIMENT_DESCRIPTION_LENGTH),
-        tags: { source: emoji.repeat(MAX_EXPERIMENT_PREDICATE_STRING_LENGTH) },
-      },
-      primaryMetric: {
-        event: emoji.repeat(MAX_EXPERIMENT_EVENT_LENGTH),
-        direction: 'increase',
-      },
-    }).ok).toBe(true)
+    expect(
+      parseExperimentDefinition({
+        ...VALID_DEFINITION,
+        hypothesis: emoji.repeat(MAX_EXPERIMENT_DESCRIPTION_LENGTH),
+        eligibility: {
+          description: emoji.repeat(MAX_EXPERIMENT_DESCRIPTION_LENGTH),
+          tags: { source: emoji.repeat(MAX_EXPERIMENT_PREDICATE_STRING_LENGTH) },
+        },
+        primaryMetric: {
+          event: emoji.repeat(MAX_EXPERIMENT_EVENT_LENGTH),
+          direction: 'increase',
+        },
+      }).ok
+    ).toBe(true)
     for (const definition of [
       { ...VALID_DEFINITION, hypothesis: emoji.repeat(MAX_EXPERIMENT_DESCRIPTION_LENGTH + 1) },
       {
@@ -153,10 +157,14 @@ test.describe('experiment definition — closed bounded contract', () => {
       },
       {
         ...VALID_DEFINITION,
-        eligibility: { description: 'eligible', tags: { source: emoji.repeat(MAX_EXPERIMENT_PREDICATE_STRING_LENGTH + 1) } },
+        eligibility: {
+          description: 'eligible',
+          tags: { source: emoji.repeat(MAX_EXPERIMENT_PREDICATE_STRING_LENGTH + 1) },
+        },
       },
       { ...VALID_DEFINITION, hypothesis: 'contains\0nul' },
-    ]) expect(parseExperimentDefinition(definition).ok).toBe(false)
+    ])
+      expect(parseExperimentDefinition(definition).ok).toBe(false)
 
     const dependencies: ExperimentCreateCommandDependencies = {
       requireOwnership: async () => ({ projectId: 'project-1', userId: 'owner-1' }),
@@ -169,28 +177,41 @@ test.describe('experiment definition — closed bounded contract', () => {
         status: 'draft',
       }),
     }
-    expect((await createExperimentVersionAfterGate(
-      'project',
-      'valid-key',
-      emoji.repeat(MAX_EXPERIMENT_DEFINITION_BYTES),
-      dependencies,
-    )).result).toEqual({ ok: false, error: 'Definition is too large (maximum 32 KiB).' })
+    expect(
+      (
+        await createExperimentVersionAfterGate(
+          'project',
+          'valid-key',
+          emoji.repeat(MAX_EXPERIMENT_DEFINITION_BYTES),
+          dependencies
+        )
+      ).result
+    ).toEqual({ ok: false, error: 'Definition is too large (maximum 32 KiB).' })
 
     const depth = 4_000
     const deeplyNestedUnknown = `${'{"x":'.repeat(depth)}null${'}'.repeat(depth)}`
-    await expect(createExperimentVersionAfterGate(
-      'project',
-      'valid-key',
-      deeplyNestedUnknown,
-      dependencies,
-    )).resolves.toMatchObject({ result: { ok: false } })
+    await expect(
+      createExperimentVersionAfterGate('project', 'valid-key', deeplyNestedUnknown, dependencies)
+    ).resolves.toMatchObject({ result: { ok: false } })
   })
 
   test('rejects malformed/duplicate/high-cardinality plans and non-explicit or imprecise windows', () => {
     for (const definition of [
       { ...VALID_DEFINITION, variants: [{ key: 'control', weight: 1 }] },
-      { ...VALID_DEFINITION, variants: [{ key: 'same', weight: 1 }, { key: 'same', weight: 1 }] },
-      { ...VALID_DEFINITION, variants: [{ key: 'control', weight: 0 }, { key: 'new-copy', weight: 1 }] },
+      {
+        ...VALID_DEFINITION,
+        variants: [
+          { key: 'same', weight: 1 },
+          { key: 'same', weight: 1 },
+        ],
+      },
+      {
+        ...VALID_DEFINITION,
+        variants: [
+          { key: 'control', weight: 0 },
+          { key: 'new-copy', weight: 1 },
+        ],
+      },
       { ...VALID_DEFINITION, controlVariantKey: 'missing' },
       {
         ...VALID_DEFINITION,
@@ -198,7 +219,10 @@ test.describe('experiment definition — closed bounded contract', () => {
       },
       { ...VALID_DEFINITION, segmentFields: ['region', 'region'] },
       { ...VALID_DEFINITION, segmentFields: ['email'] },
-      { ...VALID_DEFINITION, eligibility: { description: 'eligible', tags: { email: 'person@example.test' } } },
+      {
+        ...VALID_DEFINITION,
+        eligibility: { description: 'eligible', tags: { email: 'person@example.test' } },
+      },
       { ...VALID_DEFINITION, plannedWindow: { startAt: '2026-01-01', endAt: '2026-02-01T00:00:00Z' } },
       {
         ...VALID_DEFINITION,
@@ -233,7 +257,8 @@ test.describe('experiment definition — closed bounded contract', () => {
       },
       { ...VALID_DEFINITION, minimumSamplePerVariant: 0 },
       { ...VALID_DEFINITION, sql: 'select true' },
-    ]) expect(parseExperimentDefinition(definition).ok, JSON.stringify(definition)).toBe(false)
+    ])
+      expect(parseExperimentDefinition(definition).ok, JSON.stringify(definition)).toBe(false)
   })
 })
 
@@ -255,7 +280,9 @@ test('flag is exact true, and authorization precedes experiment payload validati
   const denied = new Error('owner boundary')
   let creates = 0
   const dependencies: ExperimentCreateCommandDependencies = {
-    requireOwnership: async () => { throw denied },
+    requireOwnership: async () => {
+      throw denied
+    },
     createVersion: async () => {
       creates += 1
       return {
@@ -273,41 +300,70 @@ test('flag is exact true, and authorization precedes experiment payload validati
     ['Not-A-Key', '{'],
     [null, null],
   ]) {
-    await expect(createExperimentVersionAfterGate('project', key, definition, dependencies))
-      .rejects.toBe(denied)
+    await expect(createExperimentVersionAfterGate('project', key, definition, dependencies)).rejects.toBe(
+      denied
+    )
   }
   expect(creates).toBe(0)
 })
 
 test('registry view exposes only lifecycle actions that can succeed', () => {
-  const rows: ExperimentRegistryRelationRow[] = [{
-    id: 'experiment-1',
-    project_id: 'project-1',
-    key: 'founding-message-v2',
-    created_by: 'owner-1',
-    created_at: '2026-07-01T00:00:00Z',
-    versions: [
-      {
-        id: 'v3', project_id: 'project-1', version: 3, definition: VALID_DEFINITION,
-        status: 'draft', created_by: 'owner-1', created_at: '2026-07-03T00:00:00Z',
-        started_by: null, started_at: null, ended_by: null, ended_at: null,
-        invalidated_by: null, invalidated_at: null,
-      },
-      {
-        id: 'v2', project_id: 'project-1', version: 2, definition: VALID_DEFINITION,
-        status: 'running', created_by: 'owner-1', created_at: '2026-07-02T00:00:00Z',
-        started_by: 'owner-1', started_at: '2026-07-04T00:00:00Z',
-        ended_by: null, ended_at: null, invalidated_by: null, invalidated_at: null,
-      },
-      {
-        id: 'v1', project_id: 'project-1', version: 1, definition: VALID_DEFINITION,
-        status: 'stopped', created_by: 'owner-1', created_at: '2026-07-01T00:00:00Z',
-        started_by: 'owner-1', started_at: '2026-07-01T01:00:00Z',
-        ended_by: 'owner-1', ended_at: '2026-07-02T00:00:00Z',
-        invalidated_by: null, invalidated_at: null,
-      },
-    ],
-  }]
+  const rows: ExperimentRegistryRelationRow[] = [
+    {
+      id: 'experiment-1',
+      project_id: 'project-1',
+      key: 'founding-message-v2',
+      created_by: 'owner-1',
+      created_at: '2026-07-01T00:00:00Z',
+      versions: [
+        {
+          id: 'v3',
+          project_id: 'project-1',
+          version: 3,
+          definition: VALID_DEFINITION,
+          status: 'draft',
+          created_by: 'owner-1',
+          created_at: '2026-07-03T00:00:00Z',
+          started_by: null,
+          started_at: null,
+          ended_by: null,
+          ended_at: null,
+          invalidated_by: null,
+          invalidated_at: null,
+        },
+        {
+          id: 'v2',
+          project_id: 'project-1',
+          version: 2,
+          definition: VALID_DEFINITION,
+          status: 'running',
+          created_by: 'owner-1',
+          created_at: '2026-07-02T00:00:00Z',
+          started_by: 'owner-1',
+          started_at: '2026-07-04T00:00:00Z',
+          ended_by: null,
+          ended_at: null,
+          invalidated_by: null,
+          invalidated_at: null,
+        },
+        {
+          id: 'v1',
+          project_id: 'project-1',
+          version: 1,
+          definition: VALID_DEFINITION,
+          status: 'stopped',
+          created_by: 'owner-1',
+          created_at: '2026-07-01T00:00:00Z',
+          started_by: 'owner-1',
+          started_at: '2026-07-01T01:00:00Z',
+          ended_by: 'owner-1',
+          ended_at: '2026-07-02T00:00:00Z',
+          invalidated_by: null,
+          invalidated_at: null,
+        },
+      ],
+    },
+  ]
   const registry = mapExperimentRegistryRows(rows)[0]
   expect(allowedExperimentTargets(registry, registry.versions[0])).toEqual(['invalid'])
   expect(allowedExperimentTargets(registry, registry.versions[1])).toEqual(['stopped', 'invalid'])
@@ -326,14 +382,20 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
     createProject(client, 'foreign'),
   ])
   try {
-    expect((await client.from('project_members').insert([
-      { project_id: projectId, user_id: owner, role: 'owner' },
-      { project_id: projectId, user_id: member, role: 'member' },
-      { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
-    ])).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert([
+          { project_id: projectId, user_id: owner, role: 'owner' },
+          { project_id: projectId, user_id: member, role: 'member' },
+          { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
+        ])
+      ).error
+    ).toBeNull()
 
     expect((await createVersion(client, projectId, member, 'blocked-member')).error?.code).toBe('42501')
-    expect((await createVersion(client, projectId, foreignOwner, 'blocked-foreign')).error?.code).toBe('42501')
+    expect((await createVersion(client, projectId, foreignOwner, 'blocked-foreign')).error?.code).toBe(
+      '42501'
+    )
 
     const creates = await Promise.all([
       createVersion(client, projectId, owner, 'founding-message-v2'),
@@ -366,23 +428,29 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
 
     const v4Create = await createVersion(client, projectId, owner, 'founding-message-v2')
     expect(v4Create.error).toBeNull()
-    const v4 = (v4Create.data![0] as Record<string, unknown>)
-    expect((await transition(
-      client, projectId, experimentId, v4.version_id as string, 'running', owner,
-    )).data).toHaveLength(0)
+    const v4 = v4Create.data![0] as Record<string, unknown>
+    expect(
+      (await transition(client, projectId, experimentId, v4.version_id as string, 'running', owner)).data
+    ).toHaveLength(0)
 
-    const beforeNullAudit = (await client
-      .from('experiment_lifecycle_audit')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)).count
+    const beforeNullAudit = (
+      await client
+        .from('experiment_lifecycle_audit')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+    ).count
     const nullTarget = await transition(client, projectId, experimentId, v1.id, null, owner)
     expect(nullTarget.error?.code).toBe('22023')
     const genericDecide = await transition(client, projectId, experimentId, v1.id, 'decided', owner)
     expect(genericDecide.error?.code).toBe('22023')
-    expect((await client
-      .from('experiment_lifecycle_audit')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)).count).toBe(beforeNullAudit)
+    expect(
+      (
+        await client
+          .from('experiment_lifecycle_audit')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+      ).count
+    ).toBe(beforeNullAudit)
 
     const stops = await Promise.all([
       transition(client, projectId, experimentId, v1.id, 'stopped', owner),
@@ -393,20 +461,35 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
     expect(new Set(stopRows.map((row) => row.ended_at)).size).toBe(1)
 
     const v4Start = await transition(
-      client, projectId, experimentId, v4.version_id as string, 'running', owner,
+      client,
+      projectId,
+      experimentId,
+      v4.version_id as string,
+      'running',
+      owner
     )
     expect(v4Start.data?.[0]).toMatchObject({ version: 4, status: 'running', changed: true })
     // A never-started older draft cannot become the current run after a newer version ever started.
     expect((await transition(client, projectId, experimentId, v2.id, 'running', owner)).data).toHaveLength(0)
 
     const invalidated = await transition(
-      client, projectId, experimentId, v4.version_id as string, 'invalid', owner,
+      client,
+      projectId,
+      experimentId,
+      v4.version_id as string,
+      'invalid',
+      owner
     )
     expect(invalidated.error).toBeNull()
     expect(invalidated.data?.[0]).toMatchObject({ status: 'invalid', changed: true })
     expect(invalidated.data?.[0].ended_at).toBe(invalidated.data?.[0].invalidated_at)
     const invalidatedAgain = await transition(
-      client, projectId, experimentId, v4.version_id as string, 'invalid', owner,
+      client,
+      projectId,
+      experimentId,
+      v4.version_id as string,
+      'invalid',
+      owner
     )
     expect(invalidatedAgain.data?.[0]).toMatchObject({
       status: 'invalid',
@@ -414,8 +497,9 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
       ended_at: invalidated.data?.[0].ended_at,
       invalidated_at: invalidated.data?.[0].invalidated_at,
     })
-    expect((await transition(client, projectId, experimentId, v3.id, 'invalid', owner)).data?.[0])
-      .toMatchObject({ status: 'invalid', changed: true, started_at: null, ended_at: null })
+    expect(
+      (await transition(client, projectId, experimentId, v3.id, 'invalid', owner)).data?.[0]
+    ).toMatchObject({ status: 'invalid', changed: true, started_at: null, ended_at: null })
 
     const { data: audit } = await client
       .from('experiment_lifecycle_audit')
@@ -435,26 +519,41 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
       .eq('experiment_id', experimentId)
       .eq('id', v1.id)
     expect(rewrite.error).not.toBeNull()
-    expect((await client.from('experiment_lifecycle_audit').insert({
-      project_id: projectId,
-      experiment_id: experimentId,
-      version_id: v1.id,
-      action: 'version_started',
-      actor_user_id: owner,
-    })).error).not.toBeNull()
-    expect((await client
-      .from('experiment_lifecycle_audit')
-      .delete()
-      .eq('project_id', projectId)
-      .eq('experiment_id', experimentId)).error).not.toBeNull()
+    expect(
+      (
+        await client.from('experiment_lifecycle_audit').insert({
+          project_id: projectId,
+          experiment_id: experimentId,
+          version_id: v1.id,
+          action: 'version_started',
+          actor_user_id: owner,
+        })
+      ).error
+    ).not.toBeNull()
+    expect(
+      (
+        await client
+          .from('experiment_lifecycle_audit')
+          .delete()
+          .eq('project_id', projectId)
+          .eq('experiment_id', experimentId)
+      ).error
+    ).not.toBeNull()
 
     const ownerDb = new PgClient({ connectionString: requireTestDatabaseUrl() })
     await ownerDb.connect()
     try {
-      await expect(ownerDb.query(
-        'UPDATE public.experiment_definition_versions SET definition = $1::jsonb WHERE project_id = $2 AND experiment_id = $3 AND id = $4',
-        [JSON.stringify({ ...VALID_DEFINITION, hypothesis: 'owner rewrite' }), projectId, experimentId, v1.id],
-      )).rejects.toMatchObject({ code: '55000' })
+      await expect(
+        ownerDb.query(
+          'UPDATE public.experiment_definition_versions SET definition = $1::jsonb WHERE project_id = $2 AND experiment_id = $3 AND id = $4',
+          [
+            JSON.stringify({ ...VALID_DEFINITION, hypothesis: 'owner rewrite' }),
+            projectId,
+            experimentId,
+            v1.id,
+          ]
+        )
+      ).rejects.toMatchObject({ code: '55000' })
     } finally {
       await ownerDb.end()
     }
@@ -462,31 +561,49 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
     const invalidDefinitions: Array<[string, unknown]> = [
       ['bad-control', { ...VALID_DEFINITION, controlVariantKey: 'missing' }],
       ['bad-segment', { ...VALID_DEFINITION, segmentFields: ['email'] }],
-      ['null-primary-direction', {
-        ...VALID_DEFINITION,
-        primaryMetric: { ...VALID_DEFINITION.primaryMetric, direction: null },
-      }],
-      ['null-guardrail-direction', {
-        ...VALID_DEFINITION,
-        guardrailMetrics: [{ event: 'guardrail_with_null_direction', direction: null }],
-      }],
+      [
+        'null-primary-direction',
+        {
+          ...VALID_DEFINITION,
+          primaryMetric: { ...VALID_DEFINITION.primaryMetric, direction: null },
+        },
+      ],
+      [
+        'null-guardrail-direction',
+        {
+          ...VALID_DEFINITION,
+          guardrailMetrics: [{ event: 'guardrail_with_null_direction', direction: null }],
+        },
+      ],
       ['blank-unicode-hypothesis', { ...VALID_DEFINITION, hypothesis: '\u00a0' }],
-      ['blank-unicode-eligibility', {
-        ...VALID_DEFINITION,
-        eligibility: { description: '\u3000' },
-      }],
-      ['unicode-padded-primary-event', {
-        ...VALID_DEFINITION,
-        primaryMetric: { event: `completed\u00a0`, direction: 'increase' },
-      }],
-      ['unicode-padded-guardrail-event', {
-        ...VALID_DEFINITION,
-        guardrailMetrics: [{ event: `\u3000abandoned`, direction: 'decrease' }],
-      }],
-      ['bad-window', {
-        ...VALID_DEFINITION,
-        plannedWindow: { startAt: '2026-01-01T00:00:00.0000001Z', endAt: '2026-02-01T00:00:00Z' },
-      }],
+      [
+        'blank-unicode-eligibility',
+        {
+          ...VALID_DEFINITION,
+          eligibility: { description: '\u3000' },
+        },
+      ],
+      [
+        'unicode-padded-primary-event',
+        {
+          ...VALID_DEFINITION,
+          primaryMetric: { event: `completed\u00a0`, direction: 'increase' },
+        },
+      ],
+      [
+        'unicode-padded-guardrail-event',
+        {
+          ...VALID_DEFINITION,
+          guardrailMetrics: [{ event: `\u3000abandoned`, direction: 'decrease' }],
+        },
+      ],
+      [
+        'bad-window',
+        {
+          ...VALID_DEFINITION,
+          plannedWindow: { startAt: '2026-01-01T00:00:00.0000001Z', endAt: '2026-02-01T00:00:00Z' },
+        },
+      ],
     ]
     for (const [key, definition] of invalidDefinitions) {
       expect((await createVersion(client, projectId, owner, key, definition)).error).not.toBeNull()
@@ -507,28 +624,37 @@ test('experiment RPCs are service-role-only with function-level denial', async (
   const client = createClient(url, anon, { auth: { persistSession: false } })
   const zero = '00000000-0000-0000-0000-000000000000'
   for (const [name, args] of [
-    ['create_experiment_version', {
-      p_project_id: zero,
-      p_experiment_key: 'x',
-      p_definition: VALID_DEFINITION,
-      p_actor_user_id: zero,
-    }],
-    ['transition_experiment_version', {
-      p_project_id: zero,
-      p_experiment_id: zero,
-      p_version_id: zero,
-      p_target_status: 'running',
-      p_actor_user_id: zero,
-    }],
-    ['get_experiment_analysis_events', {
-      p_project_id: zero,
-      p_experiment_key: 'x',
-      p_definition_version: 1,
-      p_metric_events: ['completed'],
-      p_analysis_start: '2026-01-01T00:00:00Z',
-      p_analysis_end: '2026-01-02T00:00:00Z',
-      p_as_of: '2026-01-02T00:00:00Z',
-    }],
+    [
+      'create_experiment_version',
+      {
+        p_project_id: zero,
+        p_experiment_key: 'x',
+        p_definition: VALID_DEFINITION,
+        p_actor_user_id: zero,
+      },
+    ],
+    [
+      'transition_experiment_version',
+      {
+        p_project_id: zero,
+        p_experiment_id: zero,
+        p_version_id: zero,
+        p_target_status: 'running',
+        p_actor_user_id: zero,
+      },
+    ],
+    [
+      'get_experiment_analysis_events',
+      {
+        p_project_id: zero,
+        p_experiment_key: 'x',
+        p_definition_version: 1,
+        p_metric_events: ['completed'],
+        p_analysis_start: '2026-01-01T00:00:00Z',
+        p_analysis_end: '2026-01-02T00:00:00Z',
+        p_as_of: '2026-01-02T00:00:00Z',
+      },
+    ],
   ] as const) {
     const { error } = await client.rpc(name, args)
     expect(error).not.toBeNull()

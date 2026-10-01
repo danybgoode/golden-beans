@@ -11,6 +11,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // experiments-for-humans · Story 3.2 (epic README D7) — Save draft is ONE transactional, idempotent
 // function. Everything here goes through the real `save_experiment_draft` on local Supabase; the
@@ -37,6 +38,7 @@ async function createProject(client: SupabaseClient, ownerId: string): Promise<s
   const { data, error } = await client
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(client),
       slug: `save-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: `h-${crypto.randomUUID()}`,
     })

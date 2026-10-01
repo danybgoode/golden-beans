@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // pod-report · Sprint 3, Story 3.1 — scoped share links.
 //
@@ -383,8 +384,16 @@ test('a share token keeps following its tenant across a rename (does NOT reprodu
   const slugA = `spec-tenant-a-${suffix}`
   const slugB = `spec-tenant-b-${suffix}`
 
-  const { data: a } = await db.from('projects').insert({ slug: slugA }).select('id').single()
-  const { data: b } = await db.from('projects').insert({ slug: slugB }).select('id').single()
+  const { data: a } = await db
+    .from('projects')
+    .insert({ workspace_id: await specWorkspaceId(db), slug: slugA })
+    .select('id')
+    .single()
+  const { data: b } = await db
+    .from('projects')
+    .insert({ workspace_id: await specWorkspaceId(db), slug: slugB })
+    .select('id')
+    .single()
   const projectA = a!.id as string
   const projectB = b!.id as string
 

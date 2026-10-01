@@ -4,9 +4,17 @@
 -- Plaintext keys (local dev + CI only, never real credentials):
 --   project-one: local-test-key-do-not-use-in-prod
 --   project-two: local-test-key-two-do-not-use-in-prod
-INSERT INTO projects (slug, api_key_hash) VALUES
-  ('project-one', 'b2a48213dbc6bcc579fc927ba2a926e4dc7e6962c2db4a296d47f321ceca9f76'),
-  ('project-two', 'f7207a46e314a91a166d20f591c699d175e3e370b42597c5c5630763f6fa7004')
+--
+-- workspaces (lock D11): every project lives in exactly one workspace, and the two isolation fixtures live in TWO —
+-- they exist to be different tenants. Fixed ids keep this file idempotent, like the ON CONFLICT clauses below.
+INSERT INTO workspaces (id, name) VALUES
+  ('00000000-0000-4000-8000-000000000001', 'project-one fixtures'),
+  ('00000000-0000-4000-8000-000000000002', 'project-two fixtures')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO projects (slug, api_key_hash, workspace_id) VALUES
+  ('project-one', 'b2a48213dbc6bcc579fc927ba2a926e4dc7e6962c2db4a296d47f321ceca9f76', '00000000-0000-4000-8000-000000000001'),
+  ('project-two', 'f7207a46e314a91a166d20f591c699d175e3e370b42597c5c5630763f6fa7004', '00000000-0000-4000-8000-000000000002')
 ON CONFLICT (slug) DO NOTHING;
 
 -- multi-tenant-activation Story 1.3: lib/auth.ts now resolves keys from api_keys, and this seed

@@ -101,6 +101,7 @@ const WHOAMI = {
   account: { userId: 'user-1', email: 'someone@example.com' },
   credential: { id: 'token-1', label: 'my laptop' },
   projects: [{ slug: 'acme', role: 'owner' }],
+  workspaces: [{ name: "Someone's products", role: 'owner' }],
 }
 
 // ── The parser ────────────────────────────────────────────────────────────────────────────────
@@ -793,4 +794,30 @@ test('under --json, stdout carries exactly ONE parseable document and stderr is 
   assert.equal(out.length, 1, 'more than one write reached stdout under --json')
   assert.deepEqual(err, [])
   JSON.parse(out[0])
+})
+
+// ── workspaces S2.3 — `gf whoami` prints the tenant ───────────────────────────────────────────────────────────────
+test('gf whoami prints `workspace: <name>` for each workspace the account belongs to', async () => {
+  const { writer, out } = capture()
+  const code = await run({
+    argv: ['whoami'],
+    writer,
+    env: sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN }),
+    fetchImpl: stubFetch({ '/api/v1/cli/whoami': { body: WHOAMI } }),
+  })
+  assert.equal(code, EXIT.OK)
+  assert.ok(out.join('\n').includes("workspace: Someone's products"), out.join('\n'))
+})
+
+test('gf whoami still works against a server too old to send workspaces — it just prints none', async () => {
+  const { writer, out } = capture()
+  const { workspaces: _omitted, ...older } = WHOAMI
+  const code = await run({
+    argv: ['whoami'],
+    writer,
+    env: sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN }),
+    fetchImpl: stubFetch({ '/api/v1/cli/whoami': { body: older } }),
+  })
+  assert.equal(code, EXIT.OK)
+  assert.equal(out.join('\n').includes('workspace:'), false)
 })

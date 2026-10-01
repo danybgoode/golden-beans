@@ -16,5 +16,11 @@
       "slug": "acme",
       "role": "owner"
     }
+  ],
+  "workspaces": [
+    {
+      "name": "Someone's products",
+      "role": "owner"
+    }
   ]
 }

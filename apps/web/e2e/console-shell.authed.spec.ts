@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { disposableSession } from './helpers/disposable-session'
 
 // console-ia-overhaul · Sprint 1. The signed-in shell, in a real browser.
 //
@@ -817,3 +818,53 @@ test.describe('the console shell', () => {
 //
 // **What is therefore still uncovered:** that both call sites actually ASK that predicate. A future
 // edit re-introducing a separate condition on either side would not be caught by any test here.
+
+// ── workspaces S2.3 — the switcher groups projects by workspace (the approved `switcher-grouped` state) ─────────────
+// A DISPOSABLE signed-in person (helpers/disposable-session.ts), never the shared fixture user: handing that user a
+// second project would change what every other authed spec running in parallel sees on `/app` (fresh reviewer, #221).
+test.describe('the grouped project switcher', () => {
+  test('two projects in two workspaces render as two named groups, each row "Project | Role", one link per project', async ({
+    browser,
+  }) => {
+    const session = await disposableSession(browser, 'owner')
+    try {
+      const { page, db, userId } = session
+      const other = await session.addProject('member', 'grouped switcher')
+      const { data: home } = await db
+        .from('project_members')
+        .select('projects(slug, workspaces(name))')
+        .eq('user_id', userId)
+        .eq('role', 'owner')
+        .single()
+      const homeProject = home?.projects as unknown as { slug: string; workspaces: { name: string } } | null
+      if (!homeProject) throw new Error('the disposable person has no home project')
+
+      await page.goto('/app')
+      const switcher = page.locator('.ds-shell-switcher')
+      await switcher.locator('summary').click()
+      const menu = switcher.locator('.ds-shell-menu')
+
+      await expect(menu.locator('section')).toHaveCount(2)
+      const mine = menu.locator('section', {
+        has: page.locator('p', { hasText: homeProject.workspaces.name }),
+      })
+      const theirs = menu.locator('section', {
+        has: page.locator('p', { hasText: 'grouped switcher fixtures' }),
+      })
+      await expect(mine.locator('a')).toHaveCount(1)
+      await expect(mine.locator('a')).toContainText(homeProject.slug)
+      await expect(mine.locator('.ds-shell-role')).toHaveText('owner')
+      await expect(theirs.locator('a')).toHaveCount(1)
+      await expect(theirs.locator('a')).toContainText(other.slug)
+      await expect(theirs.locator('.ds-shell-role')).toHaveText('member')
+      await expect(menu.locator('.ds-shell-note')).toHaveText(
+        'Projects are grouped by workspace. A workspace is the boundary your data never crosses.'
+      )
+
+      // No extra click: the row IS the link, straight to that project's Today.
+      await expect(theirs.locator('a')).toHaveAttribute('href', new RegExp(`project=${other.slug}`))
+    } finally {
+      await session.cleanup()
+    }
+  })
+})

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
 import { isConnectorEnabled, isTaskMcpToolEnabled } from '@/lib/flags'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 function disposableToken(): string {
   return `gb_connector_${randomBytes(24).toString('base64url')}`
@@ -138,7 +139,11 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
     const isolationSlug = `mcp-isolation-${randomBytes(6).toString('hex')}`
     const { data: project, error: projectError } = await db
       .from('projects')
-      .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
+      .insert({
+        workspace_id: await specWorkspaceId(db),
+        slug: isolationSlug,
+        api_key_hash: `spec-${randomBytes(8).toString('hex')}`,
+      })
       .select('id')
       .single()
     if (projectError || !project)
@@ -173,7 +178,11 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
     const isolationSlug = `mcp-revoke-${randomBytes(6).toString('hex')}`
     const { data: project, error: projectError } = await db
       .from('projects')
-      .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
+      .insert({
+        workspace_id: await specWorkspaceId(db),
+        slug: isolationSlug,
+        api_key_hash: `spec-${randomBytes(8).toString('hex')}`,
+      })
       .select('id')
       .single()
     if (projectError || !project)

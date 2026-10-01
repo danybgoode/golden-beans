@@ -6,6 +6,7 @@ import { isSignalsEnabled } from '../lib/flags'
 // importing it here fails the whole suite at collection time with an opaque module error
 // (Roadmap/LEARNINGS.md; see lib/signal-events.ts's header for the full account).
 import { ERROR_EVENT } from '../lib/signal-events'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // signals-loop · Sprint 1, Stories 1.1–1.3 — error capture, deterministic grouping, and the lazy
 // friction evaluation, exercised through the REAL ingest path.
@@ -37,7 +38,7 @@ async function createTenant(db: SupabaseClient): Promise<Tenant> {
   const slug = `spec-signals-${randomBytes(6).toString('hex')}`
   const { data: project, error } = await db
     .from('projects')
-    .insert({ slug, api_key_hash: null })
+    .insert({ workspace_id: await specWorkspaceId(db), slug, api_key_hash: null })
     .select('id')
     .single()
   if (error || !project) throw new Error(`could not create fixture project: ${error?.message}`)

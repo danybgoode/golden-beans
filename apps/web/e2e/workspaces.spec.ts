@@ -2,16 +2,19 @@ import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createHash, randomBytes } from 'node:crypto'
 import { claimWorkspace, releaseWorkspace, workspaceNameFor } from '../lib/workspace-tenancy'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
-// workspaces · Sprint 1 (Roadmap/02-commercial/workspaces — the Architecture lock, D2–D4).
+// workspaces (Roadmap/02-commercial/workspaces — the Architecture lock).
 //
-//   S1.1  the tables refuse anon and authenticated, and the backfill function refuses them at the FUNCTION level
-//   S1.2  the backfill rule, every branch, through the one place it lives (backfill_project_workspaces)
-//   S1.2  a credential minted before the backfill still authenticates after it
+//   S1.1  the tables refuse anon and authenticated
+//   S2·B  migration B's contract: workspace_id is NOT NULL, the backfill function is gone, and a project member is
+//         always inside the project's workspace (the D13 trigger)
+//   S1.2  a credential minted for a project still authenticates now that the project lives in a workspace
 //   S1.3  provisioning's claim / release, including the failure path
 //
-// ⚠️ The backfill tests only work while `projects.workspace_id` is NULLABLE — they insert the pre-migration shape.
-// Migration B (Sprint 2) makes it NOT NULL and drops the function, and deletes that describe block with it.
+// The backfill RULE's own specs (every branch, the abort, the two-owner tie-break) lived here until migration B dropped
+// the function; they ran green — and red under each mutation — on PR #220, and its row-by-row production result is
+// recorded there.
 
 function db(): SupabaseClient {
   const url = process.env.SUPABASE_URL
@@ -36,12 +39,22 @@ async function createUser(client: SupabaseClient, fixture: Fixture, metadata?: R
   return { id: data.user.id, email }
 }
 
-/** A project in the PRE-backfill shape: no workspace. */
-async function createProject(client: SupabaseClient, fixture: Fixture, createdBy: string | null = null) {
+/** A project in a fresh fixture workspace unless one is named. */
+async function createProject(
+  client: SupabaseClient,
+  fixture: Fixture,
+  createdBy: string | null = null,
+  workspaceId?: string
+) {
   const slug = `ws-spec-${suffix()}`
   const { data, error } = await client
     .from('projects')
-    .insert({ slug, api_key_hash: null, created_by: createdBy })
+    .insert({
+      slug,
+      api_key_hash: null,
+      created_by: createdBy,
+      workspace_id: workspaceId ?? (await specWorkspaceId(client, 'workspaces spec')),
+    })
     .select('id, slug')
     .single()
   if (error || !data) throw new Error(`createProject: ${error?.message}`)
@@ -118,11 +131,8 @@ function staleFirstWorkspaceRead(client: SupabaseClient): {
   return { client: proxy, consumed: () => !stale }
 }
 
-const backfill = (client: SupabaseClient, ids: string[]) =>
-  client.rpc('backfill_project_workspaces', { p_project_ids: ids })
-
 test.describe('S1.1 — the workspace tables are service-role only', () => {
-  test('anon and authenticated are REFUSED on both tables, and on the backfill function itself', async () => {
+  test('anon and authenticated are REFUSED on both tables', async () => {
     const url = process.env.SUPABASE_URL
     const anonKey = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     test.skip(!url || !anonKey, 'needs SUPABASE_ANON_KEY to exercise the anon and authenticated roles')
@@ -148,13 +158,6 @@ test.describe('S1.1 — the workspace tables are service-role only', () => {
           // A REFUSAL, not an empty list: RLS alone would answer [] — the REVOKE is what makes it 42501.
           expect(error?.code, `${label} reading ${relation}`).toBe('42501')
         }
-        const { error } = await client.rpc('backfill_project_workspaces', { p_project_ids: [] })
-        // Function-level, never an error from INSIDE the body (which would mean EXECUTE leaked and it ran) — LEARNINGS,
-        // "DROP FUNCTION + CREATE silently restores PUBLIC EXECUTE".
-        expect(
-          error?.code === 'PGRST202' || (error?.code === '42501' && /function/i.test(error.message)),
-          `${label} calling backfill_project_workspaces: ${error?.code} ${error?.message}`
-        ).toBe(true)
       }
     } finally {
       await cleanup(service, fixture)
@@ -181,120 +184,43 @@ test.describe('S1.1 — the workspace tables are service-role only', () => {
   })
 })
 
-test.describe('S1.2 — the backfill rule (backfill_project_workspaces, lock D3)', () => {
-  test('a self-serve project joins its CREATOR’s workspace, named for them', async () => {
+test.describe('S2 · migration B — the contract step (lock D4, D13)', () => {
+  test('a project without a workspace is refused by the database', async () => {
     const client = db()
-    const fixture: Fixture = { users: [], projects: [] }
-    try {
-      const ada = await createUser(client, fixture, { display_name: 'Ada' })
-      const project = await createProject(client, fixture, ada.id)
-      await addMember(client, ada.id, project.id, 'owner')
-
-      const { error } = await backfill(client, [project.id])
-      expect(error).toBeNull()
-
-      const workspace = await workspaceOf(client, project.id)
-      expect(workspace?.createdBy).toBe(ada.id)
-      expect(workspace?.name).toBe("Ada's products")
-      expect(workspace?.members).toEqual({ [ada.id]: 'owner' })
-    } finally {
-      await cleanup(client, fixture)
-    }
+    const { error } = await client
+      .from('projects')
+      .insert({ slug: `ws-spec-orphan-${suffix()}`, api_key_hash: null })
+    expect(error?.code).toBe('23502')
   })
 
-  test('the CREATOR wins even over an EARLIER owner — precedence, not just presence', async () => {
-    const client = db()
-    const fixture: Fixture = { users: [], projects: [] }
-    try {
-      const creator = await createUser(client, fixture)
-      const earlierOwner = await createUser(client, fixture)
-      const project = await createProject(client, fixture, creator.id)
-      await addMember(client, earlierOwner.id, project.id, 'owner', '2026-07-01T00:00:00Z')
-      await addMember(client, creator.id, project.id, 'owner', '2026-08-01T00:00:00Z')
-
-      expect((await backfill(client, [project.id])).error).toBeNull()
-
-      const workspace = await workspaceOf(client, project.id)
-      expect(workspace?.createdBy).toBe(creator.id)
-      expect(workspace?.members).toEqual({ [creator.id]: 'owner', [earlierOwner.id]: 'member' })
-    } finally {
-      await cleanup(client, fixture)
-    }
+  test('the backfill function is gone — nothing can rewrite every tenant’s workspace any more', async () => {
+    const { error } = await db().rpc('backfill_project_workspaces', { p_project_ids: [] })
+    expect(error?.code).toBe('PGRST202')
   })
 
-  test('with no creator, the EARLIEST owner wins — one workspace for a two-owner project, the rest become members', async () => {
-    const client = db()
-    const fixture: Fixture = { users: [], projects: [] }
-    try {
-      const later = await createUser(client, fixture)
-      const earlier = await createUser(client, fixture)
-      const reader = await createUser(client, fixture)
-      const project = await createProject(client, fixture)
-      // Inserted in the OPPOSITE order to their created_at, so insertion order cannot pass for the rule.
-      await addMember(client, later.id, project.id, 'owner', '2026-07-21T10:00:00Z')
-      await addMember(client, earlier.id, project.id, 'owner', '2026-07-21T09:00:00Z')
-      await addMember(client, reader.id, project.id, 'member', '2026-07-20T09:00:00Z')
-
-      expect((await backfill(client, [project.id])).error).toBeNull()
-
-      const workspace = await workspaceOf(client, project.id)
-      expect(workspace?.createdBy).toBe(earlier.id)
-      // The email's local part, because this person has no display name — "miyagi's products" in production.
-      expect(workspace?.name).toBe(workspaceNameFor(null, earlier.email))
-      // EVERY project member is inside the boundary, or Sprint 2's re-check would lock the non-owners out.
-      expect(workspace?.members).toEqual({
-        [earlier.id]: 'owner',
-        [later.id]: 'member',
-        [reader.id]: 'member',
-      })
-    } finally {
-      await cleanup(client, fixture)
-    }
-  })
-
-  test('one workspace per person: their second project joins the first one’s workspace', async () => {
+  test('granting a project places the person inside its workspace — as a member, never promoting an owner', async () => {
     const client = db()
     const fixture: Fixture = { users: [], projects: [] }
     try {
       const owner = await createUser(client, fixture)
-      const first = await createProject(client, fixture)
-      const second = await createProject(client, fixture)
-      await addMember(client, owner.id, first.id, 'owner')
-      await addMember(client, owner.id, second.id, 'owner')
+      const invitee = await createUser(client, fixture)
+      const claim = await claimWorkspace(client, owner.id, 'trigger check')
+      if (!claim.ok) throw new Error('claim failed')
+      const project = await createProject(client, fixture, owner.id, claim.workspaceId)
 
-      expect((await backfill(client, [first.id, second.id])).error).toBeNull()
+      await addMember(client, owner.id, project.id, 'owner')
+      await addMember(client, invitee.id, project.id, 'owner')
 
-      const a = await workspaceOf(client, first.id)
-      const b = await workspaceOf(client, second.id)
-      expect(a?.id).toBeTruthy()
-      expect(b?.id).toBe(a?.id)
+      const workspace = await workspaceOf(client, project.id)
+      // The workspace's creator keeps `owner`; a project OWNER who is new to the workspace joins it as `member` — the
+      // workspace role is administration, and only provisioning makes a workspace owner (lock D2, D13).
+      expect(workspace?.members).toEqual({ [owner.id]: 'owner', [invitee.id]: 'member' })
     } finally {
       await cleanup(client, fixture)
     }
   })
 
-  test('a project with NO creator and NO owner aborts the whole call — nothing is assigned', async () => {
-    const client = db()
-    const fixture: Fixture = { users: [], projects: [] }
-    try {
-      const owner = await createUser(client, fixture)
-      const assignable = await createProject(client, fixture)
-      await addMember(client, owner.id, assignable.id, 'owner')
-      const orphan = await createProject(client, fixture)
-
-      const { error } = await backfill(client, [assignable.id, orphan.id])
-      expect(error?.message).toContain(orphan.slug)
-
-      // All-or-nothing: the assignable project rolled back with it, and no workspace was left behind.
-      expect(await workspaceOf(client, assignable.id)).toBeNull()
-      const { data: leftovers } = await client.from('workspaces').select('id').eq('created_by', owner.id)
-      expect(leftovers).toEqual([])
-    } finally {
-      await cleanup(client, fixture)
-    }
-  })
-
-  test('a credential minted BEFORE the backfill still authenticates after it — ingest key and connector token', async ({
+  test('a credential minted for a project authenticates now that the project lives in a workspace — ingest key and connector token', async ({
     request,
   }) => {
     const client = db()
@@ -307,17 +233,14 @@ test.describe('S1.2 — the backfill rule (backfill_project_workspaces, lock D3)
       await client.from('api_keys').insert({
         project_id: project.id,
         key_hash: createHash('sha256').update(plaintextKey).digest('hex'),
-        label: 'pre-backfill',
+        label: 'workspace spec',
       })
       const connector = `gb_connector_${randomBytes(24).toString('base64url')}`
       await client.from('connector_tokens').insert({ project_id: project.id, token: connector })
 
-      expect((await backfill(client, [project.id])).error).toBeNull()
-      expect((await workspaceOf(client, project.id))?.id).toBeTruthy()
-
       const ingest = await request.post('/api/v1/track', {
         headers: { Authorization: `Bearer ${plaintextKey}` },
-        data: { userId: 'u1', event: 'workspace_backfill_check' },
+        data: { userId: 'u1', event: 'workspace_credential_check' },
       })
       expect(ingest.status()).toBe(201)
 
@@ -447,8 +370,7 @@ test.describe('S1.3 — provisioning claims a workspace (lib/workspace-tenancy.t
       expect(afterRetry.data).toHaveLength(1)
 
       // And even the creating claim cannot delete it once a project lives there — ON DELETE RESTRICT.
-      const project = await createProject(client, fixture)
-      await client.from('projects').update({ workspace_id: original.workspaceId }).eq('id', project.id)
+      await createProject(client, fixture, user.id, original.workspaceId)
       expect(await releaseWorkspace(client, original)).toBeNull()
       const afterRelease = await client.from('workspaces').select('id').eq('id', original.workspaceId)
       expect(afterRelease.data).toHaveLength(1)

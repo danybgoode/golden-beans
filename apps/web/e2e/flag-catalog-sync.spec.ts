@@ -8,6 +8,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const projectIds: string[] = []
 const userIds: string[] = []
@@ -50,6 +51,7 @@ async function fixtureProject(client: SupabaseClient, userId: string, label: str
   const { data, error } = await client
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(client),
       slug: `flag-sync-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: `h-${crypto.randomUUID()}`,
     })

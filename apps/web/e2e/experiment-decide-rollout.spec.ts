@@ -17,6 +17,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // experiments-for-humans · Story 4.2 (epic README D8). Decide, then roll out as a SEPARATE write,
 // against real Postgres, with the gate switched on by injection (CI keeps EXPERIMENT_BUILDER_ENABLED
@@ -55,7 +56,7 @@ async function fixture(client: SupabaseClient): Promise<Fixture> {
   const slug = `start-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const { data: project, error } = await client
     .from('projects')
-    .insert({ slug, api_key_hash: `h-${crypto.randomUUID()}` })
+    .insert({ workspace_id: await specWorkspaceId(client), slug, api_key_hash: `h-${crypto.randomUUID()}` })
     .select('id')
     .single()
   if (error || !project) throw new Error(`project fixture: ${error?.message}`)

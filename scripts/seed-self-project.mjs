@@ -25,6 +25,7 @@
 //                                              authenticates with).
 import { createHash, randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { seededProjectWorkspace } from './lib/seed-workspace.mjs';
 
 // The self tenant's slug. Kept in sync with lib/self-track.ts's SELF_PROJECT_SLUG (this script
 // can't import that TS file — see the header comment).
@@ -110,7 +111,14 @@ async function provisionProject(db) {
   const plaintextKey = overrideKey || randomBytes(24).toString('hex');
   const { data, error } = await db
     .from('projects')
-    .upsert({ slug: SELF_PROJECT_SLUG, api_key_hash: hashApiKey(plaintextKey) }, { onConflict: 'slug' })
+    .upsert(
+      {
+        slug: SELF_PROJECT_SLUG,
+        api_key_hash: hashApiKey(plaintextKey),
+        workspace_id: await seededProjectWorkspace(db, SELF_PROJECT_SLUG, 'Golden Frijoles self-tracking'),
+      },
+      { onConflict: 'slug' }
+    )
     .select('id')
     .single();
   if (error || !data) throw new Error(`Failed to upsert self project: ${error?.message}`);

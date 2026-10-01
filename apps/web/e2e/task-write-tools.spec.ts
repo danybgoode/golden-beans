@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { randomBytes, createHash } from 'node:crypto'
 import { isConnectorWriteToolEnabled, isTaskMcpToolEnabled } from '../lib/flags'
 import { ERROR_EVENT } from '../lib/signal-events'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // signals-loop · Sprint 3, Story 3.2 — the staged write tools (propose → confirm → apply).
 //
@@ -49,7 +50,7 @@ async function createTenant(db: SupabaseClient, label: string): Promise<Tenant> 
   const slug = `spec-write-${label}-${randomBytes(5).toString('hex')}`
   const { data: project, error } = await db
     .from('projects')
-    .insert({ slug, api_key_hash: null })
+    .insert({ workspace_id: await specWorkspaceId(db), slug, api_key_hash: null })
     .select('id')
     .single()
   if (error || !project) throw new Error(`fixture project failed: ${error?.message}`)

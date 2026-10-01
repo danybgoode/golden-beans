@@ -7,6 +7,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const START = '2026-07-01T00:00:00.000000Z'
 const END = '2026-08-01T00:00:00.000000Z'
@@ -50,7 +51,7 @@ async function createProject(client: SupabaseClient, label: string) {
   const slug = `experiment-analysis-${label}-${randomBytes(6).toString('hex')}`
   const { data, error } = await client
     .from('projects')
-    .insert({ slug, api_key_hash: keyHash })
+    .insert({ workspace_id: await specWorkspaceId(client), slug, api_key_hash: keyHash })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create project: ${error?.message}`)
@@ -59,9 +60,7 @@ async function createProject(client: SupabaseClient, label: string) {
     .insert({ project_id: data.id, key_hash: keyHash, label: 'experiment analysis spec' })
   if (keyError) throw new Error(`could not create API key: ${keyError.message}`)
   const token = `gb_connector_${randomBytes(24).toString('base64url')}`
-  const { error: tokenError } = await client
-    .from('connector_tokens')
-    .insert({ project_id: data.id, token })
+  const { error: tokenError } = await client.from('connector_tokens').insert({ project_id: data.id, token })
   if (tokenError) throw new Error(`could not create connector: ${tokenError.message}`)
   return { id: data.id as string, slug, key, token }
 }
@@ -70,13 +69,17 @@ async function createRunningVersion(
   client: SupabaseClient,
   projectId: string,
   ownerId: string,
-  experimentKey: string,
+  experimentKey: string
 ) {
-  expect((await client.from('project_members').insert({
-    project_id: projectId,
-    user_id: ownerId,
-    role: 'owner',
-  })).error).toBeNull()
+  expect(
+    (
+      await client.from('project_members').insert({
+        project_id: projectId,
+        user_id: ownerId,
+        role: 'owner',
+      })
+    ).error
+  ).toBeNull()
   const { data, error } = await client.rpc('create_experiment_version', {
     p_project_id: projectId,
     p_experiment_key: experimentKey,
@@ -108,11 +111,14 @@ async function insertFixture(
   client: SupabaseClient,
   projectId: string,
   experimentKey: string,
-  foreign = false,
+  foreign = false
 ) {
   const rows: Array<Record<string, unknown>> = []
   for (let index = 0; index < 5; index += 1) {
-    for (const [variant, offset] of [['z-control', 0], ['a-treatment', 10]] as const) {
+    for (const [variant, offset] of [
+      ['z-control', 0],
+      ['a-treatment', 10],
+    ] as const) {
       const subject = `${foreign ? 'foreign-' : ''}${variant}-${index}`
       rows.push({
         project_id: projectId,
@@ -181,16 +187,12 @@ async function mcpCall(request: APIRequestContext, token: string, name: string, 
   }
 }
 
-test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated analysis', async ({ request }) => {
+test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated analysis', async ({
+  request,
+}) => {
   const client = db()
-  const [ownerOne, ownerTwo] = await Promise.all([
-    createOwner(client, 'one'),
-    createOwner(client, 'two'),
-  ])
-  const [one, two] = await Promise.all([
-    createProject(client, 'one'),
-    createProject(client, 'two'),
-  ])
+  const [ownerOne, ownerTwo] = await Promise.all([createOwner(client, 'one'), createOwner(client, 'two')])
+  const [one, two] = await Promise.all([createProject(client, 'one'), createProject(client, 'two')])
   const experimentKey = `founding_cta_${Date.now()}`
   try {
     const [versionOne] = await Promise.all([
@@ -296,7 +298,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     expect((await request.get(`/api/v1/experiments/${experimentKey}/compare?${query}`)).status()).toBe(401)
     const ui = await request.get(
       `/app/experiments/${one.slug}/${experimentKey}?version=${versionOne.version}&asOf=${encodeURIComponent(asOf)}`,
-      { maxRedirects: 0 },
+      { maxRedirects: 0 }
     )
     expect([302, 307]).toContain(ui.status())
     expect(ui.headers().location).toContain('/login')
@@ -312,7 +314,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     const historicalAsOf = '2026-07-03T00:00:00.000000Z'
     const historical = await request.get(
       `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}&asOf=${encodeURIComponent(historicalAsOf)}`,
-      { headers: { Authorization: `Bearer ${one.key}` } },
+      { headers: { Authorization: `Bearer ${one.key}` } }
     )
     expect(historical.status()).toBe(200)
     const canonicalHistoricalAsOf = new Date(historicalAsOf).toISOString()
@@ -323,7 +325,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
 
     const stoppedSnapshotResponse = await request.get(
       `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}`,
-      { headers: { Authorization: `Bearer ${one.key}` } },
+      { headers: { Authorization: `Bearer ${one.key}` } }
     )
     expect(stoppedSnapshotResponse.status()).toBe(200)
     const stoppedSnapshot = await stoppedSnapshotResponse.json()
@@ -353,7 +355,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
 
     const decidedResponse = await request.get(
       `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}`,
-      { headers: { Authorization: `Bearer ${one.key}` } },
+      { headers: { Authorization: `Bearer ${one.key}` } }
     )
     expect(decidedResponse.status()).toBe(200)
     const decidedBody = await decidedResponse.json()
@@ -381,9 +383,14 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     expect(decisionMcp.response.status()).toBe(200)
     expect(decisionMcp.payload).toEqual(decidedBody)
 
-    expect((await client.from('connector_tokens')
-      .update({ revoked_at: new Date().toISOString() })
-      .eq('token', one.token)).error).toBeNull()
+    expect(
+      (
+        await client
+          .from('connector_tokens')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('token', one.token)
+      ).error
+    ).toBeNull()
     const revoked = await mcpCall(request, one.token, 'get_experiment_analysis', {
       experimentKey,
       version: versionOne.version,
@@ -394,10 +401,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     try {
       await cleanupExperimentProjects([one.id, two.id])
     } finally {
-      await Promise.all([
-        client.auth.admin.deleteUser(ownerOne),
-        client.auth.admin.deleteUser(ownerTwo),
-      ])
+      await Promise.all([client.auth.admin.deleteUser(ownerOne), client.auth.admin.deleteUser(ownerTwo)])
     }
   }
 })

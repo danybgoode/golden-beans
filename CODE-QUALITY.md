@@ -107,7 +107,8 @@ while its flag is off — read the flag.
 Every query is `project_id`-scoped, and that id is resolved **server-side** — from a credential,
 never from the request body or a URL slug. If you already hold a resolved `project_id`, pass it;
 do not re-resolve identity from something mutable. "Not yours" and "not there" must be
-indistinguishable to the caller.
+indistinguishable to the caller. The tenant is the **workspace**: a read across several projects
+goes through `getWorkspaceProjects()` and nowhere else (AGENTS.md § The tenancy invariant).
 
 ## 11. Rollout order is part of the design.
 

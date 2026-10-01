@@ -150,23 +150,26 @@ change that introduced the `workspaces` table, because a comment cannot amend an
 
 **The rule:** *no tenant (workspace) observes another's data.* Projects inside one workspace may be read
 **together** by that workspace's members, and **only through `getWorkspaceProjects(userId, workspaceId)`**
-(`apps/web/lib/workspace.ts`; it arrives in workspaces Sprint 2 — until it exists, no request path reads several
-projects' DATA at all). Every other request path stays single-project: it reads exactly one `project_id`, resolved
+(`apps/web/lib/workspace.ts`: the projects of that workspace ∩ the caller's project memberships, and nothing unless
+the caller belongs to the workspace; empty on any error). Every other request path stays single-project: it reads exactly one `project_id`, resolved
 server-side, exactly as before.
 
 **One named carve-out, and it is not a data read:** `getUserProjects(userId)` (`lib/membership.ts`) lists the caller's
-OWN memberships — the id, slug and role of each project they belong to (and, from Sprint 2, each one's workspace) — so
-the switcher, `/app` and `gf projects` can offer a choice. It returns nothing FROM inside those projects, and from
-Sprint 2 it drops any project whose workspace is not one of the caller's. Anything that reads events, metrics, flags
+OWN memberships — the id, slug, role and workspace of each project they belong to — so the switcher, `/app` and
+`gf projects` can offer a choice. It returns nothing FROM inside those projects, and it drops any project whose
+workspace is not one of the caller's. Anything that reads events, metrics, flags
 or any other project data from several projects is a multi-project read and goes through `getWorkspaceProjects()`.
 
 - **The workspace is a boundary, not a grant** (access model A). `project_members` is still the access list: a
   workspace member cannot open a project they are not a member of. `workspace_members.role` gates workspace
   administration only, and nothing reads it for project access.
 - **Every project-access read re-checks the workspace** at the one seam all of them pass through,
-  `lib/membership.ts` — *from workspaces Sprint 2*. Until it lands, `project_members` alone decides, which under
-  access model A is the same answer. A project whose workspace is not one of the caller's is "not found", never
-  "forbidden".
+  `lib/membership.ts` (all three reads, through `isInsideViewerWorkspaces` in `lib/workspace-access.ts`). A project
+  whose workspace is not one of the caller's is "not found", never "forbidden". A `project_members` insert places the
+  person inside the project's workspace (the `project_members_join_workspace` trigger), so the re-check never takes
+  away access `project_members` grants; it denies a person REMOVED from a workspace everything inside it.
+- **A guard watches it:** the semantic-lint rule `tenancy` (`golden-frijoles.config.json → lint.rules`, in shadow)
+  asks about request-path code that reads several projects outside `getWorkspaceProjects()`.
 - **Credentials stay project-scoped.** An API key, a connector token or a share link resolves to ONE project and
   never reaches its siblings, workspace or no workspace.
 - **Rule #2 is unchanged and is not widened by this.** `/api/v1/public/*` serves the demo project only. That the
@@ -247,7 +250,7 @@ deriving its own fallback.
 | Event ingest / SDK / track schema | `apps/web/app/api/v1/track/route.ts`, `apps/web/lib/track-schema.ts`, `packages/sdk/src/index.ts` |
 | Feature/signal registry | `apps/web/lib/feature-schema.ts`, `apps/web/app/api/v1/features/sync/route.ts` |
 | TARS / North Star / A/B reads | `apps/web/lib/{tars,north-star,ab}-query.ts` + their `*-schema.ts` |
-| Tenant identity / auth / API keys | `apps/web/lib/auth.ts`, `apps/web/lib/supabase.ts`, `apps/web/lib/membership.ts`, `apps/web/lib/workspace-tenancy.ts`, the `projects`/`api_keys`/`workspaces` migrations, [§ The tenancy invariant](#the-tenancy-invariant-workspace-level) |
+| Tenant identity / auth / API keys | `apps/web/lib/auth.ts`, `apps/web/lib/supabase.ts`, `apps/web/lib/membership.ts`, `apps/web/lib/workspace.ts`, `apps/web/lib/workspace-tenancy.ts`, the `projects`/`api_keys`/`workspaces` migrations, [§ The tenancy invariant](#the-tenancy-invariant-workspace-level) |
 | Public read routes (demo-only) | `apps/web/lib/public-demo.ts` (rule #2) |
 | MCP connector | `apps/web/lib/{flags,connector-tokens}.ts`, `apps/web/app/install/` (rule #3) |
 | Landing / waitlist / commercial | `apps/web/app/page.tsx`, `apps/web/lib/{landing-sections,waitlist-schema}.ts`, `references/landing-end-state.md` (local-only: `references/` is gitignored) |
@@ -297,6 +300,8 @@ supabase link --project-ref <ref> && supabase migration list   # apply: Supabase
 **Key imports** (reuse before rebuild — the load-bearing `lib/` seams):
 - `lib/supabase.ts` → `getSupabaseServiceClient()` — the ONLY DB client (service-role, server-only).
 - `lib/auth.ts` — hashed-key → `project_id` resolution. Every authed route starts here.
+- `lib/membership.ts` — session/PAT user → project access, re-checked against the user's workspaces. Every console, CLI and MCP user check passes here.
+- `lib/workspace.ts` → `getWorkspaceProjects()` — the ONLY multi-project read on a request path (§ The tenancy invariant).
 - `lib/rate-limit.ts` — DB-backed, serverless-safe bounded writes for any public write route.
 - `lib/site-url.ts` → `getSiteUrl()` — the ONLY absolute-URL builder (rule #5).
 - `lib/public-demo.ts` → `assertPublicAllowedSlug()` — the demo-only gate for any public read (rule #2).

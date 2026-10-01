@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Client as PgClient } from 'pg'
 import { hashCredential } from '@/lib/credential-hash'
 import { requireLocalSupabaseApiUrl, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 const ACTOR = 'user_ScenarioFixture'
 const projectIds: string[] = []
@@ -60,6 +61,7 @@ async function fixtureProject(client: SupabaseClient, userId: string, label: str
   const { data, error } = await client
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(client),
       slug: `scenario-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       api_key_hash: hashCredential(`fixture-${crypto.randomUUID()}`),
     })

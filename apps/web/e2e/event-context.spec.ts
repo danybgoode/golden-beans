@@ -10,6 +10,7 @@ import {
   MAX_ID_LENGTH,
   MAX_FUTURE_SKEW_MS,
 } from '@/lib/event-context'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // event-destination-router · Sprint 1, Story 1.1 — the versioned actor/subject contract.
 //
@@ -186,7 +187,7 @@ test('a full merchant context normalises to the exact persisted columns', () => 
       occurredAt: '2026-07-22T09:30:00Z',
       idempotencyKey: 'order-1',
     },
-    NOW,
+    NOW
   )
   expect(result.ok).toBe(true)
   expect(result.ok && result.context).toEqual({
@@ -209,7 +210,7 @@ test('actor and subject are independent — an admin acting on someone else s sh
       actor: { type: 'staff_user', id: 'staff_7' },
       subject: { type: 'shop', id: 'shop_42' },
     },
-    NOW,
+    NOW
   )
   expect(result.ok).toBe(true)
   expect(result.ok && result.context.actor_id).toBe('staff_7')
@@ -223,7 +224,9 @@ test('a half-populated entity is refused, not stored unqueryable', () => {
 
   const missingType = normalizeEventContext({ version: 1, subject: { id: 'm1' } }, NOW)
   expect(missingType.ok).toBe(false)
-  expect(missingType.ok === false && missingType.errors.some((e) => e.field === 'context.subject.type')).toBe(true)
+  expect(missingType.ok === false && missingType.errors.some((e) => e.field === 'context.subject.type')).toBe(
+    true
+  )
 })
 
 test('an entity given as a bare string or array is refused', () => {
@@ -236,7 +239,7 @@ test('an entity carrying an unknown property is refused, like the top-level cont
   // drops `name` while the top level would have rejected the same mistake.
   const result = normalizeEventContext(
     { version: 1, subject: { type: 'merchant', id: 'm1', name: 'Acme' } },
-    NOW,
+    NOW
   )
   expect(result.ok).toBe(false)
   expect(result.ok === false && result.errors.some((e) => e.field === 'context.subject.name')).toBe(true)
@@ -250,7 +253,7 @@ test('every field error is reported at once, not one per round-trip', () => {
       correlationId: 'a'.repeat(MAX_ID_LENGTH + 1),
       occurredAt: 'not-a-date',
     },
-    NOW,
+    NOW
   )
   expect(result.ok).toBe(false)
   const fields = result.ok === false ? result.errors.map((e) => e.field).sort() : []
@@ -416,16 +419,11 @@ test('repeating an idempotency key returns the ORIGINAL event id and creates not
   // The same LOGICAL event: an at-least-once caller converges on one identity however often it retries.
   expect(secondBody.id).toBe(firstBody.id)
 
-  const { data: rows } = await dbClient()
-    .from('events')
-    .select('id')
-    .eq('idempotency_key', key)
+  const { data: rows } = await dbClient().from('events').select('id').eq('idempotency_key', key)
   expect(rows).toHaveLength(1)
 })
 
-test('reusing an idempotency key with a DIFFERENT payload is a 409, not silent loss', async ({
-  request,
-}) => {
+test('reusing an idempotency key with a DIFFERENT payload is a 409, not silent loss', async ({ request }) => {
   // Codex round 4 Blocking: an accidental key reuse for a different event must not return the
   // original and drop the new event. Same key, different `event` name → 409, and the second event
   // is NOT stored.
@@ -487,10 +485,7 @@ test('idempotency keys are scoped per project — one tenant cannot collapse ano
   const twoBody = await two.json()
   expect(twoBody.id).not.toBe(oneBody.id)
 
-  const { data: rows } = await dbClient()
-    .from('events')
-    .select('id, project_id')
-    .eq('idempotency_key', key)
+  const { data: rows } = await dbClient().from('events').select('id, project_id').eq('idempotency_key', key)
   expect(rows).toHaveLength(2)
   expect(new Set(rows!.map((r) => r.project_id)).size).toBe(2)
 })
@@ -555,11 +550,15 @@ test('the DB CHECK constraints enforce the contract for a NON-route writer too',
   const base = { project_id: proj!.id, user_id: 'chk-u', event: 'chk_event' }
 
   // Capitalised entity type — the cohort-forking bug, at the DB layer.
-  const badType = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'Merchant', subject_id: 'm1' })
+  const badType = await db
+    .from('events')
+    .insert({ ...base, context_version: 1, subject_type: 'Merchant', subject_id: 'm1' })
   expect(badType.error).not.toBeNull()
 
   // Surrounding whitespace in an opaque id.
-  const spacedId = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: ' m1 ' })
+  const spacedId = await db
+    .from('events')
+    .insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: ' m1 ' })
   expect(spacedId.error).not.toBeNull()
 
   // Context populated but no version — an ambiguous row nothing can interpret.
@@ -567,7 +566,14 @@ test('the DB CHECK constraints enforce the contract for a NON-route writer too',
   expect(noVersion.error).not.toBeNull()
 
   // A control character in an id.
-  const ctrl = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: `m${String.fromCharCode(7)}bell` })
+  const ctrl = await db
+    .from('events')
+    .insert({
+      ...base,
+      context_version: 1,
+      subject_type: 'merchant',
+      subject_id: `m${String.fromCharCode(7)}bell`,
+    })
   expect(ctrl.error).not.toBeNull()
 
   // The valid shape still inserts — the constraints reject bad data, not all data.
@@ -586,7 +592,7 @@ test('the DB CHECK constraints enforce the contract for a NON-route writer too',
 // — this is fixture provisioning, not an app path.
 async function provisionProject(
   db: SupabaseClient,
-  opts: { quota: number; createdBy?: string | null; ingestRate?: number },
+  opts: { quota: number; createdBy?: string | null; ingestRate?: number }
 ): Promise<{ projectId: string; key: string; cleanup: () => Promise<void> }> {
   const slug = `disposable-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const key = `gb_key_test_${Math.random().toString(36).slice(2)}`
@@ -595,6 +601,7 @@ async function provisionProject(
   const { data: proj, error: projErr } = await db
     .from('projects')
     .insert({
+      workspace_id: await specWorkspaceId(db),
       slug,
       api_key_hash: keyHash, // legacy column still NOT NULL on projects; the auth path reads api_keys
       monthly_event_quota: opts.quota,
@@ -614,7 +621,10 @@ async function provisionProject(
     projectId: proj.id as string,
     key,
     cleanup: async () => {
-      await db.from('projects').delete().eq('id', proj.id as string) // CASCADE takes events + keys
+      await db
+        .from('projects')
+        .delete()
+        .eq('id', proj.id as string) // CASCADE takes events + keys
     },
   }
 }
@@ -647,7 +657,11 @@ test('an at-quota tenant can still RETRY an already-accepted idempotent event (2
     // ...while a genuinely NEW event is correctly rejected at quota.
     const fresh = await request.post('/api/v1/track', {
       headers: auth,
-      data: { userId: 'q-u', event: 'order_placed', context: { version: 1, idempotencyKey: `other-${Date.now()}` } },
+      data: {
+        userId: 'q-u',
+        event: 'order_placed',
+        context: { version: 1, idempotencyKey: `other-${Date.now()}` },
+      },
     })
     expect(fresh.status()).toBe(429)
   } finally {

@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'node:crypto'
 import { HORIZON_DESTINATIONS } from '../lib/horizon-destinations'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // pod-report · Sprint 1, Story 1.2 — the journey view and the epic drill-down.
 //
@@ -54,7 +55,11 @@ test.beforeAll(async () => {
   const { data: existingProject } = await db.from('projects').select('id').eq('slug', DEMO_SLUG).maybeSingle()
   let projectId = existingProject?.id as string | undefined
   if (!projectId) {
-    const { data, error } = await db.from('projects').insert({ slug: DEMO_SLUG }).select('id').single()
+    const { data, error } = await db
+      .from('projects')
+      .insert({ workspace_id: await specWorkspaceId(db), slug: DEMO_SLUG })
+      .select('id')
+      .single()
     if (error) throw new Error(`could not provision the demo fixture project: ${error.message}`)
     projectId = data.id as string
   }

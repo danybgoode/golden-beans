@@ -19,6 +19,7 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // entity-journeys-projections · Sprint 1, Story 1.1.
 // Pure contract + HTTP dark path + database state machine. The database tests drive the same
@@ -68,7 +69,11 @@ async function createUser(client: SupabaseClient, suffix: string): Promise<strin
 async function createProject(client: SupabaseClient, suffix: string): Promise<string> {
   const { data, error } = await client
     .from('projects')
-    .insert({ slug: `journey-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${crypto.randomUUID()}` })
+    .insert({
+      workspace_id: await specWorkspaceId(client),
+      slug: `journey-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${crypto.randomUUID()}`,
+    })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create project fixture: ${error?.message}`)
@@ -80,7 +85,7 @@ async function createVersion(
   projectId: string,
   ownerId: string,
   key: string,
-  definition: unknown = VALID_DEFINITION,
+  definition: unknown = VALID_DEFINITION
 ) {
   return client.rpc('create_journey_version', {
     p_project_id: projectId,
@@ -107,30 +112,65 @@ test.describe('JOURNEY_PROJECTIONS_ENABLED — dark by default', () => {
       else process.env.JOURNEY_PROJECTIONS_ENABLED = original
     }
   })
-
 })
 
 test.describe('journey definition — closed bounded contract', () => {
   // Mutation proof D: flipping the mapper's active-version equality makes this test fail with all
   // three lifecycle states misclassified, proving the single-snapshot mapping is actually pinned.
   test('one embedded snapshot maps lifecycle state and hides obsolete never-activated drafts', () => {
-    const rows: JourneyRegistryRelationRow[] = [{
-      id: 'journey-1',
-      key: 'merchant_activation',
-      active_version_id: 'version-active',
-      created_by: 'owner-1',
-      created_at: '2026-07-22T00:00:00.000Z',
-      versions: [
-        { id: 'version-1', version: 1, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T00:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T01:00:00.000Z' },
-        { id: 'version-obsolete', version: 2, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T01:30:00.000Z', activated_by: null, activated_at: null },
-        { id: 'version-4', version: 4, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T04:00:00.000Z', activated_by: null, activated_at: null },
-        { id: 'version-active', version: 3, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T03:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T03:30:00.000Z' },
-      ],
-    }]
+    const rows: JourneyRegistryRelationRow[] = [
+      {
+        id: 'journey-1',
+        key: 'merchant_activation',
+        active_version_id: 'version-active',
+        created_by: 'owner-1',
+        created_at: '2026-07-22T00:00:00.000Z',
+        versions: [
+          {
+            id: 'version-1',
+            version: 1,
+            definition: VALID_DEFINITION,
+            created_by: 'owner-1',
+            created_at: '2026-07-22T00:00:00.000Z',
+            activated_by: 'owner-1',
+            activated_at: '2026-07-22T01:00:00.000Z',
+          },
+          {
+            id: 'version-obsolete',
+            version: 2,
+            definition: VALID_DEFINITION,
+            created_by: 'owner-1',
+            created_at: '2026-07-22T01:30:00.000Z',
+            activated_by: null,
+            activated_at: null,
+          },
+          {
+            id: 'version-4',
+            version: 4,
+            definition: VALID_DEFINITION,
+            created_by: 'owner-1',
+            created_at: '2026-07-22T04:00:00.000Z',
+            activated_by: null,
+            activated_at: null,
+          },
+          {
+            id: 'version-active',
+            version: 3,
+            definition: VALID_DEFINITION,
+            created_by: 'owner-1',
+            created_at: '2026-07-22T03:00:00.000Z',
+            activated_by: 'owner-1',
+            activated_at: '2026-07-22T03:30:00.000Z',
+          },
+        ],
+      },
+    ]
     const mapped = mapJourneyRegistryRows(rows)
     expect(mapped[0].activeVersionId).toBe('version-active')
     expect(mapped[0].versions.map((version) => [version.version, version.state])).toEqual([
-      [4, 'draft'], [3, 'active'], [1, 'superseded'],
+      [4, 'draft'],
+      [3, 'active'],
+      [1, 'superseded'],
     ])
     expect(mapped[0].versions.some((version) => version.id === 'version-obsolete')).toBe(false)
   })
@@ -141,7 +181,10 @@ test.describe('journey definition — closed bounded contract', () => {
 
     const twenty = {
       entityType: 'account',
-      stages: Array.from({ length: MAX_JOURNEY_STAGES }, (_, i) => ({ key: `stage_${i}`, event: `event_${i}` })),
+      stages: Array.from({ length: MAX_JOURNEY_STAGES }, (_, i) => ({
+        key: `stage_${i}`,
+        event: `event_${i}`,
+      })),
     }
     expect(parseJourneyDefinition(twenty).ok).toBe(true)
   })
@@ -149,13 +192,23 @@ test.describe('journey definition — closed bounded contract', () => {
   test('rejects empty/oversized stages, duplicates, unknown fields and non-lower_snake_case keys', () => {
     for (const definition of [
       { entityType: 'merchant', stages: [] },
-      { entityType: 'merchant', stages: Array.from({ length: 21 }, (_, i) => ({ key: `s_${i}`, event: 'x' })) },
-      { entityType: 'merchant', stages: [{ key: 'same', event: 'x' }, { key: 'same', event: 'y' }] },
+      {
+        entityType: 'merchant',
+        stages: Array.from({ length: 21 }, (_, i) => ({ key: `s_${i}`, event: 'x' })),
+      },
+      {
+        entityType: 'merchant',
+        stages: [
+          { key: 'same', event: 'x' },
+          { key: 'same', event: 'y' },
+        ],
+      },
       { entityType: 'Merchant', stages: [{ key: 'ok', event: 'x' }] },
       { entityType: 'merchant', stages: [{ key: 'Not_Snake', event: 'x' }] },
       { entityType: 'merchant', stages: [{ key: 'ok', event: 'x', expression: 'return true' }] },
       { entityType: 'merchant', stages: [{ key: 'ok', event: 'x' }], sql: 'select true' },
-    ]) expect(parseJourneyDefinition(definition).ok).toBe(false)
+    ])
+      expect(parseJourneyDefinition(definition).ok).toBe(false)
   })
 
   test('rejects unsafe/high-cardinality tag fields, non-scalars and overlong strings', () => {
@@ -167,7 +220,9 @@ test.describe('journey definition — closed bounded contract', () => {
       { source: 'x'.repeat(MAX_PREDICATE_STRING_LENGTH + 1) },
       { source: 'a', channel: 'b', campaign: 'c', plan: 'd', region: 'e', sixth: 'f' },
     ]) {
-      expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags }] }).ok).toBe(false)
+      expect(
+        parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags }] }).ok
+      ).toBe(false)
     }
   })
 
@@ -178,7 +233,8 @@ test.describe('journey definition — closed bounded contract', () => {
       stages: [{ key: 'one', event: 'x' }],
     })
     expect(description.ok).toBe(false)
-    if (!description.ok) expect(description.errors).toContain('definition.description must not contain U+0000')
+    if (!description.ok)
+      expect(description.errors).toContain('definition.description must not contain U+0000')
 
     const predicate = parseJourneyDefinition({
       entityType: 'merchant',
@@ -190,28 +246,36 @@ test.describe('journey definition — closed bounded contract', () => {
       expect(predicate.errors).toContain('definition.stages[0].tags.source must not contain U+0000')
     }
 
-    expect(parseJourneyDefinition({
-      entityType: 'merchant',
-      description: 'tabs\tremain valid outside event names',
-      stages: [{ key: 'one', event: 'x', tags: { source: 'web\tapp' } }],
-    }).ok).toBe(true)
-    expect(parseJourneyDefinition({
-      entityType: 'merchant',
-      stages: [{ key: 'one', event: 'event\tname' }],
-    }).ok).toBe(false)
+    expect(
+      parseJourneyDefinition({
+        entityType: 'merchant',
+        description: 'tabs\tremain valid outside event names',
+        stages: [{ key: 'one', event: 'x', tags: { source: 'web\tapp' } }],
+      }).ok
+    ).toBe(true)
+    expect(
+      parseJourneyDefinition({
+        entityType: 'merchant',
+        stages: [{ key: 'one', event: 'event\tname' }],
+      }).ok
+    ).toBe(false)
   })
 
   test('Unicode limits count code points exactly like PostgreSQL char_length', () => {
     const emoji = '🚀'
-    expect(parseJourneyDefinition({
-      entityType: 'merchant',
-      description: emoji.repeat(MAX_JOURNEY_DESCRIPTION_LENGTH),
-      stages: [{
-        key: 'one',
-        event: emoji.repeat(MAX_EVENT_NAME_LENGTH),
-        tags: { source: emoji.repeat(MAX_PREDICATE_STRING_LENGTH) },
-      }],
-    }).ok).toBe(true)
+    expect(
+      parseJourneyDefinition({
+        entityType: 'merchant',
+        description: emoji.repeat(MAX_JOURNEY_DESCRIPTION_LENGTH),
+        stages: [
+          {
+            key: 'one',
+            event: emoji.repeat(MAX_EVENT_NAME_LENGTH),
+            tags: { source: emoji.repeat(MAX_PREDICATE_STRING_LENGTH) },
+          },
+        ],
+      }).ok
+    ).toBe(true)
 
     for (const definition of [
       {
@@ -247,33 +311,63 @@ test.describe('journey definition — closed bounded contract', () => {
   })
 
   test('cohort entry can only be stage 1; retention anchor must precede/equal target within 1–365 days', () => {
-    const base = { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }, { key: 'two', event: 'y' }] }
+    const base = {
+      entityType: 'merchant',
+      stages: [
+        { key: 'one', event: 'x' },
+        { key: 'two', event: 'y' },
+      ],
+    }
     expect(parseJourneyDefinition({ ...base, cohortEntry: { stageKey: 'two' } }).ok).toBe(false)
-    expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'one', anchorStageKey: 'two', withinDays: 30 } }).ok).toBe(false)
-    expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'one', withinDays: 0 } }).ok).toBe(false)
-    expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'two', withinDays: 365 } }).ok).toBe(true)
+    expect(
+      parseJourneyDefinition({
+        ...base,
+        retention: { stageKey: 'one', anchorStageKey: 'two', withinDays: 30 },
+      }).ok
+    ).toBe(false)
+    expect(
+      parseJourneyDefinition({
+        ...base,
+        retention: { stageKey: 'two', anchorStageKey: 'one', withinDays: 0 },
+      }).ok
+    ).toBe(false)
+    expect(
+      parseJourneyDefinition({
+        ...base,
+        retention: { stageKey: 'two', anchorStageKey: 'two', withinDays: 365 },
+      }).ok
+    ).toBe(true)
   })
 })
 
 test('DB RPCs bind owner identity, allocate versions safely, activate once, and audit atomically', async () => {
   const client = db()
   const [owner, member, foreignOwner] = await Promise.all([
-    createUser(client, 'owner'), createUser(client, 'member'), createUser(client, 'foreign'),
+    createUser(client, 'owner'),
+    createUser(client, 'member'),
+    createUser(client, 'foreign'),
   ])
   const [projectId, foreignProjectId] = await Promise.all([
-    createProject(client, 'primary'), createProject(client, 'foreign'),
+    createProject(client, 'primary'),
+    createProject(client, 'foreign'),
   ])
   try {
-    expect((await client.from('project_members').insert([
-      { project_id: projectId, user_id: owner, role: 'owner' },
-      { project_id: projectId, user_id: member, role: 'member' },
-      { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
-    ])).error).toBeNull()
+    expect(
+      (
+        await client.from('project_members').insert([
+          { project_id: projectId, user_id: owner, role: 'owner' },
+          { project_id: projectId, user_id: member, role: 'member' },
+          { project_id: foreignProjectId, user_id: foreignOwner, role: 'owner' },
+        ])
+      ).error
+    ).toBeNull()
 
     // Session actor binding is enforced again in the DB. A member and another project's owner both
     // fail even though the service-role client itself has authority to execute the RPC.
     expect((await createVersion(client, projectId, member, 'blocked_member')).error?.code).toBe('42501')
-    expect((await createVersion(client, projectId, foreignOwner, 'blocked_foreign')).error?.code).toBe('42501')
+    expect((await createVersion(client, projectId, foreignOwner, 'blocked_foreign')).error?.code).toBe(
+      '42501'
+    )
 
     // Concurrent same-key calls must serialize to distinct contiguous versions. These successful
     // calls also prove the private-schema JSON CHECK is executable through the service-role RPC
@@ -299,13 +393,19 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     const v1 = versions![0]
     const v2 = versions![1]
     const firstActivation = await client.rpc('activate_journey_version', {
-      p_project_id: projectId, p_journey_id: journeyId, p_version_id: v1.id, p_actor_user_id: owner,
+      p_project_id: projectId,
+      p_journey_id: journeyId,
+      p_version_id: v1.id,
+      p_actor_user_id: owner,
     })
     expect(firstActivation.error).toBeNull()
     expect(firstActivation.data).toBe(true)
 
     const secondActivation = await client.rpc('activate_journey_version', {
-      p_project_id: projectId, p_journey_id: journeyId, p_version_id: v2.id, p_actor_user_id: owner,
+      p_project_id: projectId,
+      p_journey_id: journeyId,
+      p_version_id: v2.id,
+      p_actor_user_id: owner,
     })
     expect(secondActivation.error).toBeNull()
     expect(secondActivation.data).toBe(true)
@@ -319,13 +419,19 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     expect(rewrite.error).not.toBeNull()
 
     const reactivation = await client.rpc('activate_journey_version', {
-      p_project_id: projectId, p_journey_id: journeyId, p_version_id: v1.id, p_actor_user_id: owner,
+      p_project_id: projectId,
+      p_journey_id: journeyId,
+      p_version_id: v1.id,
+      p_actor_user_id: owner,
     })
     expect(reactivation.error).toBeNull()
     expect(reactivation.data).toBe(false)
 
     const { data: registry } = await client
-      .from('journey_registries').select('active_version_id').eq('id', journeyId).single()
+      .from('journey_registries')
+      .select('active_version_id')
+      .eq('id', journeyId)
+      .single()
     expect(registry?.active_version_id).toBe(v2.id)
 
     // The exact embedded relationship used by listJourneyRegistries resolves pointer + activation
@@ -353,10 +459,19 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     // DB backstop rejects the same high-cardinality predicate even when TypeScript is bypassed, and
     // a failed create leaves neither a version nor an audit row (one RPC transaction).
     const unsafe = await createVersion(client, projectId, owner, 'unsafe_definition', {
-      entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags: { email: 'x@example.test' } }],
+      entityType: 'merchant',
+      stages: [{ key: 'one', event: 'x', tags: { email: 'x@example.test' } }],
     })
     expect(unsafe.error).not.toBeNull()
-    expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', 'unsafe_definition')).data).toHaveLength(0)
+    expect(
+      (
+        await client
+          .from('journey_registries')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('key', 'unsafe_definition')
+      ).data
+    ).toHaveLength(0)
 
     const jsonbTextLimitDefinition = {
       entityType: 'merchant',
@@ -383,9 +498,22 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       ['missing_stages', { entityType: 'merchant' }],
       ['missing_stage_key', { entityType: 'merchant', stages: [{ event: 'x' }] }],
       ['missing_stage_event', { entityType: 'merchant', stages: [{ key: 'one' }] }],
-      ['missing_cohort_key', { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }], cohortEntry: {} }],
-      ['missing_retention_field', { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }], retention: { stageKey: 'one', withinDays: 30 } }],
-      ['oversized_json', { entityType: 'merchant', description: 'x'.repeat(33 * 1024), stages: [{ key: 'one', event: 'x' }] }],
+      [
+        'missing_cohort_key',
+        { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }], cohortEntry: {} },
+      ],
+      [
+        'missing_retention_field',
+        {
+          entityType: 'merchant',
+          stages: [{ key: 'one', event: 'x' }],
+          retention: { stageKey: 'one', withinDays: 30 },
+        },
+      ],
+      [
+        'oversized_json',
+        { entityType: 'merchant', description: 'x'.repeat(33 * 1024), stages: [{ key: 'one', event: 'x' }] },
+      ],
       ['jsonb_text_limit', jsonbTextLimitDefinition],
     ]
     for (const [key, definition] of invalidDefinitions) {
@@ -398,7 +526,10 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     // the latter through a JS object would turn it into Infinity/null before the RPC.
     const supabaseUrl = process.env.SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    for (const [key, literal] of [['decimal_numeric', '42.5'], ['huge_numeric', '1e400']] as const) {
+    for (const [key, literal] of [
+      ['decimal_numeric', '42.5'],
+      ['huge_numeric', '1e400'],
+    ] as const) {
       const rawBody = JSON.stringify({
         p_project_id: projectId,
         p_journey_key: key,
@@ -410,29 +541,43 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       }).replace('"__RAW_NUMBER__"', literal)
       const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_journey_version`, {
         method: 'POST',
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
         body: rawBody,
       })
       expect(response.ok, key).toBe(false)
-      expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', key)).data).toHaveLength(0)
+      expect(
+        (await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', key)).data
+      ).toHaveLength(0)
     }
 
     // Concurrent activation always settles on the highest version. Each successful state change
     // has exactly one audit row; losing/obsolete attempts return false and write none.
     const raceCreates = []
-    for (let i = 0; i < 3; i += 1) raceCreates.push(await createVersion(client, projectId, owner, 'activation_race'))
+    for (let i = 0; i < 3; i += 1)
+      raceCreates.push(await createVersion(client, projectId, owner, 'activation_race'))
     const raceRows = raceCreates.flatMap((result) => result.data ?? []) as Array<Record<string, unknown>>
     const raceJourneyId = raceRows[0].journey_id as string
-    const activations = await Promise.all(raceRows.map((row) => client.rpc('activate_journey_version', {
-      p_project_id: projectId,
-      p_journey_id: raceJourneyId,
-      p_version_id: row.version_id,
-      p_actor_user_id: owner,
-    })))
+    const activations = await Promise.all(
+      raceRows.map((row) =>
+        client.rpc('activate_journey_version', {
+          p_project_id: projectId,
+          p_journey_id: raceJourneyId,
+          p_version_id: row.version_id,
+          p_actor_user_id: owner,
+        })
+      )
+    )
     for (const activation of activations) expect(activation.error).toBeNull()
     const highest = raceRows.find((row) => Number(row.version) === 3)!
     const { data: raceRegistry } = await client
-      .from('journey_registries').select('active_version_id').eq('id', raceJourneyId).single()
+      .from('journey_registries')
+      .select('active_version_id')
+      .eq('id', raceJourneyId)
+      .single()
     expect(raceRegistry?.active_version_id).toBe(highest.version_id)
     const { data: raceAudit } = await client
       .from('journey_definition_audit')
@@ -452,7 +597,9 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       actor_user_id: owner,
     })
     const auditUpdate = await client
-      .from('journey_definition_audit').update({ actor_user_id: member }).eq('journey_id', journeyId)
+      .from('journey_definition_audit')
+      .update({ actor_user_id: member })
+      .eq('journey_id', journeyId)
     const auditDelete = await client.from('journey_definition_audit').delete().eq('journey_id', journeyId)
     expect(auditInsert.error).not.toBeNull()
     expect(auditUpdate.error).not.toBeNull()
@@ -474,18 +621,39 @@ test('journey RPCs are service-role-only with function-level denial, never an RL
   const anonClient = createClient(url, anon!, { auth: { persistSession: false } })
   const zero = '00000000-0000-0000-0000-000000000000'
   const calls: [string, Record<string, unknown>][] = [
-    ['create_journey_version', { p_project_id: zero, p_journey_key: 'x', p_definition: VALID_DEFINITION, p_actor_user_id: zero }],
-    ['activate_journey_version', { p_project_id: zero, p_journey_id: zero, p_version_id: zero, p_actor_user_id: zero }],
-    ['get_journey_subject_events', { p_project_id: zero, p_subject_type: 'merchant', p_subject_id: 'subject-one' }],
-    ['get_journey_cohort_events', { p_project_id: zero, p_subject_type: 'merchant', p_event_names: ['merchant_created'], p_to: '2026-01-01T00:00:00Z', p_as_of: '2026-01-01T00:00:00Z' }],
-    ['record_journey_query_observation', {
-      p_project_id: zero,
-      p_journey_id: zero,
-      p_definition_version: 1,
-      p_query_kind: 'cohort',
-      p_duration_ms: 1,
-      p_relevant_event_count: 1,
-    }],
+    [
+      'create_journey_version',
+      { p_project_id: zero, p_journey_key: 'x', p_definition: VALID_DEFINITION, p_actor_user_id: zero },
+    ],
+    [
+      'activate_journey_version',
+      { p_project_id: zero, p_journey_id: zero, p_version_id: zero, p_actor_user_id: zero },
+    ],
+    [
+      'get_journey_subject_events',
+      { p_project_id: zero, p_subject_type: 'merchant', p_subject_id: 'subject-one' },
+    ],
+    [
+      'get_journey_cohort_events',
+      {
+        p_project_id: zero,
+        p_subject_type: 'merchant',
+        p_event_names: ['merchant_created'],
+        p_to: '2026-01-01T00:00:00Z',
+        p_as_of: '2026-01-01T00:00:00Z',
+      },
+    ],
+    [
+      'record_journey_query_observation',
+      {
+        p_project_id: zero,
+        p_journey_id: zero,
+        p_definition_version: 1,
+        p_query_kind: 'cohort',
+        p_duration_ms: 1,
+        p_relevant_event_count: 1,
+      },
+    ],
   ]
   for (const [name, args] of calls) {
     const { error } = await anonClient.rpc(name, args)
@@ -494,7 +662,8 @@ test('journey RPCs are service-role-only with function-level denial, never an RL
     const message = (error?.message ?? '').toLowerCase()
     const functionLevel =
       (code === '42501' && message.includes('function')) ||
-      code === 'PGRST202' || message.includes('could not find the function')
+      code === 'PGRST202' ||
+      message.includes('could not find the function')
     expect(functionLevel, `${name}: expected function denial, got ${code} ${message}`).toBe(true)
     expect(message).not.toContain('row-level security')
   }
