@@ -71,8 +71,11 @@ export type ConsoleProjectChoice = {
   slug: string
   /** The viewer's role in THIS project — the switcher's second column (workspaces S2.3, the `switcher-grouped` state). */
   role: string
-  /** The name of the workspace the project lives in — the switcher groups by it (workspaces S2.3). */
-  workspace: string
+  /**
+   * The workspace the project lives in (workspaces S2.3). The switcher groups by its ID and labels the group with its
+   * NAME — names are derived ("Alex's products") and two different tenants can share one (fresh reviewer, PR #221).
+   */
+  workspace: { id: string; name: string }
   /**
    * Where switching to this project lands you: the SAME section you are reading now, if that
    * project entitles it, and `/app` otherwise.
@@ -125,7 +128,7 @@ export function buildConsoleHeader(input: {
   activeSection: ShellSection
   activeProjectSlug: string
   /** Every project the viewer belongs to, with their role in each — the switcher's contents (D1). */
-  projects: readonly { slug: string; role: string; workspace: { name: string } }[]
+  projects: readonly { slug: string; role: string; workspace: { id: string; name: string } }[]
   gates: ProjectSurfaceGates
 }): ConsoleHeader {
   const activeProject = input.projects.find((project) => project.slug === input.activeProjectSlug)
@@ -189,7 +192,7 @@ export function buildConsoleHeader(input: {
     return {
       slug: project.slug,
       role: project.role,
-      workspace: project.workspace.name,
+      workspace: { id: project.workspace.id, name: project.workspace.name },
       href: sectionForProject ?? TODAY_HREF,
       current,
     }
@@ -198,7 +201,10 @@ export function buildConsoleHeader(input: {
   return { tabs, projects }
 }
 
-export type ConsoleProjectGroup = { workspace: string; projects: ConsoleProjectChoice[] }
+export type ConsoleProjectGroup = {
+  workspace: { id: string; name: string }
+  projects: ConsoleProjectChoice[]
+}
 
 /**
  * The switcher's contents, grouped under the workspace each project lives in — workspaces S2.3, the approved
@@ -210,15 +216,18 @@ export type ConsoleProjectGroup = { workspace: string; projects: ConsoleProjectC
  * and no click is added — each project is still one link.
  */
 export function groupProjectChoices(projects: readonly ConsoleProjectChoice[]): ConsoleProjectGroup[] {
-  const groups = new Map<string, ConsoleProjectChoice[]>()
+  const groups = new Map<string, ConsoleProjectGroup>()
   for (const project of projects) {
-    const group = groups.get(project.workspace)
-    if (group) group.push(project)
-    else groups.set(project.workspace, [project])
+    const group = groups.get(project.workspace.id)
+    if (group) group.projects.push(project)
+    else groups.set(project.workspace.id, { workspace: project.workspace, projects: [project] })
   }
-  return [...groups.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([workspace, members]) => ({ workspace, projects: members }))
+  // By name for reading order, then by id so two same-named tenants still sort the same way every render.
+  return [...groups.values()].sort(
+    (left, right) =>
+      left.workspace.name.localeCompare(right.workspace.name) ||
+      left.workspace.id.localeCompare(right.workspace.id)
+  )
 }
 
 /**

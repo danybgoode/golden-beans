@@ -77,7 +77,7 @@ const previewGates: ProjectSurfaceGates = {
   // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
 }
 
-const WORKSPACE = { name: "Daniel's products" }
+const WORKSPACE = { id: 'ws-daniel', name: "Daniel's products" }
 const owner = [{ slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE }]
 
 function header(section: ShellSection, gates = allGatesOpen, projects = owner, slug = 'miyagisanchez') {
@@ -550,22 +550,25 @@ test('with no projects the gates cannot affect the header — EVERY combination 
 })
 
 // ── workspaces S2.3 — the switcher is grouped by workspace (the approved `switcher-grouped` state) ──────────────────
+const choice = (slug: string, workspace: { id: string; name: string }, role = 'owner') => ({
+  slug,
+  role,
+  workspace,
+  href: `/app?project=${slug}`,
+  current: false,
+})
+
 test('the switcher groups projects under their workspace, groups by name, projects in the order they came', () => {
-  const choice = (slug: string, workspace: string, role = 'owner') => ({
-    slug,
-    role,
-    workspace,
-    href: `/app?project=${slug}`,
-    current: false,
-  })
+  const daniel = { id: 'ws-1', name: "Daniel's products" }
+  const acme = { id: 'ws-2', name: 'Acme' }
   const groups = groupProjectChoices([
-    choice('miyagisanchez', "Daniel's products"),
-    choice('acme-web', 'Acme', 'member'),
-    choice('golden-beans', "Daniel's products"),
+    choice('miyagisanchez', daniel),
+    choice('acme-web', acme, 'member'),
+    choice('golden-beans', daniel),
   ])
   assert.deepEqual(
     groups.map((group) => [
-      group.workspace,
+      group.workspace.name,
       group.projects.map((project) => `${project.slug}:${project.role}`),
     ]),
     [
@@ -575,17 +578,29 @@ test('the switcher groups projects under their workspace, groups by name, projec
   )
 })
 
+test('two DIFFERENT workspaces that share a name stay two groups — the boundary is the id, not the label', () => {
+  const groups = groupProjectChoices([
+    choice('alex-one', { id: 'ws-a', name: "Alex's products" }),
+    choice('alex-two', { id: 'ws-b', name: "Alex's products" }),
+  ])
+  assert.equal(groups.length, 2)
+  assert.deepEqual(
+    groups.map((group) => group.projects.map((project) => project.slug)),
+    [['alex-one'], ['alex-two']]
+  )
+})
+
 test('grouping neither drops nor duplicates a project — every choice is still exactly one link', () => {
   const header = buildConsoleHeader({
     activeSection: 'home',
     activeProjectSlug: 'miyagisanchez',
     projects: [
-      { slug: 'miyagisanchez', role: 'owner', workspace: { name: "Daniel's products" } },
-      { slug: 'acme', role: 'member', workspace: { name: 'Acme' } },
+      { slug: 'miyagisanchez', role: 'owner', workspace: { id: 'ws-1', name: "Daniel's products" } },
+      { slug: 'acme', role: 'member', workspace: { id: 'ws-2', name: 'Acme' } },
     ],
     gates: allGatesOpen,
   })
   const flattened = groupProjectChoices(header.projects).flatMap((group) => group.projects)
   assert.deepEqual(flattened.map((project) => project.slug).sort(), ['acme', 'miyagisanchez'])
-  assert.equal(flattened.find((project) => project.slug === 'acme')?.workspace, 'Acme')
+  assert.equal(flattened.find((project) => project.slug === 'acme')?.workspace.name, 'Acme')
 })

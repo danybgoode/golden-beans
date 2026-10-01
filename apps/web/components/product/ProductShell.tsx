@@ -330,8 +330,8 @@ export async function ProductShell({
                         groupProjectChoices) and adds no click: every project is still one link. */}
                       <div className="ds-shell-menu">
                         {groupProjectChoices(header.projects).map((group) => (
-                          <section key={group.workspace} aria-label={group.workspace}>
-                            <p>{group.workspace}</p>
+                          <section key={group.workspace.id} aria-label={group.workspace.name}>
+                            <p>{group.workspace.name}</p>
                             <ul>
                               {group.projects.map((project) => (
                                 <li key={project.slug}>
