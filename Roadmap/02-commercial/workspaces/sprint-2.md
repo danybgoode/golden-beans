@@ -3,7 +3,7 @@ epic: workspaces
 sprint: 2
 title: "Every path checks it"
 risk: high
-phase: Shaping
+phase: Shipped
 stories_total: 4
 stories:
   - id: S2.1
@@ -12,32 +12,32 @@ stories:
     i_want: "`getUserWorkspaces(userId)` and `getWorkspaceProjects(userId, workspaceId)` in `lib/workspace.ts`, with the intersect (same workspace ∩ your project memberships) as a pure function"
     so_that: "there is exactly one legal multi-project read on a request path"
     risk: high
-    status: planned
+    status: done
   - id: S2.2
     title: "Every access path re-checks the workspace"
     as_a: "a tenant"
     i_want: "`getMembership`/`getMembershipByProjectId` to deny when the project's workspace is not one of mine"
     so_that: "a slug from another workspace is a 404 on every path family"
     risk: high
-    status: planned
+    status: done
   - id: S2.3
     title: "I can see my workspace"
     as_a: "the product owner"
     i_want: "the console switcher to group my projects under their workspace name, and `gf whoami` to print the workspace"
     so_that: "the tenant is visible where I already look"
     risk: low
-    status: planned
+    status: done
   - id: S2.4
     title: "A guard watches for cross-project reads"
     as_a: "a reviewer"
     i_want: "a semantic-lint rule that selects request-path code reading several projects outside `getWorkspaceProjects()`, running in shadow"
     so_that: "the invariant has a check, not just a sentence"
     risk: low
-    status: planned
+    status: done
 ---
 # Workspaces become the tenant: one person, many products, one boundary — Sprint 2: Every path checks it
 
-**Status:** ⬜ not started
+**Status:** ✅ Shipped — #221 (`68b9974`), merged 2026-10-01; migration `20261001110000` applied to production **before** the merge and verified (PR #221 comments). CLI **0.4.0** is built; its npm publish is owed to Daniel (2FA).
 
 ## Build contract (locked by the architect before the builder started, 2026-10-01)
 Cite the README's **Architecture lock** (D1–D12); don't restate it. This sprint owns:
@@ -99,3 +99,21 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → The cross-workspace denial specs (console, CLI, MCP) are green; the semantic-lint tenancy rule reports in shadow.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-01, production, `main` @ `68b9974`)
+1. ⬜ **Owed to Daniel** (auth path): the switcher at https://goldenfrijoles.com/app shows "Daniel's products" with
+   `golden-beans`, `golden-beans-demo` and `miyagisanchez`, each row with its role, plus the boundary note. The same render
+   is asserted in CI (`console-shell.authed.spec.ts`, the grouped switcher; observed red with a flat list).
+2. ⬜ **Owed to Daniel**: `npm publish` of `@golden-frijoles/cli@0.4.0`, then `npx -y @golden-frijoles/cli@0.4.0 whoami`
+   prints `workspace: Daniel's products`. (`gf` is aliased to `git fetch` on Daniel's machine, so call it by its package
+   name.) The route already sends `workspaces` in prod. 0.3.0 ignores the field.
+3. ➖ **n/a in production, replaced by CI.** There is no seeded test tenant in prod, and probing `miyagi` would only exercise
+   the pre-existing non-member 404, not the workspace check. The cross-workspace denial is proven per path family in CI
+   instead: console (both guards), CLI and MCP. Each test was observed red with its read's check removed (PR #221).
+4. ✅ CI green with the denial specs on the PR head `5f6c4a3` (#221's final run; the squash merge is `68b9974`). The
+   tenancy lint reported in shadow from a local `semantic-lint --range origin/main...HEAD` run
+   (`lint:tenancy — 1 candidate(s): 1 clear`); no CI workflow runs semantic-lint.
+
+Also verified live: `/app/funnel/golden-beans-demo/setup_guide` and `/hub/golden-beans-demo` still answer 200 anonymously
+(rule #2's demo carve-out sits before the re-checked seam). `/app/funnel/miyagisanchez/…` → `/login`. A bad CLI token
+→ 401 `unauthorized`. `self-visit` → 200, and the event persisted after NOT NULL.

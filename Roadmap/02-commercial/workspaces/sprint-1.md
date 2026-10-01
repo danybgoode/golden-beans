@@ -3,7 +3,7 @@ epic: workspaces
 sprint: 1
 title: "The tenant exists"
 risk: high
-phase: Shaping
+phase: Shipped
 stories_total: 4
 stories:
   - id: S1.1
@@ -12,32 +12,32 @@ stories:
     i_want: "`workspaces` and `workspace_members` tables and a nullable `projects.workspace_id`, RLS on with no policies, service-role only"
     so_that: "a tenant row exists above projects without changing any read path yet"
     risk: high
-    status: planned
+    status: done
   - id: S1.2
     title: "Every project is backfilled into exactly one workspace (contract)"
     as_a: "an existing project owner"
     i_want: "my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → abort, lock D3), with `workspace_id` made NOT NULL at the head of Sprint 2 (lock D4)"
     so_that: "nobody loses or gains access and no project is orphaned"
     risk: high
-    status: planned
+    status: done
   - id: S1.3
     title: "A new signup is born with a workspace"
     as_a: "a new self-serve user"
     i_want: "my first project to be created inside a new workspace that I own"
     so_that: "every tenant has the boundary from row one"
     risk: high
-    status: planned
+    status: done
   - id: S1.4
     title: "AGENTS.md states the invariant at workspace level"
     as_a: "any agent working in this repo"
     i_want: "the tenancy rule to read \"no tenant (workspace) observes another's data; projects within a workspace may be read together by its members, only through `getWorkspaceProjects()`\""
     so_that: "D5 is enacted in the same change that introduces the table"
     risk: high
-    status: planned
+    status: done
 ---
 # Workspaces become the tenant: one person, many products, one boundary — Sprint 1: The tenant exists
 
-**Status:** ⬜ not started
+**Status:** ✅ Shipped — #220 (`4ee9bb1`), merged 2026-10-01; migration `20261001100000` applied to production **before** the merge and verified row by row (PR #220 comments)
 
 ## Build contract (locked by the architect before the builder started, 2026-10-01)
 Cite the README's **Architecture lock** (D1–D12); don't restate it. This sprint owns:
@@ -104,3 +104,18 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → The new account lands on Today with one project; the SQL `select name from workspaces order by created_at desc limit 1;` shows its new workspace.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-01, production, `main` @ `4ee9bb1`)
+1. ⬜ **Owed to Daniel** (auth path): sign in at https://goldenfrijoles.com/app and confirm Today loads your default project.
+2. ⬜ **Owed to Daniel**: open each project from the switcher. Expected: unchanged. The data says so: 0 prod project
+   members sit outside their project's workspace (measured before S2's migration).
+3. ⬜ **Owed to Daniel**: `npx -y @golden-frijoles/cli@0.3.0 projects` (not `gf`, which is aliased to `git fetch` on
+   this machine) lists your same 3 projects: `golden-beans`, `golden-beans-demo` and `miyagisanchez`.
+4. ✅ `select count(*) from projects where workspace_id is null` → **0** (run through `supabase db query --linked`).
+   `miyagisanchez`, `golden-beans-demo` and `golden-beans` → "Daniel's products"; `miyagi` → "miyagi's products".
+5. ⬜ **Owed to Daniel** (signup mints a real tenant, and I don't create prod accounts unasked): sign up a fresh test email.
+   The provisioning path itself is proven in CI. The authed fixture signs up through the real `/app/provision`, and
+   `auth.setup.ts` asserts the new project sits in its creator's own workspace (observed red with `workspace_id: null`).
+
+Also verified live: `/app` → `/login` (307) unauthed; `POST /api/v1/track` with no key → 401, not 500; `self-visit`, which
+ingests with the pre-existing production self key server-side, → 200, and the event persisted.
