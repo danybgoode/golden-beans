@@ -1,7 +1,7 @@
 ---
 title: "The board's epic links resolve one folder too high"
 slug: board-link-depth
-status: raw
+status: shipped
 area: "09"
 type: bug
 priority: unranked
@@ -10,7 +10,7 @@ underwritten_by: null
 risk: low
 epic: null
 build_order: null
-updated: 2026-09-28
+updated: 2026-10-01
 ---
 
 # Seed: the board's epic links resolve one folder too high
