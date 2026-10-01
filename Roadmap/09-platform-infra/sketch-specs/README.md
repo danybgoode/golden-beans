@@ -19,7 +19,10 @@ build_order: 52  # integer position in the ONE global build sequence — the SSO
 > **Area:** 09-platform-infra · **Risk:** low · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/sketch-specs.md`](../../00-ideas/seeds/sketch-specs.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section below, not here; this comment never names
+     that heading literally, so an edit anchored on it cannot land inside the comment). -->
+
+## Why
 Today a screen is approved as hand-made prototype HTML, and CI's state contract is extracted from it afterwards, so what the product owner approves and what the build is checked against are two artifacts. This epic lets a screen be written once as a `surface` block (state, route, the blocks in order with the words that matter), rendered as a grey wireframe for approval, and used directly as the route's state contract. The flow, state, sequence, architecture, data and copy formats the portfolio seed proposed are dropped: `intent-match`'s Mermaid diagrams and tables already are those specs. The pitch, the split with `intent-match` and the diagram are in the [seed](../../00-ideas/seeds/sketch-specs.md).
 
 ## Platform-first note
