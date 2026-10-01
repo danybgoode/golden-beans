@@ -5,10 +5,13 @@
 **Golden Beans is a standalone Unified Growth Engine** — telemetry ingest + a TypeScript SDK, a TARS
 funnel (Targeted/Adopted/Retained), a North Star metric, and A/B bucketing, wrapped in a commercial
 shell (public landing, waitlist, and a read-only MCP connector). It is **multi-tenant by design**:
-every event is scoped to a `project`, and **no request-derived read path can cross projects**
-(one narrow, registered exemption exists for background schedulers — see
+the **tenant is the workspace** — every event is scoped to a `project`, every project lives in exactly
+one `workspace`, and **no request-derived read path can cross workspaces**. Projects inside one
+workspace may be read together by its members **only through `getWorkspaceProjects()`** — see
+[§ The tenancy invariant](#the-tenancy-invariant-workspace-level). (One narrow, registered exemption
+exists for background schedulers — see
 [§ The scheduler exemption](#the-scheduler-exemption-narrow-registered-and-property-bound); it does
-not apply to anything that serves a request). It exists so a team can
+not apply to anything that serves a request.) It exists so a team can
 run product analytics + experimentation from one primitive set instead of stitching vendors together;
 its first proof-of-use is dogfooding Miyagi's real setup-guide funnel. It is *not* a fork of any
 sibling project — it's maintained on its own, consuming the shared `golden-frijoles` plugin for process.
@@ -117,6 +120,8 @@ The public landing's live-proof section and any other public read route are gate
 `assertPublicAllowedSlug()` (`apps/web/lib/public-demo.ts`) against `DEMO_PROJECT_SLUG`. A real customer
 project (e.g. `miyagisanchez`) must 403, not 404, on these routes. Any new public-facing read path reuses
 this same allow-list check — never a route that trusts a caller-supplied project slug.
+**Unchanged by the workspace-level invariant (2026-10-01):** the allow-list names one PROJECT, and the workspace
+that project sits in widens nothing — see [§ The tenancy invariant](#the-tenancy-invariant-workspace-level).
 
 ### 3. The MCP connector is enablement-gated. Never bypass either gate as a shortcut.
 `CONNECTOR_ENABLED` (`apps/web/lib/flags.ts`, born unset/OFF) and per-project revocable tokens
@@ -138,10 +143,45 @@ survived until 2026-07-22 — see LEARNINGS' "grep for its siblings" rule, which
 should have caught it.) Confirmed again 2026-07-22: `CRON_SECRET` was invisible to the running
 functions until a new deployment.
 
+### The tenancy invariant (workspace level)
+
+**Approved by Daniel as audit decision D5 (2026-09-23), enacted by the workspaces epic (2026-10-01)** — in the same
+change that introduced the `workspaces` table, because a comment cannot amend an architecture rule.
+
+**The rule:** *no tenant (workspace) observes another's data.* Projects inside one workspace may be read
+**together** by that workspace's members, and **only through `getWorkspaceProjects(userId, workspaceId)`**
+(`apps/web/lib/workspace.ts`; it arrives in workspaces Sprint 2 — until it exists, no request path reads several
+projects' DATA at all). Every other request path stays single-project: it reads exactly one `project_id`, resolved
+server-side, exactly as before.
+
+**One named carve-out, and it is not a data read:** `getUserProjects(userId)` (`lib/membership.ts`) lists the caller's
+OWN memberships — the id, slug and role of each project they belong to (and, from Sprint 2, each one's workspace) — so
+the switcher, `/app` and `gf projects` can offer a choice. It returns nothing FROM inside those projects, and from
+Sprint 2 it drops any project whose workspace is not one of the caller's. Anything that reads events, metrics, flags
+or any other project data from several projects is a multi-project read and goes through `getWorkspaceProjects()`.
+
+- **The workspace is a boundary, not a grant** (access model A). `project_members` is still the access list: a
+  workspace member cannot open a project they are not a member of. `workspace_members.role` gates workspace
+  administration only, and nothing reads it for project access.
+- **Every project-access read re-checks the workspace** at the one seam all of them pass through,
+  `lib/membership.ts` — *from workspaces Sprint 2*. Until it lands, `project_members` alone decides, which under
+  access model A is the same answer. A project whose workspace is not one of the caller's is "not found", never
+  "forbidden".
+- **Credentials stay project-scoped.** An API key, a connector token or a share link resolves to ONE project and
+  never reaches its siblings, workspace or no workspace.
+- **Rule #2 is unchanged and is not widened by this.** `/api/v1/public/*` serves the demo project only. That the
+  demo and another project share a workspace makes nothing else public, and no public path reads a workspace.
+- **This is not a scheduler exemption and does not create one.** A multi-project read on a request path that does
+  not go through `getWorkspaceProjects()` is a violation of this rule, whatever it is for.
+
 ### The scheduler exemption (narrow, registered, and property-bound)
 
 **Approved by Daniel 2026-07-22** (event-destination-router S2). Read this whole section before
 citing it. It is deliberately hard to qualify for.
+
+**"Tenant" here means the workspace** ([§ The tenancy invariant](#the-tenancy-invariant-workspace-level),
+2026-10-01). The six conditions and the registry below are unchanged; an exempt function still returns bare
+`project_id`s and nothing else.
 
 **The invariant is unchanged in substance:** *no tenant may ever observe another tenant's data.* What
 this amendment corrects is an over-broad *wording* — "no read path can cross projects" also caught
@@ -166,7 +206,7 @@ compliance.
    then `GRANT EXECUTE … TO service_role`, pinned by a spec that asserts a *function-level* denial
    (not an RLS error, which would mean EXECUTE leaked and the body ran).
 4. **The caller authenticates with a platform secret and fails closed** (`CRON_SECRET`; unset ⇒ 401).
-5. **Everything downstream is strictly single-tenant** — the work it schedules takes a **required**
+5. **Everything downstream is strictly single-tenant, and single-PROJECT** — the work it schedules takes a **required**
    `projectId` and re-asserts it on every query and write.
 6. **It is listed in the registry below.** The exempt set is finite and auditable. Adding to it is a
    deliberate decision by Daniel, recorded here — never inferred by analogy.
@@ -207,7 +247,7 @@ deriving its own fallback.
 | Event ingest / SDK / track schema | `apps/web/app/api/v1/track/route.ts`, `apps/web/lib/track-schema.ts`, `packages/sdk/src/index.ts` |
 | Feature/signal registry | `apps/web/lib/feature-schema.ts`, `apps/web/app/api/v1/features/sync/route.ts` |
 | TARS / North Star / A/B reads | `apps/web/lib/{tars,north-star,ab}-query.ts` + their `*-schema.ts` |
-| Tenant identity / auth / API keys | `apps/web/lib/auth.ts`, `apps/web/lib/supabase.ts`, the `projects`/`api_keys` migrations |
+| Tenant identity / auth / API keys | `apps/web/lib/auth.ts`, `apps/web/lib/supabase.ts`, `apps/web/lib/membership.ts`, `apps/web/lib/workspace-tenancy.ts`, the `projects`/`api_keys`/`workspaces` migrations, [§ The tenancy invariant](#the-tenancy-invariant-workspace-level) |
 | Public read routes (demo-only) | `apps/web/lib/public-demo.ts` (rule #2) |
 | MCP connector | `apps/web/lib/{flags,connector-tokens}.ts`, `apps/web/app/install/` (rule #3) |
 | Landing / waitlist / commercial | `apps/web/app/page.tsx`, `apps/web/lib/{landing-sections,waitlist-schema}.ts`, `references/landing-end-state.md` (local-only: `references/` is gitignored) |

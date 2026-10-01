@@ -3,6 +3,7 @@ import { createAuthServerClient } from '@/lib/supabase-auth'
 import { getSiteUrl } from '@/lib/site-url'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { isSignupEnabled } from '@/lib/flags'
+import { displayNameFrom } from '@/lib/display-name'
 import { provisionTenantForUser, registerStarterFeature } from '@/lib/provisioning'
 import { trackSelfEvent, ACCOUNT_CONFIRMED_EVENT } from '@/lib/self-track'
 import { setOnboardingKeyCookie } from '@/lib/onboarding-key'
@@ -34,7 +35,11 @@ export async function GET(request: NextRequest) {
       // in inboxes when the flip happened. A gate checked only at the front door leaves a queue of
       // pending links that can still create tenants behind it.
       if (user && isSignupEnabled()) {
-        const result = await provisionTenantForUser(user.id, user.email ?? '')
+        const result = await provisionTenantForUser(
+          user.id,
+          user.email ?? '',
+          displayNameFrom(user.user_metadata)
+        )
         if (!result.ok) {
           console.error('[auth/callback] provisioning failed:', result.error)
           // The session is real and sign-in succeeded, so we do NOT fail the login: /app renders an
@@ -56,9 +61,7 @@ export async function GET(request: NextRequest) {
             after(() => registerStarterFeature(starterKey))
           }
           after(() => trackSelfEvent(ACCOUNT_CONFIRMED_EVENT, user.id))
-          return NextResponse.redirect(
-            new URL(`/app/onboarding/${result.projectSlug}`, getSiteUrl()),
-          )
+          return NextResponse.redirect(new URL(`/app/onboarding/${result.projectSlug}`, getSiteUrl()))
         }
       }
       return NextResponse.redirect(target)

@@ -39,10 +39,25 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-- D6: `getWorkspaceProjects()` is the ONLY multi-project read on a request path. Cite it; don't restate it.
-- `getMembership*` keep their fail-closed contract (null on error).
-- The switcher state is an approved design: the `surface` blocks in the seed are the contract.
+## Build contract (locked by the architect before the builder started, 2026-10-01)
+Cite the README's **Architecture lock** (D1–D12); don't restate it. This sprint owns:
+- **Head commit = the contract step (D4, D11):** migration B `20261001110000_workspaces_not_null.sql` re-runs
+  `backfill_project_workspaces()`, raises if any null remains, runs `SET NOT NULL`, and drops the function. Every
+  fixture that writes `projects` (39 spec inserts, `supabase/seed.sql`, `scripts/seed-{demo,self}-project.mjs`) gains
+  a workspace through `e2e/helpers/spec-workspace.ts` (the seed scripts keep an existing project's workspace and
+  create one only for a new project). It's applied to prod before S2 merges.
+- **D6:** `getWorkspaceProjects()` is the ONLY multi-project read on a request path. Cite it; don't restate it.
+- **D9:** the workspace re-check sits in all three reads of `lib/membership.ts`, through the pure predicate in
+  `lib/workspace-access.ts`. `getMembership*` keep their fail-closed contract (null on error); `getUserProjects`
+  keeps throwing.
+- **D10:** the MCP family's assertion is "write tools absent", not a 404.
+- **Teeth:** each cross-workspace spec seeds the state that ONLY the workspace check denies: a `project_members` row
+  for a project in a workspace the user doesn't belong to. Deleting the check has to turn those specs red. A spec
+  that a plain non-member would also fail proves nothing.
+- The switcher state is an approved design: the `surface` blocks in the seed are the contract. Group names are the
+  live workspace names (D3: no platform workspace).
+- **`gf whoami`:** the route adds `workspaces: [{ name, role }]` and the CLI prints `workspace: <name>`. A CLI
+  release (npm publish) is Daniel's 2FA step and is owed by name.
 
 ## Stories
 
@@ -53,7 +68,7 @@ stories:
 
 ### Story 2.2 — Every access path re-checks the workspace
 **As** a tenant, **I want** `getMembership`/`getMembershipByProjectId` to deny when the project's workspace is not one of mine, **so that** a slug from another workspace is a 404 on every path family.
-**Acceptance:** Api specs per family: console route (`requireDashboardAccess`), `/api/v1/cli/*` (PAT) and the MCP connector each return 404 for a slug in another workspace; the existing member-vs-non-member specs stay green. A deliberate mutation (removing the workspace check) turns the new specs red.
+**Acceptance:** Api specs per family: console route (`requireDashboardAccess`), `/api/v1/cli/*` (PAT) each return 404 for a slug in another workspace, and the MCP connector registers no write tools for a PAT whose project sits in another workspace (lock D10); the existing member-vs-non-member specs stay green. A deliberate mutation (removing the workspace check) turns the new specs red.
 **Risk:** high — auth boundary
 
 ### Story 2.3 — I can see my workspace
@@ -75,7 +90,7 @@ stories:
 Env: production · https://goldenfrijoles.com   (or the preview URL while testing pre-merge)
 
 1. Go to https://goldenfrijoles.com/app and open the project switcher. **(auth path — owed to Daniel by name)**
-   → Projects are grouped under workspace names ("Daniel's products", "Golden Frijoles (platform)").
+   → Projects are grouped under the workspace name "Daniel's products" (lock D3: no platform workspace exists; demo and self are Daniel's).
 2. Run `gf whoami`.
    → A line `workspace: <your workspace name>` appears.
 3. While signed in, open https://goldenfrijoles.com/app/funnel/<a-slug-from-another-workspace> (use the test tenant the spec seeds).

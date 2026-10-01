@@ -10,17 +10,17 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [Workspaces become the tenant: one person, many products, one boundary](../../02-commercial/workspaces/README.md) — 02 Commercial · 0/8 stories · risk: High · audit-wave-C
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
-## 📋 Ready to build (scaffolded, not started) (3)
+## 📋 Ready to build (scaffolded, not started) (2)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 - [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../../02-commercial/board-sinks-and-scrumban/README.md) — 02 Commercial · 0/15 stories · risk: High · audit-wave-C
-- [Workspaces become the tenant: one person, many products, one boundary](../../02-commercial/workspaces/README.md) — 02 Commercial · 0/8 stories · risk: High · audit-wave-C
 
 ## ✅ Shipped (42)
 
@@ -85,7 +85,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (4)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -95,7 +95,8 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
+| Workspaces become the tenant: one person, many products, one boundary | In progress | Scaffolded |
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 48 · seeds in funnel: 15 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 48 · seeds in funnel: 15 · status drift: 4. Regenerate with `node scripts/build-order.mjs`._
