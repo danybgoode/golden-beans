@@ -114,18 +114,26 @@ export function siblingDocs(readmeRelPath) {
 // architecture lock included (think-skills and sketch-specs both shipped one, 2026-09-30, from an edit anchored on a
 // heading the old template's comment named). Code is skipped first: a `<!-- jev:` inside backticks or a fence is an
 // example, not a comment, and several sprint docs quote one.
+// A code span opens with a run of backticks and closes with the same run (``<!-- x`` included).
+const CODE_SPAN = /(`+)[\s\S]*?\1/g;
+
+// A later `-->` closes an open comment wherever it appears (a mermaid `A --> B` included) — that is what CommonMark
+// renders, so the rule agrees with the page; the text in between is still hidden, and only reading it shows that.
 export function unclosedComments(content) {
   const lines = content.split('\n');
   let fence = null;
   let open = null; // the line an unclosed <!-- started on, while we are inside one
   for (let i = 0; i < lines.length; i++) {
-    const fenceMark = lines[i].match(/^ {0,3}(```|~~~)/);
+    // The whole run of marks: a ```` fence is closed only by ```` or longer, never by the ``` it quotes.
+    const fenceMark = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
     if (open === null && fenceMark) {
-      fence = fence === null ? fenceMark[1] : fence === fenceMark[1] ? null : fence;
+      const mark = fenceMark[1];
+      if (fence === null) fence = mark;
+      else if (mark[0] === fence[0] && mark.length >= fence.length) fence = null;
       continue;
     }
     if (fence !== null) continue;
-    let rest = open === null ? lines[i].replace(/`[^`]*`/g, '') : lines[i];
+    let rest = open === null ? lines[i].replace(CODE_SPAN, '') : lines[i];
     for (;;) {
       if (open === null) {
         const at = rest.indexOf('<!--');
@@ -136,7 +144,7 @@ export function unclosedComments(content) {
         const at = rest.indexOf('-->');
         if (at === -1) break;
         open = null;
-        rest = rest.slice(at + 3).replace(/`[^`]*`/g, '');
+        rest = rest.slice(at + 3).replace(CODE_SPAN, '');
       }
     }
   }

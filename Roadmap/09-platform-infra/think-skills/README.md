@@ -84,8 +84,9 @@ against a file, a query or a request, not against the seed.
   narrative (D4). Nothing else. **Amended 2026-09-30 (S1 review):** a `Sources` line per skill is also
   allowed, because grooming D7 requires one and this list left it out. The product owner says the coaching is partly
   their own synthesis and partly Reforge's courses. So `pmf-narrative` and `risk-validation` credit Reforge
-  (reforge.com) and Helmer's *7 Powers*, and `north-star` credits Amplitude's *North Star Playbook* (Cutler and
-  McBride, the URL verified in `references/northstar-sources.md`). Credited, never quoted. The builder checks that each case study reads as a public fact with its source named,
+  (reforge.com), `pmf-narrative` also credits Helmer's *7 Powers* (the moat step uses it), and `north-star` credits
+  Amplitude's *North Star Playbook* (Cutler and McBride, amplitude.com/resources/north-star-playbook). Every URL
+  answered 200 on 2026-09-30. Credited, never quoted. The builder checks that each case study reads as a public fact with its source named,
   not as copied text.
 - **D2 — Names and places:** `skills/plugins/golden-frijoles/skills/{pmf-narrative,north-star,risk-validation}/SKILL.md`.
   None collides with the 11 existing skills or with the account names. `plugin.json`, the marketplace and the README

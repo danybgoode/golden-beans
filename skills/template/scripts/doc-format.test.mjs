@@ -435,6 +435,8 @@ test('unclosedComments: a closed comment, single- or multi-line, is fine — and
 test('unclosedComments: a comment quoted in code is an example, not a comment', () => {
   assert.deepEqual(unclosedComments('the comment carries a `<!-- jev:{…}` marker\n'), []);
   assert.deepEqual(unclosedComments('```\n<!-- jev:{"mode":"shadow"\n```\nafter\n'), []);
+  assert.deepEqual(unclosedComments('a ``<!-- jev`` marker\n'), []);
+  assert.deepEqual(unclosedComments('````md\n```\n<!-- quoted\n```\n````\nafter\n'), []);
 });
 
 test('unclosedComments: every epic doc type runs it', () => {

@@ -25,7 +25,7 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   for word, so the request matched the wrong skill.
 - **`doc-format` catches an HTML comment that never closes** (`unclosed-html-comment`, in epic READMEs, sprints and
   retros). One that never closes hides everything after it when the doc renders, and two epic READMEs shipped that
-  way. A comment quoted in backticks or a code fence is an example, so the rule skips it.
+  way. A comment quoted in a code span or a code fence (of any length) is an example, so the rule skips it.
 
 ### Changed
 
