@@ -65,7 +65,7 @@
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (15)
+## ⬜ Funnel — seeds not yet scaffolded (17)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
 - [Board sinks + scrumban on the Hub: one roadmap projection, many destinations](seeds/board-sinks-and-scrumban.md) — Raw · Feature · appetite M · audit-wave-C
@@ -75,9 +75,11 @@
 - [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
 - [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
+- [gf north-star set --json: say whether --yes would be accepted](seeds/north-star-dry-run-sendable.md) — Raw · Feature · appetite S · unranked
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — Raw · Chore · unranked
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — Raw · Chore · unranked
 - [The board's epic links resolve one folder too high](seeds/board-link-depth.md) — Raw · Feature · appetite S · unranked
+- [The CLI body-order guard misses req.clone().json()](seeds/cli-body-order-guard-clone.md) — Raw · Chore · appetite S · unranked
 - [This repo lints its template scripts the way its consumers do](seeds/foundation-lint-gate.md) — Raw · Chore · unranked
 - [Analytics visualization — the charting-dependency decision (spike), then the layer](seeds/analytics-visualization-layer.md) — Ready · Spike · appetite S · wave-2026-08-08
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
@@ -96,4 +98,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 46 · seeds in funnel: 15 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 46 · seeds in funnel: 17 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
