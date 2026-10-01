@@ -83,7 +83,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (4)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -94,7 +94,6 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
-| Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads | In progress | Scaffolded |
 
 ---
-_Epics: 46 · seeds in funnel: 15 · status drift: 4. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 46 · seeds in funnel: 15 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

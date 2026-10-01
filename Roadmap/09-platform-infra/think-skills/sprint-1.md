@@ -12,25 +12,25 @@ stories:
     i_want: "the PMF Narrative, North Star and Risk Validation coaches installed with the plugin"
     so_that: "I get them in any project, not just in one person's account"
     risk: low
-    status: planned
+    status: done
   - id: S1.2
     title: "Each writes its file"
     as_a: "the product owner"
     i_want: "each coach to leave a file in `Roadmap/00-strategy/`"
     so_that: "the result outlives the chat and a later session can revise it"
     risk: low
-    status: planned
+    status: done
   - id: S1.3
     title: "The chain"
     as_a: "the product owner"
     i_want: "each coach to offer the next, and Risk Validation to use my narrative"
     so_that: "I go from narrative to metric to riskiest bet without retyping"
     risk: low
-    status: planned
+    status: done
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 1: The three skills, with files
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
