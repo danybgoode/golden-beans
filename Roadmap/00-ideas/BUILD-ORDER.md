@@ -16,10 +16,12 @@
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (4)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 - [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../../02-commercial/board-sinks-and-scrumban/README.md) — 02 Commercial · 0/15 stories · risk: High · audit-wave-C
+- [Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop](../../02-commercial/portfolio-view/README.md) — 02 Commercial · 0/7 stories · risk: High · audit-wave-C
+- [FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine](../../09-platform-infra/finops/README.md) — 09 Platform Infra · 0/13 stories · risk: Low · audit-wave-D
 
 ## ✅ Shipped (43)
 
@@ -67,12 +69,9 @@
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../../09-platform-infra/verify-spike/README.md) — 09 Platform Infra · 4/4 stories · risk: Low · audit-wave-B
 - [Ways-of-work lean pass — remove the training wheels, close the adoption gap](../../09-platform-infra/ways-of-work-lean-pass/README.md) — 09 Platform Infra · 19/19 stories · risk: High · wave-2026-09-16-plugin
 
-## ⬜ Funnel — seeds not yet scaffolded (15)
+## ⬜ Funnel — seeds not yet scaffolded (12)
 
 - [Scenarios freeze: archive the epic, correct the landing's SecOps claim, deprecate the SDK scenario API](seeds/scenarios-freeze.md) — Raw · Chore · appetite S · audit-wave-A
-- [FinOps actuals: agent token and cost usage lands in the engine, attributed to skill and epic](seeds/finops-actuals.md) — Raw · Feature · appetite L · audit-wave-C
-- [Portfolio view: every product in a workspace on the Consider · Operate · Exit loop](seeds/portfolio-view.md) — Raw · Feature · appetite M · audit-wave-C
-- [FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic](seeds/finops-quotes.md) — Raw · Feature · appetite M · audit-wave-D
 - [Verify module: the verification depth ladder as a product (after the spike)](seeds/verify-module.md) — Raw · Feature · appetite L · audit-wave-D
 - [A delivery whose settle keeps failing is re-sent every 5 minutes, uncounted and unlogged](seeds/delivery-stale-reclaim-uncounted.md) — Raw · Feature · appetite S · unranked
 - [gf north-star set --json: say whether --yes would be accepted](seeds/north-star-dry-run-sendable.md) — Raw · Feature · appetite S · unranked
@@ -98,4 +97,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo | In progress | Shipped |
 
 ---
-_Epics: 48 · seeds in funnel: 15 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 50 · seeds in funnel: 12 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

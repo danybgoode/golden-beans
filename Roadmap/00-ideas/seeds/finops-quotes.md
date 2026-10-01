@@ -1,19 +1,28 @@
 ---
 title: "FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic"
 slug: finops-quotes
-status: raw
-area: "01"
+status: scaffolded
+area: "09"
 type: feature
 priority: "audit-wave-D"
 appetite: M
 underwritten_by: null
 risk: low
-epic: null
+epic: "09-platform-infra/finops"
 build_order: 42
-updated: 2026-09-23
+consolidated_into: finops-actuals   # deep-groomed together 2026-10-01; one epic
+updated: 2026-10-01
 ---
 
 # Seed: FinOps quotes: an appetite becomes a calibrated token/$ range, then quote vs actual per epic
+
+> **Consolidated 2026-10-01 into [`finops-actuals`](finops-actuals.md).** Product owner's call at grooming ("2 epics"):
+> quotes and actuals are one loop — quote at groom → measure while building → stamp at close → calibrate the next
+> quote — so they ship as ONE epic. Everything this seed asked for is a claim in that pitch: groom attaches a quote at
+> Stage 1.5 (Sprint 2), quote vs actual per epic (Sprints 1–2, and live in the build view band), cost per shipped
+> story (`/app/finops`, Sprint 3). **Budgets:** alert-only in v1 (the band turns red past the quote) — the open
+> question below is answered "alert-only is honest for v1; stop is not enforceable for agents we don't host".
+> This file stays as the funnel record (seeds never move); the epic README's `status:` is authoritative once scaffolded.
 
 **Portfolio-pass seed** (not yet deep-groomed). Seed 11 of the unification audit, [§8](../audits/golden-frijoles-unification-2026-09-23.md).
 Home repo: **golden-beans**. Class **feature**, appetite **M** (from the audit, to confirm at grooming). Audit wave **D**.
