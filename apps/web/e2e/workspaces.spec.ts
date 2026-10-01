@@ -95,6 +95,25 @@ async function cleanup(client: SupabaseClient, fixture: Fixture) {
   }
 }
 
+/**
+ * A client whose FIRST `workspaces` select answers "no row", whatever the table holds — the read a racing claim makes
+ * before the winner's insert lands. Every other call goes to the real client.
+ */
+function staleFirstWorkspaceRead(client: SupabaseClient): SupabaseClient {
+  let stale = true
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      if (prop !== 'from') return Reflect.get(target, prop, receiver)
+      return (table: string) => {
+        if (table !== 'workspaces' || !stale) return target.from(table)
+        stale = false
+        const missing = { data: null, error: null }
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => missing }) }) }
+      }
+    },
+  }) as SupabaseClient
+}
+
 const backfill = (client: SupabaseClient, ids: string[]) =>
   client.rpc('backfill_project_workspaces', { p_project_ids: ids })
 
@@ -174,6 +193,26 @@ test.describe('S1.2 — the backfill rule (backfill_project_workspaces, lock D3)
       expect(workspace?.createdBy).toBe(ada.id)
       expect(workspace?.name).toBe("Ada's products")
       expect(workspace?.members).toEqual({ [ada.id]: 'owner' })
+    } finally {
+      await cleanup(client, fixture)
+    }
+  })
+
+  test('the CREATOR wins even over an EARLIER owner — precedence, not just presence', async () => {
+    const client = db()
+    const fixture: Fixture = { users: [], projects: [] }
+    try {
+      const creator = await createUser(client, fixture)
+      const earlierOwner = await createUser(client, fixture)
+      const project = await createProject(client, fixture, creator.id)
+      await addMember(client, earlierOwner.id, project.id, 'owner', '2026-07-01T00:00:00Z')
+      await addMember(client, creator.id, project.id, 'owner', '2026-08-01T00:00:00Z')
+
+      expect((await backfill(client, [project.id])).error).toBeNull()
+
+      const workspace = await workspaceOf(client, project.id)
+      expect(workspace?.createdBy).toBe(creator.id)
+      expect(workspace?.members).toEqual({ [creator.id]: 'owner', [earlierOwner.id]: 'member' })
     } finally {
       await cleanup(client, fixture)
     }
@@ -321,6 +360,26 @@ test.describe('S1.3 — provisioning claims a workspace (lib/workspace-tenancy.t
     }
   })
 
+  test('LOSING the race (read misses, insert collides on the index) adopts the winner — deterministically', async () => {
+    const client = db()
+    const fixture: Fixture = { users: [], projects: [] }
+    try {
+      const user = await createUser(client, fixture)
+      // The winner's row already exists...
+      const { data: winner } = await client
+        .from('workspaces')
+        .insert({ name: 'winner', created_by: user.id })
+        .select('id')
+        .single()
+      // ...but this claim's FIRST read happened before it was written. A real race only reaches this branch when the
+      // timing cooperates; staging the stale read makes it reach it every run (fresh reviewer, PR #220).
+      const claim = await claimWorkspace(staleFirstWorkspaceRead(client), user.id, 'loser')
+      expect(claim).toEqual({ ok: true, workspaceId: winner!.id, created: false })
+    } finally {
+      await cleanup(client, fixture)
+    }
+  })
+
   test('two concurrent claims for one person converge on ONE workspace, and only one of them created it', async () => {
     const client = db()
     const fixture: Fixture = { users: [], projects: [] }
@@ -348,13 +407,8 @@ test.describe('S1.3 — provisioning claims a workspace (lib/workspace-tenancy.t
       expect(claim).toMatchObject({ ok: true, created: true })
       if (!claim.ok) return
 
-      // The way a real provision fails after its claim: the project insert is refused (here, a taken slug).
-      const taken = await createProject(client, fixture)
-      const { error: insertError } = await client
-        .from('projects')
-        .insert({ slug: taken.slug, created_by: user.id, workspace_id: claim.workspaceId })
-      expect(insertError?.code).toBe('23505')
-
+      // provisionTenantForUser releases exactly this claim on every `ok: false` after it (lib/provisioning.ts → fail);
+      // that wiring is asserted end to end by e2e/auth.setup.ts, where the server-only provisioner actually runs.
       expect(await releaseWorkspace(client, claim)).toBeNull()
       const { data: workspaces } = await client.from('workspaces').select('id').eq('id', claim.workspaceId)
       expect(workspaces).toEqual([])

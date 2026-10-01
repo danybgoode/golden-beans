@@ -139,8 +139,9 @@ S1 (schema + backfill on live tenant data) and S2.2 (the auth seam) go to the st
 mechanical. Each PR gets the fresh reviewer subagent on top of the routed external review (HIGH tier).
 
 ## Deploy order
-1. S1.1 migration applied (expand) → S1.2 backfill applied and verified → NOT NULL migration applied → merge S1 (code
-   for provisioning + AGENTS amendment).
+1. ~~S1.1 migration applied (expand) → S1.2 backfill applied and verified → NOT NULL migration applied → merge S1~~
+   **Superseded by lock D4:** migration A (expand + backfill) applied and verified → merge S1 (provisioning writes
+   `workspace_id`, AGENTS amendment) → deploy confirmed → migration B (NOT NULL) applied → merge S2.
 2. S2 merges after S1 is live; it reads `workspace_id`, which is NOT NULL by then.
 3. Unblocks `board-sinks-and-scrumban` S4 and seed `portfolio-view`.
 

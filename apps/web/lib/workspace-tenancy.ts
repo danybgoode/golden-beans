@@ -20,8 +20,10 @@ export type WorkspaceClaim =
   { ok: true; workspaceId: string; created: boolean } | { ok: false; error: unknown }
 
 /**
- * "<display name>'s products", else the email's local part — the same rule the backfill applies in SQL, so a person
- * provisioned today and one backfilled at the migration end up with the same kind of name.
+ * "<display name>'s products", else the email's local part. The SAME SHAPE as the backfill's name in SQL, not the same
+ * function: the caller passes `displayNameFrom(user_metadata)`, which refuses invisible and bidi characters, whereas
+ * the one-time backfill read raw metadata — checked by hand for the two people it named in production (fresh
+ * reviewer, PR #220).
  */
 export function workspaceNameFor(
   displayName: string | null | undefined,

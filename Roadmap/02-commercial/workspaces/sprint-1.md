@@ -16,7 +16,7 @@ stories:
   - id: S1.2
     title: "Every project is backfilled into exactly one workspace (contract)"
     as_a: "an existing project owner"
-    i_want: "my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → the platform workspace), then `workspace_id` made NOT NULL"
+    i_want: "my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → abort, lock D3), with `workspace_id` made NOT NULL at the head of Sprint 2 (lock D4)"
     so_that: "nobody loses or gains access and no project is orphaned"
     risk: high
     status: planned
@@ -70,7 +70,7 @@ Cite the README's **Architecture lock** (D1–D12); don't restate it. This sprin
 **Risk:** high — DB migration + tenancy
 
 ### Story 1.2 — Every project is backfilled into exactly one workspace (contract)
-**As** an existing project owner, **I want** my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → the platform workspace), then `workspace_id` made NOT NULL, **so that** nobody loses or gains access and no project is orphaned.
+**As** an existing project owner, **I want** my projects backfilled into my workspace by a deterministic rule (created_by → earliest owner → abort, lock D3), with `workspace_id` made NOT NULL at the head of Sprint 2 (lock D4), **so that** nobody loses or gains access and no project is orphaned.
 **Acceptance:** Before NOT NULL: `select count(*) from projects where workspace_id is null` = 0 in production (recorded in the PR). The rule is ONE SQL function with a spec covering all three branches, a two-owner project and a non-owner member (lock D3; NOT NULL itself lands at the head of S2, lock D4). A pre-existing API key and a pre-existing connector token still authenticate (api spec).
 **Risk:** high — migration on live tenant data
 

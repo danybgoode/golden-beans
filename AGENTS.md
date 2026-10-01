@@ -158,7 +158,9 @@ server-side, exactly as before.
   workspace member cannot open a project they are not a member of. `workspace_members.role` gates workspace
   administration only, and nothing reads it for project access.
 - **Every project-access read re-checks the workspace** at the one seam all of them pass through,
-  `lib/membership.ts`. A project whose workspace is not one of the caller's is "not found", never "forbidden".
+  `lib/membership.ts` — *from workspaces Sprint 2*. Until it lands, `project_members` alone decides, which under
+  access model A is the same answer. A project whose workspace is not one of the caller's is "not found", never
+  "forbidden".
 - **Credentials stay project-scoped.** An API key, a connector token or a share link resolves to ONE project and
   never reaches its siblings, workspace or no workspace.
 - **Rule #2 is unchanged and is not widened by this.** `/api/v1/public/*` serves the demo project only. That the
@@ -198,7 +200,7 @@ compliance.
    then `GRANT EXECUTE … TO service_role`, pinned by a spec that asserts a *function-level* denial
    (not an RLS error, which would mean EXECUTE leaked and the body ran).
 4. **The caller authenticates with a platform secret and fails closed** (`CRON_SECRET`; unset ⇒ 401).
-5. **Everything downstream is strictly single-tenant** — the work it schedules takes a **required**
+5. **Everything downstream is strictly single-tenant, and single-PROJECT** — the work it schedules takes a **required**
    `projectId` and re-asserts it on every query and write.
 6. **It is listed in the registry below.** The exempt set is finite and auditable. Adding to it is a
    deliberate decision by Daniel, recorded here — never inferred by analogy.

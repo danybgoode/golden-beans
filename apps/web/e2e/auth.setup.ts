@@ -158,6 +158,24 @@ setup('provision a disposable tenant and sign in through the real form', async (
     )
   }
 
+  // workspaces S1.3 — the provisioner's wiring, asserted where it actually runs: a real signup through the real route.
+  // The api gate drives claimWorkspace/releaseWorkspace directly, but `provisionTenantForUser` is `server-only`, so
+  // this is the one place that can see a project born OUTSIDE its creator's workspace (fresh reviewer, PR #220).
+  const { data: provisioned, error: wsErr } = await db
+    .from('projects')
+    .select('workspace_id, workspaces(created_by)')
+    .eq('id', membership.project_id)
+    .single()
+  if (wsErr) throw new Error(`could not read the provisioned tenant's workspace: ${wsErr.message}`)
+  const workspaceCreator = (provisioned?.workspaces as unknown as { created_by: string | null } | null)
+    ?.created_by
+  if (!provisioned?.workspace_id || workspaceCreator !== userId) {
+    throw new Error(
+      `provisioning created project ${membership.project_id} outside its creator's workspace ` +
+        `(workspace_id=${provisioned?.workspace_id ?? 'null'}, workspace created_by=${workspaceCreator ?? 'null'})`
+    )
+  }
+
   const slug = (membership.projects as unknown as { slug: string } | null)?.slug ?? null
   // Enrich the record now that the tenant exists. The email is recorded, never re-derived by
   // teardown — see the note on TenantRecord.
