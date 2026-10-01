@@ -10,16 +10,16 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (3)
+## 🏗️ Building now (4)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../../02-commercial/board-sinks-and-scrumban/README.md) — 02 Commercial · 0/15 stories · risk: High · audit-wave-C
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../../09-platform-infra/golden-frijoles-plugin/README.md) — 09 Platform Infra · 14/23 stories · risk: High
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../../09-platform-infra/public-monorepo/README.md) — 09 Platform Infra · 13/15 stories · risk: High · single-product-wave-A
 
-## 📋 Ready to build (scaffolded, not started) (4)
+## 📋 Ready to build (scaffolded, not started) (3)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
-- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../../02-commercial/board-sinks-and-scrumban/README.md) — 02 Commercial · 0/15 stories · risk: High · audit-wave-C
 - [Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop](../../02-commercial/portfolio-view/README.md) — 02 Commercial · 0/7 stories · risk: High · audit-wave-C
 - [FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine](../../09-platform-infra/finops/README.md) — 09 Platform Infra · 0/13 stories · risk: Low · audit-wave-D
 
