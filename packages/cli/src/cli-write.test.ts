@@ -518,3 +518,263 @@ test('diff describes a rollout change in PERCENT, using the console’s own diff
     `expected a percent sentence, got: ${JSON.stringify(report.changes)}`
   )
 })
+
+// ── think-skills S3 · `gf north-star set` (D6) ─────────────────────────────────────────────────────────────────────
+// The route's MEANING is asserted in apps/web/e2e/cli-north-star.spec.ts. Here: what is sent, how many times, what
+// is refused locally, and which exit code comes out.
+
+const NORTH_STAR_FILE = (payload: unknown, extra = '') =>
+  `---\nkind: north-star\nstatus: agreed\nupdated: 2026-10-01\n---\n\n# North Star\n\n## Input metrics\n\n${extra}## Sync payload\n\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\`\n`
+
+const PROPOSED = {
+  metric: {
+    key: 'weekly_planned_seeds',
+    name: 'Weekly planned seeds',
+    description: 'seeds groomed per week',
+  },
+  inputs: [
+    { key: 'activated_projects', name: 'Activated projects', valueSource: 'external_push' },
+    {
+      key: 'seeds_groomed',
+      name: 'Seeds groomed',
+      valueSource: 'telemetry_event',
+      sourceEvent: 'seed_groomed',
+    },
+  ],
+}
+
+function workspace(markdown: string): string {
+  const dir = mkdtempSync(join(tmpdir(), 'gf-north-star-'))
+  writeFileSync(join(dir, 'north-star.md'), markdown)
+  return dir
+}
+
+type Call = { method: string; url: string; body: Record<string, unknown> }
+
+/** GET answers `current`; POST answers `post`. Every call is recorded. */
+function stubNorthStar(
+  current: unknown[],
+  post: { status?: number; body: unknown } = {
+    body: { ok: true, project: 'acme', metric: 'weekly_planned_seeds', inputsSynced: 2 },
+  },
+  calls: Call[] = []
+): typeof fetch {
+  return (async (input: string | URL, init?: RequestInit) => {
+    const url = new URL(String(input))
+    const method = init?.method ?? 'GET'
+    calls.push({
+      method,
+      url: `${url.pathname}${url.search}`,
+      body: typeof init?.body === 'string' ? JSON.parse(init.body) : {},
+    })
+    const response =
+      method === 'GET' ? { status: 200, body: { ok: true, project: 'acme', metrics: current } } : post
+    return new Response(JSON.stringify(response.body), {
+      status: response.status ?? 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as unknown as typeof fetch
+}
+
+test('north-star set: the default is a dry run — one GET, no POST, and it says nothing was sent', async () => {
+  const { writer, out } = capture()
+  const calls: Call[] = []
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar([], undefined, calls),
+  })
+  assert.equal(code, EXIT.OK)
+  assert.deepEqual(
+    calls.map((c) => `${c.method} ${c.url}`),
+    ['GET /api/v1/cli/north-star?project=acme']
+  )
+  const text = out.join('\n')
+  assert.match(text, /weekly_planned_seeds {2}"Weekly planned seeds" {2}new/)
+  assert.match(text, /Dry run: nothing was sent/)
+})
+
+test('north-star set --yes: exactly one POST, carrying the file’s block under `sync`', async () => {
+  const { writer, out } = capture()
+  const calls: Call[] = []
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md', '--yes'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar([], undefined, calls),
+  })
+  assert.equal(code, EXIT.OK)
+  const posts = calls.filter((c) => c.method === 'POST')
+  assert.equal(posts.length, 1)
+  assert.equal(posts[0].url, '/api/v1/cli/north-star')
+  assert.deepEqual(posts[0].body, { project: 'acme', sync: PROPOSED })
+  assert.match(out.join('\n'), /ok · North Star weekly_planned_seeds synced to acme · 2 inputs/)
+})
+
+test('north-star set --yes: a 400 prints the route’s issues and exits non-zero', async () => {
+  const { writer, err } = capture()
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const refused = {
+    status: 400,
+    body: {
+      ok: false,
+      code: 'invalid',
+      error: 'Malformed north-star sync payload',
+      issues: {
+        formErrors: [],
+        fieldErrors: { inputs: ["sourceEvent is required for 'telemetry_event' inputs"] },
+      },
+    },
+  }
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md', '--yes'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar([], refused),
+  })
+  assert.equal(code, EXIT.USAGE)
+  const text = err.join('\n')
+  assert.match(text, /Malformed north-star sync payload/)
+  assert.match(text, /- inputs: sourceEvent is required/)
+})
+
+test('north-star set: `ok: false` in a 200 body is still a failure — the exit code comes from the body', async () => {
+  const { writer } = capture()
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md', '--yes'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar([], {
+      status: 200,
+      body: { ok: false, code: 'server_error', error: 'Failed to sync leading inputs' },
+    }),
+  })
+  assert.equal(code, EXIT.SERVER)
+})
+
+test('north-star set: a credential the server refuses exits 2', async () => {
+  const { writer } = capture()
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const refuseAll = (async () =>
+    new Response(
+      JSON.stringify({ ok: false, code: 'unauthorized', error: 'This CLI credential is not accepted.' }),
+      {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }
+    )) as unknown as typeof fetch
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md', '--yes'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: refuseAll,
+  })
+  assert.equal(code, EXIT.AUTH)
+})
+
+test('north-star set: zero or two json blocks is a usage error, and nothing is sent', async () => {
+  const none = '---\nkind: north-star\n---\n\n## Sync payload\n\nno block here\n'
+  const two = NORTH_STAR_FILE(PROPOSED).replace(
+    '## Sync payload\n\n',
+    '## Sync payload\n\n```json\n{}\n```\n\n'
+  )
+  for (const markdown of [none, two]) {
+    const { writer, err } = capture()
+    const code = await run({
+      argv: ['north-star', 'set', 'north-star.md'],
+      writer,
+      env: sandbox(),
+      cwd: workspace(markdown),
+      fetchImpl: noNetwork,
+    })
+    assert.equal(code, EXIT.USAGE)
+    assert.match(err.join('\n'), /Nothing was sent/)
+  }
+})
+
+test('north-star set --yes: an unfilled template is refused before any request', async () => {
+  const { writer, err } = capture()
+  const template = {
+    metric: { key: '<metric_key>', name: '<Pithy name>' },
+    inputs: [{ key: '<input_key>', name: '<Input name>', valueSource: 'external_push' }],
+  }
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md', '--yes'],
+    writer,
+    env: sandbox(),
+    cwd: workspace(NORTH_STAR_FILE(template)),
+    fetchImpl: noNetwork,
+  })
+  assert.equal(code, EXIT.USAGE)
+  assert.match(
+    err.join('\n'),
+    /placeholders \(metric\.key, metric\.name, inputs\[0\]\.key, inputs\[0\]\.name\)/
+  )
+})
+
+test('north-star set: the dry run names what a sync cannot undo — an added metric and a moved input', async () => {
+  const { writer, out } = capture()
+  const current = [
+    {
+      key: 'payable_sellers',
+      name: 'Payable sellers',
+      description: null,
+      inputs: [
+        {
+          key: 'activated_projects',
+          name: 'Activated projects',
+          valueSource: 'external_push',
+          sourceEvent: null,
+        },
+      ],
+    },
+  ]
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  const code = await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar(current),
+  })
+  assert.equal(code, EXIT.OK)
+  const text = out.join('\n')
+  assert.match(text, /already has another North Star: payable_sellers/)
+  assert.match(text, /ADDS this one beside it\. It never replaces or deletes/)
+  assert.match(text, /activated_projects +Activated projects +moved from payable_sellers/)
+  assert.match(text, /seeds_groomed +Seeds groomed +new/)
+})
+
+test('north-star set: an input whose value source would change is shown as refused before sending', async () => {
+  const { writer, out } = capture()
+  const current = [
+    {
+      key: 'weekly_planned_seeds',
+      name: 'Weekly planned seeds',
+      description: 'seeds groomed per week',
+      inputs: [
+        { key: 'seeds_groomed', name: 'Seeds groomed', valueSource: 'external_push', sourceEvent: null },
+      ],
+    },
+  ]
+  const cwd = workspace(NORTH_STAR_FILE(PROPOSED))
+  await run({
+    argv: ['north-star', 'set', 'north-star.md'],
+    writer,
+    env: sandbox(),
+    cwd,
+    fetchImpl: stubNorthStar(current),
+  })
+  const text = out.join('\n')
+  assert.match(text, /weekly_planned_seeds {2}"Weekly planned seeds" {2}unchanged/)
+  assert.match(text, /seeds_groomed +Seeds groomed +refused: value source is external_push/)
+})

@@ -1,0 +1,27 @@
+gf north-star set — send a North Star workshop's metric and inputs to the project
+
+Usage
+  gf north-star set <file> [--yes] [--project <slug>]
+
+Reads the one ```json block under "## Sync payload" in <file> — the
+  Roadmap/00-strategy/north-star.md the north-star coach writes.
+
+  Without --yes it is a DRY RUN: it reads the project's current North Star, prints what a sync
+  would do, and sends nothing. With --yes it sends the block once and prints the result.
+
+  ⚠️ A sync never replaces or deletes. A new metric key is ADDED beside an existing North Star,
+  and an input key that already exists MOVES to this metric. To revise a North Star, reuse its key.
+  Owner-only to send; any member can dry-run.
+
+Flags
+  --yes             send it (without this, nothing is sent)
+  --project <slug>  the project (default: the remembered one)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

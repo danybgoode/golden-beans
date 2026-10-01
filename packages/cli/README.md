@@ -80,6 +80,21 @@ else** — no progress lines, no warnings. A failure is a JSON document too, on 
 `--help` output and these envelopes are pinned by golden-file tests. They do not change on a copy
 edit.
 
+## Sending a North Star: `gf north-star set`
+
+The `north-star` coach in the Golden Frijoles plugin leaves `Roadmap/00-strategy/north-star.md`, with the metric and
+its inputs in one ```json block under `## Sync payload`. This command sends that block to your project:
+
+```bash
+gf north-star set Roadmap/00-strategy/north-star.md          # dry run: shows what would change, sends nothing
+gf north-star set Roadmap/00-strategy/north-star.md --yes    # sends it once (project owners only)
+```
+
+A sync never replaces or deletes. A new metric key is **added** beside an existing North Star, and an input key that
+already exists **moves** to this metric. The dry run says so before anything is sent, and to revise a North Star you
+reuse its key. The server validates the block and prints its `issues` on a 400. A file that still has the template's
+`<…>` placeholders is refused before anything is sent.
+
 ## Exit codes
 
 | Code | Name | Means |
