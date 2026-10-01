@@ -1510,6 +1510,10 @@ one-liner + why + date shape.
   runtime type. **Invoke CI's own npm scripts, never a hand-written approximation of them**, and run
   them in CI's order so the cheapest fails first. Especially where Actions minutes are the scarce
   account-wide resource they are in this repo.
+  **The same holds for a workflow you assemble from its steps by hand.** think-skills S2 ran six skills-ci checks by
+  name, missed the groom prose-budget step, and went red. Run every step from the workflow file itself (parse its
+  `run:` blocks and skip only the ones that install global CLIs), against the same tree CI uses (here, the subtree
+  split). *(2026-10-01, think-skills #215.)*
   **Derive the step list from the workflow file every time, never from memory — each red step hides the next.**
   sketch-specs paid for this rule a second time in the same order: lint went red, and once fixed, the Format step
   behind it went red on the next push (CI stops at the first failure, so a reviewer cannot see past it either). The
@@ -1727,7 +1731,9 @@ one-liner + why + date shape.
 - **A guard with no test is a guard nobody has seen fire.** `check-plugin-leaks.mjs` ran green over a
   real leak every day for months: "CI was green" cannot distinguish a working guard from a pattern that
   matches nothing. Give every guard fixtures that assert it **fires**, *and* fixtures that assert it does
-  **not** fire on the thing it must permit.
+  **not** fire on the thing it must permit. The same goes for an assertion of absence: a "returns 404" test needs a positive
+  anchor (the same caller gets 200 on its own project), or a broken fixture passes it for the wrong reason.
+  *(2026-10-01, think-skills #216.)*
 - **A mechanism does not have to be named after a project to be that project's.** A portability sweep for
   project names could never catch `lib/flags.ts` / `DEFAULT_FLAGS`. Generic filenames are how one
   consumer's architecture ships to everyone — and when a new rule surfaces incidental matches, **rewrite
@@ -1819,6 +1825,20 @@ one-liner + why + date shape.
 - **Evidence tooling fails closed too.** An empty log, a `{}` line, a marker with no mode, or a forged
   comment from a stranger on a public repo must never count as evidence. Filter by author provenance and
   exit non-zero on nothing. *(2026-09-23)*
+
+### Locking against the live system (think-skills, 2026-10-01)
+
+- **Check which credential a route accepts before planning a client over it.** The plan was "a `gf` command over the
+  existing North Star route, with the existing `gf` key". The CLI holds a personal token that only `/api/v1/cli/*`
+  accepts, and the route takes only a project ingest key, so the headline story would have 401'd. Reading two auth
+  functions at the lock disproved it before any code was written.
+- **"Sync replaces" is a claim to check against the upsert's conflict key.** `onConflict: 'project_id,key'` means a
+  new key ADDS a row beside the old one and an existing child key MOVES. A dry run should name those effects, because
+  syncing again can't undo them.
+- **A kill switch must come before the request BODY, not only before the credential.** All three CLI POST routes
+  parsed JSON first, so with the gate OFF a malformed body answered 400 instead of the uniform 404. When the test
+  server can't turn the gate off, pin the order structurally: no route reads a body itself, and the one reader
+  checks the gate first.
 
 ### Publishing a package and a plugin (golden-frijoles-plugin, 2026-09-23)
 

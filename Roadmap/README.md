@@ -379,6 +379,16 @@ independently shippable slice of value.
   a new wording on held-out folds. Its first run, on `flag-state-claim`, produced a win on paper that was **not
   adopted**: the win was leakage from the drafts the candidate was written against. **Shipped 2026-09-30** (#207,
   kit 0.15.0; #208).
+- ✅ [Think skills](09-platform-infra/think-skills/README.md): **the strategy coaches ship in the plugin.**
+  `pmf-narrative`, `north-star` and `risk-validation` each write `Roadmap/00-strategy/<name>.md` from their own
+  template, ask before overwriting an `agreed` file, credit their sources, and offer the next one: narrative, then
+  North Star, then risk validation, then groom. Groom's Stage 0 reads the folder when it exists and gives each pitch
+  one line, `Moves: <input> · Tests: <dimension>`. With no folder it says nothing. intent-match's "worth doing?" route
+  points at the coaches. **`gf north-star set <file>`** sends the workshop's metric and inputs to the engine over a new
+  owner-only `/api/v1/cli/north-star` route, which shares its logic with the ingest-key route. It's a dry run by
+  default and names what a sync can't undo. All CLI POST routes now check the gate before reading the body.
+  **Shipped 2026-10-01** (#214, #215, #216; plugin 0.17.0–0.19.0, CLI 0.3.0). ⚠️ Owed to Daniel: the CLI's npm
+  publish, the first real North Star run and its live `--yes`, and removing the account copies.
 - ✅ [Sketch specs](09-platform-infra/sketch-specs/README.md): **a screen is written once as a `surface` block** — a
   state id, a route, then one line per block from twelve kinds (`- head "Orders" action "Share your shop"`), with only
   an action's words, a count and a list's columns as facts. `node scripts/sketch-render.mjs <seed>` draws every block
@@ -416,6 +426,11 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-10-01**: `think-skills` **shipped**: three sprints, plugin 0.19.0, CLI 0.3.0 (the npm publish is owed).
+  - The strategy coaches left one person's account and now write files that groom reads. The North Star's metric
+    reaches the engine with one command, dry run first.
+  - The lock disproved the headline story before any code was written: `gf`'s token couldn't call the route it was
+    planned on. One question settled it: a new CLI route.
 - **2026-09-30**: `sketch-specs` **shipped**: two sprints, kit 0.16.0.
   - A screen can now be approved as a grey wireframe drawn from text, and that same text is the state contract CI
     enforces, with its approval pinned by hash like the prototypes'.

@@ -1,6 +1,6 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: think-skills
 title: "Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads"
@@ -14,7 +14,7 @@ build_order: 53  # integer position in the ONE global build sequence — the SSO
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
 ---
 
-# Epic: Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads
+# ✅ Epic: Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads
 
 > **Area:** 09-platform-infra · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/think-skills.md`](../../00-ideas/seeds/think-skills.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
@@ -185,17 +185,18 @@ against a file, a query or a request, not against the seed.
 Stacked branches `feat/think-skills` → `-s2` → `-s3`, merged in order. S1 and S2 are plugin releases; S3 is an app deploy (the CLI route, on merge) plus a CLI release and a plugin release (D10). Owed to Daniel after S1 ships: remove the three account copies in claude.ai settings.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] ~~Kill-switch~~ n/a — carve-out recorded at grooming (no new runtime seam). **(only if one was planned at grooming — Stage 6b):** the flag slice shipped, the flag
-      exists **in Golden Frijoles, in every env**, with the stated polarity, **and is ACTIVATED there** —
-      `gf flags get <key>` must not print `—` in its PRODUCTION row. Creating a definition is not
-      turning it on, and a flag that is synced but never activated serves compile-time defaults while
-      every dashboard says it exists. *Verify-only — not a new gate; whether a high-risk epic needs one
-      is decided at grooming, not here.*
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] All sprints merged to `main` + smoke-tested (gaps stated): #214 `f14c68d`, #215 `ac13f46`, #216 `fbce291`. S3 is
+      deployed and its dry run was verified against production. The owed steps are listed in each sprint file and below.
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs) and dated results
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (sharpened, not appended)
+- [ ] ~~Kill-switch~~ n/a: the carve-out was recorded at grooming and amended at the lock (C1, D6). The new route sits
+      inside the existing `CLI_WRITE_API_ENABLED` gate.
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`**
+
+**Owed to Daniel, by name:** `npm publish` of `@golden-frijoles/cli@0.3.0` (npm 2FA); running the North Star coach on
+Golden Frijoles, then the live `--yes` against `golden-beans` and checking the North Star surface in the console (D11);
+the interactive coach and groom runs (S1 steps 1–3, S2 step 1); and removing the three account copies of the coaches.

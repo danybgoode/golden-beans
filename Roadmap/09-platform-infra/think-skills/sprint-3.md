@@ -3,7 +3,7 @@ epic: think-skills
 sprint: 3
 title: "The metric reaches the engine"
 risk: high
-phase: Building
+phase: Shipped
 stories_total: 1
 stories:
   - id: S3.1
@@ -16,7 +16,7 @@ stories:
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 3: The metric reaches the engine
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #216 (`fbce291`), deployed to production 2026-10-01; plugin + kit **0.19.0** released; CLI **0.3.0** built, npm publish owed to Daniel
 
 ## Stories
 
@@ -79,3 +79,18 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
    → the North Star surface shows the new metric and its inputs.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-01, production @ `fbce291`)
+
+- ✅ **The route is live and gated:** `GET https://goldenfrijoles.com/api/v1/cli/north-star?project=golden-beans` with no
+  credential gives 401 `unauthorized`, and so does POST. A malformed body gives 400 (the gate is ON), and the old
+  `GET /api/v1/north-star` still gives its own 401.
+1. ✅ **Dry run, end to end against production:** the CLI built from `main` (`0.3.0`, `node packages/cli/dist/bin.js
+   north-star set <file> --project golden-beans`) authenticated with the stored `gf` login. It printed the metric as
+   `new` with two `new` inputs, and *Dry run: nothing was sent.* A prod query afterwards found **0** rows for
+   `golden-beans` and for the smoke keys, so nothing was written.
+2. ⬜ **Owed to Daniel (auth/production write, D11):** `npm publish` of `@golden-frijoles/cli@0.3.0`, then `npx
+   @golden-frijoles/cli north-star set Roadmap/00-strategy/north-star.md --yes` with the real North Star from the coach.
+   Note that `gf` is aliased to `git fetch` on his machine (C7).
+3. ⬜ **Owed to Daniel:** open https://goldenfrijoles.com/app signed in to `golden-beans` and check that the North Star
+   surface shows it.
