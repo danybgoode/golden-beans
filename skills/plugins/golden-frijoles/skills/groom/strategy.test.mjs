@@ -111,3 +111,12 @@ test('a heading renamed away from the template contract is not read silently as 
   const root = project({ 'north-star.md': filledNorthStar().replace('## Sync payload', '## Payload') });
   assert.match(formatStrategy(readStrategy(root)), /could not read: no "## Sync payload" section/);
 });
+
+test('an unreadable strategy file is reported, and the others are still read', () => {
+  const root = project({ 'risk-validation.md': filledRisk() });
+  mkdirSync(join(root, 'Roadmap', '00-strategy', 'north-star.md')); // a directory where a file should be: EISDIR
+  const result = run(root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /north-star\.md — could not read: /);
+  assert.match(result.stdout, /highest domino: Business model/);
+});

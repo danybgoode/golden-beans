@@ -128,10 +128,13 @@ export function readStrategy(root) {
   for (const kind of KINDS) {
     const path = join(dir, `${kind}.md`);
     if (!existsSync(path)) continue;
-    const text = readFileSync(path, 'utf8');
-    const fm = parseFrontmatter(text);
-    const entry = { kind, file: `${STRATEGY_DIR}/${kind}.md`, status: fm.status ?? null, updated: fm.updated ?? null };
+    const entry = { kind, file: `${STRATEGY_DIR}/${kind}.md`, status: null, updated: null };
     try {
+      // Inside the try: an unreadable file (permissions, a directory named like one) is reported, not fatal.
+      const text = readFileSync(path, 'utf8');
+      const fm = parseFrontmatter(text);
+      entry.status = fm.status ?? null;
+      entry.updated = fm.updated ?? null;
       Object.assign(entry, PARSERS[kind](text));
     } catch (err) {
       entry.problem = err.message;
