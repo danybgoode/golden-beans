@@ -12,39 +12,39 @@ stories:
     i_want: "groom to say which input metric a seed moves and which risky dimension it tests"
     so_that: "every pitch is tied to the strategy I agreed"
     risk: low
-    status: planned
+    status: done
   - id: S2.2
     title: "The Roadmap tools ignore `00-strategy/`"
     as_a: "a maintainer"
     i_want: "the board, the extractor and the doc-format check to pass with the new folder"
     so_that: "strategy files never show up as epics or seeds, or fail CI"
     risk: low
-    status: planned
+    status: done
   - id: S2.3
     title: "`intent-match`'s think-chain route names the skills"
     as_a: "the product owner"
     i_want: "an \"is it worth doing?\" gap to point at the right coach"
     so_that: "the route leads somewhere real instead of \"answer by hand\""
     risk: low
-    status: planned
+    status: done
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 2: Groom reads strategy
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Stories
 
-### Story 2.1 — Groom reads `00-strategy/`
+### Story 2.1 — Groom reads `00-strategy/` ✅
 **As** the product owner, **I want** groom to say which input metric a seed moves and which risky dimension it tests, **so that** every pitch is tied to the strategy I agreed.
 **Acceptance:** Groom Stage 0 loads `Roadmap/00-strategy/` when present; the seed template gains an optional line "Moves: <input> · Tests: <dimension>" (or "neither: <why>"). With no folder, groom says nothing about strategy. Groom's tests cover both.
 **Risk:** low
 
-### Story 2.2 — The Roadmap tools ignore `00-strategy/`
+### Story 2.2 — The Roadmap tools ignore `00-strategy/` ✅
 **As** a maintainer, **I want** the board, the extractor and the doc-format check to pass with the new folder, **so that** strategy files never show up as epics or seeds, or fail CI.
 **Acceptance:** `roadmap-extract`, `build-order` and `doc-format --check` pass with a fixture `00-strategy/`; a test per tool, observed failing first if the tool didn't already skip it.
 **Risk:** low
 
-### Story 2.3 — `intent-match`'s think-chain route names the skills
+### Story 2.3 — `intent-match`'s think-chain route names the skills ✅
 **As** the product owner, **I want** an "is it worth doing?" gap to point at the right coach, **so that** the route leads somewhere real instead of "answer by hand".
 **Acceptance:** The think-chain route's text names `pmf-narrative` / `risk-validation`. Only if `intent-match` S1.2 has shipped; otherwise cut.
 **Risk:** low
@@ -61,7 +61,13 @@ Cites the epic README's C3–C5 and D3, D5, D8, D9 and D10. Nothing here restate
 2. **2.2 (D8, C3):** pins only, no walker change. `roadmap-extract` is covered in `skills/template/scripts` and the
    root, with a fixture root through the extractor's root option or `cwd`, whichever it already supports; the builder
    checks which. `doc-format` is covered through its exported `checkOneDoc`. Each pin is seen failing once through a
-   walker mutation.
+   walker mutation. **Deviation, said out loud (the build):** no walker mutation exists to observe. A flat file is skipped
+   twice over (it isn't a directory, and it has no README), so no plausible one-line change to the extractor's or the
+   board's walk picks it up. Each pin is seen failing on the D8 violation instead: a strategy subfolder with a
+   `README.md`. doc-format's per-file path is the exception: widening its sprint-file match to `/\.md$/` does turn its
+   `--files` pin red (fresh review, #215). The template's
+   extractor and doc-format run through `GF_PROJECT_ROOT`. This repo's `roadmap-to-notion.mjs` ignores that variable, so
+   it runs from a temp copy (`scripts/roadmap-to-notion.strategy.test.mjs`).
 3. **2.3 (D9):** `ROUTES.think_chain` changes in both copies, `check-script-parity` stays green, and the groom
    reference line changes with it. `intent.json` is not touched.
 4. **Release (D10):** plugin and kit move to 0.18.0, with a CHANGELOG section.
