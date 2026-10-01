@@ -5,7 +5,6 @@
     "cross-review.security.prompt.md": "This project's own security review paths and rules; the template ships fill-ins.",
     "prose-lessons.md": "This project's own prose lessons.",
     "review-config.json": "This project's own review globs and security paths; the template ships fill-in globs.",
-    "roadmap-extract.mjs": "Delegates to this project's Notion sync (see scripts/README.md); the template's is generic.",
     "routines/README.md": "This project's own routines."
   }
 }

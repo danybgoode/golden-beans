@@ -38,6 +38,21 @@ function rows(strategy) {
   mkdirSync(join(root, 'scripts'));
   writeFileSync(join(epic, 'README.md'), EPIC);
   writeFileSync(join(root, 'scripts', 'roadmap-to-notion.mjs'), SOURCE);
+  // The Notion sync imports the ONE extractor and its libs (board-sinks-and-scrumban D15).
+  const here = dirname(fileURLToPath(import.meta.url));
+  mkdirSync(join(root, 'scripts', 'lib'));
+  writeFileSync(
+    join(root, 'scripts', 'roadmap-extract.mjs'),
+    readFileSync(join(here, 'roadmap-extract.mjs'))
+  );
+  for (const lib of [
+    'project-root.mjs',
+    'stage.mjs',
+    'work-branch.mjs',
+    'stage-facts.mjs',
+    'epic-kickoff.mjs',
+  ])
+    writeFileSync(join(root, 'scripts', 'lib', lib), readFileSync(join(here, 'lib', lib)));
   if (strategy) {
     const dir = join(root, 'Roadmap', '00-strategy');
     mkdirSync(dir);
