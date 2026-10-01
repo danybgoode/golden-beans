@@ -69,6 +69,16 @@ teardown('remove the disposable tenant and auth user', async () => {
         return { error }
       },
     ],
+    // After the project (projects.workspace_id is ON DELETE RESTRICT) and before the user (workspaces.created_by is
+    // ON DELETE SET NULL, so deleting the user first would leave an unattributable tenant behind). Keyed on the
+    // creator, which is how provisioning found or made it (lib/workspace-tenancy.ts).
+    [
+      'workspaces',
+      async () => {
+        const { error } = await db.from('workspaces').delete().eq('created_by', record.userId)
+        return { error }
+      },
+    ],
     [
       'auth user',
       async () => {

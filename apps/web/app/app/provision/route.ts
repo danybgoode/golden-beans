@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import { getSiteUrl } from '@/lib/site-url'
 import { isSignupEnabled } from '@/lib/flags'
+import { displayNameFrom } from '@/lib/display-name'
 import { provisionTenantForUser, registerStarterFeature } from '@/lib/provisioning'
 import { setOnboardingKeyCookie } from '@/lib/onboarding-key'
 import { trackSelfEvent, ACCOUNT_CONFIRMED_EVENT } from '@/lib/self-track'
@@ -37,7 +38,7 @@ export async function GET() {
   const projects = await getUserProjects(user.id)
   if (projects.length > 0) return NextResponse.redirect(backToApp)
 
-  const result = await provisionTenantForUser(user.id, user.email ?? '')
+  const result = await provisionTenantForUser(user.id, user.email ?? '', displayNameFrom(user.user_metadata))
   if (!result.ok) {
     console.error('[app/provision] retry failed:', result.error)
     // `?provision=failed` is what tells /app not to bounce straight back here — the loop breaker.

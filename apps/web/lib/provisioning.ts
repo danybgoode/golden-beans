@@ -6,6 +6,7 @@ import { generateConnectorToken } from './connector-tokens'
 import { slugFromEmail, normalizeSlug, isReservedSlug } from './tenant-slug'
 import { recordAudit } from './audit'
 import { DEMO_PROJECT_SLUG } from './public-demo'
+import { claimWorkspace, releaseWorkspace, workspaceNameFor, type WorkspaceClaim } from './workspace-tenancy'
 import { SELF_PROJECT_SLUG } from './self-track'
 
 // multi-tenant-activation · Sprint 2, Story 2.1 — turning a CONFIRMED auth user into a working
@@ -47,7 +48,7 @@ function isCreatorConstraintViolation(error: { message?: string; details?: strin
  *  be moments away from being written by the racing request. */
 async function findProjectByCreator(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
-  userId: string,
+  userId: string
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from('projects')
@@ -68,13 +69,9 @@ async function findProjectByCreator(
 async function ensureOwnerMembership(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   userId: string,
-  slug: string,
+  slug: string
 ): Promise<void> {
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('slug', slug)
-    .maybeSingle()
+  const { data: project, error } = await supabase.from('projects').select('id').eq('slug', slug).maybeSingle()
   if (error || !project) {
     console.error('[provisioning] ensureOwnerMembership could not resolve project:', error)
     return
@@ -87,7 +84,7 @@ async function ensureOwnerMembership(
     .from('project_members')
     .upsert(
       { user_id: userId, project_id: project.id, role: 'owner' },
-      { onConflict: 'user_id,project_id', ignoreDuplicates: true },
+      { onConflict: 'user_id,project_id', ignoreDuplicates: true }
     )
   if (insertError) console.error('[provisioning] ensureOwnerMembership insert failed:', insertError)
 }
@@ -97,7 +94,7 @@ async function ensureOwnerMembership(
  *  treating an outage as permission to mint a second tenant. */
 async function findExistingTenant(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
-  userId: string,
+  userId: string
 ): Promise<{ slug: string | null; error: unknown }> {
   const { data, error } = await supabase
     .from('project_members')
@@ -115,6 +112,15 @@ async function findExistingTenant(
   return { slug: project?.slug ?? null, error: null }
 }
 
+/** Release a failed provision's workspace claim, logging what could not be undone rather than throwing into a login. */
+async function logRelease(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  claim: Extract<WorkspaceClaim, { ok: true }>
+): Promise<void> {
+  const error = await releaseWorkspace(supabase, claim)
+  if (error) console.error(`[provisioning] could not release workspace ${claim.workspaceId}:`, error)
+}
+
 /**
  * Idempotent by design — the auth callback runs on EVERY confirmation link click, and a user who
  * clicks their link twice (or whose browser prefetches it) must not end up with two tenants.
@@ -127,6 +133,7 @@ async function findExistingTenant(
 export async function provisionTenantForUser(
   userId: string,
   email: string,
+  displayName?: string | null
 ): Promise<ProvisionResult> {
   // Every caller is a Route Handler and can therefore set the one-time key cookie, so there is no
   // "provision without revealing a key" mode. An earlier version had one, for a retry path that
@@ -156,7 +163,22 @@ export async function provisionTenantForUser(
   // with a reserved name, falls through to a generated slug. A confirmed signup must never fail
   // because of the shape of someone's email address.
   const suggested = slugFromEmail(email)
-  const base = suggested && !isForbiddenSlug(suggested) ? suggested : `tenant-${randomBytes(4).toString('hex')}`
+  const base =
+    suggested && !isForbiddenSlug(suggested) ? suggested : `tenant-${randomBytes(4).toString('hex')}`
+
+  // ── the tenant (workspaces · Story 1.3) ───────────────────────────────────────────────────
+  // Claimed BEFORE the project, so the project is born inside it and there is never a project without a workspace
+  // (lock D4: the column becomes NOT NULL once this code is live). Every `ok: false` below releases the claim, and
+  // releaseWorkspace only ever deletes a workspace THIS call created — a retry never removes a tenant that exists.
+  const claim = await claimWorkspace(supabase, userId, workspaceNameFor(displayName, email))
+  if (!claim.ok) {
+    console.error('[provisioning] workspace claim failed:', claim.error)
+    return { ok: false, error: 'Could not set up your workspace — try signing in again.' }
+  }
+  const fail = async (error: string): Promise<ProvisionResult> => {
+    await logRelease(supabase, claim)
+    return { ok: false, error }
+  }
 
   const plaintextKey = generateApiKey()
   let projectId: string | null = null
@@ -166,8 +188,7 @@ export async function provisionTenantForUser(
     // First attempt uses the clean slug; later ones disambiguate with random entropy rather than
     // an incrementing counter — a counter leaks how many tenants share a name and turns a
     // collision into a probe. normalizeSlug re-runs so the suffix can't push it out of shape.
-    const candidate =
-      attempt === 0 ? base : normalizeSlug(`${base}-${randomBytes(2).toString('hex')}`)
+    const candidate = attempt === 0 ? base : normalizeSlug(`${base}-${randomBytes(2).toString('hex')}`)
     if (!candidate || isForbiddenSlug(candidate)) continue
 
     // A PLAIN INSERT, never an upsert on `slug`. This is the exact bug class cross-review caught
@@ -180,6 +201,7 @@ export async function provisionTenantForUser(
       .insert({
         slug: candidate,
         created_by: userId,
+        workspace_id: claim.workspaceId,
         // api_key_hash is the retired single-key column (nullable as of this sprint's migration).
         // A self-serve tenant's credentials live ONLY in api_keys.
         api_key_hash: null,
@@ -223,17 +245,17 @@ export async function provisionTenantForUser(
         }
         // Constraint fired but the row is unreadable — bail rather than loop into the same wall.
         console.error('[provisioning] creator constraint fired but no project resolved')
-        return { ok: false, error: 'Could not create your project — please try again.' }
+        return fail('Could not create your project — please try again.')
       }
       continue // the slug was taken by someone else — try another name
     }
     console.error('[provisioning] project insert failed:', error)
-    return { ok: false, error: 'Could not create your project.' }
+    return fail('Could not create your project.')
   }
 
   if (!projectId) {
     console.error(`[provisioning] exhausted ${MAX_SLUG_ATTEMPTS} slug attempts for base "${base}"`)
-    return { ok: false, error: 'Could not create your project — please try again.' }
+    return fail('Could not create your project — please try again.')
   }
 
   // ── owner membership ──────────────────────────────────────────────────────────────────────
@@ -258,10 +280,12 @@ export async function provisionTenantForUser(
     if (cleanupError) {
       console.error(
         `[provisioning] ORPHAN project ${projectId} (${projectSlug}) — membership insert failed AND cleanup failed:`,
-        cleanupError,
+        cleanupError
       )
     }
-    return { ok: false, error: 'Could not set up your account.' }
+    // The project delete has to land first: projects.workspace_id is ON DELETE RESTRICT, so while the orphan exists
+    // the release below is refused — which is right, since an orphan in a deleted tenant would be worse.
+    return fail('Could not set up your account.')
   }
 
   // ── first credential ──────────────────────────────────────────────────────────────────────
