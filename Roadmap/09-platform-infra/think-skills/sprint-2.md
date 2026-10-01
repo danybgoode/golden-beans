@@ -3,7 +3,7 @@ epic: think-skills
 sprint: 2
 title: "Groom reads strategy"
 risk: low
-phase: Building
+phase: Shipped
 stories_total: 3
 stories:
   - id: S2.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 2: Groom reads strategy
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #215 (`ac13f46`), merged 2026-10-01; plugin + kit **0.18.0** released (`v0.18.0`)
 
 ## Stories
 
@@ -85,3 +85,14 @@ Cites the epic README's C3–C5 and D3, D5, D8, D9 and D10. Nothing here restate
    → both pass, and no strategy file appears on the board.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-01, `main` @ `fbce291`)
+
+1. ✅ (the reader half) With a filled `Roadmap/00-strategy/north-star.md` in this repo, `node
+   skills/plugins/golden-frijoles/skills/groom/strategy.mjs` printed the metric `weekly_planned_seeds` and the inputs
+   `activated_projects · seeds_groomed`, plus the pitch-line shape. Without the folder it prints nothing (exit 0). A
+   full groom of a seed with the line written is ⬜ **owed to Daniel**, once a real `north-star.md` exists.
+2. ✅ With `north-star.md` and `risk-validation.md` in `Roadmap/00-strategy/`, `node scripts/build-order.mjs --check`
+   reported the board up to date (after regenerating it for unrelated merge drift on `main`). `node
+   scripts/doc-format.mjs` named no strategy file, and `roadmap-extract` emitted no `00-strategy` row. The files were
+   removed afterwards.

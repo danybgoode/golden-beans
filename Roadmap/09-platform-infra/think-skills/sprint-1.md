@@ -3,7 +3,7 @@ epic: think-skills
 sprint: 1
 title: "The three skills, with files"
 risk: low
-phase: Building
+phase: Shipped
 stories_total: 3
 stories:
   - id: S1.1
@@ -30,7 +30,7 @@ stories:
 ---
 # Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads — Sprint 1: The three skills, with files
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #214 (`f14c68d`), merged 2026-10-01; plugin + kit **0.17.0** released (`v0.17.0` on golden-frijoles/skills, kit on npm)
 
 ## Stories
 
@@ -84,3 +84,14 @@ Cites the epic README's C1–C7 and D1–D11. Nothing here restates a rule that 
    → it starts from the narrative's six dimensions without asking for them again.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-01, `main` @ `fbce291` and the published plugin)
+
+1. ✅ The published marketplace (https://github.com/golden-frijoles/skills/blob/main/.claude-plugin/marketplace.json)
+   lists `north-star`, `pmf-narrative` and `risk-validation`; `plugin.json` is at 0.19.0 and `v0.17.0`–`v0.19.0` are
+   released. Seeing them in `/plugin` inside Claude Code is ⬜ **owed to Daniel** (an interactive session).
+2. ⬜ **Owed to Daniel:** run the North Star workshop on Golden Frijoles and say whether `Roadmap/00-strategy/north-star.md`
+   is right. What the skill text guarantees is pinned: its description no longer matches risk validation, and the
+   template's sync block passes the engine's real schema.
+3. ⬜ **Owed to Daniel:** a risk validation after a narrative exists. Step 1's narrative read is pinned by test.
+- ⬜ **Owed to Daniel:** remove the three account copies in claude.ai settings.
