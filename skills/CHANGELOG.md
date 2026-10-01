@@ -23,10 +23,16 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 
 - **Asking for a North Star workshop loads the North Star coach.** Its description used to be Risk Validation's, word
   for word, so the request matched the wrong skill.
+- **`doc-format` catches an HTML comment that never closes** (`unclosed-html-comment`, in epic READMEs, sprints and
+  retros). One that never closes hides everything after it when the doc renders, and two epic READMEs shipped that
+  way. A comment quoted in backticks or a code fence is an example, so the rule skips it.
 
 ### Changed
 
 - **The umbrella skill routes strategy asks to the coaches**, and no longer calls the planning chain out of scope.
+- **Each coach credits its sources** by name and URL: Amplitude's *North Star Playbook* for the North Star coach, and
+  Reforge's courses and Helmer's *7 Powers* for the other two.
+
 
 ## [0.16.0] - 2026-09-30
 

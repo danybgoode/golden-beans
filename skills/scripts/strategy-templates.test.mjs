@@ -122,3 +122,20 @@ test('north-star describes a North Star workshop, not risk validation', () => {
   assert.doesNotMatch(northStar, /riskiest|validation technique/);
   assert.notEqual(northStar, description('risk-validation'));
 });
+
+// D4: an offer is a sentence. Nothing auto-invokes the next coach (S1 review nit: deleting this rule left every test green).
+test('every coach offers the next without starting it', () => {
+  for (const name of Object.keys(CONTRACTS)) {
+    assert.match(read(name, 'SKILL.md'), /Offer it; don't start it unasked\./, name);
+  }
+});
+
+// Grooming D7 + the D1 amendment: each public skill credits its sources by name and URL, never a local path.
+test('every coach credits its sources by name and URL', () => {
+  for (const name of Object.keys(CONTRACTS)) {
+    const line = read(name, 'SKILL.md').match(/^> \*\*Sources\.\*\* (.+)$/m);
+    assert.ok(line, `${name} has a Sources line under its title`);
+    assert.match(line[1], /https:\/\/\S+/, name);
+    assert.doesNotMatch(line[1], /references\//, name);
+  }
+});

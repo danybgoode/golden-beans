@@ -19,11 +19,14 @@ build_order: 53  # integer position in the ONE global build sequence — the SSO
 > **Area:** 09-platform-infra · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/think-skills.md`](../../00-ideas/seeds/think-skills.md)
 <!-- Class (above) is the Stage-2 classification: Feature, Spike, Bug, or Chore — see SKILL.md's
      Stage 2 table; sourced from scaffold-epic.mjs's --type flag (a fixed 4-value enum, not free
-     text — a longer description belongs in ## Why
+     text — a longer description belongs in the Why section below, not here; this comment never names
+     that heading literally, so an edit anchored on it cannot land inside the comment). -->
+
+## Why
 The three pre-planning coaches exist only in the product owner's claude.ai account, end in a document written in chat, don't hand off to each other, and groom never sees what they produce; the North Star one also mis-triggers because its description is Risk Validation's. This epic ships them in the plugin, has each write a file in `Roadmap/00-strategy/` and offer the next, makes groom add one line per pitch ("Moves: <input metric> · Tests: <dimension>"), and adds `gf north-star set` so the workshop's metric reaches the engine without retyping. The pitch, measurements and diagram are in the [seed](../../00-ideas/seeds/think-skills.md).
 
 ## Platform-first note
-The engine already models a North Star and its inputs (`north_star` + `leading_inputs`, written by `POST /api/v1/north-star/sync`, read by `GET /api/v1/north-star`), so S3 is a client command over the existing route: no table, no route, no schema change (rule #1 holds). S1 and S2 are skill text, templates and a groom stage. Skill changes are a plugin release; S3 is a CLI release (`@golden-frijoles/cli`).
+The engine already models a North Star and its inputs (`north_star` + `leading_inputs`, written by `POST /api/v1/north-star/sync`, read by `GET /api/v1/north-star`), so S3 is a client command over the existing route: no table, no route, no schema change (rule #1 holds). **Superseded at the lock (C1, D6):** `gf`'s credential can't call that route, so S3 adds one CLI route over the same sync logic. There is still no table and no schema change, and rule #1 still holds. S1 and S2 are skill text, templates and a groom stage. Skill changes are a plugin release; S3 is a CLI release (`@golden-frijoles/cli`).
 
 ## Decisions carried from grooming (the architecture lock verifies each against live code)
 - **D1 — Port, don't rewrite.** The claude.ai account copies are the only source; the coaching text moves as is, with a `summary:`, a corrected `description` for `north-star`, and file-writing endings.
@@ -78,7 +81,11 @@ against a file, a query or a request, not against the seed.
 - **D1 — Port, don't rewrite** (grooming D1, source per C6). The coaching text moves as written: persona, concepts,
   case studies, target structure, steps. Allowed edits: the frontmatter (`name`, `summary`, `description`); a new
   closing step per skill that writes the file (D3) and offers the next (D4); Risk Validation's Step 1 reads the
-  narrative (D4). Nothing else. The builder checks that each case study reads as a public fact with its source named,
+  narrative (D4). Nothing else. **Amended 2026-09-30 (S1 review):** a `Sources` line per skill is also
+  allowed, because grooming D7 requires one and this list left it out. The product owner says the coaching is partly
+  their own synthesis and partly Reforge's courses. So `pmf-narrative` and `risk-validation` credit Reforge
+  (reforge.com) and Helmer's *7 Powers*, and `north-star` credits Amplitude's *North Star Playbook* (Cutler and
+  McBride, the URL verified in `references/northstar-sources.md`). Credited, never quoted. The builder checks that each case study reads as a public fact with its source named,
   not as copied text.
 - **D2 — Names and places:** `skills/plugins/golden-frijoles/skills/{pmf-narrative,north-star,risk-validation}/SKILL.md`.
   None collides with the 11 existing skills or with the account names. `plugin.json`, the marketplace and the README
@@ -171,7 +178,7 @@ against a file, a query or a request, not against the seed.
 **Amended at the lock (2026-09-30):** the architect builds all three sprints in place, S2 included. S2 turned out to be one small reader plus pins (C3), so briefing a separate builder would cost more than building it. `review-route --builder claude` therefore routes the external passes to the other families. The kickoff makes the fresh `pr-reviewer` pass mandatory on **every** PR, not only S3. Merges are pre-authorized on green (kickoff rule 4, WAYS-OF-WORKING *Review & merge*), and that covers S3: its new route is a CLI write of the same category the flag writes already are, not a new category of production mutation. The one production write in this epic (D11) stays owed.
 
 ## Kill switch (Stage 6b)
-**Carve-out:** no new runtime seam. `gf north-star set` is a client command over an existing route already auth-gated by the project key, and dry run is its default; rollback is the previous CLI version (`npm i -g @golden-frijoles/cli@0.2.1`). A flag would gate nothing the route doesn't already gate.
+**Amended at the lock (C1, D6):** the carve-out still holds. The new `/api/v1/cli/north-star` route sits behind the CLI API's existing `CLI_WRITE_API_ENABLED` gate and an owner check, so it adds no seam that gate doesn't already switch off. Rollback is `git revert` for the route and the previous CLI version for the command. The original text follows. **Carve-out:** no new runtime seam. `gf north-star set` is a client command over an existing route already auth-gated by the project key, and dry run is its default; rollback is the previous CLI version (`npm i -g @golden-frijoles/cli@0.2.1`). A flag would gate nothing the route doesn't already gate.
 
 ## Deploy order
 Stacked branches `feat/think-skills` → `-s2` → `-s3`, merged in order. S1 and S2 are plugin releases; S3 is an app deploy (the CLI route, on merge) plus a CLI release and a plugin release (D10). Owed to Daniel after S1 ships: remove the three account copies in claude.ai settings.

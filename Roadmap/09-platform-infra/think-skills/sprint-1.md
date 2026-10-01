@@ -34,17 +34,17 @@ stories:
 
 ## Stories
 
-### Story 1.1 — Port the three coaches into the plugin
+### Story 1.1 — Port the three coaches into the plugin ✅
 **As** a product owner using Golden Frijoles, **I want** the PMF Narrative, North Star and Risk Validation coaches installed with the plugin, **so that** I get them in any project, not just in one person's account.
 **Acceptance:** `skills/plugins/golden-frijoles/skills/{pmf-narrative,north-star,risk-validation}/SKILL.md` exist with `summary:` and their own `description`; `north-star`'s describes a North Star workshop, not risk validation. `render-skill-adverts --check` and `check-skill-scripts` pass; `plugin.json` lists 14 skills.
 **Risk:** low
 
-### Story 1.2 — Each writes its file
+### Story 1.2 — Each writes its file ✅
 **As** the product owner, **I want** each coach to leave a file in `Roadmap/00-strategy/`, **so that** the result outlives the chat and a later session can revise it.
 **Acceptance:** Each skill has a template for its contract (D3) and ends by writing or updating it with `status: draft`, asking before overwriting an `agreed` one. `north-star.md` includes a JSON block that validates against `northStarSyncSchema` (a test checks the template's example).
 **Risk:** low
 
-### Story 1.3 — The chain
+### Story 1.3 — The chain ✅
 **As** the product owner, **I want** each coach to offer the next, and Risk Validation to use my narrative, **so that** I go from narrative to metric to riskiest bet without retyping.
 **Acceptance:** PMF Narrative ends offering North Star; North Star ends offering Risk Validation (and names `gf north-star set` once S3 ships); Risk Validation reads `pmf-narrative.md` when present and starts from its six dimensions.
 **Risk:** low

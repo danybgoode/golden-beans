@@ -47,7 +47,10 @@ Cites the epic README's C1, C2, C7, D6, D10 and D11. Nothing here restates a rul
    `--help` golden regenerated. `cli-write.test.ts` covers five cases, each seen failing once: a dry run sends no POST
    (exactly one GET); `--yes` sends exactly one POST; a 400 renders `issues` with a non-zero exit; auth failure gives
    exit 2; and a file with zero or two JSON fences gives exit 1 with no request. The C2 lines (`new`, `updated`,
-   `moved from`, "adds, never replaces") are pinned too.
+   `moved from`, "adds, never replaces") are pinned too. **Added 2026-09-30 (S1 review, Codex #2):** the template's
+   `<…>` placeholders pass the schema (`min(1)`), so a payload the coach never filled in would sync as written. Any
+   string value matching `^<.*>$` is reported as unfilled in the dry run, and `--yes` refuses it with exit 1 and no
+   request. This is a template check, not schema validation, so the thin-shell rule still holds.
 4. **The skill names the command (D10):** `north-star`'s ending gives
    `npx -y @golden-frijoles/cli@0.3.0 north-star set Roadmap/00-strategy/north-star.md`, dry run first. The CLI
    moves to 0.3.0, and plugin and kit to 0.19.0.

@@ -110,8 +110,49 @@ export function siblingDocs(readmeRelPath) {
 
 // ── Individual checkers — each returns a list of { rule, detail } offenses for one file's content ──
 
+// An HTML comment that never closes hides EVERYTHING after it when the doc renders — the whole epic README, its
+// architecture lock included (think-skills and sketch-specs both shipped one, 2026-09-30, from an edit anchored on a
+// heading the old template's comment named). Code is skipped first: a `<!-- jev:` inside backticks or a fence is an
+// example, not a comment, and several sprint docs quote one.
+export function unclosedComments(content) {
+  const lines = content.split('\n');
+  let fence = null;
+  let open = null; // the line an unclosed <!-- started on, while we are inside one
+  for (let i = 0; i < lines.length; i++) {
+    const fenceMark = lines[i].match(/^ {0,3}(```|~~~)/);
+    if (open === null && fenceMark) {
+      fence = fence === null ? fenceMark[1] : fence === fenceMark[1] ? null : fence;
+      continue;
+    }
+    if (fence !== null) continue;
+    let rest = open === null ? lines[i].replace(/`[^`]*`/g, '') : lines[i];
+    for (;;) {
+      if (open === null) {
+        const at = rest.indexOf('<!--');
+        if (at === -1) break;
+        open = i;
+        rest = rest.slice(at + 4);
+      } else {
+        const at = rest.indexOf('-->');
+        if (at === -1) break;
+        open = null;
+        rest = rest.slice(at + 3).replace(/`[^`]*`/g, '');
+      }
+    }
+  }
+  return open === null
+    ? []
+    : [
+        {
+          rule: 'unclosed-html-comment',
+          detail: `line ${open + 1} opens <!-- and nothing closes it — everything after it is hidden when the doc renders`,
+        },
+      ];
+}
+
 export function checkEpicReadme(content, { slug, exists = existsRelative } = {}) {
   const offenses = [];
+  offenses.push(...unclosedComments(content));
   // Many epics predate the seeds/ convention and genuinely have no seed file to link — that's an
   // accepted state (Sprint 2 sweep decision), not drift. Only require a **Scope seed:** field when a
   // real seed file exists for this epic's slug; a seed that exists but isn't linked IS still flagged.
@@ -230,6 +271,7 @@ export function bodyStartIndex(lines) {
 
 export function checkSprintDoc(content) {
   const offenses = [];
+  offenses.push(...unclosedComments(content));
   const all = content.split('\n');
   const statusLine = all
     .slice(bodyStartIndex(all))
@@ -331,6 +373,7 @@ export const RETRO_SECTION_STEMS = [
 // same date — that is fixing drift, not relaxing the check.
 export function checkRetrospective(content) {
   const offenses = [];
+  offenses.push(...unclosedComments(content));
   const closedLine = content.split('\n').find((l) => /closed/i.test(l) && l.trim() !== '');
   if (!closedLine) {
     offenses.push({ rule: 'retro-closed-missing', detail: 'no "Closed" date line found near the top' });

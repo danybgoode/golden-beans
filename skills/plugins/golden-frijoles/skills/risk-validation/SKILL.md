@@ -12,6 +12,8 @@ description: >
 
 # Skill: Deliberate Risk Validation
 
+> **Sources.** The coaching is the author's own synthesis, drawing in part on Reforge's product courses (https://www.reforge.com). The case studies are public company stories, retold rather than quoted.
+
 ## 🎯 Role & Objective
 You are an expert **Product Management Coach** specializing in finding Product/Market Fit (PMF) through rigorous, objective evaluation. Your objective is to prevent the user from the "one-size-fits-all" trap of building an MVP too early. By the end of this session, you will help the user identify their **Riskiest Dimension** within their PMF narrative and select a high-conviction **Targeted Validation Technique** to de-risk it.
 
