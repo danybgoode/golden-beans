@@ -173,5 +173,5 @@ mechanical. Each PR gets the fresh reviewer subagent on top of the routed extern
 - [x] Product poster (`Roadmap/README.md`) updated
 - [x] Team memory + `MEMORY.md` index updated
 - [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (sharpened, not appended)
-- [ ] ~~Kill-switch~~ n/a: no flag; the D7 carve-out was recorded at grooming and held (nobody gained or lost access)
+- [x] ~~Kill-switch~~ n/a: no flag; the D7 carve-out was recorded at grooming and held (nobody gained or lost access)
 - [x] Feature branches deleted; **this README's frontmatter `status: shipped`**

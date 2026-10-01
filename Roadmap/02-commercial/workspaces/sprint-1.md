@@ -107,9 +107,10 @@ If any step fails, note the step number + what you saw — that's the bug report
 
 ### Smoke results (2026-10-01, production, `main` @ `4ee9bb1`)
 1. ⬜ **Owed to Daniel** (auth path): sign in at https://goldenfrijoles.com/app and confirm Today loads your default project.
-2. ⬜ **Owed to Daniel**: open each project from the switcher. Expected: unchanged. The data says so: every prod project's only
-   member is inside its workspace (0 outside, measured before S2's migration).
-3. ⬜ **Owed to Daniel**: `gf projects` lists the same 4 projects as before.
+2. ⬜ **Owed to Daniel**: open each project from the switcher. Expected: unchanged. The data says so: 0 prod project
+   members sit outside their project's workspace (measured before S2's migration).
+3. ⬜ **Owed to Daniel**: `npx -y @golden-frijoles/cli@0.3.0 projects` (not `gf`, which is aliased to `git fetch` on
+   this machine) lists your same 3 projects: `golden-beans`, `golden-beans-demo` and `miyagisanchez`.
 4. ✅ `select count(*) from projects where workspace_id is null` → **0** (run through `supabase db query --linked`).
    `miyagisanchez`, `golden-beans-demo` and `golden-beans` → "Daniel's products"; `miyagi` → "miyagi's products".
 5. ⬜ **Owed to Daniel** (signup mints a real tenant, and I don't create prod accounts unasked): sign up a fresh test email.

@@ -107,11 +107,12 @@ If any step fails, note the step number + what you saw — that's the bug report
 2. ⬜ **Owed to Daniel**: `npm publish` of `@golden-frijoles/cli@0.4.0`, then `npx -y @golden-frijoles/cli@0.4.0 whoami`
    prints `workspace: Daniel's products`. (`gf` is aliased to `git fetch` on Daniel's machine, so call it by its package
    name.) The route already sends `workspaces` in prod. 0.3.0 ignores the field.
-3. ⬜ **Owed to Daniel**: there is no second real tenant to probe in prod (`miyagi`'s workspace is another person's), so the
-   cross-workspace 404 is proven in CI per path family instead: console (both guards), CLI and MCP. Each test was observed
-   red with its read's check removed (PR #221).
-4. ✅ The PR's checks: CI green with the denial specs on `68b9974`. The tenancy lint reported in shadow
-   (`lint:tenancy — 1 candidate(s): 1 clear`).
+3. ➖ **n/a in production, replaced by CI.** There is no seeded test tenant in prod, and probing `miyagi` would only exercise
+   the pre-existing non-member 404, not the workspace check. The cross-workspace denial is proven per path family in CI
+   instead: console (both guards), CLI and MCP. Each test was observed red with its read's check removed (PR #221).
+4. ✅ CI green with the denial specs on the PR head `5f6c4a3` (#221's final run; the squash merge is `68b9974`). The
+   tenancy lint reported in shadow from a local `semantic-lint --range origin/main...HEAD` run
+   (`lint:tenancy — 1 candidate(s): 1 clear`); no CI workflow runs semantic-lint.
 
 Also verified live: `/app/funnel/golden-beans-demo/setup_guide` and `/hub/golden-beans-demo` still answer 200 anonymously
 (rule #2's demo carve-out sits before the re-checked seam). `/app/funnel/miyagisanchez/…` → `/login`. A bad CLI token

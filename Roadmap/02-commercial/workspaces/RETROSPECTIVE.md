@@ -38,7 +38,10 @@ project members sat outside their workspace when Sprint 2's check went live.
 - **The backfill rule lived in one place**, a SQL function the migration called and the spec called, so no TS copy could
   drift from it. Migration B dropped it once its job was done.
 - **Two clean external passes per PR** (Codex general, agy security lens). The fresh `pr-reviewer` found everything
-  that mattered, below.
+  that mattered, below. ⚠️ On #221 both external passes ran on `e3dc9db`, BEFORE `e026711` added the catch-up
+  `INSERT INTO workspace_members … FROM project_members` to migration B. Only the fresh reviewer's round 2 read that
+  insert. It's grant-shaped SQL on a security path, so the next time a fix commit touches a migration, re-run the
+  security lens.
 
 ## What we learned
 - **A "it's gone from the list" assertion against a one-item list can't fail.** The console spec asserted the left
@@ -63,10 +66,12 @@ project members sat outside their workspace when Sprint 2's check went live.
   ran clean once scoped with `--paths` (74 KB on #220, 37 KB on #221).
 
 ## Gaps / follow-ups
-- **Owed to Daniel by name:** the signed-in prod walkthroughs (S1 steps 1–3 and 5, S2 steps 1–3), and `npm publish` of
-  `@golden-frijoles/cli@0.4.0` (2FA).
+- **Owed to Daniel by name:** the signed-in prod walkthroughs (S1 steps 1–3 and 5, S2 step 1), and `npm publish` of
+  `@golden-frijoles/cli@0.4.0` (2FA), then S2 step 2. S2 step 3 is n/a in prod; CI replaces it.
 - `provisionTenantForUser`'s release-on-failure wiring is verified by inspection only. The provisioner is `server-only`,
   and no spec can make it fail midway.
-- The `tenancy` lint rule is in shadow. Promote, tune or drop it with rule-1's review (shadow expires 2026-10-14).
+- The `tenancy` lint rule is in shadow. Promote, tune or drop it with rule-1's review (shadow expires 2026-10-14). Its one
+  undecided fixture (p=0.35) is the LEGAL shape `getWorkspaceProjects()` + `.in('project_id', …)`. That's exactly
+  what board S4 and the portfolio will write, so measure it on those PRs before promoting.
 - Unblocked: `board-sinks-and-scrumban` S4 (the workspace-wide board) and seed `portfolio-view`, which both read through
   `getWorkspaceProjects()`.

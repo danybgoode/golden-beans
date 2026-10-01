@@ -1059,10 +1059,6 @@ one-liner + why + date shape.
   two failure modes: an invalid credential returning **401 rather than 500** proves the new table
   exists and resolves, and driving one real end-to-end call with a *pre-existing* credential proves the
   backfill preserved live access.
-  **The CONTRACT step has the mirror-image rule: `SET NOT NULL` lands only after the code that WRITES the column has
-  deployed.** workspaces moved NOT NULL out of the sprint that added the column (2026-10-01): signup was live, and the
-  provisioning code then in production inserted projects without a workspace. So: expand → backfill → merge the writer →
-  re-backfill stragglers + NOT NULL → merge the readers. Every PR still has its migration applied before its own merge.
   **Re-run successfully at the multi-tenant-activation launch (2026-07-21), with one addition worth
   copying: drive that "real credential" check through a route the APP already authenticates for**
   (here `/api/v1/public/self-visit`, which uses the production key server-side) — you get the same
@@ -1072,6 +1068,10 @@ one-liner + why + date shape.
   plaintext key. Also: `supabase db push` does **not** apply `seed.sql` unless you
   pass `--include-seed` — worth confirming, since a test-fixture seed reaching prod would be its own
   incident. *(2026-07-21, multi-tenant-activation S1.)*
+  **The CONTRACT step has the mirror-image rule: `SET NOT NULL` lands only after the code that WRITES the column has
+  deployed.** workspaces moved NOT NULL out of the sprint that added the column (2026-10-01): signup was live, and the
+  provisioning code then in production inserted projects without a workspace. So: expand → backfill → merge the writer →
+  re-backfill stragglers + NOT NULL → merge the readers. Every PR still has its migration applied before its own merge.
 - **A role column in the schema is not an access rule — grep for who actually reads it.**
   multi-tenant-activation S1 shipped `project_members.role` with an `owner`/`member` CHECK constraint
   and a membership gate that only ever asked "is this user a member?" — so any member could mint a
