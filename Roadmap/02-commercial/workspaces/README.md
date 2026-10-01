@@ -121,6 +121,20 @@ neither.** Every project has exactly one member, and every member is an owner. `
   on stacked branches. The fresh `pr-reviewer` and the routed external passes do the reviewing. No builder
   subagent is spawned.
 
+### Lock amendments made while building Sprint 2 (2026-10-01, stated out loud)
+- **D13 — A project member is always inside the project's workspace (new).** The `project_members_join_workspace`
+  trigger (migration B) inserts a `workspace_members` row (`member`, never `owner`) whenever a `project_members` row
+  is written. Without it, D9's re-check would deny every project grant that doesn't come through provisioning:
+  today that's specs; one day it's an invite flow. It grants nothing by itself (D1). It also amends D8's "rows only
+  from backfill and provisioning": rows now come from the backfill, provisioning, and project membership itself,
+  and never from a workspace invite or UI. What the re-check still defends is a person REMOVED from a workspace,
+  who reaches nothing inside it.
+- **D6, as built:** `getWorkspaceProjects` and `getUserWorkspaces` live in `lib/workspace.ts` (`server-only`, per-request
+  `cache`). Their queries are in `lib/workspace-projects.ts`, and the two decisions (the seam predicate and the intersect)
+  are in `lib/workspace-access.ts`, which has zero imports and is unit-tested.
+- **S2.4, as built:** rule id `tenancy`, severity `blocking` (shadow, so it never blocks today), measured 33/34 decided,
+  all right (the rule's `$measured` field in the config).
+
 ## What already exists (reuse, don't rebuild)
 - `apps/web/lib/membership.ts`: `getUserProjects`, `getMembership`, `getMembershipByProjectId` (the seam).
 - `apps/web/lib/dashboard-auth.ts`, `lib/cli-auth.ts`, `lib/mcp-flag-tools.ts`: the three callers that inherit the check.
