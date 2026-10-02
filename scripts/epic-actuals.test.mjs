@@ -425,12 +425,11 @@ test('fresh review #230: a time budget stops BETWEEN files, saves progress, and 
     write(fx.projects, '-elsewhere', 'a.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
     write(fx.projects, '-elsewhere', 'b.jsonl', [entry({ cwd: fx.root, session: 'B' })]);
     const index = emptyIndex();
-    let calls = 0;
     const first = updateIndex(index, {
       projectsDir: fx.projects,
       paths: repoPaths(fx.root),
       deadline: 0,
-      now: () => (calls++ ? 1 : 0),
+      now: () => 1, // past the deadline from the start — the first file is still read (at least one per run)
     });
     assert.equal(first.complete, false);
     assert.equal(first.files_read, 1, 'one whole file, then stop');
@@ -472,6 +471,41 @@ test('fresh review #230: a backfill never overwrites an actual already written; 
     assert.match(readFileSync(readme, 'utf8'), /actual_usd: null/);
     assert.ok(stampEpic({ root: fx.root, summary, slug: 'beta', date: 'd' }));
     assert.match(readFileSync(readme, 'utf8'), /actual_usd: 9\n/);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('round-2 review #230: refresh() under a budget writes complete:false to disk, at least one file per run, then true', () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 'a.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    write(fx.projects, '-elsewhere', 'b.jsonl', [entry({ cwd: fx.root, session: 'B' })]);
+    const summaryOnDisk = () =>
+      JSON.parse(readFileSync(join(fx.root, '.golden-frijoles', 'usage-summary.json'), 'utf8'));
+    const first = refresh({ root: fx.root, projectsDir: fx.projects, budgetMs: -1 });
+    assert.equal(first.changes.files_read, 1, 'an exhausted budget still reads one file');
+    assert.equal(summaryOnDisk().complete, false);
+    refresh({ root: fx.root, projectsDir: fx.projects, budgetMs: -1 });
+    assert.equal(summaryOnDisk().complete, true, 'the second run finishes the scan');
+    assert.equal(summaryOnDisk().epics.alpha.sessions, 2);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('round-2 review #230: an empty or null actual_basis is not a written actual', () => {
+  const fx = repoFixture();
+  try {
+    const readme = join(fx.root, 'Roadmap', '09-platform-infra', 'beta', 'README.md');
+    const summary = {
+      epics: { beta: { usd: 9, usd_known: true, tokens: {}, mtok: 1, sessions: 1, branches: [] } },
+      skipped: {},
+    };
+    for (const extra of ['\nactual_basis: null', '\nactual_basis:\nactual_mtok: null']) {
+      writeFileSync(readme, README('beta', 'shipped', extra));
+      assert.ok(stampEpic({ root: fx.root, summary, slug: 'beta', date: 'd', keepStamped: true }), extra);
+    }
   } finally {
     fx.cleanup();
   }
