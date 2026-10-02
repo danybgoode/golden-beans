@@ -51,7 +51,7 @@ import { fileURLToPath } from 'node:url';
 import { resolveTarget } from './build-state.mjs';
 import { buildRows } from './roadmap-extract.mjs';
 import { projectRoot } from './lib/project-root.mjs';
-import { formatScalar } from './lib/roadmap-contract.mjs';
+import { formatScalar, parseDocFrontmatter } from './lib/roadmap-contract.mjs';
 import { PRICES_AS_OF, PRICES_SOURCE, TOKEN_KINDS, tokensOf, usdOf } from './lib/model-prices.mjs';
 
 export const INDEX_VERSION = 1;
@@ -306,7 +306,9 @@ export function updateIndex(
     // A time budget (the mod's run is timeout-bound): stop BETWEEN files, so every file recorded is fully read and the
     // next run resumes where this one stopped. A first scan on a slow machine then completes over a few runs instead of
     // starting from zero every time and never saving (fresh review, #230).
-    if (now() > deadline) {
+    // At least ONE file per run, by construction: listing and stat-ing every transcript happens inside the budget, so
+    // checking before the first file could let a slow listing read nothing, forever (round-2 review, #230).
+    if (changes.files_read > 0 && now() > deadline) {
       changes.complete = false;
       break;
     }
@@ -584,7 +586,11 @@ export function stampEpic({ root, summary, slug, basisPrefix = '', date, keepSta
   const md = readFileSync(path, 'utf8');
   // A backfill never overwrites an actual already written — one stamped at close, or a deliberate hold such as
   // `actual_usd: null` with its reason (README C14). `--epic <slug> --write` (the close) is the one that replaces.
-  if (keepStamped && /^actual_basis:\s*\S/m.test(md.split(/^---\s*$/m)[1] ?? '')) return null;
+  if (keepStamped) {
+    // Read through the contract's own parser: an empty `actual_basis:` or `actual_basis: null` is NOT a written actual.
+    const basis = parseDocFrontmatter(md).data.actual_basis;
+    if (typeof basis === 'string' && basis.trim()) return null;
+  }
   const next = stampFrontmatter(md, actualFields(report, basisPrefix, date));
   if (next !== md) writeFileSync(path, next);
   return path;
