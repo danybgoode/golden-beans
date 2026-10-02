@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 2
 title: "The board on the Hub"
 risk: low
-phase: Shaping
+phase: In review
 stories_total: 4
 stories:
   - id: S2.1
@@ -12,32 +12,32 @@ stories:
     i_want: "a pure `lib/hub-board.ts` that turns the latest roadmap artifact into six columns (Ready to build by `build_order`, Shipped = last 30 days), WIP counts, filters and the answer line (\"2 in QA and 1 building. Next to pull: …\")"
     so_that: "the page renders and the spec asserts the same arithmetic"
     risk: low
-    status: planned
+    status: done
   - id: S2.2
     title: "A Board tab on the Hub"
     as_a: "the product owner"
     i_want: "`/hub/<slug>/board` in the hub frame (fourth hub tab, not a console section) rendering the approved `hub-board` and `hub-board-empty` states"
     so_that: "I see every initiative and its stage at a glance"
     risk: low
-    status: planned
+    status: done
   - id: S2.3
     title: "A card opens to everything I need to act"
     as_a: "the product owner"
     i_want: "clicking a card to open a drawer (`?card=<slug>`) with the goal, stage, area, build order, type, risk, appetite, bet badge, sprint progress, links to the docs, the kickoff prompt (Ready to build) and the commands for its stage"
     so_that: "I can copy the kickoff or the next command without opening the repo"
     risk: low
-    status: planned
+    status: done
   - id: S2.4
     title: "Filter by type and risk"
     as_a: "the product owner"
     i_want: "type chips (feature · spike · bug · chore) and a high-risk toggle, carried in the URL"
     so_that: "I can share a filtered board"
     risk: low
-    status: planned
+    status: done
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 2: The board on the Hub
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - D7, D8, D19 (the Hub groups, never computes), D21 (the row fields it reads). `HubTab` gains `board`, ordered
@@ -48,24 +48,40 @@ stories:
 - C10: share links do not reach the board in v1.
 - Commands: `lib/stage-commands.ts`, one map keyed by stage, the `SESSION-KICKOFFS.md` verbs.
 
+## Built — what changed against the contract (said out loud)
+- **The card is a page state at `?card=<slug>`, not an overlay drawer.** The approved `hub-board-card` surface is a full
+  block sequence, and the visual gate refuses to measure `<main>` under an overlay (D23, approved by the product owner
+  2026-10-02). It renders in place of the board, with "Back to the board" in its lede; a shared `?card=` link opens it.
+- **Three approved surfaces are registered** (`design-system/surfaces/hub-board*.surface`, hash lines in `APPROVED.md`
+  recorded at the product owner's instruction). The route is held to `hub-board` by the visual gate and is in the
+  `STATE-MATCH.json` floor; `e2e/hub-board.authed.spec.ts` measures the other two states with the gate's own functions.
+- **Gating (S2.2):** a non-demo board bounces to `/login`; the self-tenant `golden-beans-demo` is public by design (C2).
+  A share link does not reach the board in v1 (C10).
+- **WIP is shown from the push's `board.wip`** under each limited column, and an over-limit column is said in the answer
+  line — advice, never a gate (D9). The limits themselves arrive with S3.4's config key.
+- **The empty state names `npx -y @golden-frijoles/kit roadmap-extract --sink hub`,** which ships with S3.2 (kit
+  0.21.0) — the words the approved surface carries. A tenant whose latest push predates S1 sees it too (no stages yet).
+- **`HubTab` gains `board`** in the approved order Roadmap · Board · Horizon · Report; DD2 holds (a hub tab, not a
+  console section; `ProductShell`'s union is untouched).
+
 ## Stories
 
-### Story 2.1 — The board is computed, not drawn
+### Story 2.1 — The board is computed, not drawn ✅
 **As** the Hub, **I want** a pure `lib/hub-board.ts` that turns the latest roadmap artifact into six columns (Ready to build by `build_order`, Shipped = last 30 days), WIP counts, filters and the answer line ("2 in QA and 1 building. Next to pull: …"), **so that** the page renders and the spec asserts the same arithmetic.
 **Acceptance:** Unit spec over a fixture artifact: column membership, order, WIP over/under, answer-line words, filter results.
 **Risk:** low
 
-### Story 2.2 — A Board tab on the Hub
+### Story 2.2 — A Board tab on the Hub ✅
 **As** the product owner, **I want** `/hub/<slug>/board` in the hub frame (fourth hub tab, not a console section) rendering the approved `hub-board` and `hub-board-empty` states, **so that** I see every initiative and its stage at a glance.
 **Acceptance:** Membership-gated like the other hub pages (`requireDashboardAccess`); a share link scoped to the project also opens it; the page matches the approved surface blocks (state contract registered; design-drift guard green); column words exactly To groom · Grooming · Ready to build · Building · QA · Shipped.
 **Risk:** low
 
-### Story 2.3 — A card opens to everything I need to act
+### Story 2.3 — A card opens to everything I need to act ✅
 **As** the product owner, **I want** clicking a card to open a drawer (`?card=<slug>`) with the goal, stage, area, build order, type, risk, appetite, bet badge, sprint progress, links to the docs, the kickoff prompt (Ready to build) and the commands for its stage, **so that** I can copy the kickoff or the next command without opening the repo.
 **Acceptance:** Commands come from one map in `lib/stage-commands.ts` keyed by stage, using the `SESSION-KICKOFFS.md` verbs (Groom, Build epic, Resume, Wrap S<N>, Review PR #<N>, Close epic, emit-epic-kickoff). Each copy button copies the exact text (browser spec); the drawer matches the approved `hub-board-card` state.
 **Risk:** low
 
-### Story 2.4 — Filter by type and risk
+### Story 2.4 — Filter by type and risk ✅
 **As** the product owner, **I want** type chips (feature · spike · bug · chore) and a high-risk toggle, carried in the URL, **so that** I can share a filtered board.
 **Acceptance:** Api spec: `?type=spike` returns only spikes; filters survive reload; cards are initiatives only (stories live in the drawer).
 **Risk:** low

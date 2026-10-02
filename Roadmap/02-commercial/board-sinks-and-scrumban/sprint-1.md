@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 1
 title: "One stage resolver"
 risk: high
-phase: Building
+phase: Shipped
 stories_total: 5
 stories:
   - id: S1.1
@@ -44,7 +44,7 @@ stories:
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 1: One stage resolver
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #224 (`a0a5fae`), deployed 2026-10-02; hotfix #225 (Notion text limit)
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - **S1.1** — D13 is the rule, verbatim; D2's placement. `branchCandidates`/`parseBranch` move from `build-state.mjs`
@@ -140,3 +140,15 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → The freshness line shows a push from that event (a minute ago).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-02, after the deploy of `a0a5fae`)
+1. ✅ `node scripts/roadmap-extract.mjs` — every epic/seed row carries `stage` + `stage_source`, six words only.
+2. ✅ `node scripts/build-order.mjs` — six sections in order; Building and QA "live only" (C3); `--live` prints them.
+3. ✅ `emit-epic-kickoff --epic cms-integration-spike` — the first line pushes `feat/cms-integration-spike`.
+4. ✅ **Observed live in production:** the `create` event for branch `fix/notion-kickoff-2000` ran the push and stored
+   roadmap v207 (stages on all 65 initiatives, `board.repo` kept); the `pull_request opened` event and a manual dispatch
+   both answered `unchanged: true` and wrote nothing (D16). The two pushes ON the merge itself (v205/v206) raced the
+   Vercel deploy and hit the old route, which stripped `board` — a push on `main` lands before the deploy that ships a
+   route change; the next event repaired it.
+5. ⚠️ Found on the merge: `notion-sync` failed — epic rows now carry kickoffs over Notion's 2000-char text limit. Fixed by
+   #225 (split long text, never cut; surrogate-safe).
