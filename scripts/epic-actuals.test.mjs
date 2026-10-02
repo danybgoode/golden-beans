@@ -23,6 +23,7 @@ import {
   projectDirName,
   readEntry,
   refresh,
+  stampEpic,
   repoPaths,
   stampFrontmatter,
   summarize,
@@ -244,7 +245,11 @@ test('D4: missing fields are skipped and counted; an unknown model keeps its tok
       '{"type":"assistant", broken',
     ]);
     const { summary } = run(fx);
-    assert.deepEqual(summary.skipped, { synthetic: 1, no_usage: 1, unparseable: 1 });
+    assert.deepEqual(
+      summary.skipped,
+      { synthetic: 1, no_usage: 1 },
+      'a line too broken to place counts only in this repo’s own folder'
+    );
     assert.equal(summary.epics.alpha.usd_known, false);
     assert.equal(summary.epics.alpha.tokens.output, 1100, 'the unknown model’s tokens still count');
     assert.ok(summary.epics.alpha.usd > 0, 'the known turn is still priced');
@@ -316,11 +321,11 @@ test('1.2: the index is incremental — a second run reads nothing, an append re
     assert.equal(run(fx, index).changes.files_read, 1);
     const before = JSON.stringify(index);
     const again = run(fx, index);
-    assert.deepEqual(again.changes, { files_read: 0, added: 0, raised: 0 });
+    assert.deepEqual(again.changes, { files_read: 0, added: 0, raised: 0, complete: true });
     assert.equal(JSON.stringify(index), before, 'nothing changed');
     appendFileSync(join(fx.projects, '-elsewhere', 's.jsonl'), `${entry({ cwd: fx.root, output: 7 })}\n`);
     const grown = run(fx, index);
-    assert.deepEqual(grown.changes, { files_read: 1, added: 1, raised: 0 });
+    assert.deepEqual(grown.changes, { files_read: 1, added: 1, raised: 0, complete: true });
     assert.equal(grown.summary.epics.alpha.tokens.output, 107);
     // A half-written last line is left for the next run, not half-read.
     appendFileSync(
@@ -412,4 +417,62 @@ test('1.4 backfill: measured epics, partly-measured ones (never stamped), and ea
   assert.match(rep.partial[0].reason, /partial total, not stamped/);
   assert.match(rep.unresolved[0].reason, /before the oldest transcript/);
   assert.match(rep.unresolved[1].reason, /in the cloud, on another machine/);
+});
+
+test('fresh review #230: a time budget stops BETWEEN files, saves progress, and the next run finishes', () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 'a.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    write(fx.projects, '-elsewhere', 'b.jsonl', [entry({ cwd: fx.root, session: 'B' })]);
+    const index = emptyIndex();
+    let calls = 0;
+    const first = updateIndex(index, {
+      projectsDir: fx.projects,
+      paths: repoPaths(fx.root),
+      deadline: 0,
+      now: () => (calls++ ? 1 : 0),
+    });
+    assert.equal(first.complete, false);
+    assert.equal(first.files_read, 1, 'one whole file, then stop');
+    const second = updateIndex(index, { projectsDir: fx.projects, paths: repoPaths(fx.root) });
+    assert.deepEqual(
+      [second.complete, second.files_read],
+      [true, 1],
+      'resumes with the file it had not read'
+    );
+    assert.equal(summarize(index, { epicOf: epicOfBranch(fx.root) }).epics.alpha.sessions, 2);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('fresh review #230: skips are counted for this repo only', () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [
+      entry({ cwd: fx.root, model: '<synthetic>' }),
+      entry({ cwd: join(fx.base, 'other'), model: '<synthetic>' }),
+    ]);
+    assert.deepEqual(run(fx).summary.skipped, { synthetic: 1 });
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('fresh review #230: a backfill never overwrites an actual already written; the close (--epic --write) does', () => {
+  const fx = repoFixture();
+  try {
+    const readme = join(fx.root, 'Roadmap', '09-platform-infra', 'beta', 'README.md');
+    writeFileSync(readme, README('beta', 'shipped', '\nactual_usd: null\nactual_basis: "held — C14"'));
+    const summary = {
+      epics: { beta: { usd: 9, usd_known: true, tokens: {}, mtok: 1, sessions: 1, branches: [] } },
+      skipped: {},
+    };
+    assert.equal(stampEpic({ root: fx.root, summary, slug: 'beta', date: 'd', keepStamped: true }), null);
+    assert.match(readFileSync(readme, 'utf8'), /actual_usd: null/);
+    assert.ok(stampEpic({ root: fx.root, summary, slug: 'beta', date: 'd' }));
+    assert.match(readFileSync(readme, 'utf8'), /actual_usd: 9\n/);
+  } finally {
+    fx.cleanup();
+  }
 });

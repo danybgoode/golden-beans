@@ -12,6 +12,9 @@ stories_total: 3   # the sum of every sprint's stories_total — keep it in step
 build_order: 49      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: null
+actual_mtok: null
+actual_basis: "held — its total also holds intent-match, built from a session whose checkout sat on feat/semantic-lint (finops C14)"
 ---
 
 # ✅ Epic: Semantic lint — Jev judges what deterministic checks select (v1: AGENTS rule 1, in shadow)

@@ -117,8 +117,8 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
 - **C14 — `gitBranch` is the branch of the session's OWN checkout**, not of where the work happened (found on the
   real backfill, 2026-10-02). `intent-match` was built from a session whose checkout sat on `feat/semantic-lint`
   (session `780e1ca7`, 2,955 mentions of intent-match, every turn stamped `feat/semantic-lint`), so its spend is
-  inside semantic-lint's total and intent-match has none. Not fixable without guessing (D16 forbids it). Both are left
-  **unstamped**; the rule it teaches is in `epic-actuals.mjs`' header: build on the epic's branch, or in a worktree on it.
+  inside semantic-lint's total and intent-match has none. Not fixable without guessing (D16 forbids it). Both carry
+  **`actual_usd: null` with the reason in `actual_basis`** (a backfill never overwrites a written actual); the rule it teaches is in `epic-actuals.mjs`' header: build on the epic's branch, or in a worktree on it.
 - **C15 — D15 amended: a moved checkout.** Half of this repo's history (24,145 entries) was recorded under the old
   path `~/dobby/golden-beans`; Claude Code moved the transcripts into `-Users-cosmo-dobby-golden-frijoles/` on the
   2026-09-29 folder move but kept each entry's old `cwd`. A transcript in the folder Claude Code keeps for this repo
@@ -158,7 +158,7 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
   `cache_creation.ephemeral_5m/1h` split; a total with no split is priced as 5m (cheaper, said in `basis`). An unknown
   model counts tokens and makes the epic's `$` **a lower bound**: `usd_known: false`, shown as `≥$n`, never a zero.
 - **D19 — The index lives at the MAIN checkout's `.golden-frijoles/`** (`dirname` of `git rev-parse
-  --git-common-dir`, via `lib/git-common-dir.mjs`), so every worktree's band reads one summary. `usage-index.json`
+  --git-common-dir`, inline in both readers: `lib/git-common-dir.mjs` is project-only, not in the kit), so every worktree's band reads one summary. `usage-index.json`
   holds per-file `{ size, mtimeMs, offset }` + one compact record per message id (D13 needs the ids across files:
   ~20k records ≈ 2–3 MB here; a full scan of 390 MB took 1.1 s in Node). `usage-summary.json` is the band's only
   input. The existing `.golden-frijoles/.gitignore` (`*`) covers both.

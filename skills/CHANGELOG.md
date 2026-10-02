@@ -25,7 +25,9 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   `actual_usd`, `actual_mtok` and `actual_basis` on the measured ones.
 - **The build view's `$ Spend` row** on an epic branch, between Progress and Status: `≈$38 · 1.9M tok · 4 sessions ·
   this machine`. It reads the summary file only; the mod refreshes it from `session.measure` (the bundled script, at
-  most once a minute, 10 s timeout). No summary → no row, never a zero.
+  most once a minute, 10 s timeout). No summary → no row, never a zero. The refresh reads for at most 6 s and saves,
+  so a first scan on a slow machine completes over a few runs; until it does, the row stays hidden rather than low.
+  A backfill never overwrites an actual already written.
 
 ### Changed
 

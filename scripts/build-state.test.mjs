@@ -937,6 +937,11 @@ test('finops 1.3: no summary, or no row for this epic, renders no Spend line —
     assert.equal(state().spend, null);
     writeFileSync(join(f.root, '.golden-frijoles', 'usage-summary.json'), '{ torn');
     assert.equal(state().spend, null, 'a torn file is no row, not a throw');
+    writeFileSync(
+      join(f.root, '.golden-frijoles', 'usage-summary.json'),
+      JSON.stringify({ complete: false, epics: { 'arranged-only': { usd: 1, mtok: 1, sessions: 1 } } })
+    );
+    assert.equal(state().spend, null, 'an incomplete first scan shows no row, never an understated one');
   } finally {
     f.done();
   }
