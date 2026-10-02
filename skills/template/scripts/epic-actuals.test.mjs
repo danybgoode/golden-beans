@@ -10,6 +10,8 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -492,6 +494,11 @@ test('round-2 review #230: refresh() under a budget writes complete:false to dis
     await refresh({ root: fx.root, projectsDir: fx.projects, budgetMs: -1 });
     assert.equal(summaryOnDisk().complete, true, 'the second run finishes the scan');
     assert.equal(summaryOnDisk().epics.alpha.sessions, 2);
+    // A FINITE budget is relative to now: two new files inside a minute's budget are both read in one run.
+    write(fx.projects, '-elsewhere', 'c.jsonl', [entry({ cwd: fx.root, session: 'C' })]);
+    write(fx.projects, '-elsewhere', 'd.jsonl', [entry({ cwd: fx.root, session: 'D' })]);
+    const finite = await refresh({ root: fx.root, projectsDir: fx.projects, budgetMs: 60_000 });
+    assert.deepEqual([finite.changes.files_read, summaryOnDisk().complete], [2, true]);
   } finally {
     fx.cleanup();
   }
@@ -651,6 +658,58 @@ test('3.1: sessionSnapshots sums per (session, epic) and marks an unpriced model
     assert.equal(s.tokens_by_kind.output, 15);
     assert.equal(s.model_breakdown['claude-future-9'].usd, null);
     assert.ok(s.usd_estimate > 0);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('round-3 review #230: an unreadable frontmatter fails CLOSED — a backfill never overwrites what it cannot read', () => {
+  const fx = repoFixture();
+  try {
+    const readme = join(fx.root, 'Roadmap', '09-platform-infra', 'beta', 'README.md');
+    writeFileSync(
+      readme,
+      README('beta', 'shipped', '\nnot: [a, subset, line]\nactual_usd: 12\nactual_basis: "close"').replace(
+        'title: beta',
+        'title: beta\r'
+      )
+    );
+    const summary = {
+      epics: { beta: { usd: 9, usd_known: true, tokens: {}, mtok: 1, sessions: 1, branches: [] } },
+      skipped: {},
+    };
+    assert.equal(stampEpic({ root: fx.root, summary, slug: 'beta', date: 'd', keepStamped: true }), null);
+    assert.match(readFileSync(readme, 'utf8'), /actual_usd: 12/);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('round-3 review #230: D13 order — files are indexed oldest-born first, so the original owns a resumed copy', () => {
+  const fx = repoFixture();
+  try {
+    // Both files carry the same message id; the copy re-stamps the branch. Name the COPY so it sorts first by path,
+    // and make it the newer file — only a birth/mtime ordering makes the original win.
+    write(fx.projects, '-elsewhere', 'z-original.jsonl', [
+      entry({ id: 'm1', cwd: fx.root, branch: 'main', session: 'O' }),
+    ]);
+    write(fx.projects, '-elsewhere', 'a-copy.jsonl', [
+      entry({ id: 'm1', cwd: fx.root, branch: 'feat/alpha', session: 'C' }),
+    ]);
+    const older = new Date('2026-09-01T00:00:00Z');
+    utimesSync(join(fx.projects, '-elsewhere', 'z-original.jsonl'), older, older);
+    const index = emptyIndex();
+    updateIndex(index, {
+      projectsDir: fx.projects,
+      paths: repoPaths(fx.root),
+      stat: (p) => {
+        const st = statSync(p);
+        return { size: st.size, mtimeMs: st.mtimeMs, birthtimeMs: 0 };
+      },
+    });
+    const summary = summarize(index, { epicOf: epicOfBranch(fx.root) });
+    assert.equal(summary.epics.alpha, undefined, 'the copy did not own the turn');
+    assert.equal(summary.unattributed.main.sessions, 1);
   } finally {
     fx.cleanup();
   }
