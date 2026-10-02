@@ -57,8 +57,9 @@ stories:
   separate per-branch `gh pr list --head` call is gone: the open PR comes from the one facts gather. The hook stays
   offline; `session-resume` refreshes the snapshot at session start. `hub.url` is `board.hubUrl` (D22, amended in S1).
 - **S3.2 — `roadmap-push.mjs` is in the kit** and exports `pushRoadmap()`; `roadmap-extract --sink hub` calls it
-  in-process (live facts required — a failed gather exits 3, never pushes a docs-only board). The key is the SDK's
-  `GROWTH_ENGINE_API_KEY`, with this repo's `SELF_PROJECT_API_KEY` as a fallback. The npm publish is CI's trusted
+  in-process (live facts required — a failed gather exits 3, never pushes a docs-only board). The key is
+  `SELF_PROJECT_API_KEY` first, the SDK's `GROWTH_ENGINE_API_KEY` second — in this repo the latter is the Miyagi
+  project's key, so the order is a safety property (review of #227), pinned by spec. The npm publish is CI's trusted
   publishing on merge (`release.yml`), not a hand step.
 - **S3.3 — Notion writes `Stage` only when the database has a `Stage` select**: the sync never changes the board's schema
   (columns are the owner's, as `Lifecycle` was). Without it, one line says what to add. `notion-sync.yml` now runs with
