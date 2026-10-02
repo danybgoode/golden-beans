@@ -3,7 +3,7 @@ epic: finops
 sprint: 1
 title: "Actuals, measured locally"
 risk: low
-phase: Shaping
+phase: Building
 stories_total: 4
 stories:
   - id: S1.1
@@ -39,11 +39,25 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-Shared seam first: the architect lands **2.1's contract fields** in `scripts/lib/roadmap-contract.mjs` (+ template twin) at the
-start of this sprint — 1.4 writes them. Then: `epic-actuals.mjs` + `lib/model-prices.mjs` (pure; Node built-ins only;
-kit closure via the `golden-frijoles` skill's `requires_scripts`), `build-state.mjs` reads the summary, `hooks/index.tsx`
-refreshes on `session.measure`. Verify D1/D2 and the subagent transcript layout against a live Claude Code first.
+## Build contract (locked by the architect before the builder started — 2026-10-02)
+Cites README § Architecture lock; nothing here restates a rule that lives there.
+- **Shared seam first (architect):** `scripts/lib/roadmap-contract.mjs` gains decimals (D17) and `FINOPS_FIELDS` +
+  `validateFinopsFields` (D6/D17), wired into `validateEpicFrontmatter`; `template/scripts/lib/` twin byte-identical.
+- **1.1/1.2 —** `scripts/epic-actuals.mjs` (+ twin) and `scripts/lib/model-prices.mjs` (+ twin), Node built-ins
+  only. Scan set D14, repo match D15, dedupe/attribution D13, branch→epic D16 (`resolveTarget` exported from
+  `build-state.mjs`), index location D19, prices D18. Modes: `--epic <slug> [--json]`, `--refresh` (index only, prints
+  nothing unless `--json`), `--backfill [--write]`, `--repo-root <dir>`, `--projects-dir <dir>` (fixtures).
+  JSON key set pinned by spec (D9): no `message`, no `content`, no prompt text, ever.
+- **1.3 —** `build-state.mjs` reads `<common-root>/.golden-frijoles/usage-summary.json` only (D5) and adds `spend` to
+  its JSON; `renderLines` prints `  Spend    ≈$<n> · <m>M tok · <k> sessions · this machine` between Progress and
+  Status; no summary or no row for the epic → no line. `hooks/build-view.mjs` gets `Spend: '$'`; `hooks/index.tsx`
+  runs the vendored `epic-actuals.mjs --refresh` on `session.measure` per D24. The vendor bundle gains
+  `epic-actuals.mjs` as an `also` entry (`render-hook-vendor.mjs`).
+- **1.4 —** `--backfill` reads shipped epics from `buildRows`; `--write` stamps `actual_usd`, `actual_mtok`,
+  `actual_basis: "backfill · this machine · <date> · <n> sessions"` on resolved shipped epics only, via a line edit of
+  the frontmatter (insert or replace the three keys; never touch any other line).
+- **Release:** plugin + kit minor bump with a CHANGELOG section (`check-release.mjs`); kit closure gains the two
+  scripts through the `golden-frijoles` skill's `requires_scripts`.
 
 ## Stories
 

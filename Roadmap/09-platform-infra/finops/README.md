@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: finops
 title: "FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine"
@@ -65,7 +65,7 @@ ride the existing `POST /api/v1/roadmap/push` as two more nullish fields.
   host the agents (answers `finops-quotes`' open question).
 - **D9 — Metrics only, ever.** The index and every event carry counts, ids, model, skill and branch — never message
   content. A spec asserts the key set.
-- **D10 — The engine push is opt-in per project** (`finops.push`, a kit setting via `GF-NEEDS-SETTING`; unset = off).
+- **D10 — The engine push is opt-in per project** (`spend.telemetry` — see D21; unset = off).
   Idempotent per (session, epic): a re-push replaces, never adds.
 - **D11 — Planning sessions are `unattributed`**, not guessed: they run on `main`. Reported as their own line.
 - **D12 — Claude Code only in v1.** Codex/Agy/Vibe/Devin passes are "not measured", named in the band's JSON and on
@@ -77,6 +77,99 @@ ride the existing `POST /api/v1/roadmap/push` as two more nullish fields.
 - **Subagent transcript layout** on the current Claude Code (sidechain entries inline, or `subagents/` files).
 - **Price table source:** read the official pricing page (it could not be fetched during grooming; third-party reports
   give Opus 5.5 at $4 / $20 per MTok in/out) and date the table.
+
+## Architecture lock (2026-10-02, verified against live code and this Mac's 241 transcripts)
+D1–D12 above stand, **as amended here**. Each line says what the live system showed. Builders cite these, never a paraphrase.
+
+### Corrections — scope the live system disproved
+- **C1 — D2's "count once" is necessary but not the rule.** Of 40,536 assistant entries, 19,574 repeat a `message.id`
+  with identical usage (one entry per content block), and **1,160 repeat it with *larger* `output_tokens`** (the
+  streamed final write). "Keep the first" undercounts output. → **D13.**
+- **C2 — resumed sessions copy history and re-stamp it.** 813 message ids appear in more than one file; in 286 of them
+  the copy carries a *different* `gitBranch` and `sessionId` (same `uuid`, same `timestamp`). Attributing by the copy
+  would move a `main` turn onto a feature branch. → **D13.**
+- **C3 — subagents are separate files**, `<project-dir>/<session>/subagents/agent-*.jsonl` (94 here), `isSidechain:
+  true`, the parent's `sessionId`. No sidechain entry is inline in a main file (0 observed). → **D14.** (closes the
+  "subagent layout" open question)
+- **C4 — `attributionSkill` is rare**: 642 of 40,536 entries (top: `plugin-authoring`, `golden-frijoles:groom`).
+  Most rows will say `(no skill)`; that is the truth, not a bug. Entries also carry `attributionAgent` /
+  `attributionPlugin`; v1 reports skill only (D9 key set).
+- **C5 — the frontmatter subset has no floats** (`roadmap-contract.mjs`: "Booleans and floats are not in the subset");
+  `38.42` parses as the *string* `"38.42"`. D6's "numbers or null" needs the parser to read decimals. The corpus has
+  **zero** bare decimal frontmatter values today (grep), so adding them changes no existing reading. → **D17.**
+- **C6 — shipped epics carry their appetite on the SEED, not the README**: 1 of 44 shipped READMEs has `appetite:`;
+  35 seeds with `epic:` carry one. And the extractor reads `seed.appetite` only. → **D20.**
+- **C7 — `/track` idempotency never *replaces*** (3.1's "a re-push replaces"). Same key + same payload → 200 dedup;
+  same key + a different payload → **409**. Events are append-only by design. → **D22.**
+- **C8 — `finops.push` would be a second key for a setting that already exists**: `spend.telemetry` (module
+  `Spend`, `off|on`, default `off`, "Export cost telemetry?") is in `lib/config-registry.mjs`. → **D21.**
+- **C9 — the transcripts carry `usage.speed`** (`standard` / `fast`) and `usage.inference_geo`; fast mode is billed
+  at 2× on Opus 5.5 and Opus 5. A table without it would under-price fast turns. → **D18.**
+- **C10 — the build view caches** (`shouldRefresh`: branch@sha, or 15 s `MAX_AGE_MS`), so a Spend row that changes
+  every turn shows up within 15 s, not instantly. Accepted; no cache change.
+- **C11 — the band's "tok" in the approved mockup is illustrative** (its sample row's kinds do not sum to the band's
+  number). The **text shape** of the four lines is the contract; `M tok` is the sum of all four kinds (D9 detail).
+- **C12 — console pages are `/app/<feature>/[projectSlug]`** (`requireProjectMembership`), not a bare `/app/finops`.
+  The page is `/app/finops/[projectSlug]`; the empty state names `spend.telemetry`, not `finops.push`. → **D25.**
+- **C13 — the landing's FinOps copy over-claims for v1**: "Alert, rate-limit or stop" (D8 is alert-only),
+  "across providers" (D12: Claude Code only), "retry" (not in the transcript). 3.4 rewrites it to what ships.
+
+### Decisions D13+
+- **D13 — Dedupe and attribution, one rule.** Key = `message.id` (fallback `requestId`; 0 entries lack an id here).
+  Per key, token counts are the entry with the **largest `output_tokens`** (the final streamed write). The **first
+  indexed occurrence owns the attribution** (sessionId, branch, cwd, skill, model); later occurrences may only raise
+  the counts. A full scan orders files by birth time (`stat.birthtimeMs`, else `mtimeMs`), so the original session is
+  indexed before its resumed copy; an incremental run sees the original first by construction. `<synthetic>`
+  (always zero usage, 123 entries) is ignored and counted in `skipped.synthetic`.
+- **D14 — Scan set:** every `~/.claude/projects/*/*.jsonl` plus `*/<session>/subagents/*.jsonl`
+  (`CLAUDE_CONFIG_DIR` honoured). A subagent's turns belong to its parent's session.
+- **D15 — "This repo"**: an entry counts when its `cwd` (realpath when it exists, else literal) is the repo root, under
+  it, or under any `git worktree list` path. Removed agent worktrees under `<root>/.claude/worktrees/` stay covered by
+  the prefix. Sessions recorded under the pre-rename path (`~/dobby/golden-beans`, one 2 KB file) are not this repo.
+- **D16 — Branch → epic** is `build-state.mjs`'s own `resolveTarget()` (exported for this, unchanged): longest
+  `branchCandidates()` reading that names an epic dir, or a seed carrying `epic:`. Anything else — `main`, `HEAD`, a
+  branch naming no epic (`fix/notion-kickoff-2000`) — is `unattributed`, reported by branch (D11). No second parser.
+- **D17 — Decimals join the frontmatter subset**: `/^-?\d+\.\d+$/` → Number, in `parseScalar` (one change, both
+  twins, the vendored copies regenerated). `formatScalar(number)` already writes `String(n)`. The six D6 fields are
+  validated in `roadmap-contract.mjs` (`FINOPS_FIELDS`, the one list): optional; `*_usd`/`*_mtok` a number ≥ 0 or
+  null; `*_basis` a string or null. Writers round `$` to 2 places and `mtok` to 1.
+- **D18 — `lib/model-prices.mjs`**: one table, `PRICES_AS_OF = '2026-10-02'`, `PRICES_SOURCE =
+  'https://platform.claude.com/docs/en/about-claude/pricing'`, per model `{ input, cache_write_5m, cache_write_1h,
+  cache_read, output }` USD/MTok, as read that day (Opus 5.5 4/5/8/0.20/20 · Opus 5 5/6.25/10/0.50/25 · Sonnet 5.5
+  and Sonnet 5 2/2.5/4/0.20/10 · Haiku 4.5 1/1.25/2/0.10/5 · Fable 5.1 10/12.5/20/0.25/50 + the rest of the table).
+  Ids normalise by dropping a `-YYYYMMDD` suffix. `speed: "fast"` multiplies by 2 where the page lists fast pricing
+  (Opus 5.5, Opus 5, Opus 4.8), else that turn's `$` is unknown. `inference_geo: "us"` × 1.1. Cache writes use the
+  `cache_creation.ephemeral_5m/1h` split; a total with no split is priced as 5m (cheaper, said in `basis`). An unknown
+  model counts tokens and makes the epic's `$` **a lower bound**: `usd_known: false`, shown as `≥$n`, never a zero.
+- **D19 — The index lives at the MAIN checkout's `.golden-frijoles/`** (`dirname` of `git rev-parse
+  --git-common-dir`, via `lib/git-common-dir.mjs`), so every worktree's band reads one summary. `usage-index.json`
+  holds per-file `{ size, mtimeMs, offset }` + one compact record per message id (D13 needs the ids across files:
+  ~20k records ≈ 2–3 MB here; a full scan of 390 MB took 1.1 s in Node). `usage-summary.json` is the band's only
+  input. The existing `.golden-frijoles/.gitignore` (`*`) covers both.
+- **D20 — An epic's appetite** = README `appetite:` if set, else its seed's — the extractor's own rule, which 2.1
+  fixes to read the README first. `quote.mjs` reads epics through `roadmap-extract` `buildRows({ dates: false })`.
+- **D21 — The opt-in is `spend.telemetry: on`** (existing registry row; `needSetting` prints `GF-NEEDS-SETTING` once;
+  unset = `off` = nothing sent). D10's `finops.push` is retired before it existed.
+- **D22 — "Replace" is read-side.** Each push is a cumulative snapshot per (session, epic) with
+  `context.idempotency_key = agent_usage:<session_id>:<epic>:<last_at>`. An unchanged snapshot re-pushes as a 200
+  dedup; a grown one is a new event; every reader takes the **latest `last_at` per (session, epic)**. Ingest stays
+  append-only; no new route, table or migration (rule #1). Pushes run only when a session's totals changed.
+- **D23 — Push credential (closes the open question): the project ingest key**, read exactly as `roadmap-push.mjs`
+  does (`apiKeyFrom`: `SELF_PROJECT_API_KEY`, else `GROWTH_ENGINE_API_KEY`; `GROWTH_ENGINE_URL`). It is the one a
+  plugin user already set for the Hub push, so it is zero extra steps. The project comes from the hashed key server-side;
+  no body field names a project, so a foreign write is unrepresentable (api spec pins it anyway).
+- **D24 — When things run.** The mod's `session.measure` runs the **vendored** `epic-actuals.mjs --refresh` (never
+  the repo's — distribute-what-we-use D5), timeout 10 s, at most once per 60 s; with `spend.telemetry: on` that run
+  also pushes changed sessions (5 s budget, at most every 10 min). Failures log (`claude --debug`) and keep the last
+  row. `turn.start` (the hot path) never scans or pushes.
+- **D25 — `/app/finops/[projectSlug]`** through `requireProjectMembership` (one project, server-side; non-member →
+  404). Epics from `getLatestArtifact(projectId,'roadmap')`; skills/models from that project's `$agent_usage` events
+  (D22 latest-wins). The three approved surfaces (seed → Visuals) are the contract, including "Export CSV".
+- **D26 — Landing (3.4)**: FinOps `availability: { kind: 'shipped' }` — the opt-in is a client setting, not a
+  server gate `GATE_NOTES` can describe, and Daniel's no-flag rule (2026-08-31) stands. Copy rewritten per C13.
+- **D27 — Who builds.** The architect builds **in place** (the only session in this checkout, clean tree, one builder
+  at a time): every Sprint 1–2 story crosses the two shared seams (`roadmap-contract`, `build-state`) and Sprint 3 is
+  never delegated. Reviews follow the routing below.
 
 ## What already exists (reuse, don't rebuild)
 - Transcripts: `~/.claude/projects/*/*.jsonl` (fields above).

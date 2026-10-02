@@ -46,10 +46,22 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-Builds on Sprint 1's index and summary. `quote.mjs` reads READMEs through the existing frontmatter reader
-(`roadmap-extract` `parseFrontmatter`), never its own. Band states are rendered by `build-state.mjs` `renderLines()` (the
-resolver owns the words; the mod only decorates — `build-visualization-claude-mods` D3).
+## Build contract (locked by the architect before the builder started — 2026-10-02)
+Cites README § Architecture lock.
+- **2.1 —** the contract landed in Sprint 1; this story adds `roadmap-extract.mjs` emitting the six fields on epic
+  rows (numbers via `Number()`, `null` when absent) and `appetite: epicFm.appetite || seed.appetite` (D20). Specs.
+- **2.2 —** `scripts/quote.mjs` (+ twin): rows from `buildRows({ dates: false })`, shipped epics with a numeric
+  `actual_usd` at the appetite; p25/p75 by linear interpolation; `n < 3` → `WIDE_DEFAULT` (a constant here, per
+  appetite S/M/L). Output `$<lo>–<hi> (<A>, n=<n>, p25–p75)` / `(<A>, n=<n>, wide)`. `--json`, `--report`.
+- **2.3 —** groom `SKILL.md` Stage 1.5 + `templates/scope-seed.md` (`quote:` under Appetite) +
+  `templates/epic-README.md` (the three quote fields, null) + `scaffold-epic.mjs --quote <lo>-<hi> --quote-basis`.
+- **2.4 —** `build-state.mjs` reads the epic README's `quote_*`/`quote_basis` and owns all four lines (the approved
+  mockup's text shape, C11). The mod only decorates (D3): a pure `spendOf()` in `build-view.mjs` parses the resolver's
+  own words (`≈$<a> of quote $<lo>–<hi>` → bar = a ÷ hi, tone `good`; `% over quote` → full bar, tone `bad`; anything
+  else → no bar, tone `plain`).
+- **2.5 —** `epic-actuals.mjs --epic <slug> --write` (shares 1.4's frontmatter writer); `epic-dod.mjs` warns on a
+  shipped epic with no `actual_usd`; `templates/RETROSPECTIVE.md` + WAYS-OF-WORKING DoD line (rendered copies).
+- **Release:** plugin + kit minor bump with CHANGELOG.
 
 ## Stories
 
