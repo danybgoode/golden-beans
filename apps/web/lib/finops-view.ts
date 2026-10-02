@@ -19,7 +19,13 @@ type Finops = {
   storiesDone: number | null
 }
 type Total = { usd: number; usdLowerBound: boolean; tokens: number; sessions: number }
-type Snapshot = { epic: string; usd_estimate: number; last_at: string; session_id: string }
+type Snapshot = {
+  epic: string
+  usd_estimate: number
+  last_at: string
+  session_id: string
+  model_breakdown?: Record<string, { usd: number | null }>
+}
 
 export type FinopsTile = { label: string; value: string | null; absent: string; detail: string }
 export type FinopsEpicRow = {
@@ -99,7 +105,13 @@ export function buildFinopsView(input: {
   const tiles: FinopsTile[] = [
     {
       label: 'Spend this month',
-      value: thisMonth.length ? money(monthUsd) : null,
+      // D4: any unpriced model this month makes the figure a lower bound, said as ≥ (fresh review, #232).
+      value: thisMonth.length
+        ? money(
+            monthUsd,
+            thisMonth.some((x) => Object.values(x.model_breakdown ?? {}).some((p) => p.usd === null))
+          )
+        : null,
       absent: 'No usage pushed this month',
       detail: `≈ API $ · ${thisMonth.length} session${thisMonth.length === 1 ? '' : 's'} · from the usage push`,
     },

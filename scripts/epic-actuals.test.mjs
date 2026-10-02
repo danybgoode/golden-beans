@@ -632,8 +632,8 @@ test('3.1: idempotent — an unchanged session is not re-sent; a grown one is; a
       `${entry({ cwd: fx.root, session: 'S1', at: '2026-10-01T12:00:00.000Z' })}\n`
     );
     run(fx, index);
-    const refused = fakeEngine(409);
-    assert.equal((await pushUsage({ ...opts, fetchImpl: refused.fetchImpl })).reason, 'engine answered 409');
+    const refused = fakeEngine(401);
+    assert.equal((await pushUsage({ ...opts, fetchImpl: refused.fetchImpl })).reason, 'engine answered 401');
     assert.equal((await pushUsage(opts)).sent, 1, 'the refused snapshot goes next time');
     assert.equal(engine.calls.length, 2);
     assert.equal(
@@ -710,6 +710,65 @@ test('round-3 review #230: D13 order — files are indexed oldest-born first, so
     const summary = summarize(index, { epicOf: epicOfBranch(fx.root) });
     assert.equal(summary.epics.alpha, undefined, 'the copy did not own the turn');
     assert.equal(summary.unattributed.main.sessions, 1);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('fresh review #232: per snapshot — a 409 is done, a 400 is skipped and never retried, the rest still go', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [
+      entry({ cwd: fx.root, session: 'A' }),
+      entry({ cwd: fx.root, session: 'B' }),
+      entry({ cwd: fx.root, session: 'C' }),
+    ]);
+    const { index } = run(fx);
+    telemetry(fx.root, 'on');
+    const answers = [409, 400, 201];
+    const calls = [];
+    const fetchImpl = async (url, init) => (calls.push(JSON.parse(init.body)), { status: answers.shift() });
+    const opts = { root: fx.root, index, epicOf: epicOfBranch(fx.root), env: ENV, fetchImpl };
+    const r = await pushUsage(opts);
+    assert.deepEqual([r.sent, r.rejected, r.reason, calls.length], [1, 1, 'ok', 3]);
+    assert.equal((await pushUsage(opts)).reason, 'nothing changed', 'neither the 409 nor the 400 is re-sent');
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('fresh review #232: a failed run backs off like a good one — no retry every minute on a persistent 401', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root })]);
+    const { index } = run(fx);
+    telemetry(fx.root, 'on');
+    const failing = fakeEngine(401);
+    const opts = {
+      root: fx.root,
+      index,
+      epicOf: epicOfBranch(fx.root),
+      env: ENV,
+      fetchImpl: failing.fetchImpl,
+    };
+    await pushUsage({ ...opts, now: 1_000_000 });
+    assert.equal((await pushUsage({ ...opts, throttle: true, now: 1_060_000 })).reason, 'throttled');
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('fresh review #232: a malformed config is a reason, never a throw — the scan still saves', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root })]);
+    writeFileSync(join(fx.root, 'golden-frijoles.config.json'), '{ not json');
+    const r = await refresh({ root: fx.root, projectsDir: fx.projects, push: true });
+    assert.match(r.pushed.reason, /^config unreadable/);
+    assert.equal(
+      JSON.parse(readFileSync(join(fx.root, '.golden-frijoles', 'usage-summary.json'), 'utf8')).complete,
+      true
+    );
   } finally {
     fx.cleanup();
   }

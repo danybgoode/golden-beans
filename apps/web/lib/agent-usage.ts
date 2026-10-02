@@ -62,7 +62,9 @@ export const MAX_BREAKDOWN_ENTRIES = 50
 const MAX_TOKENS = 1e13 // far above any session; guards against a nonsense number poisoning a sum
 const SLUG_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}$/
 const NAME_RE = /^[^\u0000-\u001f\u007f]{1,120}$/
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
+// Exactly milliseconds: every timestamp then has one length, so comparing the strings compares the times (the kit
+// copies Claude Code's own `…T10:00:00.000Z`). A mixed precision would sort `…00Z` after `…00.500Z`.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -153,8 +155,8 @@ export function parseAgentUsage(
   const epic = str('epic', SLUG_RE, 'an epic slug')
   const branch = str('branch', NAME_RE, 'a branch name (<= 120 chars)')
   const price_table_date = str('price_table_date', DATE_RE, 'a YYYY-MM-DD date')
-  const first_at = str('first_at', ISO_RE, 'an ISO-8601 UTC timestamp')
-  const last_at = str('last_at', ISO_RE, 'an ISO-8601 UTC timestamp')
+  const first_at = str('first_at', ISO_RE, 'an ISO-8601 UTC timestamp with milliseconds')
+  const last_at = str('last_at', ISO_RE, 'an ISO-8601 UTC timestamp with milliseconds')
   const model_breakdown = readBreakdown(m.model_breakdown, 'model_breakdown', errors)
   const skill_breakdown = readBreakdown(m.skill_breakdown, 'skill_breakdown', errors)
   const tokens_by_kind = readTokens(m.tokens_by_kind, 'tokens_by_kind', errors)
@@ -177,6 +179,30 @@ export function parseAgentUsage(
       last_at,
     },
   }
+}
+
+/**
+ * The REST of the envelope (fresh review, #232 — D9 means nothing but metrics is stored, not only in `metadata`):
+ * `userId` names the agent (`agent:<name>`), no `featureId`, no tags, and `context` carries only `version`,
+ * `idempotencyKey` and `occurredAt` — no actor, subject or correlation id. Returns the problems, [] when clean.
+ */
+export const AGENT_USAGE_USER_RE = /^agent:[a-z0-9][a-z0-9-]{0,39}$/
+const ALLOWED_CONTEXT_KEYS = ['version', 'idempotencyKey', 'occurredAt']
+export function agentUsageEnvelopeErrors(e: {
+  userId: unknown
+  featureId?: unknown
+  tags?: Record<string, unknown>
+  context?: Record<string, unknown>
+}): string[] {
+  const errors: string[] = []
+  if (typeof e.userId !== 'string' || !AGENT_USAGE_USER_RE.test(e.userId))
+    errors.push('userId must name the agent, like agent:claude-code')
+  if (e.featureId !== undefined) errors.push('featureId is not part of $agent_usage')
+  if (e.tags && Object.keys(e.tags).length) errors.push('tags must be empty — usage rides metadata')
+  const extra = Object.keys(e.context ?? {}).filter((k) => !ALLOWED_CONTEXT_KEYS.includes(k))
+  if (extra.length)
+    errors.push(`context may carry only ${ALLOWED_CONTEXT_KEYS.join(', ')} (got ${extra.join(', ')})`)
+  return errors
 }
 
 /** The idempotency key the kit sends: an unchanged snapshot re-pushes as a dedup, a grown one is a new event. */

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   AGENT_USAGE_EVENT,
   AGENT_USAGE_KEYS,
+  agentUsageEnvelopeErrors,
   agentUsageIdempotencyKey,
   latestSnapshots,
   parseAgentUsage,
@@ -107,4 +108,21 @@ test('a breakdown name that would touch Object machinery is refused (no prototyp
     assert.equal(parseAgentUsage(usage({ skill_breakdown: raw })).ok, false, name)
   }
   assert.equal(({} as Record<string, unknown>).polluted, undefined)
+})
+
+test('fresh review #232: the envelope is closed too — agent userId, no featureId, no tags, a three-key context', () => {
+  const ok = { userId: 'agent:claude-code', tags: {}, context: { version: 1, idempotencyKey: 'k' } }
+  assert.deepEqual(agentUsageEnvelopeErrors(ok), [])
+  assert.equal(agentUsageEnvelopeErrors({ ...ok, userId: 'daniel@example.com' }).length, 1)
+  assert.equal(agentUsageEnvelopeErrors({ ...ok, featureId: 'x' }).length, 1)
+  assert.equal(agentUsageEnvelopeErrors({ ...ok, tags: { a: 1 } }).length, 1)
+  assert.equal(
+    agentUsageEnvelopeErrors({ ...ok, context: { version: 1, actor: { type: 'u', id: 'SECRET' } } }).length,
+    1
+  )
+})
+
+test('fresh review #232: timestamps carry exactly milliseconds, so string order is time order', () => {
+  assert.equal(parseAgentUsage(usage({ last_at: '2026-10-02T11:00:00Z' })).ok, false)
+  assert.equal(parseAgentUsage(usage({ last_at: '2026-10-02T11:00:00.5Z' })).ok, false)
 })

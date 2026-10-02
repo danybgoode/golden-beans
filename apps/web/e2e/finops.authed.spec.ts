@@ -69,7 +69,14 @@ test.describe('/app/finops (finops 3.3)', () => {
               quote_high_usd: 35,
               actual_usd: 33.08,
             },
-            { name: 'FinOps', slug: 'finops', area: '09 Platform Infra', grain: 'Epic', status: 'In progress', appetite: 'L' },
+            {
+              name: 'FinOps',
+              slug: 'finops',
+              area: '09 Platform Infra',
+              grain: 'Epic',
+              status: 'In progress',
+              appetite: 'L',
+            },
           ],
         },
       })

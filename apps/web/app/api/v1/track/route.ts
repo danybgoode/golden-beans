@@ -7,7 +7,7 @@ import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
 import { scheduleSignalGrouping, scrubReservedEventPayload } from '@/lib/signals'
-import { AGENT_USAGE_EVENT, parseAgentUsage } from '@/lib/agent-usage'
+import { AGENT_USAGE_EVENT, agentUsageEnvelopeErrors, parseAgentUsage } from '@/lib/agent-usage'
 
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
@@ -70,16 +70,18 @@ export async function POST(req: NextRequest) {
   // accident (finops D9). The project still comes from the API key above, never from the body (D23).
   if (parsed.data.event === AGENT_USAGE_EVENT) {
     const usage = parseAgentUsage(parsed.data.metadata)
-    const tagKeys = Object.keys(parsed.data.tags)
-    if (!usage.ok || tagKeys.length) {
+    const envelope = agentUsageEnvelopeErrors({
+      userId: parsed.data.userId,
+      featureId: parsed.data.featureId,
+      tags: parsed.data.tags,
+      context: parsed.data.context as Record<string, unknown> | undefined,
+    })
+    if (!usage.ok || envelope.length) {
       return NextResponse.json(
         {
           ok: false,
           error: 'Malformed $agent_usage event',
-          issues: [
-            ...(usage.ok ? [] : usage.errors),
-            ...(tagKeys.length ? ['tags must be empty — usage rides metadata'] : []),
-          ],
+          issues: [...(usage.ok ? [] : usage.errors), ...envelope],
         },
         { status: 400 }
       )

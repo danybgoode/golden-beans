@@ -161,6 +161,21 @@ test.describe('$agent_usage on /api/v1/track (finops 3.1)', () => {
     expect(await storedUsage(db, theirs.projectId)).toHaveLength(0)
   })
 
+  test('the envelope is closed too: a person as userId, a featureId or an actor in context is a 400', async ({
+    request,
+  }) => {
+    const db = dbClient()
+    const t = await createTenant(db)
+    for (const extra of [
+      { userId: 'daniel@example.com' },
+      { featureId: 'checkout' },
+      { context: { version: 1, idempotencyKey: 'k-actor', actor: { type: 'user', id: 'SECRET' } } },
+    ]) {
+      expect((await push(request, t.key, usage(), extra)).status()).toBe(400)
+    }
+    expect(await storedUsage(db, t.projectId)).toHaveLength(0)
+  })
+
   test('no key, no write', async ({ request }) => {
     const res = await request.post('/api/v1/track', {
       data: { userId: 'u', event: AGENT_USAGE_EVENT, metadata: usage() },

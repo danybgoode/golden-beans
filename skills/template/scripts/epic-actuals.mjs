@@ -640,22 +640,34 @@ export async function pushUsage({
   now = Date.now(),
   throttle = false,
 }) {
-  const setting = needSetting('spend.telemetry', { root });
+  // Never throws (fresh review, #232): a malformed golden-frijoles.config.json must not take the Spend row's refresh
+  // down with it — it is a reason, and the scan still saves.
+  let setting;
+  try {
+    setting = needSetting('spend.telemetry', { root });
+  } catch (err) {
+    return { sent: 0, reason: `config unreadable — ${err && err.message ? err.message : err}` };
+  }
   if (setting !== 'on')
     return { sent: 0, reason: 'off — spend.telemetry is not on (gf-kit config set spend.telemetry on)' };
-  if (throttle && Number.isFinite(index.pushed_at) && now - index.pushed_at < PUSH_EVERY_MS)
+  // The throttle counts ATTEMPTS, not successes: a persistent 401 or 429 retries every 10 minutes, not every minute.
+  const last = Math.max(index.pushed_at ?? -Infinity, index.push_attempt_at ?? -Infinity);
+  if (throttle && Number.isFinite(last) && now - last < PUSH_EVERY_MS)
     return { sent: 0, reason: 'throttled' };
   const key = apiKeyFrom(env);
   if (!key) return { sent: 0, reason: 'no ingest key — set SELF_PROJECT_API_KEY (or GROWTH_ENGINE_API_KEY)' };
   const base = String(env.GROWTH_ENGINE_URL || 'http://localhost:3000').replace(/\/+$/, '');
   index.pushed ??= {};
+  index.push_attempt_at = now;
   const due = sessionSnapshots(index, { epicOf }).filter(
     (s) => index.pushed[`${s.session_id}|${s.epic}`] !== s.last_at
   );
   const deadline = Date.now() + PUSH_BUDGET_MS;
   let sent = 0;
+  let rejected = 0;
   for (const s of due) {
-    if (Date.now() > deadline) return { sent, reason: 'budget — the rest go next time' };
+    const left = deadline - Date.now();
+    if (left <= 0) return { sent, rejected, reason: 'budget — the rest go next time' };
     let res;
     try {
       res = await fetchImpl(`${base}/api/v1/track`, {
@@ -667,19 +679,32 @@ export async function pushUsage({
           metadata: s,
           context: { version: 1, idempotencyKey: `agent_usage:${s.session_id}:${s.epic}:${s.last_at}` },
         }),
-        signal: AbortSignal.timeout(PUSH_BUDGET_MS),
+        // Clamped to what is left of the budget, so the run as a whole stays inside the hook's timeout.
+        signal: AbortSignal.timeout(Math.max(1, left)),
       });
     } catch (err) {
-      return { sent, reason: `network — ${err && err.message ? err.message : err}` };
+      return { sent, rejected, reason: `network — ${err && err.message ? err.message : err}` };
     }
-    // 201 = stored, 200 = this exact snapshot was already there. Anything else stops the run: it will not get better
-    // by trying the next one (a wrong key, a quota, a schema the engine refuses).
-    if (res.status !== 201 && res.status !== 200) return { sent, reason: `engine answered ${res.status}` };
-    index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
-    sent++;
+    // Per snapshot, never "one bad row stops everything forever" (fresh review, #232):
+    //   201 stored · 200 this exact snapshot was already there → done.
+    //   409 the engine already holds a snapshot at this (session, epic, last_at) with other numbers — a rebuilt index,
+    //       or a new price table re-pricing an old session. The engine's copy stands (append-only, latest-wins) → done.
+    //   400 this snapshot will never be accepted (say, a branch name over the limit) → recorded, skipped, never retried.
+    //   anything else (401 wrong key, 429 quota, 5xx) → stop; it is about the run, not the row. Next try in 10 min.
+    if (res.status === 201 || res.status === 200 || res.status === 409) {
+      index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
+      if (res.status !== 409) sent++;
+      continue;
+    }
+    if (res.status === 400) {
+      index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
+      rejected++;
+      continue;
+    }
+    return { sent, rejected, reason: `engine answered ${res.status}` };
   }
   index.pushed_at = now;
-  return { sent, reason: due.length ? 'ok' : 'nothing changed' };
+  return { sent, rejected, reason: due.length ? 'ok' : 'nothing changed' };
 }
 
 // ── Stamping actual_* (S1.4 backfill, S2.5 close) ───────────────────────────────────────────────────

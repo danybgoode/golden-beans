@@ -109,3 +109,21 @@ test('the CSV quotes every cell and defuses a formula-looking one', () => {
   )
   assert.match(csv.split('\n')[1], /^"'=HYPERLINK\(""x""\)"/)
 })
+
+test('fresh review #232: an unpriced model this month makes the spend tile a lower bound (≥)', () => {
+  const v = buildFinopsView({
+    ...empty,
+    snapshots: [
+      {
+        epic: 'finops',
+        usd_estimate: 12.5,
+        last_at: '2026-10-02T10:00:00.000Z',
+        session_id: 'a',
+        model_breakdown: { 'claude-future-9': { usd: null } },
+      },
+    ],
+    byEpic: { finops: total(12.5) },
+  })
+  if (v.state !== 'populated') return assert.fail('populated')
+  assert.equal(v.tiles[0].value, '≥$13')
+})
