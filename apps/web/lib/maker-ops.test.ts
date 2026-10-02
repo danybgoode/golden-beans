@@ -92,12 +92,22 @@ test('the gated surface reports gated while a gate it names is off, and clears w
   assert.deepEqual(resolveSurfaceStatus(sec, BOTH_GATES_ON), { status: 'live' })
 })
 
-// Epic D4's structural half. FinOps is not gated-off, it is absent — so no flag position can make
-// it live, and this asserts that rather than trusting the comment that says so.
-test('the unbuilt surface is next under every gate reading', () => {
+// Epic D4's structural half: an `unbuilt` surface is `next` under every gate reading — no flag position can make it
+// live. FinOps WAS the unbuilt surface until finops S3.4 shipped it, so the rule is asserted on a surface that says
+// `unbuilt`, rather than disappearing with the last one.
+test('an unbuilt surface is next under every gate reading', () => {
+  const unbuilt = { ...getSurface('fin'), availability: { kind: 'unbuilt' as const } }
+  assert.equal(resolveSurfaceStatus(unbuilt, BOTH_GATES_OFF).status, 'next')
+  assert.equal(resolveSurfaceStatus(unbuilt, BOTH_GATES_ON).status, 'next')
+})
+
+test('finops S3.4: FinOps is live under every gate reading, and claims nothing it does not show', () => {
   const fin = getSurface('fin')
-  assert.equal(resolveSurfaceStatus(fin, BOTH_GATES_OFF).status, 'next')
-  assert.equal(resolveSurfaceStatus(fin, BOTH_GATES_ON).status, 'next')
+  assert.equal(resolveSurfaceStatus(fin, BOTH_GATES_OFF).status, 'live')
+  assert.equal(resolveSurfaceStatus(fin, BOTH_GATES_ON).status, 'live')
+  const copy = JSON.stringify(fin)
+  // D8 alert-only and D12 Claude Code only: the old concept's promises must not survive the flip.
+  assert.doesNotMatch(copy, /rate-limit|stop at a boundary|across providers|retry/i)
 })
 
 test('an unknown surface id fails loudly', () => {
@@ -277,4 +287,3 @@ test('a surface naming two gates that share a sentence says it once', () => {
   const note = sec.status === 'gated' ? sec.note : ''
   assert.equal(note.split('Starting').length - 1, 1, `the note repeats itself: ${note}`)
 })
-

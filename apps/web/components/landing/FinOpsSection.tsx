@@ -2,89 +2,50 @@ import { getSection } from '@/lib/landing-sections'
 import { surfaceBadgeLabel } from '@/lib/maker-ops'
 import { Badge } from '@/components/ui/Badge'
 
-// landing-maker-ops · Sprint 2, Story 2.6 — AI unit economics, labelled as the concept it is.
+// landing-maker-ops · Sprint 2, Story 2.6 — AI unit economics. finops · Sprint 3, Story 3.4 — now LIVE, and it says
+// only what /app/finops shows.
 //
-// This is the only section on this page describing something that does not exist, and epic D4 says
-// it ships as an explicit concept or not at all. Three things make that structural rather than a
-// promise in a comment:
+// Until finops shipped, this was the one section describing something that did not exist, with four invented figures
+// in a deliberately un-StatCard-like treatment. The figures are GONE, not swapped for real ones: a landing page has no
+// reader's data to show, and borrowing our own numbers would be a reading presented as the reader's. What is left is
+// the mechanism, stated in the present tense because it runs:
 //
-//   1. The status comes from the registry (`lib/landing-sections.ts`), which carries `next` for
-//      this id. Nobody can quietly upgrade the claim by editing a string in this file.
-//   2. The figures deliberately do NOT use `StatCard`. That component's entire contract is "this is
-//      a reading" — it will not even render a placeholder in place of a number it could not read —
-//      and borrowing it for four invented figures would put a shipped-evidence device around a
-//      sketch. They get their own dashed, quieter treatment instead.
-//
-//      That distinction used to be drawn against §proof, which rendered a genuinely live read in
-//      shipped-evidence chrome one section below. §proof was deleted in agentic-pm-public-surface
-//      Sprint 2, so the contrast now has only one term — but the rule is unchanged and matters
-//      MORE, not less: with no live reading anywhere on the page, `StatCard` around invented
-//      figures would be the only stat-shaped thing here, and a reader has nothing to calibrate it
-//      against.
-//   3. The honesty line is inside the panel, not in a footnote below it.
-//
-// The alternative was to cut the section. It earns its place because the question it answers —
-// "what is all this intelligence costing me, and is it worth it" — is one the reader is already
-// asking, and a product that says "not yet, and here is exactly what we would build" is more
-// credible than one that stays quiet about it.
-const figures = [
-  { label: 'Projected token spend', value: '$184', note: 'across 3 providers' },
-  { label: 'Cost / completed workflow', value: '$0.42', note: 'includes retries + cache' },
-  { label: 'Expected value signal', value: '+6 pts', note: 'North Star input projection' },
-]
-
+//   1. The status still comes from the registry (`lib/landing-sections.ts`, now `live`), never from a string here.
+//   2. Every claim is one /app/finops or the build view can show: measured from Claude Code sessions (metrics only),
+//      a quote calibrated from your own shipped epics, an alert when spend passes it — alert only, nothing is stopped
+//      (finops D8) — and Claude Code only, said outright (D12).
+//   3. The one part still unbuilt — cost linked to the North Star movement it bought — keeps a `next` badge of its
+//      own, in words, inside the panel. The section is live; that sentence is not, and it says so.
 const facets = [
-  { label: 'Attribution', detail: 'agent → workflow → Bet' },
-  { label: 'Provider mix', detail: 'cost + quality by model' },
-  { label: 'Appetite', detail: 'budget + alerts + stop' },
-  { label: 'Unit economics', detail: 'cost per useful outcome' },
+  { label: 'Measured', detail: 'from your own Claude Code sessions' },
+  { label: 'Quoted', detail: 'from your shipped epics, at grooming' },
+  { label: 'Alerted', detail: 'in the build view, when spend passes the quote' },
+  { label: 'Stamped', detail: 'into the epic at close — the next quote learns' },
 ]
 
 export function FinOpsSection() {
-  // Status AND its wording both come from shared sources: the registry says this section is
-  // `next`, and `surfaceBadgeLabel` says what `next` is called. This was the last place on the page
-  // spelling that word by hand, which is how the bag and the panel drifted apart in round 6.
-  // Mistral Vibe flagged it as a nit in round 10; it costs one import to remove the last copy.
   const section = getSection('finops')
 
   return (
     <section id="finops">
       <div className="wrap">
-        <p className="eyebrow">FinOps for agentic making · next build</p>
-        <h2 className="section-title">Know what your intelligence costs — and what it buys</h2>
-        {/* The mockup's lead, verbatim. It states the mechanism ("attribute, then connect back to
-            product value") and its verb is FUTURE — "will bring" — which is the one thing this
-            section's copy has to keep getting right: it is the only section on this page about
-            something that does not exist. The badge and the closing note below say so outright;
-            this sentence just does not contradict them. */}
-        {/* Epic D1 — spend control and unit economics. The tense is load-bearing and stays: this
-            is the one section on the page describing something that does not exist, and every
-            sentence in it is future or conditional. The badge and the "not built" line below are
-            untouched by the register pass. */}
+        <p className="eyebrow">FinOps for agentic making</p>
+        <h2 className="section-title">Know what each epic costs — against what you expected</h2>
         <p className="measure">
-          Spend control is not a bill you read at the end of the month — it is knowing which agent, which
-          workflow and which Bet consumed the tokens, and whether the thing they bought was worth it.
-          Golden Frijoles will bring AI unit economics into the same operating context as your North Star.
+          Every epic gets a quote when it is groomed, calibrated from what your own shipped epics actually
+          cost. While it is built, the build view shows spend against that quote; at close the actual is
+          stamped into the epic, so the next quote is better. Push your usage and FinOps in the console breaks
+          it down by epic, skill and model.
         </p>
 
         <div className="finops-concept section-lead">
           <p className="ops-status">
             <Badge status={section.status}>{surfaceBadgeLabel(section.status)}</Badge>
             <span>
-              Nothing on this panel is built or measured. It is the shape of the capability, drawn so you can
-              tell us it is wrong before we build it.
+              Measured, not estimated: token counts from your own sessions — never their content — priced as ≈
+              API $, a list-price equivalent. Claude Code only; other agents are not measured yet.
             </span>
           </p>
-
-          <div className="finops-figures">
-            {figures.map((figure) => (
-              <div className="finops-figure" key={figure.label}>
-                <small>{figure.label}</small>
-                <b>{figure.value}</b>
-                <span>{figure.note}</span>
-              </div>
-            ))}
-          </div>
 
           <div className="finops-facets">
             {facets.map((facet) => (
@@ -96,12 +57,15 @@ export function FinOpsSection() {
           </div>
 
           <p className="note">
-            The kind of thing it would tell you: route routine classification to a smaller model, projected
-            cost down 31% while preserving the quality threshold this Bet requires. A recommendation, not an
-            instruction — value beats cheapest-token theatre.
+            Over the quote is an alert, not a stop — we do not host your agents, so nothing is throttled on
+            your behalf.
           </p>
-          <p className="note finops-concept__next">
-            Illustrative product direction — FinOps is the next build, not a shipped capability.
+          <p className="ops-status finops-concept__next">
+            <Badge status="next">{surfaceBadgeLabel('next')}</Badge>
+            <span>
+              Cost per outcome — connecting the spend to the North Star movement it bought — is the next
+              build.
+            </span>
           </p>
         </div>
       </div>
