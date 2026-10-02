@@ -17,7 +17,9 @@
 import { writeSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { buildRows } from './roadmap-extract.mjs';
+import { buildRows, factsModeFrom } from './roadmap-extract.mjs';
+import { gatherFacts } from './lib/stage-facts.mjs';
+import { projectRoot } from './lib/project-root.mjs';
 
 // Notion caps ONE rich-text object at 2000 characters, and a property may carry up to 100 of them. An epic row carries
 // its whole epic kickoff, often longer than that, so long text is SPLIT across objects, never cut: the kickoff on a
@@ -65,7 +67,12 @@ async function main() {
   }
 
   const mode = hasFlag('--pr') ? 'pr' : 'sync';
-  const rows = buildRows();
+  // The same facts modes as roadmap-extract.mjs (--live · --offline, the default · --docs-only), so the Stage column
+  // carries Building and QA when asked to (board-sinks-and-scrumban S3.3; fresh review, #227).
+  const factsMode = factsModeFrom(args);
+  const facts = gatherFacts({ root: projectRoot(), mode: factsMode });
+  if (facts.note && factsMode === 'live') process.stderr.write(`roadmap-to-notion: ${facts.note}\n`);
+  const rows = buildRows({ facts });
 
   // --- sync mode: upsert into Notion by slug (docs always win) ---
   const TOKEN = process.env.NOTION_TOKEN;
@@ -80,11 +87,14 @@ async function main() {
 
   const sel = (v) => (v ? { select: { name: String(v) } } : { select: null });
   const rt = richText;
+  let stageProp = false;
   function props(row, epicId) {
     const p = {
       Name: { title: [{ text: { content: row.name } }] },
       Slug: rt(row.slug),
       Status: sel(row.status),
+      // board-sinks-and-scrumban S3.3 — the six-stage word, only when the board has a `Stage` select (see stageProp).
+      ...(stageProp ? { Stage: sel(row.stage) } : {}),
       Area: sel(row.area),
       Priority: sel(row.priority),
       Type: sel(row.type),
@@ -156,6 +166,17 @@ async function main() {
     console.log(`pr-sync done — ${clearing ? 'cleared overlay' : `set ${PR_PROP}="${status}"`} on ${targets.size} row(s) for ${prSlugs.join(', ')}`);
     return;
   }
+
+  // board-sinks-and-scrumban S3.3 — the `Stage` column. Written only when the database already has a select property
+  // named Stage: this sync never changes the board's schema (columns are the board owner's to add, as Lifecycle was).
+  // Without it the run says once what to add, and every other column syncs as before.
+  const schema = await api(`/databases/${DB}`);
+  stageProp = schema?.properties?.Stage?.type === 'select';
+  if (!stageProp)
+    console.error(
+      'notion: no "Stage" select property on this database — add one (options: To groom, Grooming, Ready to build, ' +
+        'Building, QA, Shipped) to see each card\'s stage. Syncing every other column.'
+    );
 
   // 1. Snapshot existing rows by slug
   const existing = new Map();

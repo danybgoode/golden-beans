@@ -8,7 +8,7 @@
 // changes that.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -45,14 +45,13 @@ function rows(strategy) {
     join(root, 'scripts', 'roadmap-extract.mjs'),
     readFileSync(join(here, 'roadmap-extract.mjs'))
   );
-  for (const lib of [
-    'project-root.mjs',
-    'stage.mjs',
-    'work-branch.mjs',
-    'stage-facts.mjs',
-    'epic-kickoff.mjs',
-  ])
-    writeFileSync(join(root, 'scripts', 'lib', lib), readFileSync(join(here, 'lib', lib)));
+  // The extractor's whole import closure — every lib module, and the push it imports. A hand-kept list of libs broke
+  // this fixture twice as the extractor grew (board-sinks-and-scrumban S1, S3), so the closure is copied, not listed.
+  for (const name of readdirSync(join(here, 'lib')).filter(
+    (n) => n.endsWith('.mjs') && !n.endsWith('.test.mjs')
+  ))
+    writeFileSync(join(root, 'scripts', 'lib', name), readFileSync(join(here, 'lib', name)));
+  writeFileSync(join(root, 'scripts', 'roadmap-push.mjs'), readFileSync(join(here, 'roadmap-push.mjs')));
   if (strategy) {
     const dir = join(root, 'Roadmap', '00-strategy');
     mkdirSync(dir);

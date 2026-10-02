@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 2
 title: "The board on the Hub"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 4
 stories:
   - id: S2.1
@@ -37,7 +37,7 @@ stories:
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 2: The board on the Hub
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #226 (`98afa52`), deployed 2026-10-02
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - D7, D8, D19 (the Hub groups, never computes), D21 (the row fields it reads). `HubTab` gains `board`, ordered
@@ -106,3 +106,13 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → You are sent to sign in. (The demo's board stays public — C2.)
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-02, production, after the deploy of `98afa52`)
+1. ✅ https://goldenfrijoles.com/hub/golden-beans-demo/board — six columns in order; answer line "3 initiatives in QA and 1
+   building. Next to pull: CMS-neutral experiment integration + Payload go/no-go (build order 18)."
+2. ✅ `?card=cms-integration-spike` → 200 (the card view); `?card=nope` → 404.
+3. Owed to Daniel: paste "Copy kickoff prompt" and compare with `emit-epic-kickoff` (the authed browser spec already
+   asserts every copy button byte-for-byte against the fixture).
+4. ✅ `?type=spike` → only spikes (five cards, all spikes).
+5. ✅ https://goldenfrijoles.com/hub/golden-beans/board (not the demo) → 307 to sign-in.
+- Owed to Daniel: the board and the card view against the approved picture, in a browser.

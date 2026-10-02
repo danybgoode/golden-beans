@@ -7,13 +7,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const LIBS = ['project-root.mjs', 'stage.mjs', 'work-branch.mjs', 'stage-facts.mjs', 'epic-kickoff.mjs'];
 
 const epicReadme = (slug, status, title) => `---
 status: ${status}
@@ -55,8 +54,13 @@ function fixture() {
     join(root, 'scripts', 'roadmap-extract.mjs'),
     readFileSync(join(HERE, 'roadmap-extract.mjs'))
   );
-  for (const lib of LIBS)
-    writeFileSync(join(root, 'scripts', 'lib', lib), readFileSync(join(HERE, 'lib', lib)));
+  // The extractor's whole import closure — every lib module, and the push it imports. A hand-kept list of libs broke
+  // this fixture twice as the extractor grew (board-sinks-and-scrumban S1, S3), so the closure is copied, not listed.
+  for (const name of readdirSync(join(HERE, 'lib')).filter(
+    (n) => n.endsWith('.mjs') && !n.endsWith('.test.mjs')
+  ))
+    writeFileSync(join(root, 'scripts', 'lib', name), readFileSync(join(HERE, 'lib', name)));
+  writeFileSync(join(root, 'scripts', 'roadmap-push.mjs'), readFileSync(join(HERE, 'roadmap-push.mjs')));
   for (const [slug, status, title] of [
     ['ready-epic', 'scaffolded', 'Ready epic'],
     ['building-epic', 'scaffolded', 'Building epic'],
@@ -173,7 +177,7 @@ test('--live --require-live exits 3 and prints nothing when live facts cannot be
   );
   assert.equal(r.status, 3);
   assert.equal(r.stdout, '');
-  assert.match(r.stderr, /--require-live/);
+  assert.match(r.stderr, /live facts could not be gathered — nothing printed or pushed/);
   // Without the flag the same run falls back to the snapshot and says so.
   const soft = spawnSync(process.execPath, [join(root, 'scripts', 'roadmap-extract.mjs'), '--live'], {
     cwd: root,
@@ -181,4 +185,33 @@ test('--live --require-live exits 3 and prints nothing when live facts cannot be
   });
   assert.equal(soft.status, 0);
   assert.match(soft.stderr, /live facts unavailable/);
+});
+
+test('--sink notion from the INSTALLED kit runs the project’s own scripts/roadmap-to-notion.mjs, passing the facts mode', () => {
+  // A kit layout (…/kit/dist/roadmap-extract.mjs beside a package.json named @golden-frijoles/kit) and a project whose
+  // scripts/ holds a stub sink that prints its arguments — the copy the optional Notion sink tells a project to make.
+  const project = fixture();
+  const kit = realpathSync(mkdtempSync(join(tmpdir(), 'kit-')));
+  mkdirSync(join(kit, 'dist', 'lib'), { recursive: true });
+  writeFileSync(join(kit, 'package.json'), JSON.stringify({ name: '@golden-frijoles/kit' }));
+  writeFileSync(join(kit, 'dist', 'roadmap-extract.mjs'), readFileSync(join(HERE, 'roadmap-extract.mjs')));
+  writeFileSync(join(kit, 'dist', 'roadmap-push.mjs'), readFileSync(join(HERE, 'roadmap-push.mjs')));
+  for (const name of readdirSync(join(HERE, 'lib')).filter(
+    (n) => n.endsWith('.mjs') && !n.endsWith('.test.mjs')
+  ))
+    writeFileSync(join(kit, 'dist', 'lib', name), readFileSync(join(HERE, 'lib', name)));
+  writeFileSync(
+    join(project, 'scripts', 'roadmap-to-notion.mjs'),
+    "console.log('notion-stub', process.argv.slice(2).join(' '));\n"
+  );
+  const r = spawnSync(
+    process.execPath,
+    [join(kit, 'dist', 'roadmap-extract.mjs'), '--sink', 'notion', '--docs-only'],
+    {
+      cwd: project,
+      encoding: 'utf8',
+    }
+  );
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^notion-stub --sync --docs-only$/m);
 });
