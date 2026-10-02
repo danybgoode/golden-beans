@@ -75,5 +75,12 @@
         }
       }
     ]
+  },
+  "board": {
+    "wip": {
+      "Building": 2,
+      "QA": 3
+    },
+    "hubUrl": "https://goldenfrijoles.com/hub/golden-beans-demo"
   }
 }
