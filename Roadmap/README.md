@@ -447,7 +447,7 @@ independently shippable slice of value.
 - **2026-10-02**: `board-sinks-and-scrumban` **shipped**: four sprints, plugin + kit 0.20.0 and 0.21.0.
   - One stage everywhere: the Hub's Board, the CLI build view, the kit's sinks and Notion all read the resolver's
     answer, so "10/10 shown as Building" can't recur.
-  - The lock disproved five things before code (no prod project of that name, workspaces with no slug, a committed file
+  - The lock corrected thirteen things before code (among them: no prod project of that name, workspaces with no slug, a committed file
     that can't hold live facts). The HIGH tenancy sprint merged with both outside review families dark, by the product
     owner's call, after a fresh reviewer found the one missing spec that pins the access model at the page.
 - **2026-10-01**: `workspaces` **shipped**: two sprints, both migrations applied before their merges, CLI 0.4.0 (the npm

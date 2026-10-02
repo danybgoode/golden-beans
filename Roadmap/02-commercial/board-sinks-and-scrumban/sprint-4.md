@@ -94,7 +94,7 @@ Env: production · https://goldenfrijoles.com
 If any step fails, note the step number + what you saw — that's the bug report.
 
 ### Smoke results (2026-10-02, after the merge of `da0828c`, deploy `success`)
-1. ✅ https://goldenfrijoles.com/hub/golden-beans-demo — 6 area rows, Shipped · Now · Next · Later; no journey track; the
+1. ✅ https://goldenfrijoles.com/hub/golden-beans-demo — 3 area rows (01 Growth Engine, 02 Commercial, 09 Platform Infra), Shipped · Now · Next · Later; no journey track; the
    answer reads "43 of 50 epics have shipped. Now: …"; 28 names link to `/board?card=`, and one opened (200). (The
    demo Hub reads anonymously — it is the public self-tenant, rule #2 — so this step needed no sign-in.)
 2. ⏳ **Owed to Daniel (signed in):** `/hub/w/9e58bc7d-a0a8-43c9-89a2-c544cab854f2/board`. Signed out it sends you to

@@ -36,7 +36,7 @@ _Intent: yes | mostly | no_
   route and lost `board`; the next event repaired it.
 - **Fix the class, not the instance — again**: hand-kept lib copy lists broke fixtures twice, a removed broken command
   had a sibling, and a "Miyagi" safety note leaked into shipped code after the leak guard had last run.
-- **A safety property needs its prose to agree**: the key-order fix was right in code and stated backwards in five
+- **A safety property needs its prose to agree**: the key-order fix was right in code and stated backwards in four
   places until round 2.
 - **External review capacity is a resource that runs out mid-epic**: Codex capped, vibe failing on the review prompt,
   every agy family on quota by S4. The HIGH tenancy PR merged with BOTH external lenses dark, by the product owner's
@@ -44,7 +44,7 @@ _Intent: yes | mostly | no_
   at the page (swap the helper for "every project in the workspace" and nothing else went red). A tenancy PR's first
   question for its own specs: which mutation of the ONE legal read would they survive?
 - **A lock decision is easy to violate in the next sprint's convenience code**: S4's first draft computed stages from
-  `status` on the Roadmap tab, three weeks of reading after D19 said the Hub never does.
+  `status` on the Roadmap tab, the day after D19 said the Hub never does.
 
 ## Gaps / follow-ups
 - Owed to Daniel: the `Stage` select on the Notion roadmap DB (S3.3's live column); the board and card view against the

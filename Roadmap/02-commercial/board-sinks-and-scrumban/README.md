@@ -1,6 +1,6 @@
 ---
 status: shipped  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+phase: Shipped      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: board-sinks-and-scrumban
 title: "One stage, every client: a six-stage board on the Hub, the CLI mod and every sink"
