@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 4
 title: "Areas and the workspace board"
 risk: high
-phase: Shaping
+phase: In review
 stories_total: 2
 stories:
   - id: S4.1
@@ -12,18 +12,18 @@ stories:
     i_want: "the Roadmap tab to show functional areas as rows and Shipped · Now · Next · Later as columns, each row in build order"
     so_that: "the high-level view answers \"where is each area heading\" with both seeds and scaffolded work"
     risk: low
-    status: planned
+    status: done
   - id: S4.2
     title: "One board across a workspace"
     as_a: "a person with several products"
     i_want: "`/hub/w/<workspace>/board` showing initiatives from every project in that workspace I belong to, with a project filter"
     so_that: "I see all my work in one place"
     risk: high
-    status: planned
+    status: done
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 4: Areas and the workspace board
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - **S4.1** — D10, D19: the areas view groups rows by `area` and `stage` (Now = Building + QA, Next = Ready to
@@ -34,14 +34,36 @@ stories:
   viewer is not in, a malformed id, and a `?project=` outside the result all 404. The fresh reviewer and the
   security lens are mandatory.
 
+## Built — what changed against the contract (said out loud)
+- **S4.1 — the Roadmap tab is areas × Shipped · Now · Next · Later** (`lib/hub-areas.ts`, pure), held to the approved
+  surface `hub-roadmap-areas` (D23; the visual gate measures it and it is in the `STATE-MATCH.json` floor). The journey
+  track retires from the tab; its "you are here" is the Board's answer line ("Next to pull: …") and this tab's own
+  ("Now: …"). The share page (`/s/<token>`) keeps its journey — a different approved state — so `lib/hub-journey.ts`
+  and the track CSS stay. Shipped shows a count and the latest three per area; every name opens its card on the Board.
+  A push from before stages is placed from its written status, and the note says so.
+- **On a phone the area table STACKS** (each horizon labelled), it does not scroll sideways. Found by the existing
+  390px spec: an early `min-width` overrode the house rule that clips `.ds-listhead` to a 1px box under 900px, and
+  the absolutely-positioned header escaped the card and widened the page to 744px.
+- **S4.2 — `/hub/w/<workspaceId>/board`** (lock C8: workspaces have no slug). Tenancy, per AGENTS § The tenancy
+  invariant: session required (a workspace is never public); a malformed id, a workspace the viewer is not in, or a
+  `?project=` outside `getWorkspaceProjects()` all 404 — each guard observed red with it removed. The ONLY
+  multi-project read is `getWorkspaceProjects()`; each project's artifact is then read by id. The view is the project
+  board's own component (`BoardView`), so columns, filters and WIP are one implementation; a card opens on ITS project's
+  board. The approved `hub-workspace-board` surface draws no answer line, so the workspace board has none.
+- **"Open a project's board" is a link, not a dialog**, so the route is covered by `hub-board.authed.spec.ts` (which
+  measures it with the gate's own functions) rather than by the gate's press-every-head-action loop, which expects a
+  modal.
+- **The approved surfaces `hub-roadmap-areas` and `hub-workspace-board` are registered** — corrected only for routes
+  and the `tabs` line, recorded at the product owner's instruction (D23).
+
 ## Stories
 
-### Story 4.1 — The Roadmap tab shows areas on a horizon
+### Story 4.1 — The Roadmap tab shows areas on a horizon ✅
 **As** the product owner or a stakeholder, **I want** the Roadmap tab to show functional areas as rows and Shipped · Now · Next · Later as columns, each row in build order, **so that** the high-level view answers "where is each area heading" with both seeds and scaffolded work.
 **Acceptance:** Matches the approved `hub-roadmap-areas` state; Now = Building + QA, Next = Ready to build, Later = To groom + Grooming; the journey track is retired and its "you are here" lives in the board's answer line; `hub.spec.ts` updated.
 **Risk:** low
 
-### Story 4.2 — One board across a workspace
+### Story 4.2 — One board across a workspace ✅
 **As** a person with several products, **I want** `/hub/w/<workspace>/board` showing initiatives from every project in that workspace I belong to, with a project filter, **so that** I see all my work in one place.
 **Acceptance:** Reads only through `getWorkspaceProjects()` (workspaces epic). A project from another workspace in the filter 404s (api spec). ~~Before the workspaces epic ships, the route renders the `hub-workspace-board-unbuilt` state.~~ Moot: `workspaces` shipped 2026-10-01 (lock C9).
 **Risk:** high — tenancy (cross-project read)
