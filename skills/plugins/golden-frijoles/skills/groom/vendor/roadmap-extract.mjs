@@ -6,7 +6,7 @@
 //   node scripts/roadmap-extract.mjs --docs-only  # no facts at all — what the committed BUILD-ORDER.md reads
 //   … --live --require-live                        # exit 3 instead of falling back (what a publisher passes)
 //   node scripts/roadmap-extract.mjs --sink terminal  # the six-stage board as text (live facts unless told otherwise)
-//   node scripts/roadmap-extract.mjs --sink hub       # push the board to the Hub (GROWTH_ENGINE_URL + GROWTH_ENGINE_API_KEY)
+//   node scripts/roadmap-extract.mjs --sink hub       # push the board to the Hub (GROWTH_ENGINE_URL + the project key, see roadmap-push)
 //   node scripts/roadmap-extract.mjs --sink notion    # run the optional Notion sync copied beside this file
 //
 // ── One extractor (board-sinks-and-scrumban D15) ─────────────────────────────────────────────────────────
@@ -700,10 +700,14 @@ if (isMain) {
     process.exitCode = reportPush(await pushRoadmap(rows, { root: REPO }), rows.length);
   else {
     // Notion is opt-in (template/optional/notion/): a project that wants it copies roadmap-to-notion.mjs beside this.
-    const notion = join(dirname(fileURLToPath(import.meta.url)), 'roadmap-to-notion.mjs');
-    if (!existsSync(notion)) {
+    // Beside this file when it IS the project's copy; the project's scripts/ when this runs from the kit (fresh review, #227).
+    const notion = [
+      join(dirname(fileURLToPath(import.meta.url)), 'roadmap-to-notion.mjs'),
+      join(REPO, 'scripts', 'roadmap-to-notion.mjs'),
+    ].find((p) => existsSync(p));
+    if (!notion) {
       process.stderr.write(
-        'roadmap-extract: no roadmap-to-notion.mjs beside this script — the Notion sink is opt-in: copy ' +
+        'roadmap-extract: no roadmap-to-notion.mjs beside this script or in the project\'s scripts/ — the Notion sink is opt-in: copy ' +
           'template/optional/notion/roadmap-to-notion.mjs into scripts/ and set NOTION_TOKEN + NOTION_DB_ID.\n'
       );
       process.exit(2);

@@ -13,8 +13,8 @@
 //   node scripts/roadmap-push.mjs --dry-run             # print the envelope, send nothing
 //   node scripts/roadmap-push.mjs --url http://localhost:3000
 //
-// Env: GROWTH_ENGINE_URL (default http://localhost:3000) and the project's ingest key in GROWTH_ENGINE_API_KEY (the
-// SDK's name; this repo's CI passes SELF_PROJECT_API_KEY, still read as a fallback).
+// Env: GROWTH_ENGINE_URL (default http://localhost:3000) and the project's ingest key: SELF_PROJECT_API_KEY FIRST (it only
+// ever means this project's own key), else the SDK's GROWTH_ENGINE_API_KEY. Not the other way round — see apiKeyFrom.
 // A missing key is a CLEAN SKIP (exit 0), not a failure — see the note in the CI step.
 
 import { spawnSync } from 'node:child_process';
@@ -114,9 +114,13 @@ export function readExtract(run = spawnSync) {
   return items;
 }
 
-/** The project's ingest key: the SDK's `GROWTH_ENGINE_API_KEY`, else this repo's CI name `SELF_PROJECT_API_KEY`. */
+/** The project's ingest key: `SELF_PROJECT_API_KEY` first, else the SDK's `GROWTH_ENGINE_API_KEY`. */
+// ⚠️ ORDER MATTERS (fresh review, #227): a repo that ALSO syncs data from another project can hold that other project's
+// key in `GROWTH_ENGINE_API_KEY` (the SDK's name for "the engine key"), so preferring it would push this roadmap into
+// someone else's project from any shell that has it exported. `SELF_PROJECT_API_KEY` — the name that only ever means
+// "this project's own key" — wins; a project that never sets it uses the SDK's name.
 export const apiKeyFrom = (env = process.env) =>
-  env.GROWTH_ENGINE_API_KEY || env.SELF_PROJECT_API_KEY || null;
+  env.SELF_PROJECT_API_KEY || env.GROWTH_ENGINE_API_KEY || null;
 
 /** The envelope for `items` as pushed from the checkout at `root`: provenance, the WIP limits, the repo base. */
 export function envelopeFor(items, root = REPO_ROOT) {
@@ -147,12 +151,18 @@ export async function pushRoadmap(
   } = {}
 ) {
   if (!apiKey) return { ok: true, skipped: true, status: null, text: '' };
-  const res = await fetchFn(`${String(baseUrl).replace(/\/$/, '')}/api/v1/roadmap/push`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(envelopeFor(items, root)),
-    signal: AbortSignal.timeout(30_000),
-  });
+  let res;
+  try {
+    res = await fetchFn(`${String(baseUrl).replace(/\/$/, '')}/api/v1/roadmap/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(envelopeFor(items, root)),
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (err) {
+    // An unreachable engine is a failed push with its reason — never a stack trace (fresh review, #227).
+    return { ok: false, skipped: false, status: null, text: `could not reach ${baseUrl}: ${err.message}` };
+  }
   return { ok: res.ok, skipped: false, status: res.status, text: await res.text() };
 }
 
@@ -162,7 +172,7 @@ export function reportPush(result, count) {
     // Clean skip, not a failure: a repo without the key must not turn every CI run red over an observability-grade
     // nicety — same stance as the Telegram workflow.
     process.stderr.write(
-      'GROWTH_ENGINE_API_KEY (or SELF_PROJECT_API_KEY) not set — skipping the roadmap push cleanly.\n' +
+      'SELF_PROJECT_API_KEY (or GROWTH_ENGINE_API_KEY) not set — skipping the roadmap push cleanly.\n' +
         `  ${count} rows were generated and discarded. Set the project's ingest key to enable this.\n`
     );
     return 0;

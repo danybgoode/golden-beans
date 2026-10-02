@@ -57,8 +57,9 @@ stories:
   separate per-branch `gh pr list --head` call is gone: the open PR comes from the one facts gather. The hook stays
   offline; `session-resume` refreshes the snapshot at session start. `hub.url` is `board.hubUrl` (D22, amended in S1).
 - **S3.2 — `roadmap-push.mjs` is in the kit** and exports `pushRoadmap()`; `roadmap-extract --sink hub` calls it
-  in-process (live facts required — a failed gather exits 3, never pushes a docs-only board). The key is the SDK's
-  `GROWTH_ENGINE_API_KEY`, with this repo's `SELF_PROJECT_API_KEY` as a fallback. The npm publish is CI's trusted
+  in-process (live facts required — a failed gather exits 3, never pushes a docs-only board). The key is
+  `SELF_PROJECT_API_KEY` first, the SDK's `GROWTH_ENGINE_API_KEY` second — in this repo the latter is the Miyagi
+  project's key, so the order is a safety property (review of #227), pinned by spec. The npm publish is CI's trusted
   publishing on merge (`release.yml`), not a hand step.
 - **S3.3 — Notion writes `Stage` only when the database has a `Stage` select**: the sync never changes the board's schema
   (columns are the owner's, as `Lifecycle` was). Without it, one line says what to add. `notion-sync.yml` now runs with
@@ -80,7 +81,7 @@ stories:
 **Acceptance:** `npx -y @golden-frijoles/kit roadmap-extract --sink hub` pushes with `GROWTH_ENGINE_URL` + the project key; `--sink terminal` prints BUILD-ORDER-style text; `check-skill-scripts` and the kit tarball test pass. Plugin release noted in `skills/CHANGELOG.md`.
 **Risk:** low
 
-### Story 3.3 — Notion gets the stage column ✅
+### Story 3.3 — Notion gets the stage column ✅ (code) · ⏳ live column owed: the `Stage` select on the Notion DB
 **As** a team that keeps a Notion board, **I want** the optional Notion sink to write the six-stage `stage` value, **so that** Notion agrees with the Hub too.
 **Acceptance:** `optional/notion/roadmap-to-notion.mjs` maps `stage` to a select property; this repo's `notion-sync.yml` run shows the new column.
 **Risk:** low
