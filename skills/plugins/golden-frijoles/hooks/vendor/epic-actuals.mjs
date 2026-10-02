@@ -588,7 +588,10 @@ export function stampEpic({ root, summary, slug, basisPrefix = '', date, keepSta
   // `actual_usd: null` with its reason (README C14). `--epic <slug> --write` (the close) is the one that replaces.
   if (keepStamped) {
     // Read through the contract's own parser: an empty `actual_basis:` or `actual_basis: null` is NOT a written actual.
-    const basis = parseDocFrontmatter(md).data.actual_basis;
+    const fm = parseDocFrontmatter(md);
+    // Fail CLOSED: a frontmatter this parser cannot read (an out-of-subset line, CRLF) may still hold an actual.
+    if (fm.error) return null;
+    const basis = fm.data.actual_basis;
     if (typeof basis === 'string' && basis.trim()) return null;
   }
   const next = stampFrontmatter(md, actualFields(report, basisPrefix, date));
