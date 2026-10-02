@@ -73,7 +73,7 @@ stories:
 
 ### Story 2.2 — A Board tab on the Hub ✅
 **As** the product owner, **I want** `/hub/<slug>/board` in the hub frame (fourth hub tab, not a console section) rendering the approved `hub-board` and `hub-board-empty` states, **so that** I see every initiative and its stage at a glance.
-**Acceptance:** Membership-gated like the other hub pages (`requireDashboardAccess`); a share link scoped to the project also opens it; the page matches the approved surface blocks (state contract registered; design-drift guard green); column words exactly To groom · Grooming · Ready to build · Building · QA · Shipped.
+**Acceptance:** Membership-gated like the other hub pages (`requireDashboardAccess`); ~~a share link scoped to the project also opens it~~ (out of v1, lock C10); the page matches the approved surface blocks (state contract registered; design-drift guard green); column words exactly To groom · Grooming · Ready to build · Building · QA · Shipped.
 **Risk:** low
 
 ### Story 2.3 — A card opens to everything I need to act ✅
@@ -97,7 +97,7 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
 1. Go to https://goldenfrijoles.com/hub/golden-beans-demo/board (the demo project — public by design, C2).
    → Six columns: To groom · Grooming · Ready to build · Building · QA · Shipped, and an answer line naming the next pull.
 2. Click the first card in Ready to build.
-   → A drawer opens with its goal, sprints, docs and a "Copy kickoff prompt" button.
+   → The card's own view opens (`?card=<slug>` — a page state, lock D23) with its goal, sprints, docs and a "Copy kickoff prompt" button.
 3. Click "Copy kickoff prompt" and paste it into a text editor.
    → The same text `emit-epic-kickoff --epic <slug>` prints.
 4. Click the Spike chip.

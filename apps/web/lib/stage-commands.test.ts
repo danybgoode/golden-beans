@@ -36,11 +36,8 @@ test('To groom and Grooming use the Groom and Bet verbs', () => {
   assert.deepEqual(texts(card({ stage: 'Grooming', grain: 'Seed' })), ['Groom: demo', 'Bet the wave'])
 })
 
-test('Ready to build: an epic offers Build epic and the generator; a fixed-scope seed offers Build', () => {
-  assert.deepEqual(texts(card({})), [
-    'Build epic demo',
-    'node skills/groom/emit-epic-kickoff.mjs --epic demo',
-  ])
+test("Ready to build: an epic offers Build epic (the kickoff is the card's own action); a fixed-scope seed offers Build", () => {
+  assert.deepEqual(texts(card({})), ['Build epic demo'])
   assert.deepEqual(texts(card({ grain: 'Seed' })), ['Build: demo'])
 })
 

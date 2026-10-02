@@ -29,13 +29,9 @@ const COMMANDS: Record<BoardCard['stage'], (card: BoardCard) => StageCommand[]> 
   ],
   'Ready to build': (card) =>
     card.grain === 'Epic'
-      ? [
-          { label: 'Build it', text: `Build epic ${card.slug}` },
-          {
-            label: 'Regenerate the kickoff',
-            text: `node skills/groom/emit-epic-kickoff.mjs --epic ${card.slug}`,
-          },
-        ]
+      ? // The kickoff itself is the card's head action. No "regenerate" command: the generator's path depends on where
+        // the plugin is installed, and a copied command that fails is worse than none (fresh review, #226).
+        [{ label: 'Build it', text: `Build epic ${card.slug}` }]
       : [{ label: 'Build it (fixed scope)', text: `Build: ${card.slug}` }],
   Building: (card) => {
     const n = currentSprint(card)

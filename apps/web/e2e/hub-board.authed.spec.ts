@@ -67,20 +67,22 @@ test('every copy button on a card copies its exact text', async ({ page, context
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto(`/hub/${slug()}/board?card=fixture-unbet`)
   const read = () => page.evaluate(() => navigator.clipboard.readText())
-
-  await page.getByRole('button', { name: 'Copy the kickoff prompt' }).click()
-  const kickoff = await read()
-  expect(kickoff.split('\n')[0]).toBe(
-    'Start by pushing the epic branch, before anything else — it is what moves this card to Building on the board:'
-  )
-  expect(kickoff).toContain('git switch -c feat/fixture-unbet origin/main')
-
-  for (const text of [
-    'Build epic fixture-unbet',
-    'node skills/groom/emit-epic-kickoff.mjs --epic fixture-unbet',
-  ]) {
-    await page.getByRole('button', { name: `Copy: ${text}` }).click()
-    expect(await read()).toBe(text)
+  // The fixture's kickoff, byte for byte (auth.setup.ts seeds exactly this).
+  const KICKOFF =
+    'Start by pushing the epic branch, before anything else — it is what moves this card to Building on the board:\n' +
+    '`git switch -c feat/fixture-unbet origin/main && git push -u origin feat/fixture-unbet`'
+  const expected: Record<string, string> = {
+    'Copy the kickoff prompt': KICKOFF,
+    'Copy: The kickoff prompt': KICKOFF,
+    'Copy: Build epic fixture-unbet': 'Build epic fixture-unbet',
+  }
+  const buttons = page.locator('main button[aria-label^="Copy"]')
+  const names = await buttons.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''))
+  // EVERY copy button on the card is pressed — and every one is accounted for, so a new button cannot slip past.
+  expect(names.sort()).toEqual(Object.keys(expected).sort())
+  for (const name of names) {
+    await page.getByRole('button', { name, exact: true }).click()
+    expect(await read(), name).toBe(expected[name])
   }
 })
 

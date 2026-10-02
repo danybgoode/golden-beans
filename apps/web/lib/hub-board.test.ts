@@ -123,6 +123,18 @@ test('WIP: under, at and over the limit; over is said in the answer line, never 
   assert.equal(over.columns.find((c) => c.stage === 'Building')!.wip, null, 'no limit, no WIP state')
 })
 
+test('WIP counts the whole column even when a filter hides some of it (a team limit, not a view limit)', () => {
+  const spikes = buildBoard(ITEMS, {
+    now: NOW,
+    wip: { QA: 1 },
+    filters: parseBoardFilters({ type: 'spike' }),
+  })
+  const qa = spikes.columns.find((c) => c.stage === 'QA')!
+  assert.equal(qa.cards.length, 0, 'no spike is in QA')
+  assert.deepEqual(qa.wip, { limit: 1, count: 2, over: true, at: false })
+  assert.match(spikes.answer, /QA is over its WIP limit \(2 of 1\)/)
+})
+
 test('an empty flow says so, and nothing ready says so', () => {
   const b = buildBoard([row({ name: 'Done', slug: 'd', stage: 'Shipped', shipped_at: '2026-10-01' })], {
     now: NOW,

@@ -144,8 +144,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 /**
  * The board: six columns in board order, Ready to build in build order (pull from the top), Shipped newest first
- * within the last 30 days, every other column in build order then name. WIP counts what is on the board after the
- * filters, against the limits the push carried (`board.wip`, D21) — advice, never a gate (D9).
+ * within the last 30 days, every other column in build order then name. WIP counts the whole column (never only what
+ * the filters left visible), against the limits the push carried (`board.wip`, D21) — advice, never a gate (D9).
  */
 export function buildBoard(
   items: RoadmapRow[],
@@ -162,7 +162,8 @@ export function buildBoard(
   const cutoff = new Date(now.getTime() - SHIPPED_WINDOW_DAYS * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10)
-  const cards = items.map(toCard).filter((c): c is BoardCard => c !== null && matchesFilters(c, filters))
+  const all = items.map(toCard).filter((c): c is BoardCard => c !== null)
+  const cards = all.filter((c) => matchesFilters(c, filters))
   let shippedOutsideWindow = 0
   const columns = BOARD_STAGES.map((stage): BoardColumn => {
     let list = cards.filter((c) => c.stage === stage)
@@ -176,7 +177,10 @@ export function buildBoard(
       list = list.sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name))
     }
     const limit = stage === 'Building' ? wip?.Building : stage === 'QA' ? wip?.QA : null
-    return { stage, cards: list, wip: wipFor(list.length, limit) }
+    // WIP is the TEAM's limit, so it counts the whole column, not what a filter left visible (fresh review, #226): a
+    // spike-only view must not say Building is under its limit while the team is over it.
+    const teamCount = all.filter((c) => c.stage === stage).length
+    return { stage, cards: list, wip: wipFor(teamCount, limit) }
   })
   const col = (stage: RoadmapStage) => columns.find((c) => c.stage === stage)!
   const nextToPull = col('Ready to build').cards[0] ?? null
