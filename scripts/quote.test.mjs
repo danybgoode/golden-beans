@@ -3,7 +3,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { WIDE_DEFAULT, actualsAt, calibrationReport, percentile, quoteFor } from './quote.mjs';
 
-const epic = (appetite, actual_usd, extra = {}) => ({ grain: 'Epic', status: 'Shipped', appetite, actual_usd, ...extra });
+const epic = (appetite, actual_usd, extra = {}) => ({
+  grain: 'Epic',
+  status: 'Shipped',
+  appetite,
+  actual_usd,
+  ...extra,
+});
 
 test('percentile: linear interpolation, and the edges', () => {
   assert.equal(percentile([], 0.25), null);
@@ -13,7 +19,14 @@ test('percentile: linear interpolation, and the edges', () => {
 });
 
 test('n >= 3: p25–p75 of shipped actuals at the appetite, floor/ceil to whole dollars', () => {
-  const rows = [epic('M', 23.43), epic('M', 24.44), epic('M', 33.08), epic('M', 37.02), epic('M', 102), epic('S', 999)];
+  const rows = [
+    epic('M', 23.43),
+    epic('M', 24.44),
+    epic('M', 33.08),
+    epic('M', 37.02),
+    epic('M', 102),
+    epic('S', 999),
+  ];
   const q = quoteFor(rows, 'M');
   assert.deepEqual([q.low, q.high, q.n, q.kind], [24, 38, 5, 'p25–p75']);
   assert.equal(q.line, '$24–38 (M, n=5, p25–p75)');

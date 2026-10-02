@@ -29,9 +29,15 @@ function fixture() {
     writeFileSync(join(root, 'Roadmap', '09-platform-infra', slug, 'README.md'), README(slug, extra));
   };
   mkdirSync(join(root, 'Roadmap', '00-ideas', 'seeds'), { recursive: true });
-  epic('quoted', 'appetite: M\nquote_low_usd: 30\nquote_high_usd: 55\nquote_basis: "M, n=6, p25–p75"\nactual_usd: 38.42\nactual_mtok: 1.9\nactual_basis: "this machine · 2026-10-02"');
+  epic(
+    'quoted',
+    'appetite: M\nquote_low_usd: 30\nquote_high_usd: 55\nquote_basis: "M, n=6, p25–p75"\nactual_usd: 38.42\nactual_mtok: 1.9\nactual_basis: "this machine · 2026-10-02"'
+  );
   epic('seeded', '');
-  writeFileSync(join(root, 'Roadmap', '00-ideas', 'seeds', 'seeded.md'), '---\nstatus: scaffolded\nappetite: S\nepic: 09-platform-infra/seeded\n---\n# seeded\n');
+  writeFileSync(
+    join(root, 'Roadmap', '00-ideas', 'seeds', 'seeded.md'),
+    '---\nstatus: scaffolded\nappetite: S\nepic: 09-platform-infra/seeded\n---\n# seeded\n'
+  );
   return { root, done: () => rmSync(root, { recursive: true, force: true }) };
 }
 
@@ -42,10 +48,14 @@ test('2.1: an epic row carries the six FinOps fields — numbers as numbers, abs
   try {
     const rows = rowsOf(f.root);
     const q = rows.find((r) => r.slug === 'quoted' && r.grain === 'Epic');
-    assert.deepEqual(
-      Object.fromEntries(FINOPS_FIELDS.map((k) => [k, q[k]])),
-      { quote_low_usd: 30, quote_high_usd: 55, quote_basis: 'M, n=6, p25–p75', actual_usd: 38.42, actual_mtok: 1.9, actual_basis: 'this machine · 2026-10-02' }
-    );
+    assert.deepEqual(Object.fromEntries(FINOPS_FIELDS.map((k) => [k, q[k]])), {
+      quote_low_usd: 30,
+      quote_high_usd: 55,
+      quote_basis: 'M, n=6, p25–p75',
+      actual_usd: 38.42,
+      actual_mtok: 1.9,
+      actual_basis: 'this machine · 2026-10-02',
+    });
     const s = rows.find((r) => r.slug === 'seeded' && r.grain === 'Epic');
     for (const k of FINOPS_FIELDS) assert.equal(s[k], null, k);
   } finally {

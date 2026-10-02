@@ -308,7 +308,8 @@ export function dollars(usd, known = true) {
  */
 export function quoteLabel(basis, appetite = null) {
   const m = /^\s*([SML])\s*,\s*n=(\d+)\s*,\s*(wide|p25–p75)\s*$/.exec(String(basis ?? ''));
-  if (m) return m[3] === 'wide' ? `(${m[1]} · ${m[2]} past epic${m[2] === '1' ? '' : 's'}, wide)` : `(${m[1]})`;
+  if (m)
+    return m[3] === 'wide' ? `(${m[1]} · ${m[2]} past epic${m[2] === '1' ? '' : 's'}, wide)` : `(${m[1]})`;
   if (basis) return `(${basis})`;
   return appetite ? `(${appetite})` : '';
 }
@@ -323,7 +324,8 @@ export function quoteLabel(basis, appetite = null) {
  */
 export function spendValue(spend, quote) {
   const tok = spend.mtok !== null ? `${spend.mtok}M tok` : null;
-  const sessions = spend.sessions !== null ? `${spend.sessions} session${spend.sessions === 1 ? '' : 's'}` : null;
+  const sessions =
+    spend.sessions !== null ? `${spend.sessions} session${spend.sessions === 1 ? '' : 's'}` : null;
   const usd = dollars(spend.usd, spend.usd_known);
   if (quote === undefined) return [usd, tok, sessions, spend.basis].filter(Boolean).join(' · ');
   if (!quote) return [usd, 'no quote', tok, sessions].filter(Boolean).join(' · ');

@@ -916,7 +916,11 @@ test('finops 1.3: on an epic branch with a summary row, Spend sits between Progr
       resolveBuildState({ root: f.root, offline: true, gh: noGh, board: false, elsewhere: false })
     );
     const at = (label) => lines.findIndex((l) => l.startsWith(`  ${label}`));
-    assert.equal(lines[at('Spend')], '  Spend    ≈$38 · no quote · 1.9M tok · 4 sessions', 'the fixture epic carries no quote');
+    assert.equal(
+      lines[at('Spend')],
+      '  Spend    ≈$38 · no quote · 1.9M tok · 4 sessions',
+      'the fixture epic carries no quote'
+    );
     assert.equal(at('Spend'), at('Progress') + 1);
     assert.equal(at('Status'), at('Spend') + 1);
   } finally {
@@ -973,12 +977,15 @@ test('finops 2.4: the four Spend lines are the approved mockup’s, word for wor
 
 test('finops 2.4: a quote comes off the README only when both ends are numbers in order — else no quote, never $0', async () => {
   const { quoteOf } = await import('./build-state.mjs');
-  assert.deepEqual(quoteOf({ quote_low_usd: 30, quote_high_usd: 55, quote_basis: 'M, n=6, p25–p75', appetite: 'M' }), {
-    low: 30,
-    high: 55,
-    basis: 'M, n=6, p25–p75',
-    appetite: 'M',
-  });
+  assert.deepEqual(
+    quoteOf({ quote_low_usd: 30, quote_high_usd: 55, quote_basis: 'M, n=6, p25–p75', appetite: 'M' }),
+    {
+      low: 30,
+      high: 55,
+      basis: 'M, n=6, p25–p75',
+      appetite: 'M',
+    }
+  );
   assert.equal(quoteOf({ quote_low_usd: null, quote_high_usd: null }), null);
   assert.equal(quoteOf({ quote_low_usd: 60, quote_high_usd: 55 }), null);
   assert.equal(quoteOf({ quote_low_usd: '30', quote_high_usd: 55 }), null);
@@ -988,14 +995,28 @@ test('finops 2.4: on a quoted epic branch the resolver prints the inside state',
   const f = fixture();
   try {
     const readme = join(f.root, 'Roadmap', '04-shipping', 'arranged-only', 'README.md');
-    writeFileSync(readme, readFileSync(readme, 'utf8').replace('stories_total: 3\n', 'stories_total: 3\nquote_low_usd: 30\nquote_high_usd: 55\nquote_basis: "M, n=6, p25–p75"\n'));
+    writeFileSync(
+      readme,
+      readFileSync(readme, 'utf8').replace(
+        'stories_total: 3\n',
+        'stories_total: 3\nquote_low_usd: 30\nquote_high_usd: 55\nquote_basis: "M, n=6, p25–p75"\n'
+      )
+    );
     f.git('add', '-A');
     f.git('commit', '-qm', 'quote');
     f.git('switch', '-qc', 'feat/arranged-only');
     mkdirSync(join(f.root, '.golden-frijoles'), { recursive: true });
-    writeFileSync(join(f.root, '.golden-frijoles', 'usage-summary.json'), SUMMARY({ 'arranged-only': { usd: 38.42, mtok: 1.9, sessions: 4 } }));
-    const lines = renderLines(resolveBuildState({ root: f.root, offline: true, gh: noGh, board: false, elsewhere: false }));
-    assert.ok(lines.includes('  Spend    ≈$38 of quote $30–55 (M) · 1.9M tok · 4 sessions'), lines.join('\n'));
+    writeFileSync(
+      join(f.root, '.golden-frijoles', 'usage-summary.json'),
+      SUMMARY({ 'arranged-only': { usd: 38.42, mtok: 1.9, sessions: 4 } })
+    );
+    const lines = renderLines(
+      resolveBuildState({ root: f.root, offline: true, gh: noGh, board: false, elsewhere: false })
+    );
+    assert.ok(
+      lines.includes('  Spend    ≈$38 of quote $30–55 (M) · 1.9M tok · 4 sessions'),
+      lines.join('\n')
+    );
   } finally {
     f.done();
   }

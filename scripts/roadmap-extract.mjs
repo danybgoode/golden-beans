@@ -727,7 +727,7 @@ if (isMain) {
     ].find((p) => existsSync(p));
     if (!notion) {
       process.stderr.write(
-        'roadmap-extract: no roadmap-to-notion.mjs beside this script or in the project\'s scripts/ — the Notion sink is opt-in: copy ' +
+        "roadmap-extract: no roadmap-to-notion.mjs beside this script or in the project's scripts/ — the Notion sink is opt-in: copy " +
           'template/optional/notion/roadmap-to-notion.mjs into scripts/ and set NOTION_TOKEN + NOTION_DB_ID.\n'
       );
       process.exit(2);

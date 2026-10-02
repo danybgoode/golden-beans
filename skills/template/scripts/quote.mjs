@@ -51,7 +51,8 @@ export function basisOf(q) {
 
 /** The quote for an appetite: { appetite, low, high, n, kind: 'p25–p75' | 'wide', basis, line }. */
 export function quoteFor(rows, appetite) {
-  if (!APPETITES.includes(appetite)) throw new Error(`appetite must be one of ${APPETITES.join(', ')} (got ${appetite})`);
+  if (!APPETITES.includes(appetite))
+    throw new Error(`appetite must be one of ${APPETITES.join(', ')} (got ${appetite})`);
   const xs = actualsAt(rows, appetite);
   const calibrated = xs.length >= MIN_HISTORY;
   const [low, high] = calibrated
@@ -76,9 +77,18 @@ export function calibrationReport(rows) {
         typeof r.quote_low_usd === 'number' &&
         typeof r.quote_high_usd === 'number'
     );
-    const inside = judged.filter((r) => r.actual_usd >= r.quote_low_usd && r.actual_usd <= r.quote_high_usd).length;
+    const inside = judged.filter(
+      (r) => r.actual_usd >= r.quote_low_usd && r.actual_usd <= r.quote_high_usd
+    ).length;
     const over = judged.filter((r) => r.actual_usd > r.quote_high_usd).length;
-    return { appetite, quote: quoteFor(rows, appetite), judged: judged.length, inside, over, under: judged.length - inside - over };
+    return {
+      appetite,
+      quote: quoteFor(rows, appetite),
+      judged: judged.length,
+      inside,
+      over,
+      under: judged.length - inside - over,
+    };
   });
 }
 
@@ -109,7 +119,9 @@ function main(argv) {
 
 const isMain = (() => {
   try {
-    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
   } catch {
     return false;
   }

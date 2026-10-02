@@ -343,7 +343,8 @@ export function evaluate({
   // red (epic-dod.exemptions.json stays untouched). An actual held on purpose (`actual_basis` says why) is recorded.
   const warnings = [];
   const actual = String(fm?.actual_usd ?? '').trim();
-  const held = String(fm?.actual_basis ?? '').trim() && !['null', '~'].includes(String(fm?.actual_basis).trim());
+  const held =
+    String(fm?.actual_basis ?? '').trim() && !['null', '~'].includes(String(fm?.actual_basis).trim());
   if (fm?.status === 'shipped' && !(actual && Number.isFinite(Number(actual))) && !held)
     warnings.push(
       `no actual_usd — stamp what it cost: node scripts/epic-actuals.mjs --epic ${slug} --write (finops; a warning, not a failure)`
