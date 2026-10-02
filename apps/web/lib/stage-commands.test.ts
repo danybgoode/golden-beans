@@ -84,16 +84,22 @@ test('every `node scripts/…` command a card offers exists in the template — 
   const every = (['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped'] as const).flatMap(
     (stage) => (['Epic', 'Seed'] as const).flatMap((grain) => stageCommands(card({ stage, grain, pr })))
   )
+  // EVERY `scripts/` path anywhere in a command, whatever runs it (`node --flag scripts/x.mjs`, `./scripts/x.sh` …), and
+  // a command that runs anything must name such a path — so a new runner form cannot slip past (round-3 review, #226).
   const scripts = [
-    ...new Set(every.flatMap((c) => [...c.text.matchAll(/\bnode (\S+\.mjs)/g)].map((m) => m[1]))),
+    ...new Set(
+      every.flatMap((c) => [...c.text.matchAll(/(?:^|\s)(?:\.\/)?(scripts\/\S+)/g)].map((m) => m[1]))
+    ),
   ]
+  for (const c of every)
+    if (/(?:^|\s)(?:node|npx|npm|bash|sh)\s/.test(c.text))
+      assert.match(
+        c.text,
+        /(?:^|\s)(?:\.\/)?scripts\//,
+        `"${c.text}" runs something that is not a checked scripts/ path`
+      )
   assert.ok(scripts.length >= 2, `expected the map to run some scripts, found: ${scripts.join(', ')}`)
   for (const script of scripts) {
-    assert.match(
-      script,
-      /^scripts\//,
-      `${script} is not under scripts/ — a project cannot run it from its root`
-    )
     assert.ok(
       existsSync(join(template, script.replace(/^scripts\//, ''))),
       `${script} is not shipped by the template`
