@@ -175,8 +175,9 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
   plugin user already set for the Hub push, so it is zero extra steps. The project comes from the hashed key server-side;
   no body field names a project, so a foreign write is unrepresentable (api spec pins it anyway).
 - **D24 — When things run.** The mod's `session.measure` runs the **vendored** `epic-actuals.mjs --refresh` (never
-  the repo's — distribute-what-we-use D5), timeout 10 s, at most once per 60 s; with `spend.telemetry: on` that run
-  also pushes changed sessions (5 s budget, at most every 10 min). Failures log (`claude --debug`) and keep the last
+  the repo's — distribute-what-we-use D5), at most once per 60 s; it scans for ≤ 6 s and saves (a first scan
+  finishes over several runs), and with `spend.telemetry: on` it also pushes changed sessions — only after a complete
+  scan, ≤ 5 s, at most every 10 min — so the hook's timeout is 15 s. Failures log (`claude --debug`) and keep the last
   row. `turn.start` (the hot path) never scans or pushes.
 - **D25 — `/app/finops/[projectSlug]`** through `requireProjectMembership` (one project, server-side; non-member →
   404). Epics from `getLatestArtifact(projectId,'roadmap')`; skills/models from that project's `$agent_usage` events
