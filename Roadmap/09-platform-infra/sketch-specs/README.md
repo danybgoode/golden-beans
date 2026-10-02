@@ -12,6 +12,9 @@ stories_total: 5   # 6 groomed; S2.3 moved out at the lock (C5) — the sum of e
 build_order: 52  # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 24.44
+actual_mtok: 75.4
+actual_basis: "backfill · this machine · 2026-10-02 · 1 session · prices 2026-10-02"
 ---
 
 # ✅ Epic: Sketch specs — a surface spec renders the grey wireframe and becomes the state contract

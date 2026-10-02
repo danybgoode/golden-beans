@@ -9,6 +9,9 @@ type: feature
 phase: Shipped
 sprints_total: 3
 stories_total: 16
+actual_usd: 207.81
+actual_mtok: 317
+actual_basis: "backfill · this machine · 2026-10-02 · 1 session · prices 2026-10-02"
 ---
 
 # Epic: Golden Frijoles CLI v1 — the write surface an agent can actually drive
