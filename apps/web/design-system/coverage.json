@@ -1,16 +1,17 @@
 {
   "_": "GENERATED — do not hand-edit. Run: node scripts/design-coverage.mjs",
-  "routes": 30,
-  "liveRoutesAtSprint1": 33,
-  "hasReferenceState": 29,
-  "rendersFromDesignSystem": 29,
+  "routes": 31,
+  "liveRoutesAtSprint1": 34,
+  "hasReferenceState": 30,
+  "rendersFromDesignSystem": 30,
   "complete": 23,
   "matchesApprovedState": 23,
   "measurable": 23,
   "coveredElsewhere": [
     "/app/flags/[projectSlug]/[flagKey]",
     "/app/funnel/[projectSlug]/[featureKey]",
-    "/hub/[projectSlug]/epic/[epicSlug]"
+    "/hub/[projectSlug]/epic/[epicSlug]",
+    "/hub/w/[workspaceId]/board"
   ],
   "covered": [
     "/app",

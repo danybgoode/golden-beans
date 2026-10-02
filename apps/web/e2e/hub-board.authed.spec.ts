@@ -2,6 +2,7 @@
 import './helpers/css-module-shim'
 
 import { test, expect } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement } from 'react'
@@ -101,4 +102,87 @@ test('the empty board matches the approved hub-board-empty state', async ({ page
   const built = await page.evaluate(extractSignature, signatureArgs('product'))
   const differences = diffSignature(CONTRACT.states['hub-board-empty'], built)
   expect(differences, differences.join('\n')).toEqual([])
+})
+
+// ── board-sinks-and-scrumban · Sprint 4, Story 4.2 — one board across a workspace (tenancy) ───────────────────────
+
+function serviceDb() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set to run this spec')
+  return createClient(url, key, { auth: { persistSession: false } })
+}
+
+/** The fixture tenant's workspace — read with the service role, the way the spec knows it; the PAGE never sees this. */
+async function fixtureWorkspaceId(): Promise<string> {
+  const { data, error } = await serviceDb()
+    .from('projects')
+    .select('workspace_id')
+    .eq('slug', slug())
+    .single()
+  if (error || !data?.workspace_id)
+    throw new Error(`could not read the fixture's workspace: ${error?.message}`)
+  return data.workspace_id as string
+}
+
+test('the workspace board matches the approved hub-workspace-board state and shows the viewer’s projects', async ({
+  page,
+}) => {
+  const ws = await fixtureWorkspaceId()
+  await page.goto(`/hub/w/${ws}/board`)
+  const built = await page.evaluate(extractSignature, signatureArgs('product'))
+  const differences = diffSignature(CONTRACT.states['hub-workspace-board'], built)
+  expect(differences, differences.join('\n')).toEqual([])
+  // Every card names its project and opens on THAT project's board.
+  const first = page.locator('.ds-board-card').first()
+  await expect(first).toContainText(slug())
+  await expect(first).toHaveAttribute('href', new RegExp(`^/hub/${slug()}/board\\?card=`))
+  // The project filter is the viewer's projects, and it carries in the URL.
+  await page.getByRole('link', { name: slug(), exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/hub/w/${ws}/board\\?project=${slug()}$`))
+})
+
+test('tenancy: another workspace, a malformed id, and a project from another workspace are all 404 (S4.2)', async ({
+  page,
+}) => {
+  const db = serviceDb()
+  // A workspace that exists and that the viewer does NOT belong to, holding a project that also exists.
+  const { data: other, error } = await db
+    .from('workspaces')
+    .insert({ name: 'not yours' })
+    .select('id')
+    .single()
+  if (error || !other) throw new Error(`could not create a foreign workspace: ${error?.message}`)
+  const foreignSlug = `foreign-${Date.now()}`
+  const { data: foreign, error: pErr } = await db
+    .from('projects')
+    .insert({ workspace_id: other.id, slug: foreignSlug })
+    .select('id')
+    .single()
+  if (pErr || !foreign) throw new Error(`could not create a foreign project: ${pErr?.message}`)
+  try {
+    for (const url of [
+      `/hub/w/${other.id}/board`,
+      '/hub/w/not-a-uuid/board',
+      `/hub/w/${await fixtureWorkspaceId()}/board?project=${foreignSlug}`,
+    ]) {
+      const response = await page.goto(url)
+      expect(response?.status(), url).toBe(404)
+      await expect(page.locator('body')).not.toContainText(foreignSlug)
+    }
+  } finally {
+    // Leave nothing behind: the fixture teardown deletes ITS workspace, and a stray project would block it.
+    await db.from('projects').delete().eq('id', foreign.id)
+    await db.from('workspaces').delete().eq('id', other.id)
+  }
+})
+
+test('signed out, a workspace board sends you to sign in — a workspace is never public', async ({
+  browser,
+}) => {
+  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+  const page = await anonymous.newPage()
+  await page.goto(`/hub/w/${await fixtureWorkspaceId()}/board`)
+  await expect(page).toHaveURL(/\/login/)
+  await anonymous.close()
 })

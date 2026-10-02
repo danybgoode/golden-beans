@@ -180,8 +180,9 @@ test('the denominator moves exactly as the D13 ledger says', () => {
   // ⚠️ **+1 once more — board-sinks-and-scrumban Sprint 2, Story 2.2: `/hub/[projectSlug]/board`.** The fourth hub tab.
   // Unlike the two above it lands WITH an approved state — `hub-board`, the first approved SURFACE (D23) — so it moves
   // the denominator AND the covered count together.
-  assert.equal(beforeSprint4.length, 33, 'every row is live before Story 4.5 retires three')
-  assert.equal(atClose.length, 30, 'after Story 4.5: 33 rows minus the three retired')
+  // ⚠️ **+1 in S4.2 — `/hub/w/[workspaceId]/board`**, the workspace board, also landing with its approved surface.
+  assert.equal(beforeSprint4.length, 34, 'every row is live before Story 4.5 retires three')
+  assert.equal(atClose.length, 31, 'after Story 4.5: 34 rows minus the three retired')
 
   // ...and the row that does not exist yet is the one Daniel approved as a designed empty state.
   const scheduled = ROUTE_MANIFEST.find((row) => row.route === '/app/scheduled/[projectSlug]')
@@ -203,7 +204,7 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   const now = coverage(1)
   // 32 since golden-frijoles-cli added Setup › CLI access, 33 since board-sinks-and-scrumban added the Board tab — see
   // the ledger test above.
-  assert.equal(now.total, 33)
+  assert.equal(now.total, 34)
   // ⚠️ **`>=`, not `>` — and the change is the whole point of Sprint 6.** This line asserted
   // `hasReferenceState > complete` under the message "reference states exist ahead of the work",
   // which was true for five sprints and is FALSE at epic close by design: the work caught up. The
@@ -246,11 +247,11 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // ⚠️ **30 and 29 since board-sinks-and-scrumban S2.2** — the Board tab lands covered (its approved surface,
   // `hub-board`), so both numbers move by one and `outstanding` stays exactly the CLI route.
   const atClose = coverage(6)
-  assert.equal(atClose.total, 30, 'the epic-close denominator is not the 30 the two ledgers compute')
+  assert.equal(atClose.total, 31, 'the epic-close denominator is not the 31 the two ledgers compute')
   assert.equal(
     atClose.complete,
-    29,
-    `29 of 30 routes are covered — outstanding: ${atClose.outstanding.join(', ')}`
+    30,
+    `30 of 31 routes are covered — outstanding: ${atClose.outstanding.join(', ')}`
   )
   assert.deepEqual(
     atClose.outstanding,
@@ -354,8 +355,8 @@ test('every row names a seam, and the seam matches the frame', () => {
   )
   assert.equal(
     bySeam('frame'),
-    10,
-    'seam B: five hub routes (the Board tab since board-sinks-and-scrumban) and five doors'
+    11,
+    'seam B: six hub routes (the Board tab and the workspace board since board-sinks-and-scrumban) and five doors'
   )
 })
 

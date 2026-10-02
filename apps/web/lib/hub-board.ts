@@ -31,6 +31,8 @@ export type BoardFilters = { type: BoardType | null; highRisk: boolean }
 export const SHIPPED_WINDOW_DAYS = 30
 
 export type BoardCard = {
+  /** The project a card belongs to — set on the workspace board (S4.2), where slugs from several projects meet. */
+  project: string | null
   slug: string
   name: string
   grain: 'Epic' | 'Seed'
@@ -81,9 +83,11 @@ export function parseBoardFilters(params: {
 /** The query string for a filter set — the chips link to it. Empty filters are the bare board. */
 export function boardQuery(filters: BoardFilters, extra: Record<string, string> = {}): string {
   const q = new URLSearchParams()
+  // `project` first when given (the workspace board's filter, S4.2), so a shared URL reads project → type → risk.
+  if (extra.project) q.set('project', extra.project)
   if (filters.type) q.set('type', filters.type)
   if (filters.highRisk) q.set('risk', 'high')
-  for (const [k, v] of Object.entries(extra)) q.set(k, v)
+  for (const [k, v] of Object.entries(extra)) if (k !== 'project') q.set(k, v)
   const s = q.toString()
   return s ? `?${s}` : ''
 }
@@ -96,6 +100,7 @@ export function toCard(row: RoadmapRow): BoardCard | null {
   const r = row as RoadmapRow & Record<string, unknown>
   const links = (r.links ?? {}) as Partial<BoardCard['links']>
   return {
+    project: typeof r.project === 'string' ? r.project : null,
     slug: row.slug,
     name: row.name,
     grain: row.grain,

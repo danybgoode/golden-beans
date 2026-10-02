@@ -2950,6 +2950,74 @@
   color: var(--crema);
 }
 
+/* ── The Roadmap tab by area (board-sinks-and-scrumban S4.1) — areas × Shipped · Now · Next · Later ─────────────
+   The header is the list card's own `.ds-listhead` (flex) and each area row a grid with the SAME ratios, so the five
+   columns line up. Cells hold several names, so these rows grow with their content — they are not `.ds-row`, whose
+   fixed 71px is a gated number for single-line lists. Narrow screens scroll inside the card, never the page (Do-not #6). */
+.ds .ds-areas-col {
+  flex: 1.4 1 0;
+  min-width: 0;
+}
+.ds .ds-areas-col:first-child {
+  flex: 1 1 0;
+}
+.ds .ds-areas-col:nth-child(2) {
+  flex: 0.8 1 0;
+}
+.ds .ds-areas-row {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 1.4fr 1.4fr 1.4fr;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  align-items: start;
+  font-size: 12.5px;
+}
+.ds .ds-areas-row:last-child {
+  border-bottom: none;
+}
+.ds .ds-areas-name {
+  font-weight: 600;
+  color: var(--crema);
+}
+.ds .ds-areas-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ds .ds-areas-item {
+  color: var(--crema);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.ds .ds-areas-item:hover,
+.ds .ds-areas-item:focus-visible {
+  color: var(--gold);
+}
+.ds .ds-areas-stage,
+.ds .ds-areas-empty {
+  color: var(--dim);
+}
+.ds .ds-areas-count {
+  color: var(--dim-2);
+  font-weight: 600;
+}
+/* A phone gets a STACK, not a sideways scroll: each area row lists its four horizons one under another, each labelled.
+   The header row is the house's: under 900px every `.ds-listhead` is clipped to a 1px box (hidden from the eye, kept for
+   the screen reader — see "Phone: the fixed columns stack"). An earlier `min-width` here overrode that 1px width, and
+   the absolutely-positioned header then escaped the card's clipping and widened the page to 744px at 390. */
+@media (max-width: 900px) {
+  .ds .ds-areas-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .ds .ds-areas-row > [data-horizon]::before {
+    content: attr(data-horizon) ' · ';
+    color: var(--dim-2);
+    font-weight: 600;
+  }
+}
+
 /* The tile with no reading. Set in prose at body size rather than at 28px mono, because a sentence
    rendered as a headline figure reads as a figure — and this one is the opposite of a figure. The
    sentence itself comes from `lib/stat-figures.ts`, which already owns the four North Star states. */

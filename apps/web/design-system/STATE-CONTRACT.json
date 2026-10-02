@@ -1036,6 +1036,58 @@
       "annotations": 0,
       "unknown": [],
       "source": "spec"
+    },
+    "hub-roadmap-areas": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "area",
+            "shipped",
+            "now",
+            "next",
+            "later"
+          ]
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": [],
+      "source": "spec"
+    },
+    "hub-workspace-board": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "open a project's board"
+        },
+        {
+          "kind": "toolbar"
+        },
+        {
+          "kind": "tiles",
+          "count": 6
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": [],
+      "source": "spec"
     }
   }
 }

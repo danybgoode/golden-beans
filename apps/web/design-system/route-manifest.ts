@@ -741,7 +741,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     frame: 'hub',
     seam: 'frame',
     surface: null,
-    referenceState: 'hub-roadmap',
+    // board-sinks-and-scrumban S4.1 — the Roadmap tab is areas × Shipped · Now · Next · Later now, held to the approved
+    // SURFACE `hub-roadmap-areas` (D23). The prototype's `hub-roadmap` (the journey track) stays approved: the share page
+    // draws its own journey.
+    referenceState: 'hub-roadmap-areas',
     rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
@@ -771,6 +774,21 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'hub-board',
+    rendersFromDesignSystem: true,
+    landsIn: 6,
+    retiresIn: null,
+    deferred: null,
+  },
+  // board-sinks-and-scrumban S4.2 — one board across a workspace, keyed by workspace id (lock C8). A hub view with no
+  // single project, held to the approved surface `hub-workspace-board` (D23); `e2e/hub-board.authed.spec.ts` measures it.
+  {
+    route: '/hub/w/[workspaceId]/board',
+    page: 'hub/w/[workspaceId]/board/page.tsx',
+    label: 'Workspace board',
+    frame: 'hub',
+    seam: 'frame',
+    surface: null,
+    referenceState: 'hub-workspace-board',
     rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
