@@ -2872,6 +2872,84 @@
   color: var(--gold-hot);
 }
 
+/* ── The board (board-sinks-and-scrumban S2) — six stage columns as one tile row ──────────────────────
+   The approved `hub-board` state draws the six stages as `tiles count 6`, so each column IS a `.ds-tile`: its label
+   is the stage word, its value the count, and its cards sit under them. Six across on a wide screen, three then one
+   as it narrows — the page never scrolls sideways (Do-not #6). */
+.ds .ds-tiles--board {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .ds .ds-tiles--board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .ds .ds-tiles--board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ds .ds-board-col .ds-tile-value {
+  font-size: 22px;
+}
+.ds .ds-board-cards {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* A card is a link to its own view (`?card=<slug>`). Stage is never colour alone: the column says it in words. */
+.ds .ds-board-card {
+  display: block;
+  padding: 9px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--crema);
+  text-decoration: none;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.ds .ds-board-card:hover,
+.ds .ds-board-card:focus-visible {
+  border-color: var(--gold);
+}
+.ds .ds-board-card-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--dim);
+}
+/* WIP advice under a column's count: words first, the warm tone only as reinforcement (D9 — advice, never a gate). */
+.ds .ds-board-wip {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--dim-2);
+}
+.ds .ds-board-wip[data-over='true'] {
+  color: var(--gold-hot);
+}
+/* A filter chip: a link that carries the filter in the URL (S2.4), so a filtered board is a shareable link. The
+   selected chip says so to a screen reader and to the eye through ONE attribute. */
+.ds .ds-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--dim);
+  font-size: 12px;
+  text-decoration: none;
+}
+.ds .ds-chip[aria-current='true'] {
+  border-color: var(--gold);
+  color: var(--crema);
+}
+
 /* The tile with no reading. Set in prose at body size rather than at 28px mono, because a sentence
    rendered as a headline figure reads as a figure — and this one is the opposite of a figure. The
    sentence itself comes from `lib/stat-figures.ts`, which already owns the four North Star states. */

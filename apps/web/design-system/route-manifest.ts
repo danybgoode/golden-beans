@@ -760,6 +760,22 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     retiresIn: null,
     deferred: null,
   },
+  // board-sinks-and-scrumban S2.2 — the fourth hub tab (DD2 holds: a hub tab, not a console section). Its state is an
+  // APPROVED SURFACE (`surfaces/hub-board.surface`, D23), the first route held to one. `hub-board-card` and
+  // `hub-board-empty` are the same route's other states; `e2e/hub-board.authed.spec.ts` measures those two.
+  {
+    route: '/hub/[projectSlug]/board',
+    page: 'hub/[projectSlug]/board/page.tsx',
+    label: 'Board',
+    frame: 'hub',
+    seam: 'frame',
+    surface: null,
+    referenceState: 'hub-board',
+    rendersFromDesignSystem: true,
+    landsIn: 6,
+    retiresIn: null,
+    deferred: null,
+  },
   {
     route: '/hub/[projectSlug]/horizon',
     page: 'hub/[projectSlug]/horizon/page.tsx',

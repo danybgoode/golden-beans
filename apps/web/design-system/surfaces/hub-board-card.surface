@@ -1,0 +1,8 @@
+state: hub-board-card
+route: /hub/golden-beans-demo/board?card=golden-frijoles-plugin
+- head "One plugin, one install" action "Copy kickoff prompt"
+- answer "So that a stranger installs Golden Frijoles once and every skill runs in their own repo."
+- summary "Stage | Area | Build order | Type | Risk | Appetite | Bet" count 7
+- steps "Sprints"
+- list "Docs" columns "Doc | Link"
+- list "Commands for this stage" columns "Command | Copy"

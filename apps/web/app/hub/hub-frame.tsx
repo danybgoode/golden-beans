@@ -19,16 +19,20 @@ import { Frame } from '@/design-system/Frame'
 // i.e. `ProductShell` itself, whose `section` prop is a CLOSED union of the four console sections
 // (`lib/console-shell.ts`). Adding a fifth member to that union to render a page that is
 // deliberately not a section would be re-deciding DD2 in a type, in the sprint that also deletes
-// `.product-shell`. The bar carries the mark, the project it is showing, the three hub tabs and the
+// `.product-shell`. The bar carries the mark, the project it is showing, the hub tabs and the
 // way back to the console — which is every destination the hub screens actually offer.
 //
 // Written down rather than left to be noticed: the console's switcher and ⌘K are not reachable from
 // a hub page, and getting them there is a follow-up, not an oversight.
 
-export type HubTab = 'roadmap' | 'horizon' | 'report'
+// board-sinks-and-scrumban S2.2 — `board` is a fourth HUB tab, not a console section: DD2 above holds unchanged (the
+// hub stays the console's peer, and `ProductShell`'s closed union of four sections is not touched). Order is the
+// approved `hub-board` picture's: Roadmap · Board · Horizon · Report.
+export type HubTab = 'roadmap' | 'board' | 'horizon' | 'report'
 
 const TABS: readonly { id: HubTab; label: string; path: (slug: string) => string }[] = [
   { id: 'roadmap', label: 'Roadmap', path: (slug) => `/hub/${slug}` },
+  { id: 'board', label: 'Board', path: (slug) => `/hub/${slug}/board` },
   { id: 'horizon', label: 'Horizon', path: (slug) => `/hub/${slug}/horizon` },
   { id: 'report', label: 'Report', path: (slug) => `/hub/${slug}/report` },
 ]

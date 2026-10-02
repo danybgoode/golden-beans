@@ -1,0 +1,7 @@
+state: hub-board
+route: /hub/golden-beans-demo/board
+- head "Board"
+- answer "2 initiatives in QA and 1 building. Next to pull: CMS integration (build order 18)."
+- toolbar "All types | Feature | Spike | Bug | Chore | High risk"
+- tiles "To groom | Grooming | Ready to build | Building | QA | Shipped" count 6
+- note "Generated from each initiative's frontmatter, git and GitHub. A view, never ticked by hand."

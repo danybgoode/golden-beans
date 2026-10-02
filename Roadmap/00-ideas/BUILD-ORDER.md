@@ -10,7 +10,7 @@
 > This committed file reads the docs alone, so **Building and QA are not here** — they are facts git
 > and GitHub hold. For the live board run `node scripts/build-order.mjs --live`, or open the Hub board.
 
-## To groom (8)
+## To groom (9)
 
 _seeds with no pitch yet._
 
@@ -21,6 +21,7 @@ _seeds with no pitch yet._
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 - [The CLI body-order guard misses req.clone().json()](seeds/cli-body-order-guard-clone.md) — 09 Platform Infra · seed · Chore · risk: Low · appetite S · _docs: status raw_
+- [The docs name a kickoff-generator path that does not exist in an installed repo](seeds/kickoff-generator-path.md) — 09 Platform Infra · seed · Bug · risk: Low · appetite S · _docs: status raw_
 - [This repo lints its template scripts the way its consumers do](seeds/foundation-lint-gate.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 
 ## Grooming (2)
@@ -37,7 +38,7 @@ _scaffolded (or a fixed-scope seed), in build order — pull from the top._
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../01-growth-engine/scenarios-pm-operable/README.md) — #16 · 01 Growth Engine · 10/10 stories · risk: High · appetite M · _docs: status in-progress_
 - [CMS-neutral experiment integration + Payload go/no-go](../01-growth-engine/cms-integration-spike/README.md) — #18 · 01 Growth Engine · 0/6 stories · risk: Low · _docs: status scaffolded_
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../09-platform-infra/golden-frijoles-plugin/README.md) — #34 · 09 Platform Infra · 14/23 stories · risk: High · appetite L · _docs: status in-progress_
-- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../02-commercial/board-sinks-and-scrumban/README.md) — #39 · 02 Commercial · 5/15 stories · risk: High · appetite L · _docs: status in-progress_
+- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../02-commercial/board-sinks-and-scrumban/README.md) — #39 · 02 Commercial · 9/15 stories · risk: High · appetite L · _docs: status in-progress_
 - [FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine](../09-platform-infra/finops/README.md) — #40 · 09 Platform Infra · 0/13 stories · risk: High · appetite M · _docs: status scaffolded_
 - [Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop](../02-commercial/portfolio-view/README.md) — #41 · 02 Commercial · 0/7 stories · risk: High · appetite M · _docs: status scaffolded_
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../09-platform-infra/public-monorepo/README.md) — #45 · 09 Platform Infra · 13/15 stories · risk: High · appetite M · _docs: status in-progress_
@@ -103,4 +104,4 @@ _merged, deployed and closed._
 - [The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics](../01-growth-engine/flags-console-parity/README.md) — 01 Growth Engine · 11/11 stories · risk: High · appetite M · _docs: status shipped_
 
 ---
-_64 initiatives on the board. Regenerate with `node scripts/build-order.mjs`._
+_65 initiatives on the board. Regenerate with `node scripts/build-order.mjs`._

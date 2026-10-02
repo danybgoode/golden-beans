@@ -1,0 +1,4 @@
+state: hub-board-empty
+route: /hub/golden-beans-demo/board
+- head "Board"
+- empty "Nothing on the board yet. Push your roadmap with: npx -y @golden-frijoles/kit roadmap-extract --sink hub"
