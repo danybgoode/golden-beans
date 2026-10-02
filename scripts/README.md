@@ -46,8 +46,9 @@ run the same bytes.
 `lib/cross-agent-cli.mjs` is this project's own (see below) but gained the template's `runDevin` export,
 which the shared prose writer needs.
 
-`roadmap-extract.mjs` **delegates** to this project's `roadmap-to-notion.mjs --extract` rather than forking
-the extractor — that script drives the live Notion board.
+`roadmap-extract.mjs` is the template's, byte for byte (board-sinks-and-scrumban D15): it used to delegate to
+this project's `roadmap-to-notion.mjs --extract`, a fork that had drifted. Now the Notion sync imports `buildRows()`
+from it, like every other sink.
 
 ### `preflight` fails in THIS repo, and that is the right answer
 

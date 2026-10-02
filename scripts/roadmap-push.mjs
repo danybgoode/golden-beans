@@ -89,7 +89,8 @@ export function buildBoard({ wip, repo }) {
  * output (LEARNINGS: treat empty as failure).
  */
 export function readExtract(run = spawnSync) {
-  const r = run('node', [resolve(__dirname, 'roadmap-extract.mjs'), '--live'], {
+  // --require-live: a failed git/GitHub gather turns the run red rather than publishing a docs-only board.
+  const r = run('node', [resolve(__dirname, 'roadmap-extract.mjs'), '--live', '--require-live'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,

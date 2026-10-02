@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // pod-report · Sprint 1, Story 1.1 — the roadmap-push contract.
 //
-// The payload is the output of `node scripts/roadmap-to-notion.mjs --extract`, which is the epic's
+// The payload is the output of `node scripts/roadmap-extract.mjs --live` (board-sinks-and-scrumban D15), the epic's
 // stated contract ("that JSON is the contract, version field validated on ingest"). The extract
 // emits a BARE ARRAY of rows with no envelope and no version of its own, so this module defines the
 // envelope the rail actually ships: a schema version, provenance, and the rows.

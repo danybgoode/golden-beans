@@ -106,7 +106,11 @@ test('readExtract runs the ONE extractor with live facts (D15, D14)', () => {
     return { status: 0, stdout: '[{"slug":"a"}]', stderr: '' };
   });
   assert.match(argv[1], /roadmap-extract\.mjs$/);
-  assert.equal(argv[2], '--live');
+  assert.deepEqual(
+    argv.slice(2),
+    ['--live', '--require-live'],
+    'a failed gather must fail, not publish docs-only'
+  );
 });
 
 test('repoBlobBase maps the origin remote to the https blob base doc links resolve against', () => {
