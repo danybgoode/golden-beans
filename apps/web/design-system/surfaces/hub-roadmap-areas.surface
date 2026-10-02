@@ -1,0 +1,6 @@
+state: hub-roadmap-areas
+route: /hub/golden-beans-demo
+- head "Roadmap"
+- answer "42 of 46 epics have shipped. Now: One plugin (Building), Public monorepo (QA)."
+- list "Areas" columns "Area | Shipped | Now | Next | Later"
+- note "Now is Building and QA. Next is Ready to build. Later is To groom and Grooming. Each row runs in build order."

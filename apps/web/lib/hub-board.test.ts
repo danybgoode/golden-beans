@@ -183,3 +183,18 @@ test('a payload pushed before the board has no stages, so the page shows its emp
   assert.equal(hasStages([row({ name: 'Old', slug: 'old' })]), false)
   assert.equal(hasStages(ITEMS), true)
 })
+
+test('a card names its project only from the caller, never from a field of the push (S4.2 review)', () => {
+  const row = {
+    grain: 'Epic',
+    slug: 'x',
+    name: 'X',
+    status: 'Open',
+    stage: 'Building',
+    project: 'spoofed',
+  } as never
+  const own = buildBoard([row])
+  assert.equal(own.columns.flatMap((c) => c.cards)[0].project, null)
+  const ws = buildBoard([row], { projectOf: () => 'real' })
+  assert.equal(ws.columns.flatMap((c) => c.cards)[0].project, 'real')
+})

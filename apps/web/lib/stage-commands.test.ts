@@ -9,6 +9,7 @@ import { stageCommands } from './stage-commands.ts'
 // board-sinks-and-scrumban · Sprint 2, Story 2.3 — one map keyed by stage, in the SESSION-KICKOFFS verbs.
 
 const card = (over: Partial<BoardCard>): BoardCard => ({
+  project: null,
   slug: 'demo',
   name: 'Demo epic',
   grain: 'Epic',

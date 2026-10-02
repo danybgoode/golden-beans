@@ -1,0 +1,6 @@
+state: hub-workspace-board
+route: /hub/w/9e58bc7d-a0a8-43c9-89a2-c544cab854f2/board
+- head "Board" action "Open a project's board"
+- toolbar "All projects | All types | High risk"
+- tiles "To groom | Grooming | Ready to build | Building | QA | Shipped" count 6
+- note "Every project in this workspace that you belong to. Filter by project."

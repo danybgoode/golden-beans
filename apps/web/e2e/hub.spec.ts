@@ -110,31 +110,50 @@ async function pushRoadmap(request: APIRequestContext, items: unknown[]) {
   return res.json()
 }
 
-test('the journey view renders the latest artifact’s epics with a freshness stamp', async ({ request }) => {
+test('the Roadmap tab shows areas × Shipped · Now · Next · Later, with a freshness stamp (S4.1)', async ({
+  request,
+}) => {
   const unique = `spec-epic-${Date.now()}`
   await pushRoadmap(request, [
-    epicRow({ slug: unique, name: `Journey spec ${unique}`, status: 'Shipped', build_order_num: 1 }),
-    epicRow({ slug: `${unique}-next`, name: 'Not shipped yet', status: 'Scaffolded', build_order_num: 2 }),
+    epicRow({
+      slug: unique,
+      name: `Shipped ${unique}`,
+      stage: 'Shipped',
+      build_order_num: 1,
+      area: '02 Commercial',
+    }),
+    epicRow({
+      slug: `${unique}-now`,
+      name: `Building ${unique}`,
+      stage: 'Building',
+      build_order_num: 2,
+      area: '02 Commercial',
+    }),
+    epicRow({
+      slug: `${unique}-next`,
+      name: `Next ${unique}`,
+      stage: 'Ready to build',
+      build_order_num: 3,
+      area: '09 Platform Infra',
+    }),
   ])
 
   const res = await request.get(`/hub/${DEMO_SLUG}`)
   expect(res.status()).toBe(200)
   const html = await res.text()
-
-  expect(html).toContain(`Journey spec ${unique}`)
-  expect(html).toContain('Not shipped yet')
-  // The freshness stamp is a required design element, not fine print (sprint-1.md).
-  //
-  // ⚠️ **It MOVED, and both halves of it are still asserted** — mockups-as-built Story 4.4. The
-  // approved `hub-roadmap` state is `head → answer → tiles → list → sectionlabel → list → note` and
-  // draws no provenance line; the stamp belongs to `hub-report`, which does. So the three facts it
-  // carried — when, from which merge, and how stale — are in the closing note, in words, which is
-  // where the approved design puts the provenance of this board. The `data-freshness-tone`
-  // attribute travels with them, so a stylesheet and a screen reader still get the cue.
-  expect(html).toMatch(/as of merge abc1234/)
+  // The five columns, in order — the approved `hub-roadmap-areas` list (D10).
+  const heads = [...html.matchAll(/class="ds-areas-col" role="columnheader">([^<]+)</g)].map((m) => m[1])
+  expect(heads).toEqual(['Area', 'Shipped', 'Now', 'Next', 'Later'])
+  expect(html).toContain('02 Commercial')
+  expect(html).toContain(`Shipped ${unique}`)
+  // The answer names what is Now, with its stage — the journey track's "you are here", where the question is asked.
+  expect(html).toContain(`Now: Building ${unique} (Building).`)
+  // Every name links to its card on the Board.
+  expect(html).toContain(`/board?card=${unique}-next`)
+  // The freshness stamp is a required design element, not fine print — in the closing note, with its tone.
+  expect(html).toMatch(/as of abc1234/)
   expect(html).toContain('data-freshness-tone="fresh"')
-  // "You are here" marks the first UNSHIPPED epic — what is being built next.
-  expect(html).toContain('you are here')
+  expect(html).not.toContain('ds-track')
 })
 
 test('an epic drill-down renders its sprints, and an unknown slug 404s', async ({ request }) => {
@@ -160,20 +179,32 @@ test('an epic drill-down renders its sprints, and an unknown slug 404s', async (
   expect(missing.status()).toBe(404)
 })
 
-test('the journey view never marks an unshipped epic as shipped', async ({ request }) => {
-  // The poster rule asserted on RENDERED output, not just on the derivation: a near-miss status
-  // ("Shipping") must not earn a ✅.
+test('the roadmap never computes a stage: a stage-less push is the empty state, a pushed stage is where a row lands', async ({
+  request,
+}) => {
+  // board-sinks-and-scrumban S4.1 (lock D19) — what replaced "the journey never marks an unshipped epic shipped": the
+  // Hub no longer reads `status` at all. A push from before stages gets the empty state (push again), never a guess…
   const unique = `spec-claim-${Date.now()}`
   await pushRoadmap(request, [
     epicRow({ slug: unique, name: `Nearly ${unique}`, status: 'Shipping', build_order_num: 1 }),
   ])
+  const empty = await (await request.get(`/hub/${DEMO_SLUG}`)).text()
+  expect(empty).toContain('pushed before stages existed')
+  expect(empty).not.toContain(`Nearly ${unique}`)
 
+  // …and a row lands in its PUSHED stage's horizon, whatever its status says ("Shipping" earns no Shipped cell).
+  await pushRoadmap(request, [
+    epicRow({ slug: unique, name: `Nearly ${unique}`, status: 'Shipping', build_order_num: 1, stage: 'QA' }),
+  ])
   const html = await (await request.get(`/hub/${DEMO_SLUG}`)).text()
-  const idx = html.indexOf(`Nearly ${unique}`)
+  // Anchor on the rendered LINK: the answer line names it too ("Now: …"), and so does Next's serialized page data.
+  const idx = html.search(new RegExp(`<a class="ds-areas-item"[^>]*>Nearly ${unique}`))
   expect(idx).toBeGreaterThan(-1)
-  // Inspect only this epic's own rendered node, so a ✅ belonging to another epic on the page cannot
-  // make the assertion pass or fail by accident.
-  expect(html.slice(idx, idx + 400)).not.toContain('✅')
+  const cell = html
+    .slice(0, idx)
+    .match(/data-horizon="([^"]+)"/g)
+    ?.at(-1)
+  expect(cell).toBe('data-horizon="Now"')
 })
 
 test('a tenant with no pushed artifact gets the deliberate empty state, not a broken page', async ({

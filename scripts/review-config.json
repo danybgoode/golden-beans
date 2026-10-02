@@ -18,6 +18,10 @@
     "scripts/review-config.json",
     "scripts/cross-review.mjs",
     "scripts/lib/review-guard.mjs",
-    "skills/plugins/golden-frijoles/hooks/**"
+    "skills/plugins/golden-frijoles/hooks/**",
+    "apps/web/lib/workspace*",
+    "apps/web/lib/membership*",
+    "apps/web/lib/dashboard-auth*",
+    "apps/web/app/hub/w/**"
   ]
 }

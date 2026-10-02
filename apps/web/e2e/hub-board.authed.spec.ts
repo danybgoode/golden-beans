@@ -2,6 +2,8 @@
 import './helpers/css-module-shim'
 
 import { test, expect } from '@playwright/test'
+import { ROADMAP_SCHEMA_VERSION } from '@/lib/roadmap-artifact-schema'
+import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement } from 'react'
@@ -101,4 +103,141 @@ test('the empty board matches the approved hub-board-empty state', async ({ page
   const built = await page.evaluate(extractSignature, signatureArgs('product'))
   const differences = diffSignature(CONTRACT.states['hub-board-empty'], built)
   expect(differences, differences.join('\n')).toEqual([])
+})
+
+// ── board-sinks-and-scrumban · Sprint 4, Story 4.2 — one board across a workspace (tenancy) ───────────────────────
+
+function serviceDb() {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set to run this spec')
+  return createClient(url, key, { auth: { persistSession: false } })
+}
+
+/** The fixture tenant's workspace — read with the service role, the way the spec knows it; the PAGE never sees this. */
+async function fixtureWorkspaceId(): Promise<string> {
+  const { data, error } = await serviceDb()
+    .from('projects')
+    .select('workspace_id')
+    .eq('slug', slug())
+    .single()
+  if (error || !data?.workspace_id)
+    throw new Error(`could not read the fixture's workspace: ${error?.message}`)
+  return data.workspace_id as string
+}
+
+test('the workspace board matches the approved hub-workspace-board state and shows the viewer’s projects', async ({
+  page,
+}) => {
+  const ws = await fixtureWorkspaceId()
+  await page.goto(`/hub/w/${ws}/board`)
+  const built = await page.evaluate(extractSignature, signatureArgs('product'))
+  const differences = diffSignature(CONTRACT.states['hub-workspace-board'], built)
+  expect(differences, differences.join('\n')).toEqual([])
+  // Every card names its project and opens on THAT project's board.
+  const first = page.locator('.ds-board-card').first()
+  await expect(first).toContainText(slug())
+  await expect(first).toHaveAttribute('href', new RegExp(`^/hub/${slug()}/board\\?card=`))
+  // The project filter is the viewer's projects, and it carries in the URL.
+  await page.getByRole('link', { name: slug(), exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/hub/w/${ws}/board\\?project=${slug()}$`))
+})
+
+test('tenancy: another workspace, a malformed id, and a project from another workspace are all 404 (S4.2)', async ({
+  page,
+}) => {
+  const db = serviceDb()
+  // A workspace that exists and that the viewer does NOT belong to, holding a project that also exists.
+  const { data: other, error } = await db
+    .from('workspaces')
+    .insert({ name: 'not yours' })
+    .select('id')
+    .single()
+  if (error || !other) throw new Error(`could not create a foreign workspace: ${error?.message}`)
+  const foreignSlug = `foreign-${Date.now()}`
+  const { data: foreign, error: pErr } = await db
+    .from('projects')
+    .insert({ workspace_id: other.id, slug: foreignSlug })
+    .select('id')
+    .single()
+  if (pErr || !foreign) throw new Error(`could not create a foreign project: ${pErr?.message}`)
+  try {
+    for (const url of [
+      `/hub/w/${other.id}/board`,
+      '/hub/w/not-a-uuid/board',
+      `/hub/w/${await fixtureWorkspaceId()}/board?project=${foreignSlug}`,
+    ]) {
+      const response = await page.goto(url)
+      expect(response?.status(), url).toBe(404)
+      await expect(page.locator('body')).not.toContainText(foreignSlug)
+    }
+  } finally {
+    // Leave nothing behind: the fixture teardown deletes ITS workspace, and a stray project would block it.
+    const { error: dp } = await db.from('projects').delete().eq('id', foreign.id)
+    const { error: dw } = await db.from('workspaces').delete().eq('id', other.id)
+    if (dp || dw) throw new Error(`cleanup failed: ${dp?.message ?? ''} ${dw?.message ?? ''}`)
+  }
+})
+
+test('access model A: a project in the SAME workspace that the viewer is not a member of stays off the board (S4.2)', async ({
+  page,
+}) => {
+  // The boundary that matters most: the workspace is a boundary, not a grant. A sibling project in the viewer's own
+  // workspace, with a real pushed board, must not reach the page — not its chip, not its cards, not via `?project=`.
+  // Swap getWorkspaceProjects() for "every project in the workspace" and this goes red.
+  const db = serviceDb()
+  const ws = await fixtureWorkspaceId()
+  const siblingSlug = `sibling-${Date.now()}`
+  const secret = `Sibling secret initiative ${Date.now()}`
+  const { data: sibling, error } = await db
+    .from('projects')
+    .insert({ workspace_id: ws, slug: siblingSlug })
+    .select('id')
+    .single()
+  if (error || !sibling) throw new Error(`could not create a sibling project: ${error?.message}`)
+  try {
+    const { error: pushErr } = await db.rpc('push_report_artifact', {
+      p_project_id: sibling.id,
+      p_kind: 'roadmap',
+      p_schema_version: ROADMAP_SCHEMA_VERSION,
+      p_payload: {
+        items: [
+          {
+            name: secret,
+            slug: 'sibling-secret',
+            grain: 'Epic',
+            status: 'in-progress',
+            area: '02-commercial',
+            epic_slug: null,
+            stage: 'Building',
+          },
+        ],
+      },
+      p_generated_at: new Date().toISOString(),
+      p_source_commit: null,
+      p_source_ref: null,
+    })
+    if (pushErr) throw new Error(`could not push the sibling's board: ${pushErr.message}`)
+
+    await page.goto(`/hub/w/${ws}/board`)
+    await expect(page.locator('.ds-board-card').first()).toBeVisible()
+    await expect(page.locator('body')).not.toContainText(secret)
+    await expect(page.locator('body')).not.toContainText(siblingSlug)
+    const response = await page.goto(`/hub/w/${ws}/board?project=${siblingSlug}`)
+    expect(response?.status()).toBe(404)
+  } finally {
+    // Deleting the project removes its artifact (the artifact's own trigger permits it once the project is gone).
+    const { error: dp } = await db.from('projects').delete().eq('id', sibling.id)
+    if (dp) throw new Error(`cleanup failed: ${dp.message}`)
+  }
+})
+
+test('signed out, a workspace board sends you to sign in — a workspace is never public', async ({
+  browser,
+}) => {
+  const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+  const page = await anonymous.newPage()
+  await page.goto(`/hub/w/${await fixtureWorkspaceId()}/board`)
+  await expect(page).toHaveURL(/\/login/)
+  await anonymous.close()
 })

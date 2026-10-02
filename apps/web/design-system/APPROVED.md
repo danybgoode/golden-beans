@@ -98,6 +98,8 @@ asked the architect to record the lines on 2026-10-02.
 | hub-board | `surfaces/hub-board.surface` | `ab51f60a6cefbbd0` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
 | hub-board-card | `surfaces/hub-board-card.surface` | `06d5e165f22f2be7` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
 | hub-board-empty | `surfaces/hub-board-empty.surface` | `8c2f5f0b8892e590` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
+| hub-roadmap-areas | `surfaces/hub-roadmap-areas.surface` | `4f2a3fc2d45bc950` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
+| hub-workspace-board | `surfaces/hub-workspace-board.surface` | `816bc514e4a22105` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
 
 ## Design decisions settled at approval — the lock does NOT reopen these
 

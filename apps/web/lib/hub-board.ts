@@ -31,6 +31,8 @@ export type BoardFilters = { type: BoardType | null; highRisk: boolean }
 export const SHIPPED_WINDOW_DAYS = 30
 
 export type BoardCard = {
+  /** The project a card belongs to — set on the workspace board (S4.2), where slugs from several projects meet. */
+  project: string | null
   slug: string
   name: string
   grain: 'Epic' | 'Seed'
@@ -81,9 +83,11 @@ export function parseBoardFilters(params: {
 /** The query string for a filter set — the chips link to it. Empty filters are the bare board. */
 export function boardQuery(filters: BoardFilters, extra: Record<string, string> = {}): string {
   const q = new URLSearchParams()
+  // `project` first when given (the workspace board's filter, S4.2), so a shared URL reads project → type → risk.
+  if (extra.project) q.set('project', extra.project)
   if (filters.type) q.set('type', filters.type)
   if (filters.highRisk) q.set('risk', 'high')
-  for (const [k, v] of Object.entries(extra)) q.set(k, v)
+  for (const [k, v] of Object.entries(extra)) if (k !== 'project') q.set(k, v)
   const s = q.toString()
   return s ? `?${s}` : ''
 }
@@ -91,11 +95,13 @@ export function boardQuery(filters: BoardFilters, extra: Record<string, string> 
 const isStage = (v: unknown): v is RoadmapStage => (BOARD_STAGES as readonly unknown[]).includes(v)
 
 /** One row → a card, or null when the row is not an initiative on the board (a sprint, or no stage: archived). */
-export function toCard(row: RoadmapRow): BoardCard | null {
+/** `project` is the CALLER's (the workspace board's server-side slug) — never read from the pushed row. */
+export function toCard(row: RoadmapRow, project: string | null = null): BoardCard | null {
   if (row.grain === 'Sprint' || !isStage(row.stage)) return null
   const r = row as RoadmapRow & Record<string, unknown>
   const links = (r.links ?? {}) as Partial<BoardCard['links']>
   return {
+    project,
     slug: row.slug,
     name: row.name,
     grain: row.grain,
@@ -153,16 +159,19 @@ export function buildBoard(
     filters = { type: null, highRisk: false },
     wip = null,
     now = new Date(),
+    projectOf = () => null,
   }: {
     filters?: BoardFilters
     wip?: { Building?: number | null; QA?: number | null } | null
+    /** The workspace board's project for a row (by identity, set server-side); null on a project's own board. */
+    projectOf?: (row: RoadmapRow) => string | null
     now?: Date
   } = {}
 ): Board {
   const cutoff = new Date(now.getTime() - SHIPPED_WINDOW_DAYS * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10)
-  const all = items.map(toCard).filter((c): c is BoardCard => c !== null)
+  const all = items.map((row) => toCard(row, projectOf(row))).filter((c): c is BoardCard => c !== null)
   const cards = all.filter((c) => matchesFilters(c, filters))
   let shippedOutsideWindow = 0
   const columns = BOARD_STAGES.map((stage): BoardColumn => {

@@ -551,6 +551,8 @@ const EXPECTED_SKIPS = [
   '/app/funnel/[projectSlug]/[featureKey]',
   '/app/impact/[projectSlug]/[featureKey]',
   '/hub/[projectSlug]/epic/[epicSlug]',
+  // board-sinks-and-scrumban S4.2 — keyed by a workspace id; measured by e2e/hub-board.authed.spec.ts.
+  '/hub/w/[workspaceId]/board',
 ]
 
 const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
@@ -620,6 +622,11 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
       'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
   },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
+  // Keyed by a workspace id the gate does not hold; its own spec resolves the fixture's workspace and measures the
+  // route against `hub-workspace-board` with this gate's own functions (board-sinks-and-scrumban S4.2).
+  '/hub/w/[workspaceId]/board': {
+    coveredBy: 'e2e/hub-board.authed.spec.ts — measures it against hub-workspace-board',
+  },
   // ⚠️ **SPRINT 6 CLOSED THIS.** The `coveredBy` string that stood here named `report-share.spec.ts`,
   // an `api` spec with zero `page.goto` calls, under a note saying the claim would stop being inert
   // the moment the row flipped. It flipped in Story 6.5, so the route is opened by this loop with a
