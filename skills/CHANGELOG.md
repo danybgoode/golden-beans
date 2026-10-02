@@ -32,6 +32,8 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
 - **The frontmatter contract reads decimals** (`38.42`) and declares six optional FinOps fields once —
   `quote_low_usd`, `quote_high_usd`, `quote_basis`, `actual_usd`, `actual_mtok`, `actual_basis`; `doc-format` rejects a
   non-numeric value.
+- **agy pinned to 1.2.15** (re-verified by `cross-agent-doctor agy --fix` on 2026-10-02, probed with
+  `gpt-oss-120b-medium` — the Gemini models were quota-capped).
 
 ## [0.21.0] - 2026-10-02
 
