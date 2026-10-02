@@ -320,6 +320,16 @@ independently shippable slice of value.
   read, so the portfolio view and the workspace-wide board are now buildable. The switcher groups projects by workspace,
   and `gf whoami` prints it (CLI 0.4.0, npm publish owed). A `tenancy` lint rule watches it in shadow. Nobody gained or
   lost access (access model A; no billing, quotas or invites yet).
+- ✅ [One stage, every client](02-commercial/board-sinks-and-scrumban/README.md) (a six-stage board on the Hub, the CLI
+  mod and every sink) — **shipped and live 2026-10-02** (PRs #224–#228, plugin + kit 0.20.0/0.21.0). Every client now
+  reads ONE stage: To groom · Grooming · Ready to build · Building · QA · Shipped, decided once by
+  `scripts/lib/stage.mjs` from the docs plus git/GitHub facts (a live branch, an open or merged PR) and carried in the
+  push. The Hub has a **Board** (`/hub/<slug>/board`: six columns, a card view with the copyable kickoff, filters in the
+  URL, WIP as advice), the **Roadmap** tab is areas × Shipped · Now · Next · Later, and a **workspace board**
+  (`/hub/w/<workspaceId>/board`) reads several projects only through `getWorkspaceProjects()`. The CLI build view, the
+  kit's `roadmap-extract --sink terminal|hub|notion` and Notion's `Stage` column read the same row, and
+  `roadmap-push.yml` re-pushes on the event that moved a card. The Hub never computes a stage. **Owed to Daniel:** the
+  `Stage` select on the Notion DB; the signed-in workspace-board walkthrough.
 - ✅ [Pod Report + Roadmap Hub](02-commercial/pod-report/README.md) (benchmarks/ROI + live
   roadmap-vs-end-state views · scoped share links) — **shipped and live in production 2026-07-26**
   (PRs #30/#32/#33/#34). The report-rendering primitive became an engine primitive with two consumers
@@ -434,6 +444,12 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-10-02**: `board-sinks-and-scrumban` **shipped**: four sprints, plugin + kit 0.20.0 and 0.21.0.
+  - One stage everywhere: the Hub's Board, the CLI build view, the kit's sinks and Notion all read the resolver's
+    answer, so "10/10 shown as Building" can't recur.
+  - The lock disproved five things before code (no prod project of that name, workspaces with no slug, a committed file
+    that can't hold live facts). The HIGH tenancy sprint merged with both outside review families dark, by the product
+    owner's call, after a fresh reviewer found the one missing spec that pins the access model at the page.
 - **2026-10-01**: `workspaces` **shipped**: two sprints, both migrations applied before their merges, CLI 0.4.0 (the npm
   publish is owed).
   - The workspace is the tenant now. Every membership read re-checks it, one helper may read several projects, and the
