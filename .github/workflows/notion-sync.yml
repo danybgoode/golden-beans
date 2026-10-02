@@ -22,7 +22,13 @@ on:
 
 concurrency:
   group: notion-sync
-  cancel-in-progress: false   # let a running sync finish; upserts are idempotent by Slug anyway
+  cancel-in-progress: false # let a running sync finish; upserts are idempotent by Slug anyway
+
+# board-sinks-and-scrumban S3.3 — the Stage column is computed with live git/GitHub facts (`--live`: one ls-remote, one
+# `gh pr list`), so Building and QA reach Notion too. A failed gather falls back to docs-only stages; Notion is a view.
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   sync:
@@ -30,6 +36,7 @@ jobs:
     env:
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,7 +46,7 @@ jobs:
           node-version: '22'
       - name: Sync Roadmap docs → Notion board
         if: env.NOTION_TOKEN != '' && env.NOTION_DB_ID != ''
-        run: node scripts/roadmap-to-notion.mjs --sync
+        run: node scripts/roadmap-to-notion.mjs --sync --live
       - name: Skipped (secrets not configured)
         if: env.NOTION_TOKEN == '' || env.NOTION_DB_ID == ''
         run: echo "NOTION_TOKEN / NOTION_DB_ID not set — skipping Notion sync (board will drift until configured)."
