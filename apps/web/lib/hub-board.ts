@@ -57,7 +57,7 @@ export type BoardColumn = { stage: RoadmapStage; cards: BoardCard[]; wip: WipSta
 
 export type Board = {
   columns: BoardColumn[]
-  /** Initiatives on the board after filtering, across all six columns. */
+  /** Initiatives the filters left visible, across all six columns (WIP is the one count that ignores the filters). */
   total: number
   /** Shipped initiatives older than the window, left off the Shipped column (said in the note, not hidden). */
   shippedOutsideWindow: number
@@ -189,7 +189,7 @@ export function buildBoard(
     total: columns.reduce((n, c) => n + c.cards.length, 0),
     shippedOutsideWindow,
     nextToPull,
-    answer: answerLine(col('QA'), col('Building'), nextToPull),
+    answer: answerLine(col('QA'), col('Building'), nextToPull, filters.type !== null || filters.highRisk),
   }
 }
 
@@ -198,7 +198,12 @@ export function buildBoard(
  * 18)." — the approved `hub-board` answer, plus the WIP advice when a column is past its limit (D9: the board says
  * it, nothing blocks).
  */
-export function answerLine(qa: BoardColumn, building: BoardColumn, next: BoardCard | null): string {
+export function answerLine(
+  qa: BoardColumn,
+  building: BoardColumn,
+  next: BoardCard | null,
+  filtered = false
+): string {
   const q = qa.cards.length
   const b = building.cards.length
   const flow =
@@ -208,9 +213,14 @@ export function answerLine(qa: BoardColumn, building: BoardColumn, next: BoardCa
   const pull = next
     ? ` Next to pull: ${next.name}${next.buildOrder !== null ? ` (build order ${next.buildOrder})` : ''}.`
     : ' Nothing is ready to pull.'
+  // The flow counts what the filters show; WIP counts the TEAM's whole column. Under a filter the two can differ, so
+  // the over-limit clause says whose count it is rather than contradict the sentence before it (round-2 review, #226).
   const over = [building, qa]
     .filter((c) => c.wip?.over)
-    .map((c) => ` ${c.stage} is over its WIP limit (${c.wip!.count} of ${c.wip!.limit}).`)
+    .map(
+      (c) =>
+        ` ${c.stage} is over its WIP limit (${c.wip!.count} of ${c.wip!.limit}${filtered ? ', the whole column' : ''}).`
+    )
     .join('')
   return `${flow}${pull}${over}`
 }

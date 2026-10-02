@@ -73,7 +73,7 @@ test('every copy button on a card copies its exact text', async ({ page, context
     '`git switch -c feat/fixture-unbet origin/main && git push -u origin feat/fixture-unbet`'
   const expected: Record<string, string> = {
     'Copy the kickoff prompt': KICKOFF,
-    'Copy: The kickoff prompt': KICKOFF,
+    'Copy: kickoff prompt': KICKOFF,
     'Copy: Build epic fixture-unbet': 'Build epic fixture-unbet',
   }
   const buttons = page.locator('main button[aria-label^="Copy"]')

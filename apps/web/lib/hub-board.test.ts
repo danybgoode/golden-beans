@@ -132,7 +132,7 @@ test('WIP counts the whole column even when a filter hides some of it (a team li
   const qa = spikes.columns.find((c) => c.stage === 'QA')!
   assert.equal(qa.cards.length, 0, 'no spike is in QA')
   assert.deepEqual(qa.wip, { limit: 1, count: 2, over: true, at: false })
-  assert.match(spikes.answer, /QA is over its WIP limit \(2 of 1\)/)
+  assert.match(spikes.answer, /QA is over its WIP limit \(2 of 1, the whole column\)\.$/)
 })
 
 test('an empty flow says so, and nothing ready says so', () => {

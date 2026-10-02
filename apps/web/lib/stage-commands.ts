@@ -3,8 +3,8 @@ import type { BoardCard } from './hub-board'
 // board-sinks-and-scrumban · Sprint 2, Story 2.3 — the commands a card offers, by stage.
 //
 // ONE map keyed by stage, in the house vocabulary: the verbs of `Roadmap/SESSION-KICKOFFS.md` → *Command shorthands*
-// (Groom, Bet, Build epic, Resume, Wrap S<N>, Review PR #<N>, Close epic) and the generator they point at
-// (`emit-epic-kickoff`). The Hub only SHOWS them to copy — it runs nothing (D8; no LLM and no repo access in the
+// (Groom, Bet, Build epic, Resume, Wrap S<N>, Review PR #<N>, Close epic), plus the two scripts every project has
+// (`review-route`, `epic-dod` — a spec holds every `node scripts/…` here to the template). The Hub only SHOWS them to copy — it runs nothing (D8; no LLM and no repo access in the
 // engine). Pure and import-free at runtime (a type import is erased), so `node --test` loads it directly.
 
 export type StageCommand = { label: string; text: string }
@@ -36,8 +36,9 @@ const COMMANDS: Record<BoardCard['stage'], (card: BoardCard) => StageCommand[]> 
   Building: (card) => {
     const n = currentSprint(card)
     return [
+      // No `session-trail` command: the template does not ship that script (round-2 review, #226). `Resume` expands to it
+      // where it exists.
       { label: 'Resume a session that died', text: 'Resume' },
-      { label: 'Read the trail it left', text: 'node scripts/session-trail.mjs --resume' },
       ...(card.grain === 'Epic' && n !== null ? [{ label: 'Wrap the sprint', text: `Wrap S${n}` }] : []),
     ]
   },
@@ -67,7 +68,7 @@ const COMMANDS: Record<BoardCard['stage'], (card: BoardCard) => StageCommand[]> 
   Shipped: () => [],
 }
 
-/** The commands for this card's stage, in the order the drawer lists them. Empty for Shipped: nothing is owed. */
+/** The commands for this card's stage, in the order the card view lists them. Empty for Shipped: nothing is owed. */
 export function stageCommands(card: BoardCard): StageCommand[] {
   return COMMANDS[card.stage](card)
 }

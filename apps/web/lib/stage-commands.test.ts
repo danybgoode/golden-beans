@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { BoardCard } from './hub-board.ts'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { stageCommands } from './stage-commands.ts'
 
 // board-sinks-and-scrumban · Sprint 2, Story 2.3 — one map keyed by stage, in the SESSION-KICKOFFS verbs.
@@ -41,12 +44,8 @@ test("Ready to build: an epic offers Build epic (the kickoff is the card's own a
   assert.deepEqual(texts(card({ grain: 'Seed' })), ['Build: demo'])
 })
 
-test('Building: Resume, the trail, and Wrap for the first sprint not yet done', () => {
-  assert.deepEqual(texts(card({ stage: 'Building' })), [
-    'Resume',
-    'node scripts/session-trail.mjs --resume',
-    'Wrap S2',
-  ])
+test('Building: Resume, and Wrap for the first sprint not yet done', () => {
+  assert.deepEqual(texts(card({ stage: 'Building' })), ['Resume', 'Wrap S2'])
 })
 
 test('QA with an open PR: Review PR and the routing command, then Close epic and its DoD check', () => {
@@ -69,4 +68,35 @@ test('QA after the merge (close-out owed): only the close commands', () => {
 
 test('Shipped owes nothing', () => {
   assert.deepEqual(stageCommands(card({ stage: 'Shipped' })), [])
+})
+
+test('every `node scripts/…` command a card offers exists in the template — a copied command must run (the CLASS, #226)', () => {
+  const template = join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    '..',
+    'skills',
+    'template',
+    'scripts'
+  )
+  const pr = { number: 9, url: 'https://github.com/o/r/pull/9', state: 'OPEN', draft: false }
+  const every = (['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped'] as const).flatMap(
+    (stage) => (['Epic', 'Seed'] as const).flatMap((grain) => stageCommands(card({ stage, grain, pr })))
+  )
+  const scripts = [
+    ...new Set(every.flatMap((c) => [...c.text.matchAll(/\bnode (\S+\.mjs)/g)].map((m) => m[1]))),
+  ]
+  assert.ok(scripts.length >= 2, `expected the map to run some scripts, found: ${scripts.join(', ')}`)
+  for (const script of scripts) {
+    assert.match(
+      script,
+      /^scripts\//,
+      `${script} is not under scripts/ — a project cannot run it from its root`
+    )
+    assert.ok(
+      existsSync(join(template, script.replace(/^scripts\//, ''))),
+      `${script} is not shipped by the template`
+    )
+  }
 })
