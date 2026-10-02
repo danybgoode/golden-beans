@@ -184,6 +184,13 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
   (D22 latest-wins). The three approved surfaces (seed → Visuals) are the contract, including "Export CSV".
 - **D26 — Landing (3.4)**: FinOps `availability: { kind: 'shipped' }` — the opt-in is a client setting, not a
   server gate `GATE_NOTES` can describe, and Daniel's no-flag rule (2026-08-31) stands. Copy rewritten per C13.
+- **D28 — D9 covers the whole `$agent_usage` envelope, not only `metadata`** (fresh security review, #232): `userId`
+  must be `agent:<name>`, no `featureId`, no tags, and `context` carries only `version`/`idempotencyKey`/`occurredAt`;
+  anything else is a 400 before any counter is charged. Breakdown names `__proto__`/`constructor`/`prototype` are
+  refused. Timestamps carry exactly milliseconds (the transcripts' own shape), so string order is time order.
+- **D29 — The push is per snapshot** (amends D22's client side): 201/200 done; 409 done (the engine already holds that
+  key — append-only, latest-wins); 400 recorded and never retried (counted as `rejected`); anything else stops the run
+  and backs off 10 minutes (the throttle counts attempts). A malformed config is a reason, never a throw.
 - **D27 — Who builds.** The architect builds **in place** (the only session in this checkout, clean tree, one builder
   at a time): every Sprint 1–2 story crosses the two shared seams (`roadmap-contract`, `build-state`) and Sprint 3 is
   never delegated. Reviews follow the routing below.
