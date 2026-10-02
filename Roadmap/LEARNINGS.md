@@ -19,6 +19,15 @@ one-liner + why + date shape.
 ## Multi-agent & async deploy coordination
 *If several agents work in parallel on their own branches, against repos that deploy independently.*
 
+- **A push triggered by a merge to `main` races the deploy of that same merge.** board-sinks-and-scrumban S1 changed
+  the push contract and the workflow that pushes on merge in one PR: the first two pushes reached the OLD route, which
+  dropped the new `board` block, and the board stayed stale until the next event re-pushed. When a merge changes both a
+  route and a client that calls it on merge, either make the client wait for the deployment (`deployment_status`), or
+  make the payload one the old route accepts in full and verify after the deploy. *(2026-10-02.)*
+- **A committed generated file cannot hold facts that move without a commit — nor sort by them.** BUILD-ORDER.md
+  could not carry Building/QA (they move on a branch push, not a commit), and its Shipped section, sorted by git dates,
+  reordered itself in CI's depth-1 clone and failed the freshness guard. Committed output sorts by committed data
+  (build order); live facts go to a gitignored snapshot. *(board-sinks-and-scrumban S1, 2026-10-02.)*
 - **Rollout ORDER is part of a cross-repo feature's design, not an afterthought — the receiver must
   hold the shared secret before delivery is enabled.** event-destination-router delivers to a
   Miyagi endpoint that fails **closed** (401) when its `GOLDEN_BEANS_WEBHOOK_SECRET` is unset, and
@@ -328,12 +337,21 @@ one-liner + why + date shape.
 
 ## Review quality
 
+- **A lock decision is most at risk in the NEXT sprint's convenience code.** D19 said "the Hub never computes a
+  stage" and S2's board obeyed it; S4's Roadmap tab, written for a different story, quietly derived stages from the old
+  `status` field for pre-stage pushes, and linked them to cards the board could not open. Before building a view, grep
+  the lock for the rules about its data, not only its story. *(board-sinks-and-scrumban S4, 2026-10-02.)*
 - **A mutation check that breaks the BUILD proves nothing — confirm the mutated code compiled before
   reading "no failing test" as "the guard is weak".** Three times in golden-frijoles-cli a mutation
   left a symbol unused; lint failed inside `next build`, no test ran, and the result read exactly
   like a guard that survived its mutation. Mutate with a change that compiles AND lints (keep the
   symbol referenced, weaken the condition), and check the run actually built before scoring it.
   *(2026-09-17, golden-frijoles-cli S1–S3.)*
+  **On a tenancy path, mutate the ONE legal read itself** (board-sinks-and-scrumban S4, 2026-10-02): the workspace
+  board's specs went red when each 404 guard was removed, and stayed green when `getWorkspaceProjects()` was swapped for
+  "every project in the workspace" — the one mutation the invariant exists to forbid. A fresh reviewer found it. The
+  spec that catches it seeds a sibling project in the viewer's OWN workspace, with a real pushed board, and the viewer
+  not a member.
 - **A guard written to satisfy a rule is not exempt from that rule — check WHAT refused the write,
   not just that something did.** A spec written because a migration's comment claimed "asserted by
   attempting the writes" passed a random `user_id`, so the forged INSERT failed on the FOREIGN KEY
@@ -671,6 +689,10 @@ one-liner + why + date shape.
   and a reviewer then found the same defect, in the same file, in the code that PR had just added
   (the hero's overlap block above the base rule it overrides). *(2026-08-20,
   landing-readability-pass.)*
+  **The class this time was a hand-kept COPY list** (board-sinks-and-scrumban, 2026-10-02): two spec fixtures listed
+  which libs to copy into a temp repo and broke twice as the extractor grew; copying the extractor's whole closure
+  ended it. Same epic, same shape: prettier formats `scripts/` but not the byte-identical `skills/` mirror, so every
+  format run broke parity until the mirror was re-copied from the formatted tree as one step.
 - **A reviewer that could not see the risky file has not reviewed it — and the tooling says so in
   its own output.** `cross-review.mjs` prints "N did not fit the budget" when a diff exceeds agy's
   256 KB argv cap. In `landing-readability-pass` the withheld file was `globals.css`, where every bit

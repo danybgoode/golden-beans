@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 4
 title: "Areas and the workspace board"
 risk: high
-phase: In review
+phase: Shipped
 stories_total: 2
 stories:
   - id: S4.1
@@ -23,7 +23,7 @@ stories:
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 4: Areas and the workspace board
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #228 (`da0828c`), deployed 2026-10-02
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - **S4.1** — D10, D19: the areas view groups rows by `area` and `stage` (Now = Building + QA, Next = Ready to
@@ -92,3 +92,13 @@ Env: production · https://goldenfrijoles.com
    → A 404 page.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-02, after the merge of `da0828c`, deploy `success`)
+1. ✅ https://goldenfrijoles.com/hub/golden-beans-demo — 3 area rows (01 Growth Engine, 02 Commercial, 09 Platform Infra), Shipped · Now · Next · Later; no journey track; the
+   answer reads "43 of 50 epics have shipped. Now: …"; 28 names link to `/board?card=`, and one opened (200). (The
+   demo Hub reads anonymously — it is the public self-tenant, rule #2 — so this step needed no sign-in.)
+2. ⏳ **Owed to Daniel (signed in):** `/hub/w/9e58bc7d-a0a8-43c9-89a2-c544cab854f2/board`. Signed out it sends you to
+   `/login` (307), malformed id included — the session check comes first. The signed-in behaviour is pinned locally by
+   `hub-board.authed.spec.ts` (approved-state signature, project chips, access model A).
+3. ⏳ **Owed to Daniel (signed in):** the Miyagi workspace id → 404. Pinned locally by the tenancy spec (a foreign
+   workspace, a malformed id and a foreign `?project=` are each 404; each guard observed red with it removed).

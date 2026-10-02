@@ -31,14 +31,13 @@ _a pitch is waiting at the approval gate._
 - [Analytics visualization — the charting-dependency decision (spike), then the layer](seeds/analytics-visualization-layer.md) — #14 · 01 Growth Engine · seed · Spike · risk: Low · appetite S · _docs: status ready_
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — #17 · 02 Commercial · seed · Spike · risk: Low · appetite S · _docs: status ready_
 
-## Ready to build (8)
+## Ready to build (7)
 
 _scaffolded (or a fixed-scope seed), in build order — pull from the top._
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../01-growth-engine/scenarios-pm-operable/README.md) — #16 · 01 Growth Engine · 10/10 stories · risk: High · appetite M · _docs: status in-progress_
 - [CMS-neutral experiment integration + Payload go/no-go](../01-growth-engine/cms-integration-spike/README.md) — #18 · 01 Growth Engine · 0/6 stories · risk: Low · _docs: status scaffolded_
 - [One plugin, one install — Golden Frijoles ships as a public plugin whose skills run in anyone's repo](../09-platform-infra/golden-frijoles-plugin/README.md) — #34 · 09 Platform Infra · 14/23 stories · risk: High · appetite L · _docs: status in-progress_
-- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../02-commercial/board-sinks-and-scrumban/README.md) — #39 · 02 Commercial · 15/15 stories · risk: High · appetite L · _docs: status in-progress_
 - [FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine](../09-platform-infra/finops/README.md) — #40 · 09 Platform Infra · 0/13 stories · risk: High · appetite M · _docs: status scaffolded_
 - [Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop](../02-commercial/portfolio-view/README.md) — #41 · 02 Commercial · 0/7 stories · risk: High · appetite M · _docs: status scaffolded_
 - [One public monorepo — skills/ subtree, a lean install mirror, licences, a private docs repo](../09-platform-infra/public-monorepo/README.md) — #45 · 09 Platform Infra · 13/15 stories · risk: High · appetite M · _docs: status in-progress_
@@ -52,7 +51,7 @@ _a work branch is on origin. Not in this committed file: `node scripts/build-ord
 
 _a PR is ready for review, or merged and waiting for its close-out. Not in this committed file: `node scripts/build-order.mjs --live` or the Hub board._
 
-## Shipped (46)
+## Shipped (47)
 
 _merged, deployed and closed._
 
@@ -65,6 +64,7 @@ _merged, deployed and closed._
 - [Distribute what we use — one review rail, Jev and notify setup, schedulers, build view](../09-platform-infra/distribute-what-we-use/README.md) — #47 · 09 Platform Infra · 11/11 stories · risk: High · _docs: status shipped_
 - [Refit the Jev guard thresholds with DSPy ReAnchor on the labelled fixtures](seeds/jev-reanchor-thresholds.md) — #44 · 09 Platform Infra · seed · Spike · risk: Low · appetite S · _docs: status shipped_
 - [✅ Epic: One Roadmap — the plugin's epics, seeds, bets and learnings move here](../09-platform-infra/one-roadmap/README.md) — #43 · 09 Platform Infra · 4/4 stories · risk: Low · appetite S · _docs: status shipped_
+- [One stage, every client: a six-stage board on the Hub, the CLI mod and every sink](../02-commercial/board-sinks-and-scrumban/README.md) — #39 · 02 Commercial · 15/15 stories · risk: High · appetite L · _docs: status shipped_
 - [Workspaces become the tenant: one person, many products, one boundary ✅](../02-commercial/workspaces/README.md) — #38 · 02 Commercial · 8/8 stories · risk: High · appetite M · _docs: status shipped_
 - [Verify spike: Quint on the outbox, Lean on the flag evaluator](../09-platform-infra/verify-spike/README.md) — #37 · 09 Platform Infra · 4/4 stories · risk: Low · appetite S · _docs: status shipped_
 - [Experiments for humans](../01-growth-engine/experiments-for-humans/README.md) — #35 · 01 Growth Engine · 11/11 stories · risk: High · appetite L · _docs: status shipped_
