@@ -80,7 +80,7 @@ stories:
 **Acceptance:** `npx -y @golden-frijoles/kit roadmap-extract --sink hub` pushes with `GROWTH_ENGINE_URL` + the project key; `--sink terminal` prints BUILD-ORDER-style text; `check-skill-scripts` and the kit tarball test pass. Plugin release noted in `skills/CHANGELOG.md`.
 **Risk:** low
 
-### Story 3.3 — Notion gets the stage column ✅
+### Story 3.3 — Notion gets the stage column ✅ (code) · ⏳ live column owed: the `Stage` select on the Notion DB
 **As** a team that keeps a Notion board, **I want** the optional Notion sink to write the six-stage `stage` value, **so that** Notion agrees with the Hub too.
 **Acceptance:** `optional/notion/roadmap-to-notion.mjs` maps `stage` to a select property; this repo's `notion-sync.yml` run shows the new column.
 **Risk:** low
