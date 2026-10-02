@@ -278,6 +278,8 @@ export function spendFor(root, git, slug) {
     const path = join(mainCheckoutOf(git, root), ...USAGE_SUMMARY);
     if (!existsSync(path)) return null;
     const summary = JSON.parse(readFileSync(path, 'utf8'));
+    // A first scan that ran out of its time budget is not a total yet: no row until it completes, never a low number.
+    if (summary?.complete === false) return null;
     const row = summary?.epics?.[slug];
     if (!row || typeof row.usd !== 'number') return null;
     return {

@@ -62,6 +62,8 @@ export const MACHINE = 'this machine';
 /** D12 — the agents whose passes this does not see. Named, so a reader never takes "Claude Code" for "everything". */
 export const NOT_MEASURED = Object.freeze(['codex', 'agy', 'vibe', 'devin']);
 export const NO_SKILL = '(no skill)';
+/** How long `--refresh` reads before saving and stopping (the mod's timeout is 10 s — D24). */
+export const REFRESH_BUDGET_MS = 6_000;
 
 // The same rule build-state.mjs applies: a git run from a hook must describe --repo-root, never an inherited GIT_DIR.
 const GIT_ENV_TO_CLEAR = [
@@ -199,9 +201,9 @@ export function readEntry(line) {
   if (!m) return { skip: 'no_message' };
   const id = (typeof m.id === 'string' && m.id) || (typeof d.requestId === 'string' && d.requestId) || null;
   if (!id) return { skip: 'no_id' };
-  if (m.model === '<synthetic>') return { skip: 'synthetic' };
-  if (!m.usage || typeof m.usage !== 'object') return { skip: 'no_usage' };
-  if (typeof m.model !== 'string' || !m.model) return { skip: 'no_model' };
+  if (m.model === '<synthetic>') return { skip: 'synthetic', cwd: d.cwd };
+  if (!m.usage || typeof m.usage !== 'object') return { skip: 'no_usage', cwd: d.cwd };
+  if (typeof m.model !== 'string' || !m.model) return { skip: 'no_model', cwd: d.cwd };
   if (typeof d.cwd !== 'string' || !d.cwd) return { skip: 'no_cwd' };
   return {
     record: {
@@ -283,7 +285,10 @@ function readFrom(path, offset, size) {
  * (rewritten) is read again from the start — harmless, records are keyed by message id. Files are taken oldest-born
  * first so an original session is indexed before a resumed copy of it (D13). Returns what changed.
  */
-export function updateIndex(index, { projectsDir, paths, stat = statSync }) {
+export function updateIndex(
+  index,
+  { projectsDir, paths, stat = statSync, deadline = Infinity, now = Date.now }
+) {
   const own = ownProjectDirs(paths);
   const files = listTranscripts(projectsDir)
     .map((path) => {
@@ -296,8 +301,15 @@ export function updateIndex(index, { projectsDir, paths, stat = statSync }) {
     })
     .filter(Boolean)
     .sort((a, b) => a.born - b.born || (a.path < b.path ? -1 : 1));
-  const changes = { files_read: 0, added: 0, raised: 0 };
+  const changes = { files_read: 0, added: 0, raised: 0, complete: true };
   for (const f of files) {
+    // A time budget (the mod's run is timeout-bound): stop BETWEEN files, so every file recorded is fully read and the
+    // next run resumes where this one stopped. A first scan on a slow machine then completes over a few runs instead of
+    // starting from zero every time and never saving (fresh review, #230).
+    if (now() > deadline) {
+      changes.complete = false;
+      break;
+    }
     const known = index.files[f.path];
     if (known && known.size === f.size && known.mtimeMs === f.mtimeMs) continue;
     const from = known && f.size >= known.offset ? known.offset : 0;
@@ -309,7 +321,9 @@ export function updateIndex(index, { projectsDir, paths, stat = statSync }) {
       const e = readEntry(line);
       if (!e) continue;
       if (e.skip) {
-        index.skipped[e.skip] = (index.skipped[e.skip] || 0) + 1;
+        // Counted only when it is THIS repo's (its folder, or its cwd when the entry still has one) — another
+        // project's skips are not this summary's business. A line too broken to say counts only in our own folder.
+        if (ownFolder || inRepo(e.cwd, paths)) index.skipped[e.skip] = (index.skipped[e.skip] || 0) + 1;
         continue;
       }
       if (!ownFolder && !inRepo(e.record.cwd, paths)) continue;
@@ -474,12 +488,16 @@ export function epicOfBranch(root) {
 }
 
 /** Refresh index + summary under the main checkout's `.golden-frijoles/`. Returns { summary, changes, dir }. */
-export function refresh({ root, projectsDir = defaultProjectsDir(), now = new Date() }) {
+export function refresh({ root, projectsDir = defaultProjectsDir(), now = new Date(), budgetMs = Infinity }) {
   const dir = join(mainCheckout(root), STATE_DIR);
   const indexPath = join(dir, INDEX_FILE);
   const index = loadIndex(indexPath);
-  const changes = updateIndex(index, { projectsDir, paths: repoPaths(root) });
-  const summary = summarize(index, { epicOf: epicOfBranch(root), now });
+  const changes = updateIndex(index, {
+    projectsDir,
+    paths: repoPaths(root),
+    deadline: Date.now() + budgetMs,
+  });
+  const summary = { ...summarize(index, { epicOf: epicOfBranch(root), now }), complete: changes.complete };
   if (changes.files_read || !existsSync(indexPath)) writeJson(indexPath, index);
   writeJson(join(dir, SUMMARY_FILE), summary);
   return { summary, changes, dir };
@@ -558,12 +576,15 @@ function epicReadme(root, slug) {
 }
 
 /** Write an epic's actual into its README. Returns the README path, or null when nothing was measured. */
-export function stampEpic({ root, summary, slug, basisPrefix = '', date }) {
+export function stampEpic({ root, summary, slug, basisPrefix = '', date, keepStamped = false }) {
   const report = epicReport(summary, slug);
   if (!report.measured) return null;
   const path = epicReadme(root, slug);
   if (!path) throw new Error(`no Roadmap/*/${slug}/README.md`);
   const md = readFileSync(path, 'utf8');
+  // A backfill never overwrites an actual already written — one stamped at close, or a deliberate hold such as
+  // `actual_usd: null` with its reason (README C14). `--epic <slug> --write` (the close) is the one that replaces.
+  if (keepStamped && /^actual_basis:\s*\S/m.test(md.split(/^---\s*$/m)[1] ?? '')) return null;
   const next = stampFrontmatter(md, actualFields(report, basisPrefix, date));
   if (next !== md) writeFileSync(path, next);
   return path;
@@ -651,7 +672,9 @@ function main(argv) {
   const json = argv.includes('--json');
   const write = argv.includes('--write');
   const today = new Date().toISOString().slice(0, 10);
-  const { summary, changes } = refresh({ root, projectsDir });
+  // --refresh is what the mod runs under a 10 s timeout (D24): it saves what it read within REFRESH_BUDGET_MS.
+  const budgetMs = argv.includes('--refresh') ? REFRESH_BUDGET_MS : Infinity;
+  const { summary, changes } = refresh({ root, projectsDir, budgetMs });
 
   if (argv.includes('--refresh')) {
     if (json)
@@ -695,7 +718,17 @@ function main(argv) {
     });
     if (write)
       for (const r of rep.resolved)
-        stampEpic({ root, summary, slug: r.epic, basisPrefix: 'backfill · ', date: today });
+        if (
+          !stampEpic({
+            root,
+            summary,
+            slug: r.epic,
+            basisPrefix: 'backfill · ',
+            date: today,
+            keepStamped: true,
+          })
+        )
+          process.stderr.write(`epic-actuals: ${r.epic} already carries an actual — left as written\n`);
     if (json) {
       process.stdout.write(
         `${JSON.stringify({ ...rep, unattributed: summary.unattributed, written: write }, null, 2)}\n`
