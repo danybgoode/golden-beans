@@ -3,6 +3,7 @@ import { requireDashboardAccess } from '@/lib/dashboard-auth'
 import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { isRoadmapStatusShipped } from '@/lib/roadmap-artifact-schema'
+import { epicFinops, quoteActualLine } from '@/lib/roadmap-finops'
 import { EmptyHubState, HubProvenance } from '../../../hub-components'
 import { HubFrame } from '../../../hub-frame'
 import { Answer, Callout, Crumbs, Crumb, PageHead, Pill, Tag, Tile, Tiles } from '@/design-system/primitives'
@@ -53,6 +54,8 @@ export default async function HubEpicDrilldownPage({
   const freshness = formatFreshness(artifact.generatedAt, new Date(), artifact.sourceCommit)
   const risk = epic.risk ? String(epic.risk).trim() : null
   const shippedSprints = epic.sprints.filter((sprint) => isRoadmapStatusShipped(sprint.status)).length
+  // finops 3.2 — the epic's quote and actual off the same artifact, or nothing at all when it carries neither.
+  const finopsLine = quoteActualLine(epicFinops(epic))
 
   return (
     <HubFrame projectSlug={projectSlug} tab="roadmap">
@@ -70,6 +73,11 @@ export default async function HubEpicDrilldownPage({
         from={`${epic.sprints.length} sprint${epic.sprints.length === 1 ? '' : 's'}`}
         version={artifact.version}
       />
+      {finopsLine ? (
+        <p className="ds-hint" data-testid="epic-finops">
+          {finopsLine} <span className="ds-mono">≈ API $</span>
+        </p>
+      ) : null}
 
       <Answer>
         <b>

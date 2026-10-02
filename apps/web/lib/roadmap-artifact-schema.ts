@@ -127,6 +127,15 @@ const roadmapRowSchema = z
     shipped_at: z.string().max(40).nullish(),
     appetite: z.string().max(10).nullish(),
     underwritten_by: z.string().max(200).nullish(),
+    // finops · Story 3.2 (D6) — an epic's quote (groomed) and actual (stamped at close), in ≈ API $. Nullish, so an
+    // older pusher that never sends them stays valid: absent is "not quoted / not measured", never zero. Declared
+    // rather than left to `.passthrough()` so a malformed value is refused instead of stored and rendered.
+    quote_low_usd: z.number().nonnegative().max(1e7).nullish(),
+    quote_high_usd: z.number().nonnegative().max(1e7).nullish(),
+    quote_basis: z.string().max(300).nullish(),
+    actual_usd: z.number().nonnegative().max(1e7).nullish(),
+    actual_mtok: z.number().nonnegative().max(1e9).nullish(),
+    actual_basis: z.string().max(300).nullish(),
   })
   .passthrough()
 

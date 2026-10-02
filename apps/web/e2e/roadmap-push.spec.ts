@@ -270,3 +270,78 @@ test('artifacts are append-only IN FACT — the app’s own client cannot UPDATE
     .single()
   expect(after?.schema_version).toBe(1)
 })
+
+// ── finops · Story 3.2 — the push carries quote and actual (D6), and an older pusher stays valid ───────────────────────
+async function throwawayTenant() {
+  const db = dbClient()
+  const { randomBytes } = await import('node:crypto')
+  const { data: project, error } = await db
+    .from('projects')
+    .insert({
+      workspace_id: await specWorkspaceId(db),
+      slug: `spec-finops-push-${randomBytes(6).toString('hex')}`,
+      api_key_hash: null,
+    })
+    .select('id')
+    .single()
+  if (error || !project) throw new Error(`fixture project: ${error?.message}`)
+  const key = `gb_key_spec_${randomBytes(24).toString('base64url')}`
+  await db
+    .from('api_keys')
+    .insert({
+      project_id: project.id,
+      key_hash: createHash('sha256').update(key).digest('hex'),
+      label: 'finops push spec',
+    })
+  return { db, projectId: project.id as string, key }
+}
+
+test('finops 3.2: quote and actual ride the push and are stored as numbers', async ({ request }) => {
+  const { db, projectId, key } = await throwawayTenant()
+  const res = await request.post('/api/v1/roadmap/push', {
+    headers: { Authorization: `Bearer ${key}` },
+    data: envelope({
+      items: [
+        row({
+          quote_low_usd: 24,
+          quote_high_usd: 35,
+          quote_basis: 'M, n=4, p25–p75',
+          actual_usd: 33.08,
+          actual_mtok: 101.7,
+          actual_basis: 'this machine · 2026-10-02 · 1 session',
+        }),
+      ],
+    }),
+  })
+  expect(res.status()).toBe(200)
+  const { data } = await db
+    .from('report_artifacts')
+    .select('payload')
+    .eq('project_id', projectId)
+    .eq('kind', 'roadmap')
+    .single()
+  const stored = (data?.payload as { items: Record<string, unknown>[] }).items[0]
+  expect([stored.quote_low_usd, stored.quote_high_usd, stored.actual_usd, stored.actual_mtok]).toEqual([
+    24, 35, 33.08, 101.7,
+  ])
+})
+
+test('finops 3.2: an older client that sends none of the six fields is still valid', async ({ request }) => {
+  const { key } = await throwawayTenant()
+  const res = await request.post('/api/v1/roadmap/push', {
+    headers: { Authorization: `Bearer ${key}` },
+    data: envelope(),
+  })
+  expect(res.status()).toBe(200)
+})
+
+test('finops 3.2: a malformed quote is refused, not stored and rendered', async ({ request }) => {
+  const { key } = await throwawayTenant()
+  for (const bad of [{ actual_usd: 'lots' }, { quote_low_usd: -1 }, { quote_basis: 5 }]) {
+    const res = await request.post('/api/v1/roadmap/push', {
+      headers: { Authorization: `Bearer ${key}` },
+      data: envelope({ items: [row(bad)] }),
+    })
+    expect(res.status()).toBe(400)
+  }
+})
