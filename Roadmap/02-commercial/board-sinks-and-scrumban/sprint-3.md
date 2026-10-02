@@ -3,7 +3,7 @@ epic: board-sinks-and-scrumban
 sprint: 3
 title: "Every client reads it"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 4
 stories:
   - id: S3.1
@@ -37,7 +37,7 @@ stories:
 ---
 # One stage, every client: a six-stage board on the Hub, the CLI mod and every sink — Sprint 3: Every client reads it
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — #227 (`c2cb30f`), deployed 2026-10-02; plugin + kit 0.21.0 (npm + `v0.21.0` on golden-frijoles/skills)
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 - **S3.1** — C12 + D14: the hook stays offline, so the mod reads the snapshot and prints its age; the CLI run
@@ -111,3 +111,14 @@ Env: your terminal + production · https://goldenfrijoles.com
    → One warning line names the limit; the kickoff still prints.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+### Smoke results (2026-10-02, after the merge of `c2cb30f`)
+1. ✅ The build view (the vendored resolver, run as the hook runs it): `Status   QA · from github: PR #226 ready (snapshot,
+   3m ago) · phase Shaping` and a `Board` line counting Building / QA / Ready to build with the next pull.
+2. ✅ `Board ↗ https://goldenfrijoles.com/hub/golden-beans-demo/board?card=board-sinks-and-scrumban` — that card opens (200).
+3. ✅ Offline wording: "(snapshot, <age>)"; with no snapshot "(docs only, no snapshot yet)" — pinned by spec.
+4. ✅ `npx -y @golden-frijoles/kit@0.21.0 roadmap-extract --sink terminal` in a scratch repo with only a `Roadmap/` prints
+   the six-stage board.
+5. ✅ At the WIP limit `emit-epic-kickoff` prints one warning line and the kickoff — pinned by the CLI-level spec (this
+   repo is at 1 of 2 Building, so no warning today).
+- ⏳ Owed to Daniel: add the `Stage` select to the Notion roadmap DB, then the next `notion-sync` run shows the column.
