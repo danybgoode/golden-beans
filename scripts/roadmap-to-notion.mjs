@@ -67,6 +67,20 @@ export {
   floorSprintDone,
 };
 
+// Notion caps ONE rich-text object at 2000 characters, and a property may carry up to 100 of them. Since
+// board-sinks-and-scrumban S1 an epic row carries its whole epic kickoff (~2.5 KB+), which one object cannot hold —
+// the sync failed with `text.content.length should be ≤ 2000` on the first merge. So long text is SPLIT across
+// objects, never cut: the kickoff on a Notion card is the one a builder pastes.
+export const NOTION_TEXT_LIMIT = 2000;
+export function richText(v) {
+  if (!v) return { rich_text: [] };
+  const s = String(v);
+  const chunks = [];
+  for (let i = 0; i < s.length && chunks.length < 100; i += NOTION_TEXT_LIMIT)
+    chunks.push({ text: { content: s.slice(i, i + NOTION_TEXT_LIMIT) } });
+  return { rich_text: chunks };
+}
+
 // Decide the live PR overlay label from the PR state — the SINGLE source the workflow (`--lifecycle`)
 // and its node:test both read, so the bash and the test can't drift. Draft PR → In progress;
 // ready PR → In review; closed (merged or not) → clear (notion-sync.yml re-derives Status on merge).
@@ -138,7 +152,7 @@ async function main() {
     });
 
   const sel = (v) => (v ? { select: { name: String(v) } } : { select: null });
-  const rt = (v) => ({ rich_text: v ? [{ text: { content: String(v) } }] : [] });
+  const rt = richText;
   function props(row, epicId) {
     const p = {
       Name: { title: [{ text: { content: row.name } }] },
