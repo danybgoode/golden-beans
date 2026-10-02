@@ -203,6 +203,20 @@ export const PROJECT_ROUTE_INVENTORY = [
     href: (slug: string) => `/app/north-star/${slug}`,
     description: () => 'the one number, and what feeds it',
   },
+  // finops · Sprint 3, Story 3.3 — what each epic, skill and model cost, against the epic's quote. Measure, beside the
+  // North Star: spend is read against the outcome it was for.
+  {
+    routeSegment: 'finops',
+    iconKey: 'gauge',
+    audience: 'member',
+    gate: 'always',
+    status: 'linked',
+    topLevelProjectRoute: true,
+    section: 'measure',
+    label: 'FinOps',
+    href: (slug: string) => `/app/finops/${slug}`,
+    description: () => 'what each epic cost, against its quote',
+  },
   {
     routeSegment: 'journeys',
     iconKey: 'route',
