@@ -7,6 +7,7 @@ import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
 import { scheduleSignalGrouping, scrubReservedEventPayload } from '@/lib/signals'
+import { AGENT_USAGE_EVENT, parseAgentUsage } from '@/lib/agent-usage'
 
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
@@ -60,6 +61,29 @@ export async function POST(req: NextRequest) {
       { ok: false, error: 'Malformed event', issues: parsed.error.flatten() },
       { status: 400 }
     )
+  }
+
+  // ── finops · Story 3.1 · `$agent_usage` carries metrics only ───────────────────────────────────
+  // The kit's usage push is an ordinary event on this route (AGENTS rule #1), but its payload is a CLOSED shape:
+  // exactly the keys lib/agent-usage.ts names, every value a count, id, model, skill, branch or timestamp, and no
+  // tags. Anything else is refused here, before any counter is charged, so message content can never be stored by
+  // accident (finops D9). The project still comes from the API key above, never from the body (D23).
+  if (parsed.data.event === AGENT_USAGE_EVENT) {
+    const usage = parseAgentUsage(parsed.data.metadata)
+    const tagKeys = Object.keys(parsed.data.tags)
+    if (!usage.ok || tagKeys.length) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'Malformed $agent_usage event',
+          issues: [
+            ...(usage.ok ? [] : usage.errors),
+            ...(tagKeys.length ? ['tags must be empty — usage rides metadata'] : []),
+          ],
+        },
+        { status: 400 }
+      )
+    }
   }
 
   // ── Story 1.1 · versioned actor/subject context ─────────────────────────────────────────────

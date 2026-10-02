@@ -84,7 +84,7 @@ export const VENDOR_EPIC_ACTUALS = decodeURIComponent(
   new URL('./vendor/epic-actuals.mjs', import.meta.url).pathname
 ).replace(/^\/([A-Za-z]:\/)/, '$1');
 export const USAGE_REFRESH_MS = 60_000;
-export const USAGE_TIMEOUT_MS = 10_000;
+export const USAGE_TIMEOUT_MS = 15_000; // a ≤6 s scan + the opt-in push's ≤5 s budget (finops D24)
 
 /** The command the mod runs to refresh the usage index. The repo is only READ, via `--repo-root`. */
 export function epicActualsArgv(root, script = VENDOR_EPIC_ACTUALS) {
