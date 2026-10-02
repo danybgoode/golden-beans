@@ -127,4 +127,15 @@ test('finops 2.3: the quote comes from --quote, else the seed’s quote: line; a
 test('finops 2.3: a malformed --quote is refused before anything is written', () => {
   assert.throws(() => scaffold(['--risk', 'low', '--sprints', 'One', '--quote', '55-30']));
   assert.throws(() => scaffold(['--risk', 'low', '--sprints', 'One', '--quote', 'lots']));
+  assert.throws(() => scaffold(['--risk', 'low', '--sprints', 'One', '--quote']), undefined, 'a value-less --quote');
+  assert.throws(() => scaffold(['--risk', 'low', '--sprints', 'One', '--quote', '0-0']), undefined, 'a $0 quote');
+  assert.throws(() => scaffold(['--risk', 'low', '--sprints', 'One', '--quote', '0.001-0.004']), undefined, 'rounds to $0');
+  const { root, dir } = scaffold(['--risk', 'low', '--sprints', 'One', '--quote', '30.456-55.004']);
+  try {
+    const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+    assert.match(readme, /^quote_low_usd: 30\.46\s/m);
+    assert.match(readme, /^quote_high_usd: 55\s*$/m);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

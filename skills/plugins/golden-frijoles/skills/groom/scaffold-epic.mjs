@@ -123,6 +123,10 @@ function quoteFrom(flag, basisFlag, seedText) {
       process.exit(1);
     }
     const r2 = (v) => String(Math.round(Number(v) * 100) / 100); // D17 — writers round $ to 2 places
+    if (Number(r2(m[2])) <= 0) {
+      console.error(`scaffold-epic: a quote of $0 is not a quote — leave --quote out to scaffold an unquoted epic`);
+      process.exit(1);
+    }
     return { low: r2(m[1]), high: r2(m[2]), basis: typeof basisFlag === 'string' ? yaml(basisFlag) : 'null' };
   }
   const m = /^quote:\s*\$(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)\s*\(([^)]+)\)/m.exec(seedText);

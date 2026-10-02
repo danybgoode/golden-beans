@@ -206,4 +206,5 @@ test('finops 2.4: the Spend bar and tone come from the resolver’s own words', 
   assert.deepEqual(view.spendOf('≈$22 · no quote · 1.1M tok · 2 sessions'), { tone: 'plain', bar: null });
   assert.deepEqual(view.spendOf('≈$9 of quote $25–90 (M · 2 past epics, wide) · 0.4M tok'), { tone: 'good', bar: { filled: 1, width: 10 } });
   assert.equal(view.bandRowsFrom('Currently building\n  Spend    ≈$71 · 29% over quote $30–55 (M) · 3.4M tok')[1].tone, 'bad');
+  assert.deepEqual(view.spendOf('≈$55 · <1% over quote $30–55 (M) · 1M tok'), { tone: 'bad', bar: { filled: 10, width: 10 } });
 });
