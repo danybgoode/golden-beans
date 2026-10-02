@@ -40,7 +40,13 @@ export const PRICES = Object.freeze({
 });
 
 /** The token kinds a usage record carries, in the order every report prints them. */
-export const TOKEN_KINDS = Object.freeze(['input', 'output', 'cache_read', 'cache_write_5m', 'cache_write_1h']);
+export const TOKEN_KINDS = Object.freeze([
+  'input',
+  'output',
+  'cache_read',
+  'cache_write_5m',
+  'cache_write_1h',
+]);
 
 /** `claude-haiku-4-5-20251001` → `claude-haiku-4-5`: a dated snapshot is priced as its model. */
 export function normalizeModel(model) {

@@ -62,7 +62,10 @@ export function validateFinopsFields(fm) {
     const v = fm[key];
     if (v === undefined || v === null) continue;
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0)
-      offenses.push({ rule: 'contract-finops-invalid', detail: `${key}: "${v}" is not a number >= 0 (or null)` });
+      offenses.push({
+        rule: 'contract-finops-invalid',
+        detail: `${key}: "${v}" is not a number >= 0 (or null)`,
+      });
   }
   for (const key of FINOPS_BASIS_FIELDS) {
     const v = fm[key];
@@ -73,9 +76,15 @@ export function validateFinopsFields(fm) {
   const lo = fm.quote_low_usd;
   const hi = fm.quote_high_usd;
   if (typeof lo === 'number' && typeof hi === 'number' && lo > hi)
-    offenses.push({ rule: 'contract-finops-invalid', detail: `quote_low_usd ${lo} is above quote_high_usd ${hi}` });
+    offenses.push({
+      rule: 'contract-finops-invalid',
+      detail: `quote_low_usd ${lo} is above quote_high_usd ${hi}`,
+    });
   if ((typeof lo === 'number') !== (typeof hi === 'number'))
-    offenses.push({ rule: 'contract-finops-invalid', detail: 'a quote needs both quote_low_usd and quote_high_usd' });
+    offenses.push({
+      rule: 'contract-finops-invalid',
+      detail: 'a quote needs both quote_low_usd and quote_high_usd',
+    });
   return offenses;
 }
 
@@ -181,7 +190,8 @@ export function formatScalar(v) {
   if (v === null || v === undefined) return 'null';
   if (typeof v === 'number') return String(v);
   const s = String(v);
-  if (BARE_SAFE.test(s) && !/^-?\d+(\.\d+)?$/.test(s) && !RESERVED.has(s.toLowerCase()) && !s.endsWith(' ')) return s;
+  if (BARE_SAFE.test(s) && !/^-?\d+(\.\d+)?$/.test(s) && !RESERVED.has(s.toLowerCase()) && !s.endsWith(' '))
+    return s;
   return JSON.stringify(s);
 }
 

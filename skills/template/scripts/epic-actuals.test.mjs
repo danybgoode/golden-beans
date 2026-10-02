@@ -3,7 +3,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -23,7 +31,13 @@ import {
 } from './epic-actuals.mjs';
 
 // ⚠️ SEALED: git exports GIT_DIR into hooks, and it overrides cwd (see build-state.test.mjs).
-const GIT_ENV_TO_CLEAR = ['GIT_DIR', 'GIT_INDEX_FILE', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY'];
+const GIT_ENV_TO_CLEAR = [
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_WORK_TREE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+];
 function sealedEnv(base = process.env) {
   const env = { ...base };
   for (const k of GIT_ENV_TO_CLEAR) delete env[k];
@@ -52,7 +66,8 @@ function repoFixture() {
   mkdirSync(join(root, 'Roadmap', '09-platform-infra', 'beta'), { recursive: true });
   writeFileSync(join(root, 'Roadmap', '09-platform-infra', 'alpha', 'README.md'), README('alpha'));
   writeFileSync(join(root, 'Roadmap', '09-platform-infra', 'beta', 'README.md'), README('beta', 'shipped'));
-  const git = (...a) => execFileSync('git', a, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], env: sealedEnv() });
+  const git = (...a) =>
+    execFileSync('git', a, { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], env: sealedEnv() });
   git('init', '-q', '-b', 'main');
   git('config', 'user.email', 't@t');
   git('config', 'user.name', 't');
@@ -147,11 +162,15 @@ test('D13: a streamed response written as several entries counts ONCE, with the 
 test('D13: a resumed copy re-stamped with another branch never moves the turn — the first occurrence owns it', () => {
   const fx = repoFixture();
   try {
-    write(fx.projects, '-elsewhere', 'a-original.jsonl', [entry({ id: 'm1', cwd: fx.root, branch: 'main', session: 'A' })]);
+    write(fx.projects, '-elsewhere', 'a-original.jsonl', [
+      entry({ id: 'm1', cwd: fx.root, branch: 'main', session: 'A' }),
+    ]);
     const index = emptyIndex();
     run(fx, index);
     // Later, a resume copies the turn into a new file and re-stamps it with the branch of the new session.
-    write(fx.projects, '-elsewhere', 'b-resumed.jsonl', [entry({ id: 'm1', cwd: fx.root, branch: 'feat/alpha', session: 'B' })]);
+    write(fx.projects, '-elsewhere', 'b-resumed.jsonl', [
+      entry({ id: 'm1', cwd: fx.root, branch: 'feat/alpha', session: 'B' }),
+    ]);
     const { summary } = run(fx, index);
     assert.equal(summary.epics.alpha, undefined, 'the copy did not move the turn onto alpha');
     assert.equal(summary.unattributed.main.sessions, 1);
@@ -182,8 +201,12 @@ test('D15/D16: a worktree on feat/<slug>-s2 counts toward <slug>; main is unattr
 test('D15 (C15): a transcript in the folder Claude Code keeps for this repo counts even under the pre-move cwd', () => {
   const fx = repoFixture();
   try {
-    write(fx.projects, projectDirName(fx.root), 's.jsonl', [entry({ cwd: '/Users/someone/old-name', branch: 'feat/alpha' })]);
-    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: '/Users/someone/old-name', branch: 'feat/alpha' })]);
+    write(fx.projects, projectDirName(fx.root), 's.jsonl', [
+      entry({ cwd: '/Users/someone/old-name', branch: 'feat/alpha' }),
+    ]);
+    write(fx.projects, '-elsewhere', 's.jsonl', [
+      entry({ cwd: '/Users/someone/old-name', branch: 'feat/alpha' }),
+    ]);
     const { summary } = run(fx);
     assert.equal(summary.epics.alpha.sessions, 1, 'only the one in this repo’s own folder');
   } finally {
@@ -195,7 +218,9 @@ test('D14: a subagent file counts toward its parent session', () => {
   const fx = repoFixture();
   try {
     write(fx.projects, '-elsewhere', 'P.jsonl', [entry({ cwd: fx.root, session: 'P' })]);
-    write(fx.projects, '-elsewhere', 'P/subagents/agent-1.jsonl', [entry({ cwd: fx.root, session: 'P', output: 50 })]);
+    write(fx.projects, '-elsewhere', 'P/subagents/agent-1.jsonl', [
+      entry({ cwd: fx.root, session: 'P', output: 50 }),
+    ]);
     const { summary } = run(fx);
     assert.equal(summary.epics.alpha.sessions, 1);
     assert.equal(summary.epics.alpha.tokens.output, 150);
@@ -211,7 +236,11 @@ test('D4: missing fields are skipped and counted; an unknown model keeps its tok
       entry({ cwd: fx.root }),
       entry({ cwd: fx.root, model: 'claude-future-9', output: 1000 }),
       entry({ cwd: fx.root, model: '<synthetic>', usage: { input_tokens: 0, output_tokens: 0 } }),
-      JSON.stringify({ type: 'assistant', message: { id: 'nousage', model: 'claude-opus-5-5' }, cwd: fx.root }),
+      JSON.stringify({
+        type: 'assistant',
+        message: { id: 'nousage', model: 'claude-opus-5-5' },
+        cwd: fx.root,
+      }),
       '{"type":"assistant", broken',
     ]);
     const { summary } = run(fx);
@@ -231,7 +260,8 @@ test('D9: no content ever reaches the index, the summary or the report — and t
     write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root, skill: 'golden-frijoles:groom' })]);
     const { index, summary } = run(fx);
     const report = epicReport(summary, 'alpha');
-    for (const blob of [index, summary, report]) assert.doesNotMatch(JSON.stringify(blob), /SECRET PROMPT TEXT/);
+    for (const blob of [index, summary, report])
+      assert.doesNotMatch(JSON.stringify(blob), /SECRET PROMPT TEXT/);
     assert.deepEqual(Object.keys(report).sort(), [
       'basis',
       'branches',
@@ -251,11 +281,28 @@ test('D9: no content ever reaches the index, the summary or the report — and t
       'usd',
       'usd_known',
     ]);
-    assert.deepEqual(Object.keys(report.tokens), ['input', 'output', 'cache_read', 'cache_write_5m', 'cache_write_1h']);
+    assert.deepEqual(Object.keys(report.tokens), [
+      'input',
+      'output',
+      'cache_read',
+      'cache_write_5m',
+      'cache_write_1h',
+    ]);
     assert.deepEqual(Object.keys(report.by_skill), ['golden-frijoles:groom']);
     assert.deepEqual(report.not_measured, ['codex', 'agy', 'vibe', 'devin']);
     const rec = readEntry(entry({ cwd: fx.root })).record;
-    assert.deepEqual(Object.keys(rec).sort(), ['at', 'branch', 'cwd', 'geo', 'id', 'model', 'session', 'skill', 'speed', 'tokens']);
+    assert.deepEqual(Object.keys(rec).sort(), [
+      'at',
+      'branch',
+      'cwd',
+      'geo',
+      'id',
+      'model',
+      'session',
+      'skill',
+      'speed',
+      'tokens',
+    ]);
   } finally {
     fx.cleanup();
   }
@@ -276,7 +323,10 @@ test('1.2: the index is incremental — a second run reads nothing, an append re
     assert.deepEqual(grown.changes, { files_read: 1, added: 1, raised: 0 });
     assert.equal(grown.summary.epics.alpha.tokens.output, 107);
     // A half-written last line is left for the next run, not half-read.
-    appendFileSync(join(fx.projects, '-elsewhere', 's.jsonl'), entry({ cwd: fx.root, output: 1 }).slice(0, 40));
+    appendFileSync(
+      join(fx.projects, '-elsewhere', 's.jsonl'),
+      entry({ cwd: fx.root, output: 1 }).slice(0, 40)
+    );
     assert.equal(run(fx, index).changes.added, 0);
   } finally {
     fx.cleanup();
@@ -318,23 +368,48 @@ test('inRepo: the repo, under it — never a sibling that only shares a prefix',
 
 test('stampFrontmatter replaces in place, inserts what is missing, touches nothing else, and is idempotent', () => {
   const md = '---\nstatus: shipped # SSOT\nactual_usd: 1\ntitle: T\n---\n# Body\nactual_usd: 99\n';
-  const once = stampFrontmatter(md, { actual_usd: 38.42, actual_mtok: 1.9, actual_basis: 'this machine · 2026-10-02' });
+  const once = stampFrontmatter(md, {
+    actual_usd: 38.42,
+    actual_mtok: 1.9,
+    actual_basis: 'this machine · 2026-10-02',
+  });
   assert.equal(
     once,
     '---\nstatus: shipped # SSOT\nactual_usd: 38.42\ntitle: T\nactual_mtok: 1.9\nactual_basis: "this machine · 2026-10-02"\n---\n# Body\nactual_usd: 99\n'
   );
-  assert.equal(stampFrontmatter(once, { actual_usd: 38.42, actual_mtok: 1.9, actual_basis: 'this machine · 2026-10-02' }), once);
+  assert.equal(
+    stampFrontmatter(once, {
+      actual_usd: 38.42,
+      actual_mtok: 1.9,
+      actual_basis: 'this machine · 2026-10-02',
+    }),
+    once
+  );
 });
 
-test('1.4 backfill: measured epics, and each unmeasured one with its reason', () => {
-  const summary = { epics: { a: { usd: 1, usd_known: true, tokens: {}, mtok: 0, sessions: 1, branches: [] } }, skipped: {} };
+test('1.4 backfill: measured epics, partly-measured ones (never stamped), and each unmeasured one with its reason', () => {
+  const row = { usd: 1, usd_known: true, tokens: {}, mtok: 0, sessions: 1, branches: ['feat/a'] };
+  const summary = {
+    epics: { a: row, early: row, retro: { ...row, branches: ['docs/retro-owed'] } },
+    skipped: {},
+  };
   const rep = backfillReport({
     summary,
-    shipped: ['a', 'old', 'cloud'],
+    shipped: ['a', 'early', 'retro', 'old', 'cloud'],
     oldestTranscriptAt: '2026-09-09T00:00:00Z',
     shippedAt: (s) => ({ old: '2026-08-01T00:00:00Z', cloud: '2026-09-20T00:00:00Z' })[s],
+    scaffoldedAt: (s) => ({ a: '2026-09-20T00:00:00Z', early: '2026-09-01T00:00:00Z' })[s],
   });
-  assert.deepEqual(rep.resolved.map((r) => r.epic), ['a']);
+  assert.deepEqual(
+    rep.resolved.map((r) => r.epic),
+    ['a']
+  );
+  assert.deepEqual(
+    rep.partial.map((r) => r.epic),
+    ['early', 'retro']
+  );
+  assert.match(rep.partial[1].reason, /only close-out sessions/);
+  assert.match(rep.partial[0].reason, /partial total, not stamped/);
   assert.match(rep.unresolved[0].reason, /before the oldest transcript/);
   assert.match(rep.unresolved[1].reason, /in the cloud, on another machine/);
 });

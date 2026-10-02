@@ -19,6 +19,8 @@
 //     attribution is the FIRST occurrence indexed (files are first read oldest-born first).
 //   • D16 — branch → epic is build-state.mjs's own resolveTarget(). Anything it does not name — main, a fix
 //     branch with no epic — is `unattributed`, reported by branch (D11), never guessed.
+//   • C14 — `gitBranch` is the branch of the session's OWN checkout. A session sitting on epic A that builds epic B
+//     in another directory is counted as A. So build an epic from a session on its branch, or in a worktree on it.
 //   • D4 — unknown is not zero: an unpriceable turn keeps its tokens and makes the $ a lower bound (`usd_known:
 //     false`); an entry missing a field the count needs is skipped and counted in `skipped`.
 //   • D9 — metrics only. Nothing here reads, stores or prints message content; a spec pins every output key.
@@ -62,12 +64,23 @@ export const NOT_MEASURED = Object.freeze(['codex', 'agy', 'vibe', 'devin']);
 export const NO_SKILL = '(no skill)';
 
 // The same rule build-state.mjs applies: a git run from a hook must describe --repo-root, never an inherited GIT_DIR.
-const GIT_ENV_TO_CLEAR = ['GIT_DIR', 'GIT_INDEX_FILE', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY'];
+const GIT_ENV_TO_CLEAR = [
+  'GIT_DIR',
+  'GIT_INDEX_FILE',
+  'GIT_WORK_TREE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+];
 function git(root, args) {
   const env = { ...process.env };
   for (const k of GIT_ENV_TO_CLEAR) delete env[k];
   try {
-    return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], env }).trim();
+    return execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      env,
+    }).trim();
   } catch {
     return null;
   }
@@ -218,7 +231,20 @@ export function emptyIndex() {
 
 function packRecord(r) {
   const t = r.tokens;
-  return [r.session, r.branch, r.skill, r.model, r.at, r.speed, r.geo, t.input, t.output, t.cache_read, t.cache_write_5m, t.cache_write_1h];
+  return [
+    r.session,
+    r.branch,
+    r.skill,
+    r.model,
+    r.at,
+    r.speed,
+    r.geo,
+    t.input,
+    t.output,
+    t.cache_read,
+    t.cache_write_5m,
+    t.cache_write_1h,
+  ];
 }
 
 /** D13 — the first occurrence owns the attribution; a later one may only raise the counts (the final streamed write). */
@@ -324,7 +350,14 @@ const zeroTokens = () => Object.fromEntries(TOKEN_KINDS.map((k) => [k, 0]));
 const totalTokens = (t) => TOKEN_KINDS.reduce((a, k) => a + (t[k] || 0), 0);
 
 function newBucket() {
-  return { usd: 0, usd_known: true, tokens: zeroTokens(), sessions: new Set(), first_at: null, last_at: null };
+  return {
+    usd: 0,
+    usd_known: true,
+    tokens: zeroTokens(),
+    sessions: new Set(),
+    first_at: null,
+    last_at: null,
+  };
 }
 
 function addTo(bucket, rec) {
@@ -385,7 +418,8 @@ export function summarize(index, { epicOf, now = new Date() }) {
       addTo(unattributed.get(key), rec);
       continue;
     }
-    if (!epics.has(epic)) epics.set(epic, { all: newBucket(), models: new Map(), skills: new Map(), branches: new Set() });
+    if (!epics.has(epic))
+      epics.set(epic, { all: newBucket(), models: new Map(), skills: new Map(), branches: new Set() });
     const e = epics.get(epic);
     addTo(e.all, rec);
     e.branches.add(rec[1]);
@@ -410,7 +444,8 @@ export function summarize(index, { epicOf, now = new Date() }) {
     };
   }
   let oldest = null;
-  for (const rec of Object.values(index.messages)) if (rec[4] && (!oldest || rec[4] < oldest)) oldest = rec[4];
+  for (const rec of Object.values(index.messages))
+    if (rec[4] && (!oldest || rec[4] < oldest)) oldest = rec[4];
   return {
     generated_at: now.toISOString(),
     basis: MACHINE,
@@ -540,13 +575,32 @@ export function stampEpic({ root, summary, slug, basisPrefix = '', date }) {
  * Every shipped epic: measured from local transcripts, or the reason it could not be (findings recorded, not fixed).
  * `shippedAt(slug)` is when its README last changed; `oldestTranscriptAt` bounds what this machine can still see.
  */
-export function backfillReport({ summary, shipped, oldestTranscriptAt, shippedAt = () => null }) {
+export function backfillReport({
+  summary,
+  shipped,
+  oldestTranscriptAt,
+  shippedAt = () => null,
+  scaffoldedAt = () => null,
+}) {
   const resolved = [];
+  const partial = [];
   const unresolved = [];
   for (const slug of shipped) {
     const e = summary.epics[slug];
     if (e) {
-      resolved.push({ epic: slug, ...epicReport(summary, slug) });
+      // An epic scaffolded before the oldest transcript this machine still has was partly built in sessions that are
+      // gone: its total is an UNDERSTATEMENT, and stamping it would teach the first quotes a number too low (D4).
+      // And one measured only on `docs/` branches (a retro, a close-out) is not its build: the build ran elsewhere.
+      const born = scaffoldedAt(slug);
+      const onlyDocs = (e.branches || []).length > 0 && e.branches.every((b) => /^docs\//.test(b));
+      const reason =
+        born && oldestTranscriptAt && born < oldestTranscriptAt
+          ? `scaffolded ${born.slice(0, 10)}, before the oldest transcript on this machine (${oldestTranscriptAt.slice(0, 10)}) — a partial total, not stamped`
+          : onlyDocs
+            ? `only close-out sessions here (${e.branches.join(', ')}) — the build ran elsewhere; a partial total, not stamped`
+            : null;
+      if (reason) partial.push({ epic: slug, ...epicReport(summary, slug), reason });
+      else resolved.push({ epic: slug, ...epicReport(summary, slug) });
       continue;
     }
     const at = shippedAt(slug);
@@ -558,7 +612,7 @@ export function backfillReport({ summary, shipped, oldestTranscriptAt, shippedAt
           : 'no session on this machine ran on a branch naming it';
     unresolved.push({ epic: slug, reason });
   }
-  return { resolved, unresolved };
+  return { resolved, partial, unresolved };
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -578,8 +632,12 @@ function printEpic(r) {
   const lines = [
     `${r.epic}: ${usdText(r.usd, r.usd_known)} · ${r.mtok}M tok · ${r.sessions} session${r.sessions === 1 ? '' : 's'} · ${MACHINE}`,
     `  tokens   in ${m(t.input)} · out ${m(t.output)} · cache-read ${m(t.cache_read)} · cache-write ${m(t.cache_write_5m + t.cache_write_1h)}`,
-    `  models   ${Object.entries(r.by_model).map(([k, v]) => `${k} ${usdText(v.usd, v.usd_known)}`).join(' · ')}`,
-    `  skills   ${Object.entries(r.by_skill).map(([k, v]) => `${k} ${usdText(v.usd, v.usd_known)}`).join(' · ')}`,
+    `  models   ${Object.entries(r.by_model)
+      .map(([k, v]) => `${k} ${usdText(v.usd, v.usd_known)}`)
+      .join(' · ')}`,
+    `  skills   ${Object.entries(r.by_skill)
+      .map(([k, v]) => `${k} ${usdText(v.usd, v.usd_known)}`)
+      .join(' · ')}`,
     `  span     ${r.first_at ?? '?'} → ${r.last_at ?? '?'} · branches ${r.branches.join(', ')}`,
     `  ≈ API $ = list-price equivalent (${r.prices_source}, ${r.prices_as_of}); not measured: ${r.not_measured.join(', ')}`,
   ];
@@ -596,7 +654,8 @@ function main(argv) {
   const { summary, changes } = refresh({ root, projectsDir });
 
   if (argv.includes('--refresh')) {
-    if (json) process.stdout.write(`${JSON.stringify({ changes, epics: Object.keys(summary.epics).length })}\n`);
+    if (json)
+      process.stdout.write(`${JSON.stringify({ changes, epics: Object.keys(summary.epics).length })}\n`);
     return 0;
   }
   const slug = arg(argv, '--epic');
@@ -622,32 +681,67 @@ function main(argv) {
       const dates = p ? git(root, ['log', '--format=%cI', '-G', '^status: shipped', '--', p]) : null;
       return dates ? dates.split('\n').filter(Boolean).at(-1) || null : null;
     };
-    const rep = backfillReport({ summary, shipped, oldestTranscriptAt: summary.oldest_at, shippedAt });
+    const scaffoldedAt = (s) => {
+      const p = epicReadme(root, s);
+      const dates = p ? git(root, ['log', '--format=%cI', '--follow', '--diff-filter=A', '--', p]) : null;
+      return dates ? dates.split('\n').filter(Boolean).at(-1) || null : null;
+    };
+    const rep = backfillReport({
+      summary,
+      shipped,
+      oldestTranscriptAt: summary.oldest_at,
+      shippedAt,
+      scaffoldedAt,
+    });
     if (write)
-      for (const r of rep.resolved) stampEpic({ root, summary, slug: r.epic, basisPrefix: 'backfill · ', date: today });
+      for (const r of rep.resolved)
+        stampEpic({ root, summary, slug: r.epic, basisPrefix: 'backfill · ', date: today });
     if (json) {
-      process.stdout.write(`${JSON.stringify({ ...rep, unattributed: summary.unattributed, written: write }, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify({ ...rep, unattributed: summary.unattributed, written: write }, null, 2)}\n`
+      );
       return 0;
     }
-    const out = [`Measured on ${MACHINE} (${rep.resolved.length} shipped epic${rep.resolved.length === 1 ? '' : 's'}):`];
-    for (const r of rep.resolved) out.push(`  ${r.epic.padEnd(36)} ${usdText(r.usd, r.usd_known).padStart(9)} · ${r.mtok}M tok · ${r.sessions} session${r.sessions === 1 ? '' : 's'}`);
+    const out = [
+      `Measured on ${MACHINE} (${rep.resolved.length} shipped epic${rep.resolved.length === 1 ? '' : 's'}):`,
+    ];
+    for (const r of rep.resolved)
+      out.push(
+        `  ${r.epic.padEnd(36)} ${usdText(r.usd, r.usd_known).padStart(9)} · ${r.mtok}M tok · ${r.sessions} session${r.sessions === 1 ? '' : 's'}`
+      );
+    out.push(`Partly measured — not stamped (${rep.partial.length}):`);
+    for (const r of rep.partial)
+      out.push(`  ${r.epic.padEnd(36)} ${usdText(r.usd, r.usd_known).padStart(9)} · ${r.reason}`);
     out.push(`Could not measure (${rep.unresolved.length}):`);
     for (const u of rep.unresolved) out.push(`  ${u.epic.padEnd(36)} ${u.reason}`);
     const un = Object.entries(summary.unattributed);
-    out.push(`Unattributed (D11 — planning on main, fixes with no epic; ${un.length} branch${un.length === 1 ? '' : 'es'}):`);
-    for (const [b, v] of un.slice(0, 12)) out.push(`  ${b.padEnd(36)} ${usdText(v.usd, v.usd_known).padStart(9)} · ${v.sessions} session${v.sessions === 1 ? '' : 's'}`);
+    out.push(
+      `Unattributed (D11 — planning on main, fixes with no epic; ${un.length} branch${un.length === 1 ? '' : 'es'}):`
+    );
+    for (const [b, v] of un.slice(0, 12))
+      out.push(
+        `  ${b.padEnd(36)} ${usdText(v.usd, v.usd_known).padStart(9)} · ${v.sessions} session${v.sessions === 1 ? '' : 's'}`
+      );
     if (un.length > 12) out.push(`  … ${un.length - 12} more — --json`);
-    out.push(write ? 'Stamped actual_* on every measured shipped epic.' : 'Dry run — add --write to stamp actual_* on the measured ones.');
+    out.push(
+      write
+        ? 'Stamped actual_* on every measured shipped epic.'
+        : 'Dry run — add --write to stamp actual_* on the measured ones.'
+    );
     process.stdout.write(`${out.join('\n')}\n`);
     return 0;
   }
-  process.stderr.write('usage: epic-actuals.mjs --epic <slug> [--json] [--write] | --refresh | --backfill [--write]\n');
+  process.stderr.write(
+    'usage: epic-actuals.mjs --epic <slug> [--json] [--write] | --refresh | --backfill [--write]\n'
+  );
   return 2;
 }
 
 const isMain = (() => {
   try {
-    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+    return (
+      !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
   } catch {
     return false;
   }

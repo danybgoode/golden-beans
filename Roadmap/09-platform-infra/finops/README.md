@@ -114,6 +114,22 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
 - **C13 — the landing's FinOps copy over-claims for v1**: "Alert, rate-limit or stop" (D8 is alert-only),
   "across providers" (D12: Claude Code only), "retry" (not in the transcript). 3.4 rewrites it to what ships.
 
+- **C14 — `gitBranch` is the branch of the session's OWN checkout**, not of where the work happened (found on the
+  real backfill, 2026-10-02). `intent-match` was built from a session whose checkout sat on `feat/semantic-lint`
+  (session `780e1ca7`, 2,955 mentions of intent-match, every turn stamped `feat/semantic-lint`), so its spend is
+  inside semantic-lint's total and intent-match has none. Not fixable without guessing (D16 forbids it). Both are left
+  **unstamped**; the rule it teaches is in `epic-actuals.mjs`' header: build on the epic's branch, or in a worktree on it.
+- **C15 — D15 amended: a moved checkout.** Half of this repo's history (24,145 entries) was recorded under the old
+  path `~/dobby/golden-beans`; Claude Code moved the transcripts into `-Users-cosmo-dobby-golden-frijoles/` on the
+  2026-09-29 folder move but kept each entry's old `cwd`. A transcript in the folder Claude Code keeps for this repo
+  (or a worktree) now counts whatever `cwd` it recorded; everywhere else the cwd rule applies.
+- **C16 — a backfilled total can be a partial one.** An epic scaffolded before the oldest surviving transcript, or
+  measured only on `docs/` close-out branches, was partly built in sessions this Mac no longer has (or never had).
+  `--backfill` reports those as **partial — not stamped** so they never teach the first quotes a number that is too
+  low. Real run: 10 stamped, 2 partial (`mockups-as-built`, `experiments-for-humans`), 31 unmeasurable (shipped before
+  the oldest transcript, 2026-09-09 — Claude Code's 30-day cleanup removed the Sep-1 sessions *today*), plus
+  semantic-lint held back per C14. Sprint 1.4's expected list is amended accordingly.
+
 ### Decisions D13+
 - **D13 — Dedupe and attribution, one rule.** Key = `message.id` (fallback `requestId`; 0 entries lack an id here).
   Per key, token counts are the entry with the **largest `output_tokens`** (the final streamed write). The **first
@@ -125,7 +141,7 @@ D1–D12 above stand, **as amended here**. Each line says what the live system s
   (`CLAUDE_CONFIG_DIR` honoured). A subagent's turns belong to its parent's session.
 - **D15 — "This repo"**: an entry counts when its `cwd` (realpath when it exists, else literal) is the repo root, under
   it, or under any `git worktree list` path. Removed agent worktrees under `<root>/.claude/worktrees/` stay covered by
-  the prefix. Sessions recorded under the pre-rename path (`~/dobby/golden-beans`, one 2 KB file) are not this repo.
+  the prefix. **Amended by C15**: a transcript in the folder Claude Code keeps for this repo counts whatever cwd it recorded.
 - **D16 — Branch → epic** is `build-state.mjs`'s own `resolveTarget()` (exported for this, unchanged): longest
   `branchCandidates()` reading that names an epic dir, or a seed carrying `epic:`. Anything else — `main`, `HEAD`, a
   branch naming no epic (`fix/notion-kickoff-2000`) — is `unattributed`, reported by branch (D11). No second parser.
