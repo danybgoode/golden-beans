@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'node:crypto'
+import { specWorkspaceId } from './helpers/spec-workspace'
 
 // pod-report · Sprint 1, Story 1.1 — POST /api/v1/roadmap/push.
 //
@@ -87,9 +89,10 @@ test('push → 200 with a new version, and consecutive pushes increment monotoni
   expect(a.ok).toBe(true)
   expect(a.version).toBeGreaterThan(0)
 
+  // A DIFFERENT board: since board-sinks-and-scrumban D16 an identical push is not a new version (see below).
   const second = await request.post('/api/v1/roadmap/push', {
     headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
-    data: envelope({ items: [row({ slug })] }),
+    data: envelope({ items: [row({ slug, name: 'Changed' })] }),
   })
   const b = await second.json()
   // STRICTLY GREATER, not exactly +1 — and that is the honest assertion, not a weakened one.
@@ -102,14 +105,92 @@ test('push → 200 with a new version, and consecutive pushes increment monotoni
   expect(b.artifactId).not.toBe(a.artifactId)
 })
 
+test('an identical board is not a new version — the push answers unchanged (board-sinks-and-scrumban D16)', async ({
+  request,
+}) => {
+  // The board re-pushes on every branch and PR event; most move nothing, and every artifact is kept forever.
+  // ⚠️ Its OWN tenant, provisioned here: project-one and project-two are pushed by parallel siblings in this file,
+  // and "unchanged" is a claim about the LATEST version — a sibling landing in between would make the assertion
+  // depend on scheduling. A tenant nobody else touches makes it deterministic.
+  const db = dbClient()
+  const slug = `roadmap-dedupe-${Date.now()}`
+  const key = `local-roadmap-dedupe-${Date.now()}-do-not-use-in-prod`
+  const { data: project, error } = await db
+    .from('projects')
+    .insert({ workspace_id: await specWorkspaceId(db), slug })
+    .select('id')
+    .single()
+  if (error) throw new Error(`could not provision the dedupe tenant: ${error.message}`)
+  const keyHash = createHash('sha256').update(key).digest('hex')
+  const { error: keyError } = await db
+    .from('api_keys')
+    .insert({ project_id: project.id, key_hash: keyHash, label: 'roadmap dedupe spec' })
+  if (keyError) throw new Error(`could not provision the dedupe key: ${keyError.message}`)
+
+  const headers = { Authorization: `Bearer ${key}` }
+  const items = [row({ slug: 'same-board', stage: 'QA', goal: 'unchanged' })]
+  const board = { wip: { Building: 2, QA: 3 }, repo: 'https://github.com/o/r/blob/main/' }
+  const push = async (data: unknown) => (await request.post('/api/v1/roadmap/push', { headers, data })).json()
+
+  const first = await push(envelope({ items, board }))
+  expect(first.ok).toBe(true)
+  expect(first.unchanged).toBeUndefined()
+
+  // Same board, a later generatedAt and another commit: still the same board, so no new version.
+  const again = await push(
+    envelope({
+      items,
+      board,
+      generatedAt: new Date().toISOString(),
+      source: { commit: 'def5678', ref: 'feat/x' },
+    })
+  )
+  expect(again).toMatchObject({
+    ok: true,
+    unchanged: true,
+    version: first.version,
+    artifactId: first.artifactId,
+  })
+
+  // The board block is part of the content: a new WIP limit is a new version.
+  const wip = await push(envelope({ items, board: { ...board, wip: { Building: 1 } } }))
+  expect(wip.unchanged).toBeUndefined()
+  expect(wip.version).toBeGreaterThan(first.version)
+
+  // So is a moved card.
+  const moved = await push(
+    envelope({ items: [{ ...items[0], stage: 'Shipped' }], board: { ...board, wip: { Building: 1 } } })
+  )
+  expect(moved.unchanged).toBeUndefined()
+  expect(moved.version).toBeGreaterThan(wip.version)
+
+  // And the block is STORED, not stripped (lock C6).
+  const { data: stored } = await db
+    .from('report_artifacts')
+    .select('payload')
+    .eq('project_id', project.id)
+    .eq('kind', 'roadmap')
+    .order('version', { ascending: false })
+    .limit(1)
+    .single()
+  expect(stored?.payload?.board).toEqual({ wip: { Building: 1 }, repo: 'https://github.com/o/r/blob/main/' })
+})
+
 test('concurrent pushes never collide on a version — the advisory lock does its job', async ({ request }) => {
   // The lost-update race the RPC's advisory lock exists to prevent: two callers reading
   // max(version)=N and both writing N+1. Without the lock this fails on the unique constraint (a
   // 500) or silently skips a version. Fired in parallel, asserted on distinct versions.
   const headers = { Authorization: `Bearer ${PROJECT_ONE_KEY}` }
+  // Five DIFFERENT boards: identical ones may be skipped as unchanged (D16), which is not what this test is about.
+  const stamp = Date.now()
   const results = await Promise.all(
-    Array.from({ length: 5 }, () =>
-      request.post('/api/v1/roadmap/push', { headers, data: envelope() }).then((r) => r.json())
+    Array.from({ length: 5 }, (_, i) =>
+      request
+        .post('/api/v1/roadmap/push', {
+          headers,
+          data: envelope({ items: [row({ slug: `concurrent-${stamp}-${i}` })] }),
+        })
+        .then((r) => r.json())
     )
   )
   for (const r of results) expect(r.ok).toBe(true)

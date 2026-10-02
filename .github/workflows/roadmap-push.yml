@@ -1,85 +1,120 @@
-# pod-report · Sprint 1, Story 1.1 — push golden-beans' own roadmap on every merge to `main`.
+# Push golden-beans' own roadmap to the Hub — on the EVENT that moved a card (board-sinks-and-scrumban S1.3, D18).
 #
-# golden-beans is tenant #0. It dogfoods the client-pushes rail through the SAME public endpoint,
-# with the SAME kind of API key a customer uses. There is no privileged internal path — the engine
-# never reads anyone's git, including its own. That is what makes the Roadmap Hub's freshness stamp
-# ("as of merge <sha>") honest: it is stamping a real push, not a server-side scrape.
+# golden-beans is tenant #0. It dogfoods the client-pushes rail through the SAME public endpoint, with the SAME kind
+# of API key a customer uses. There is no privileged internal path — the engine never reads anyone's git, including
+# its own: CI pushes, the Hub renders.
 #
-# ── This is DORMANT until SELF_PROJECT_API_KEY exists as a repo secret ────────────────────────
-# The script exits 0 with a message when the key is unset, so this job is green-and-inert rather
-# than red, exactly like the Telegram workflow. Turning it on is a deliberate, named act by Daniel:
-# the key is a production credential and adding it is not something an agent does on a standing
-# authorization (Roadmap/LEARNINGS.md — a broad "wrap up as per process" never extends to credential
-# territory).
+# ── Why these triggers (D13/D18) ──────────────────────────────────────────────────────────────────────────
+# A card's stage is decided by facts git and GitHub already hold: a work branch on origin is Building, a ready PR is
+# QA, back to draft is Building, a merge with no close-out is QA, `status: shipped` on main is Shipped. So the board
+# re-renders on exactly those events — a branch created or deleted, a PR opened / readied / drafted / closed, a docs
+# commit on main — and never because somebody remembered to edit a doc. Only work branches
+# (`feat|fix|chore|spike|bug|docs/…`) trigger it: dependabot and `claude/` branches name no initiative.
 #
-# Runs AFTER the deploy rather than racing it: a push carries a commit SHA, and stamping a SHA whose
-# deployment has not finished would let the hub claim a state that is not serving yet. `deployment_status`
-# on the Production environment is the same signal notify-telegram.yml's deploy-finish ping uses.
+# ── What every run reads ──────────────────────────────────────────────────────────────────────────────────
+# The DEFAULT BRANCH's docs, whatever the trigger: the docs SSOT is `main`, and a feature branch's half-edited
+# Roadmap/ must never reach the Hub. The stamp it pushes is that commit. The git/GitHub facts are global (one
+# `git ls-remote`, one `gh pr list` — lib/stage-facts.mjs), so the event that fired the run is in them.
+#
+# ── One concurrency group, not one per ref ────────────────────────────────────────────────────────────────
+# Every run pushes the WHOLE board, so the newest facts must win: a per-ref group would let an older run on another
+# ref finish last and push a stale board over a fresh one. GitHub keeps at most one pending run per group and drops
+# the older pending one, which is exactly "the latest wins". `cancel-in-progress: false` so a push in flight is never
+# cut off half-way. An unchanged board is not stored again (the route's D16 check), so a burst of events costs
+# runs, not artifacts.
+#
+# ── Without the secret it is a clean skip ─────────────────────────────────────────────────────────────────
+# `scripts/roadmap-push.mjs` exits 0 when SELF_PROJECT_API_KEY is unset — a fork PR gets no secrets, and this
+# repo's fork PRs are filtered out below anyway. Turning the key on was a deliberate, named act (pod-report).
 
 name: Push roadmap artifact
 
 on:
+  push:
+    branches: [main]
+  create:
+  delete:
+  pull_request:
+    types: [opened, reopened, ready_for_review, converted_to_draft, closed]
   deployment_status:
   workflow_dispatch:
 
 permissions:
   contents: read
-  # pod-report Story 3.2 — scripts/pod-report.mjs shells out to `gh pr list` for review latency, the
-  # deploy-frequency proxy and four of the maturity criteria. WITHOUT this scope the script does not
-  # fail: it warns and renders those rows as "not instrumented" (correct behaviour, and much worse
-  # than the truth). An honest degradation is still a degradation when the data is right there.
+  # `gh pr list` (the board's PR facts) and pod-report's review-latency rows both need it. Without it neither fails:
+  # each degrades to "no PR facts", which on the board would read every open PR as plain Building.
   pull-requests: read
 
 jobs:
   push-roadmap:
     name: Push roadmap to the engine
-    # Only a SUCCESSFUL production deploy. A failed deploy means the SHA we would stamp is not the
-    # SHA that is serving, and the hub would render a freshness stamp that is quietly a lie.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.deployment_status.environment == 'Production' &&
+      github.event_name == 'push' ||
+      ((github.event_name == 'create' || github.event_name == 'delete') &&
+       github.event.ref_type == 'branch' &&
+       (startsWith(github.event.ref, 'feat/') || startsWith(github.event.ref, 'fix/') ||
+        startsWith(github.event.ref, 'chore/') || startsWith(github.event.ref, 'spike/') ||
+        startsWith(github.event.ref, 'bug/') || startsWith(github.event.ref, 'docs/'))) ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       (startsWith(github.head_ref, 'feat/') || startsWith(github.head_ref, 'fix/') ||
+        startsWith(github.head_ref, 'chore/') || startsWith(github.head_ref, 'spike/') ||
+        startsWith(github.head_ref, 'bug/') || startsWith(github.head_ref, 'docs/')))
+    runs-on: ubuntu-latest
+    concurrency:
+      group: roadmap-push
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          # FULL history: each row's `status_date` (and so a card's `shipped_at`, which decides the board's
+          # "Shipped in the last 30 days") is the last commit that touched its status line. On a depth-1 clone every
+          # date would collapse to the checkout's own commit.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # No `npm ci`: the extractor and the push script are zero-dependency, and this job now runs on every branch
+      # and PR event rather than once per deploy.
+      - name: Push the roadmap artifact
+        env:
+          GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
+          SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/roadmap-push.mjs
+
+  # pod-report · Sprint 3, Story 3.2 — the landing's §5 reads THIS artifact, so it has to stay current on its own.
+  # Computed from this very checkout (`--repo .`): golden-beans measuring golden-beans. It stays on the deploy signal:
+  # a push carries a commit SHA, and stamping one whose deployment has not finished would claim a state that is not
+  # serving yet. `continue-on-error`: a failed Pod Report must not fail the deploy pipeline; the landing falls back to
+  # its honest teaser when no artifact is readable.
+  push-pod-report:
+    name: Push golden-beans' own Pod Report
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'deployment_status' &&
+       github.event.deployment_status.environment == 'Production' &&
        github.event.deployment_status.state == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # The roadmap extract reads Roadmap/ at the DEPLOYED commit, not at whatever `main` has
-          # drifted to since. Stamping a SHA whose docs we did not actually read would be the same
-          # class of dishonesty the `if:` above avoids.
           ref: ${{ github.event.deployment.sha || github.sha }}
-          # FULL history, and this is load-bearing for the pod-report step below, not a nicety.
-          # actions/checkout defaults to depth 1, and scripts/pod-report.mjs derives every number
-          # from `git log` and from when each epic README first appeared. On a shallow clone it would
-          # succeed, report "1 commit / 0 measurable epics", and push that as an artifact — a
-          # confidently wrong report, which is the one outcome this epic exists to prevent.
+          # FULL history, load-bearing: scripts/pod-report.mjs derives every number from `git log` and from when
+          # each epic README first appeared. On a shallow clone it would report "1 commit / 0 measurable epics".
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-
-      - name: Push the roadmap artifact
-        env:
-          GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
-          SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
-        run: node scripts/roadmap-push.mjs
-
-      # pod-report · Sprint 3, Story 3.2 — the landing's §5 reads THIS artifact, so it has to stay
-      # current on its own. Computed from this very checkout (`--repo .`): golden-beans measuring
-      # golden-beans, which is both the demo-safe dataset for a public page and the only version of
-      # "we sell what we use" that is literally true.
-      #
-      # `continue-on-error`: a failed Pod Report must not fail the deploy pipeline, and it must not
-      # take the roadmap push down with it. The landing section falls back to its honest teaser when
-      # no artifact is readable, so the visible consequence of a failure here is a page that claims
-      # less — never a broken one, and never a stale number presented as fresh.
       - name: Push golden-beans' own Pod Report artifact
         continue-on-error: true
         env:
           GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
           SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
-          # `gh` reads GH_TOKEN from the environment; the job token carries the pull-requests: read
-          # scope declared above.
+          # `gh` reads GH_TOKEN from the environment; the job token carries the pull-requests: read scope above.
           GH_TOKEN: ${{ github.token }}
         run: node scripts/pod-report.mjs --repo . --push

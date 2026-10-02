@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // pod-report · Sprint 1, Story 1.1 — the roadmap-push contract.
 //
-// The payload is the output of `node scripts/roadmap-to-notion.mjs --extract`, which is the epic's
+// The payload is the output of `node scripts/roadmap-extract.mjs --live` (board-sinks-and-scrumban D15), the epic's
 // stated contract ("that JSON is the contract, version field validated on ingest"). The extract
 // emits a BARE ARRAY of rows with no envelope and no version of its own, so this module defines the
 // envelope the rail actually ships: a schema version, provenance, and the rows.
@@ -32,6 +32,32 @@ export const ROADMAP_SCHEMA_VERSION = 1
 
 /** Grains the extract emits. Anything else is a generator we do not understand — reject, don't guess. */
 export const ROADMAP_GRAINS = ['Epic', 'Sprint', 'Seed'] as const
+
+/**
+ * The six stages (board-sinks-and-scrumban D1), in board order.
+ *
+ * ⚠️ A COPY of `STAGES` in `scripts/lib/stage.mjs`, which is where a stage is decided. App code does not import
+ * `scripts/` at runtime (lock D19 — the `ROADMAP_SCHEMA_VERSION` precedent), so `hub-board.test.ts` asserts the two
+ * lists are identical: renaming a stage in one place turns that spec red instead of emptying a column.
+ */
+export const ROADMAP_STAGES = ['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped'] as const
+export type RoadmapStage = (typeof ROADMAP_STAGES)[number]
+
+// A URL the hub renders as a link. Only https — a pushed `javascript:` URL would otherwise be one click from running
+// in the viewer's session on our origin. Validated at ingest, never trusted at render (the slug's stance).
+const httpsUrl = z
+  .string()
+  .max(500)
+  .url()
+  .refine((u) => u.startsWith('https://'), 'must be an https URL')
+
+// A repo-relative doc path (`Roadmap/…/README.md`). The hub joins it onto the pushed repo base, so it must not be
+// able to climb out of the repo or carry a scheme of its own.
+const docPath = z
+  .string()
+  .max(300)
+  .regex(/^[A-Za-z0-9_][A-Za-z0-9_./-]*\.md$/, 'must be a repo-relative .md path')
+  .refine((p) => !p.split('/').includes('..'), 'must not climb out of the repo')
 
 // Rows are validated structurally but NOT exhaustively: `.passthrough()` keeps unknown fields.
 // That is deliberate. The extract gains columns as the roadmap tooling grows, and a strict schema
@@ -65,6 +91,42 @@ const roadmapRowSchema = z
     build_order_num: z.number().int().nullish(),
     doc_link: z.string().max(500).nullish(),
     epic_slug: z.string().max(200).nullish(),
+    // ── board-sinks-and-scrumban (D21) — every field optional, so a v1 payload from before the board still parses
+    // and no ROADMAP_SCHEMA_VERSION bump is needed. Validated where the hub renders them (a link, a column).
+    stage: z.enum(ROADMAP_STAGES).nullish(),
+    stage_source: z.string().max(300).nullish(),
+    goal: z.string().max(2000).nullish(),
+    sprints: z
+      .array(
+        z.object({
+          n: z.number().int().nonnegative(),
+          title: z.string().max(300).nullish(),
+          done: z.number().int().nonnegative(),
+          total: z.number().int().nonnegative(),
+        })
+      )
+      .max(50)
+      .nullish(),
+    links: z
+      .object({
+        readme: docPath.nullish(),
+        seed: docPath.nullish(),
+        sprints: z.array(docPath).max(50).nullish(),
+        retro: docPath.nullish(),
+      })
+      .nullish(),
+    pr: z
+      .object({
+        number: z.number().int().positive(),
+        url: httpsUrl,
+        state: z.string().max(20),
+        draft: z.boolean(),
+      })
+      .nullish(),
+    kickoff: z.string().max(20000).nullish(),
+    shipped_at: z.string().max(40).nullish(),
+    appetite: z.string().max(10).nullish(),
+    underwritten_by: z.string().max(200).nullish(),
   })
   .passthrough()
 
@@ -86,6 +148,20 @@ export const roadmapPushSchema = z.object({
   // The migration also rejects an empty array; asserting it here makes the failure a 400 with a
   // readable message instead of a constraint violation the caller cannot act on.
   items: z.array(roadmapRowSchema).min(1).max(5000),
+  // board-sinks-and-scrumban D6/D21 — optional, additive. Before this field existed an extra `board` key passed this
+  // (non-strict) object and was silently STRIPPED (lock C6); now it is declared, and the route stores it.
+  board: z
+    .object({
+      wip: z
+        .object({
+          Building: z.number().int().positive().max(99).nullish(),
+          QA: z.number().int().positive().max(99).nullish(),
+        })
+        .nullish(),
+      // The base a card's repo-relative doc links resolve against: `https://github.com/<o>/<r>/blob/<branch>/`.
+      repo: httpsUrl.nullish(),
+    })
+    .nullish(),
 })
 
 export type RoadmapPush = z.infer<typeof roadmapPushSchema>
@@ -115,6 +191,34 @@ export function parseRoadmapPush(
     }
   }
   return { ok: true, value: parsed.data }
+}
+
+/**
+ * JSON with every object's keys sorted, recursively — so two payloads compare by content, not by key order.
+ *
+ * Needed because Postgres `jsonb` does not keep the order a client sent: reading a stored payload back and
+ * `JSON.stringify`-ing it gives different bytes for the same data.
+ */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+/**
+ * Whether a push would store exactly what the latest artifact already holds (board-sinks-and-scrumban D16).
+ *
+ * The board re-pushes on every branch and PR event, ~60 a day at this repo's pace, and most of those leave every
+ * card where it was. Each artifact is immutable and kept, so an identical push is growth with no information.
+ * `generatedAt` and `source` live outside `payload`, so they never make two identical boards look different.
+ */
+export function isSameRoadmapPayload(stored: unknown, next: unknown): boolean {
+  return canonicalJson(stored) === canonicalJson(next)
 }
 
 /**

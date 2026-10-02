@@ -1,4 +1,5 @@
-# Repo-hygiene: the in-repo status board must stay a faithful generated view.
+# Repo-hygiene: the in-repo status board must stay a faithful generated view. It renders the six stages from the docs
+# alone (board-sinks-and-scrumban lock C3), so the extractor and the stage libs it reads are watched too.
 # BUILD-ORDER.md is GENERATED from the SSOT (each epic README's frontmatter `status:`,
 # plus seed frontmatter for the funnel) by scripts/build-order.mjs. This guard fails CI
 # if the committed board is stale — i.e. someone changed a status/seed/sprint doc (or the
@@ -14,12 +15,20 @@ on:
       - 'Roadmap/**'
       - 'scripts/build-order.mjs'
       - 'scripts/roadmap-to-notion.mjs'
+      - 'scripts/roadmap-extract.mjs'
+      - 'scripts/lib/stage*.mjs'
+      - 'scripts/lib/work-branch.mjs'
+      - 'scripts/lib/epic-kickoff.mjs'
       - '.github/workflows/build-order-guard.yml'
   pull_request:
     paths:
       - 'Roadmap/**'
       - 'scripts/build-order.mjs'
       - 'scripts/roadmap-to-notion.mjs'
+      - 'scripts/roadmap-extract.mjs'
+      - 'scripts/lib/stage*.mjs'
+      - 'scripts/lib/work-branch.mjs'
+      - 'scripts/lib/epic-kickoff.mjs'
       - '.github/workflows/build-order-guard.yml'
 
 jobs:

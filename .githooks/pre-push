@@ -73,7 +73,7 @@ push_fail=0
 changed=$(git diff --name-only '@{upstream}'...HEAD 2>/dev/null)
 [ -z "$changed" ] && changed=$(git diff --name-only origin/main...HEAD 2>/dev/null)
 
-if echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-to-notion\.mjs)'; then
+if echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-extract\.mjs|scripts/roadmap-to-notion\.mjs|scripts/lib/stage)'; then
   echo "pre-push: build-order freshness..." >&2
   if ! node scripts/build-order.mjs --check; then
     echo "pre-push: BUILD-ORDER.md is STALE — it is DERIVED, never hand-edited." >&2

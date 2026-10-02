@@ -39,8 +39,16 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-- D2/D4 from the README. Every change under `skills/` is a plugin release (`skills/RELEASING.md`), mirrored to `golden-frijoles/skills`.
+## Build contract (locked by the architect before the builder started — README § Architecture lock)
+- **S3.1** — C12 + D14: the hook stays offline, so the mod reads the snapshot and prints its age; the CLI run
+  without `--offline` gathers facts once and refreshes the snapshot; `session-resume` refreshes it too. `hub.url`
+  per D22. `phase:` stays only as a detail (D12).
+- **S3.2** — D15: `--sink terminal|hub|notion` on the one extractor; `roadmap-push.mjs` moves into
+  `skills/template/scripts/` (this repo's copy byte-identical). The npm publish of the kit is the product owner's
+  2FA step — owed by name.
+- **S3.3** — the Notion sink writes `stage` as a select; this repo's live Notion DB needs the property.
+- **S3.4** — D22 (`board.wip`); the warning reads the snapshot through the D13 resolver and never blocks.
+- Every change under `skills/` is a plugin release (`skills/RELEASING.md`), mirrored to `golden-frijoles/skills`.
 
 ## Stories
 
@@ -75,7 +83,7 @@ Env: your terminal + production · https://goldenfrijoles.com
 1. In Claude Code on a `feat/<slug>` branch, look at the build view above the prompt.
    → It shows the stage word, "stage from GitHub, <age>", and a `Board ↗` link.
 2. Click the `Board ↗` link.
-   → https://goldenfrijoles.com/hub/golden-frijoles/board opens with that card's drawer.
+   → https://goldenfrijoles.com/hub/golden-beans-demo/board opens with that card's drawer.
 3. Turn the network off and open a new Claude Code turn.
    → The build view says "stage from snapshot, <age>".
 4. In a scratch repo with the plugin installed, run `npx -y @golden-frijoles/kit roadmap-extract --sink terminal`.

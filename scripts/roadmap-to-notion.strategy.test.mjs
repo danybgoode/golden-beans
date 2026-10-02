@@ -1,8 +1,8 @@
 // roadmap-to-notion.strategy.test.mjs — this repo's own extractor ignores Roadmap/00-strategy/ (think-skills S2.2, D8).
 //
-// `skills/template/scripts/strategy-folder.test.mjs` pins the property for the extractor strangers get. This repo runs
-// a different one: `scripts/roadmap-extract.mjs` delegates to `roadmap-to-notion.mjs --extract`, which pins its root to
-// its own directory and ignores GF_PROJECT_ROOT. So it is copied into a fixture project and run there, with and
+// `skills/template/scripts/strategy-folder.test.mjs` pins the property for the extractor strangers get. This repo's
+// `roadmap-to-notion.mjs --extract` now runs that same extractor (board-sinks-and-scrumban D15); it is still pinned
+// here through the Notion entry point, copied into a fixture project with its imports and run there, with and
 // without the strategy folder. As in the template's pin, the failing run is the D8 violation (a strategy SUBFOLDER
 // carrying a README.md), because a flat file is skipped twice over by the walker and no one-line mutation of it
 // changes that.
@@ -38,6 +38,21 @@ function rows(strategy) {
   mkdirSync(join(root, 'scripts'));
   writeFileSync(join(epic, 'README.md'), EPIC);
   writeFileSync(join(root, 'scripts', 'roadmap-to-notion.mjs'), SOURCE);
+  // The Notion sync imports the ONE extractor and its libs (board-sinks-and-scrumban D15).
+  const here = dirname(fileURLToPath(import.meta.url));
+  mkdirSync(join(root, 'scripts', 'lib'));
+  writeFileSync(
+    join(root, 'scripts', 'roadmap-extract.mjs'),
+    readFileSync(join(here, 'roadmap-extract.mjs'))
+  );
+  for (const lib of [
+    'project-root.mjs',
+    'stage.mjs',
+    'work-branch.mjs',
+    'stage-facts.mjs',
+    'epic-kickoff.mjs',
+  ])
+    writeFileSync(join(root, 'scripts', 'lib', lib), readFileSync(join(here, 'lib', lib)));
   if (strategy) {
     const dir = join(root, 'Roadmap', '00-strategy');
     mkdirSync(dir);

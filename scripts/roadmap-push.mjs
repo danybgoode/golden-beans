@@ -16,6 +16,7 @@ import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getKey } from './lib/config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -37,7 +38,7 @@ function git(args) {
  * touching the network — the envelope is the thing the server validates, so it is the thing worth
  * testing.
  */
-export function buildEnvelope(items, { commit, ref, generatedAt } = {}) {
+export function buildEnvelope(items, { commit, ref, generatedAt, board = null } = {}) {
   return {
     schemaVersion: ROADMAP_SCHEMA_VERSION,
     generatedAt: generatedAt ?? new Date().toISOString(),
@@ -48,22 +49,57 @@ export function buildEnvelope(items, { commit, ref, generatedAt } = {}) {
       ref: ref ?? null,
     },
     items,
+    // board-sinks-and-scrumban D21 — optional and additive; absent rather than null when there is nothing in it,
+    // so the server's unchanged-board check (D16) never sees a difference that carries no information.
+    ...(board ? { board } : {}),
   };
 }
 
-/** Rows from `roadmap-to-notion.mjs --extract`. Dies loudly on empty output (LEARNINGS: treat empty as failure). */
+/**
+ * The https base a card's repo-relative doc links resolve against, from the `origin` remote:
+ * `git@github.com:o/r.git` or `https://github.com/o/r(.git)` → `https://github.com/o/r/blob/<branch>/`.
+ * null for any other host — a link the Hub cannot build is better left out than guessed.
+ */
+export function repoBlobBase(remoteUrl, branch = 'main') {
+  const m = String(remoteUrl || '')
+    .trim()
+    .match(
+      /^(?:git@github\.com:|https:\/\/(?:[^@/]+@)?github\.com\/)([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/
+    );
+  if (!m || !/^[A-Za-z0-9_./-]+$/.test(branch)) return null;
+  return `https://github.com/${m[1]}/${m[2]}/blob/${branch}/`;
+}
+
+/** The envelope's `board` block: the WIP limits from config (D22) and the repo base for doc links. null when empty. */
+export function buildBoard({ wip, repo }) {
+  const limits = {};
+  for (const stage of ['Building', 'QA']) {
+    const n = wip?.[stage];
+    if (Number.isInteger(n) && n > 0) limits[stage] = n;
+  }
+  const board = {};
+  if (Object.keys(limits).length) board.wip = limits;
+  if (repo) board.repo = repo;
+  return Object.keys(board).length ? board : null;
+}
+
+/**
+ * Rows from `roadmap-extract.mjs --live` — the ONE extractor (board-sinks-and-scrumban D15), with git and GitHub facts
+ * gathered now, so the pushed stages are the ones the event that triggered this run produced. Dies loudly on empty
+ * output (LEARNINGS: treat empty as failure).
+ */
 export function readExtract(run = spawnSync) {
-  const r = run('node', [resolve(__dirname, 'roadmap-to-notion.mjs'), '--extract'], {
+  // --require-live: a failed git/GitHub gather turns the run red rather than publishing a docs-only board.
+  const r = run('node', [resolve(__dirname, 'roadmap-extract.mjs'), '--live', '--require-live'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
   if (r.status !== 0) {
-    throw new Error(`roadmap-to-notion.mjs --extract failed: ${(r.stderr || '').trim().split('\n').pop()}`);
+    throw new Error(`roadmap-extract.mjs --live failed: ${(r.stderr || '').trim().split('\n').pop()}`);
   }
   const out = (r.stdout || '').trim();
-  if (!out)
-    throw new Error('roadmap-to-notion.mjs --extract produced no output — treating empty as failure.');
+  if (!out) throw new Error('roadmap-extract.mjs --live produced no output — treating empty as failure.');
   const items = JSON.parse(out);
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('extract returned no rows — refusing to push an empty roadmap.');
@@ -82,9 +118,16 @@ async function main() {
   const apiKey = process.env.SELF_PROJECT_API_KEY;
 
   const items = readExtract();
+  const defaultBranch = (
+    git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']) || 'origin/main'
+  ).replace(/^origin\//, '');
   const envelope = buildEnvelope(items, {
     commit: git(['rev-parse', 'HEAD']),
     ref: git(['rev-parse', '--abbrev-ref', 'HEAD']),
+    board: buildBoard({
+      wip: getKey('board.wip', { root: REPO_ROOT }),
+      repo: repoBlobBase(git(['remote', 'get-url', 'origin']), defaultBranch),
+    }),
   });
 
   if (dryRun) {
