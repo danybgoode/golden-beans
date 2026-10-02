@@ -23,6 +23,9 @@ requires_scripts:
   - lib/stage.mjs
   - roadmap-extract.mjs
   - roadmap-push.mjs
+  # FinOps (finops S1): what each epic consumed, from this machine's Claude Code transcripts.
+  - epic-actuals.mjs
+  - lib/model-prices.mjs
   # The epic kickoff's own commands (distribute-what-we-use D4): the review rail and the session resume.
   - review-route.mjs
   - cross-review.mjs
