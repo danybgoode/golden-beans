@@ -74,14 +74,13 @@ test('the answer: shipped of epics, then what is Now with its stage', () => {
   )
 })
 
-test('a payload pushed before stages existed is placed from its legacy status, and counted as such', () => {
+test('the Hub never computes a stage (D19): a row without one is off the roadmap, never placed from its status', () => {
   const v = buildAreas([
     row({ name: 'Old shipped', slug: 'a', status: 'Shipped' }),
     row({ name: 'Old open', slug: 'b', status: 'In progress' }),
-    row({ name: 'Old seed', slug: 'c', grain: 'Seed', status: 'Raw' }),
+    row({ name: 'Staged', slug: 'c', stage: 'Building' }),
   ])
-  assert.equal(v.fromLegacyStatus, 3)
-  assert.deepEqual(cell(v, '02 Commercial', 'Shipped'), ['Old shipped'])
-  assert.deepEqual(cell(v, '02 Commercial', 'Now'), ['Old open'])
-  assert.deepEqual(cell(v, '02 Commercial', 'Later'), ['Old seed'])
+  assert.deepEqual(cell(v, '02 Commercial', 'Shipped'), [])
+  assert.deepEqual(cell(v, '02 Commercial', 'Now'), ['Staged'])
+  assert.equal(v.epics, 1)
 })

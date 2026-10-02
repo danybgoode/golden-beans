@@ -40,16 +40,24 @@ stories:
   track retires from the tab; its "you are here" is the Board's answer line ("Next to pull: …") and this tab's own
   ("Now: …"). The share page (`/s/<token>`) keeps its journey — a different approved state — so `lib/hub-journey.ts`
   and the track CSS stay. Shipped shows a count and the latest three per area; every name opens its card on the Board.
-  A push from before stages is placed from its written status, and the note says so.
+  **The Hub computes no stage here either (D19).** The first draft placed a pre-stage push from its old `status`; the
+  fresh review caught that this contradicted the lock and linked to cards the board could not open. A push without
+  stages now gets the board's own empty state ("push again").
 - **On a phone the area table STACKS** (each horizon labelled), it does not scroll sideways. Found by the existing
   390px spec: an early `min-width` overrode the house rule that clips `.ds-listhead` to a 1px box under 900px, and
   the absolutely-positioned header escaped the card and widened the page to 744px.
 - **S4.2 — `/hub/w/<workspaceId>/board`** (lock C8: workspaces have no slug). Tenancy, per AGENTS § The tenancy
   invariant: session required (a workspace is never public); a malformed id, a workspace the viewer is not in, or a
-  `?project=` outside `getWorkspaceProjects()` all 404 — each guard observed red with it removed. The ONLY
+  `?project=` outside `getWorkspaceProjects()` all 404. The membership 404, the `?project=` 404 and the session
+  redirect were each observed red with the guard removed; the UUID check is defence in depth (a malformed id already
+  matches no workspace). **Access model A is pinned at the page:** a sibling project in the viewer's OWN workspace,
+  with a pushed board, that the viewer is not a member of stays off the chips and cards, and its `?project=` is a 404;
+  swapping the helper for "every project in the workspace" turns that spec red. The ONLY
   multi-project read is `getWorkspaceProjects()`; each project's artifact is then read by id. The view is the project
-  board's own component (`BoardView`), so columns, filters and WIP are one implementation; a card opens on ITS project's
-  board. The approved `hub-workspace-board` surface draws no answer line, so the workspace board has none.
+  board's own component (`BoardView`), so the columns and filters are one implementation; a card opens on ITS project's
+  board, and its project is the server's slug (by row identity), never a field of the push. **No WIP advice on the
+  workspace board:** a limit is one project's `board.wip`, and a column summed across projects has none to measure. An
+  empty project list says so in words (no membership, or an unreadable list), never "0 of 0". The approved `hub-workspace-board` surface draws no answer line, so the workspace board has none.
 - **"Open a project's board" is a link, not a dialog**, so the route is covered by `hub-board.authed.spec.ts` (which
   measures it with the gate's own functions) rather than by the gate's press-every-head-action loop, which expects a
   modal.

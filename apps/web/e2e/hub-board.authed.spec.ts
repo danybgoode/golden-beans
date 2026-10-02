@@ -2,6 +2,7 @@
 import './helpers/css-module-shim'
 
 import { test, expect } from '@playwright/test'
+import { ROADMAP_SCHEMA_VERSION } from '@/lib/roadmap-artifact-schema'
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -172,8 +173,62 @@ test('tenancy: another workspace, a malformed id, and a project from another wor
     }
   } finally {
     // Leave nothing behind: the fixture teardown deletes ITS workspace, and a stray project would block it.
-    await db.from('projects').delete().eq('id', foreign.id)
-    await db.from('workspaces').delete().eq('id', other.id)
+    const { error: dp } = await db.from('projects').delete().eq('id', foreign.id)
+    const { error: dw } = await db.from('workspaces').delete().eq('id', other.id)
+    if (dp || dw) throw new Error(`cleanup failed: ${dp?.message ?? ''} ${dw?.message ?? ''}`)
+  }
+})
+
+test('access model A: a project in the SAME workspace that the viewer is not a member of stays off the board (S4.2)', async ({
+  page,
+}) => {
+  // The boundary that matters most: the workspace is a boundary, not a grant. A sibling project in the viewer's own
+  // workspace, with a real pushed board, must not reach the page — not its chip, not its cards, not via `?project=`.
+  // Swap getWorkspaceProjects() for "every project in the workspace" and this goes red.
+  const db = serviceDb()
+  const ws = await fixtureWorkspaceId()
+  const siblingSlug = `sibling-${Date.now()}`
+  const secret = `Sibling secret initiative ${Date.now()}`
+  const { data: sibling, error } = await db
+    .from('projects')
+    .insert({ workspace_id: ws, slug: siblingSlug })
+    .select('id')
+    .single()
+  if (error || !sibling) throw new Error(`could not create a sibling project: ${error?.message}`)
+  try {
+    const { error: pushErr } = await db.rpc('push_report_artifact', {
+      p_project_id: sibling.id,
+      p_kind: 'roadmap',
+      p_schema_version: ROADMAP_SCHEMA_VERSION,
+      p_payload: {
+        items: [
+          {
+            name: secret,
+            slug: 'sibling-secret',
+            grain: 'Epic',
+            status: 'in-progress',
+            area: '02-commercial',
+            epic_slug: null,
+            stage: 'Building',
+          },
+        ],
+      },
+      p_generated_at: new Date().toISOString(),
+      p_source_commit: null,
+      p_source_ref: null,
+    })
+    if (pushErr) throw new Error(`could not push the sibling's board: ${pushErr.message}`)
+
+    await page.goto(`/hub/w/${ws}/board`)
+    await expect(page.locator('.ds-board-card').first()).toBeVisible()
+    await expect(page.locator('body')).not.toContainText(secret)
+    await expect(page.locator('body')).not.toContainText(siblingSlug)
+    const response = await page.goto(`/hub/w/${ws}/board?project=${siblingSlug}`)
+    expect(response?.status()).toBe(404)
+  } finally {
+    // Deleting the project removes its artifact (the artifact's own trigger permits it once the project is gone).
+    const { error: dp } = await db.from('projects').delete().eq('id', sibling.id)
+    if (dp) throw new Error(`cleanup failed: ${dp.message}`)
   }
 })
 

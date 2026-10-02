@@ -5,8 +5,8 @@ import type { RoadmapRow, RoadmapStage } from './roadmap-artifact-schema'
 // The high-level view answers "where is each area heading", with seeds AND scaffolded work: each area is a row, and
 // the six stages fold into four horizons — Shipped · Now (Building + QA) · Next (Ready to build) · Later (To groom +
 // Grooming). Every cell runs in build order. Like the board, the Hub never computes a stage (D19): rows arrive with the
-// stage S1's resolver decided. A payload pushed before S1 has no stages, so its rows are placed from their legacy
-// `status` — said in the page's note, never presented as the resolver's answer.
+// stage S1's resolver decided, and a row without one is left out. A payload pushed before S1 has no stages at all, and
+// the page gives it the board's empty state (push again) rather than inventing stages from the old `status` field.
 //
 // Pure and import-free at runtime (a type import is erased), so `node --test` loads it directly.
 
@@ -29,35 +29,23 @@ export type AreasView = {
   epics: number
   shippedEpics: number
   now: AreaItem[]
-  /** Rows placed from their legacy status because the push carried no stage (a pre-board payload). */
-  fromLegacyStatus: number
 }
 
 const STAGES: readonly string[] = ['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped']
-
-/** The legacy `status` → a stage, ONLY for rows pushed before stages existed. */
-function legacyStage(row: RoadmapRow): RoadmapStage | null {
-  const s = String(row.status ?? '').toLowerCase()
-  if (s === 'archived') return null
-  if (s === 'shipped') return 'Shipped'
-  if (row.grain === 'Seed') return s === 'ready' ? 'Grooming' : s === 'queued' ? 'Ready to build' : 'To groom'
-  return s === 'in progress' ? 'Building' : 'Ready to build'
-}
 
 const order = (i: AreaItem) => i.buildOrder ?? Number.MAX_SAFE_INTEGER
 
 export function buildAreas(items: RoadmapRow[]): AreasView {
   const byArea = new Map<string, AreaRow>()
-  let fromLegacyStatus = 0
   const all: AreaItem[] = []
   let epics = 0
   let shippedEpics = 0
   for (const row of items) {
     if (row.grain === 'Sprint') continue
-    const pushed = STAGES.includes(String(row.stage)) ? (row.stage as RoadmapStage) : null
-    const stage = pushed ?? legacyStage(row)
-    if (!pushed && row.stage === undefined) fromLegacyStatus += 1
-    if (stage === null) continue // archived: off the roadmap, as it is off the board
+    // The Hub never computes a stage (lock D19): a row without one (archived, or a push from before stages) is off the
+    // roadmap exactly as it is off the board. The page gives a stage-less push the board's own empty state.
+    if (!STAGES.includes(String(row.stage))) continue
+    const stage = row.stage as RoadmapStage
     if (row.grain === 'Epic') {
       epics += 1
       if (stage === 'Shipped') shippedEpics += 1
@@ -79,7 +67,7 @@ export function buildAreas(items: RoadmapRow[]): AreasView {
   const now = all
     .filter((i) => HORIZON_OF[i.stage] === 'Now')
     .sort((x, y) => order(x) - order(y) || x.name.localeCompare(y.name))
-  return { areas, epics, shippedEpics, now, fromLegacyStatus }
+  return { areas, epics, shippedEpics, now }
 }
 
 /** "42 of 46 epics have shipped. Now: One plugin (Building), Public monorepo (QA)." — the approved answer. */

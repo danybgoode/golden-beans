@@ -5,7 +5,8 @@ import { formatFreshness } from '@/lib/hub-freshness'
 import { areasAnswer, buildAreas, HORIZONS, type AreaItem } from '@/lib/hub-areas'
 import { EmptyHubState } from '../hub-components'
 import { HubFrame } from '../hub-frame'
-import { Answer, ListCard, ListHead, PageHead } from '@/design-system/primitives'
+import { Answer, Empty, ListCard, ListHead, PageHead } from '@/design-system/primitives'
+import { hasStages } from '@/lib/hub-board'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,8 +32,11 @@ function Cell({
   shipped?: boolean
 }) {
   if (items.length === 0) return <span className="ds-areas-empty">—</span>
-  // Shipped is the long column: its count and the most recent few (highest build order), never a wall of names.
-  const shown = shipped ? [...items].reverse().slice(0, SHIPPED_SHOWN) : items
+  // Shipped is the long column: its count and the most recent few (highest build order; a row with none, such as a
+  // shipped seed, last), never a wall of names.
+  const shown = shipped
+    ? [...items].sort((a, b) => (b.buildOrder ?? -1) - (a.buildOrder ?? -1)).slice(0, SHIPPED_SHOWN)
+    : items
   return (
     <span className="ds-areas-items">
       {shipped ? <b className="ds-areas-count">{items.length} shipped</b> : null}
@@ -73,6 +77,26 @@ export default async function HubRoadmapPage({ params }: { params: Promise<{ pro
 
   const { artifact } = result
   const items = Array.isArray(artifact.payload?.items) ? artifact.payload.items : []
+  // A push from before stages carries none, and the Hub never computes one (D19): the board's empty state, not a guess.
+  if (!hasStages(items)) {
+    return (
+      <HubFrame projectSlug={projectSlug} tab="roadmap">
+        <PageHead
+          title="Roadmap"
+          lede="Where each area is heading: what shipped, what is moving now, next and later."
+        />
+        <Empty
+          title="This roadmap was pushed before stages existed."
+          body={
+            <>
+              Push it again to place each initiative:{' '}
+              <code className="ds-mono">npx -y @golden-frijoles/kit roadmap-extract --sink hub</code>
+            </>
+          }
+        />
+      </HubFrame>
+    )
+  }
   const view = buildAreas(items)
   const freshness = formatFreshness(artifact.generatedAt, new Date(), artifact.sourceCommit)
 
@@ -121,11 +145,6 @@ export default async function HubRoadmapPage({ params }: { params: Promise<{ pro
           freshness.age
         )}
         {freshness.shortCommit ? ` as of ${freshness.shortCommit}` : ''} (push #{artifact.version}).
-        {view.fromLegacyStatus > 0
-          ? ` This push predates stages, so ${view.fromLegacyStatus} initiative${
-              view.fromLegacyStatus === 1 ? ' is' : 's are'
-            } placed from ${view.fromLegacyStatus === 1 ? 'its' : 'their'} written status until the next push.`
-          : ''}
       </p>
     </HubFrame>
   )

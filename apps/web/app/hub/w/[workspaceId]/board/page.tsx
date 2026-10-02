@@ -23,7 +23,8 @@ export const dynamic = 'force-dynamic'
 //   · `?project=` outside that list     → 404, even when the project exists in another workspace
 //
 // The route is keyed by workspace ID: workspaces have no slug (lock C8). It reuses the project board's view, so the six
-// columns, the filters and the WIP advice are the same component; a card opens on ITS project's board.
+// columns and the filters are the same component; a card opens on ITS project's board. It shows NO WIP advice: a WIP
+// limit is one project's config (`board.wip`), and a column summed across projects has no limit to be measured against.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default async function WorkspaceBoardPage({
@@ -50,18 +51,20 @@ export default async function WorkspaceBoardPage({
   const results = await Promise.all(shown.map((p) => getHubRoadmapByProjectId(p.id)))
   if (results.some((r) => !r.ok && r.reason === 'query_failed'))
     throw new Error('Roadmap artifact lookup failed')
-  const items: RoadmapRow[] = results.flatMap((r, i) =>
-    r.ok && Array.isArray(r.artifact.payload?.items)
-      ? r.artifact.payload.items.map((row) => ({ ...row, project: shown[i].slug }) as RoadmapRow)
-      : []
-  )
+  // Each row's project is the server's slug from the helper's list, held by identity — never a field of the push.
+  const projectOfRow = new Map<RoadmapRow, string>()
+  const items: RoadmapRow[] = results.flatMap((r, i) => {
+    const rows = r.ok && Array.isArray(r.artifact.payload?.items) ? r.artifact.payload.items : []
+    for (const row of rows) projectOfRow.set(row, shown[i].slug)
+    return rows
+  })
   const withBoard = shown.filter((_, i) => {
     const r = results[i]
     return r.ok && hasStages(r.artifact.payload?.items ?? [])
   }).length
 
   const filters = parseBoardFilters(query)
-  const board = buildBoard(items, { filters })
+  const board = buildBoard(items, { filters, projectOf: (row) => projectOfRow.get(row) ?? null })
   const base = `/hub/w/${workspaceId}/board`
   const carry: Record<string, string> = projectFilter ? { project: projectFilter } : {}
   const firstProject = projectFilter ?? projects[0]?.slug ?? null
@@ -117,13 +120,20 @@ export default async function WorkspaceBoardPage({
           `/hub/${encodeURIComponent(card.project ?? '')}/board?card=${encodeURIComponent(card.slug)}`
         }
         note={
-          <p className="ds-hint">
-            Every project in this workspace that you belong to. Filter by project. {withBoard} of{' '}
-            {shown.length} project
-            {shown.length === 1 ? ' has' : 's have'} pushed a board; a project with none yet shows nothing
-            here until it does (
-            <code className="ds-mono">npx -y @golden-frijoles/kit roadmap-extract --sink hub</code>).
-          </p>
+          projects.length === 0 ? (
+            <p className="ds-hint">
+              No projects of this workspace were found for you: either you belong to none of them yet, or the
+              list could not be read just now. Reload to try again, or open a project from the console.
+            </p>
+          ) : (
+            <p className="ds-hint">
+              Every project in this workspace that you belong to. Filter by project. {withBoard} of{' '}
+              {shown.length} project
+              {shown.length === 1 ? ' has' : 's have'} pushed a board; a project with none yet shows nothing
+              here until it does (
+              <code className="ds-mono">npx -y @golden-frijoles/kit roadmap-extract --sink hub</code>).
+            </p>
+          )
         }
       />
     </Frame>

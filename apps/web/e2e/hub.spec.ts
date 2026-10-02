@@ -179,20 +179,32 @@ test('an epic drill-down renders its sprints, and an unknown slug 404s', async (
   expect(missing.status()).toBe(404)
 })
 
-test('the journey view never marks an unshipped epic as shipped', async ({ request }) => {
-  // The poster rule asserted on RENDERED output, not just on the derivation: a near-miss status
-  // ("Shipping") must not earn a ✅.
+test('the roadmap never computes a stage: a stage-less push is the empty state, a pushed stage is where a row lands', async ({
+  request,
+}) => {
+  // board-sinks-and-scrumban S4.1 (lock D19) — what replaced "the journey never marks an unshipped epic shipped": the
+  // Hub no longer reads `status` at all. A push from before stages gets the empty state (push again), never a guess…
   const unique = `spec-claim-${Date.now()}`
   await pushRoadmap(request, [
     epicRow({ slug: unique, name: `Nearly ${unique}`, status: 'Shipping', build_order_num: 1 }),
   ])
+  const empty = await (await request.get(`/hub/${DEMO_SLUG}`)).text()
+  expect(empty).toContain('pushed before stages existed')
+  expect(empty).not.toContain(`Nearly ${unique}`)
 
+  // …and a row lands in its PUSHED stage's horizon, whatever its status says ("Shipping" earns no Shipped cell).
+  await pushRoadmap(request, [
+    epicRow({ slug: unique, name: `Nearly ${unique}`, status: 'Shipping', build_order_num: 1, stage: 'QA' }),
+  ])
   const html = await (await request.get(`/hub/${DEMO_SLUG}`)).text()
-  const idx = html.indexOf(`Nearly ${unique}`)
+  // Anchor on the rendered LINK: the answer line names it too ("Now: …"), and so does Next's serialized page data.
+  const idx = html.search(new RegExp(`<a class="ds-areas-item"[^>]*>Nearly ${unique}`))
   expect(idx).toBeGreaterThan(-1)
-  // Inspect only this epic's own rendered node, so a ✅ belonging to another epic on the page cannot
-  // make the assertion pass or fail by accident.
-  expect(html.slice(idx, idx + 400)).not.toContain('✅')
+  const cell = html
+    .slice(0, idx)
+    .match(/data-horizon="([^"]+)"/g)
+    ?.at(-1)
+  expect(cell).toBe('data-horizon="Now"')
 })
 
 test('a tenant with no pushed artifact gets the deliberate empty state, not a broken page', async ({
