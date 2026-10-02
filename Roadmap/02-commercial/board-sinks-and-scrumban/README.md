@@ -13,6 +13,9 @@ intent_match: null   # copied from the seed by scaffold-epic (intent-match); the
 build_order: 39      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 78.23
+actual_mtok: 291.2
+actual_basis: "backfill · this machine · 2026-10-02 · 1 session · prices 2026-10-02"
 ---
 
 # Epic: One stage, every client: a six-stage board on the Hub, the CLI mod and every sink

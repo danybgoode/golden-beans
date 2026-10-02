@@ -13,6 +13,9 @@ build_order: 48      # integer position in the ONE global build sequence — the
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
 intent_match: 84
+actual_usd: null
+actual_mtok: null
+actual_basis: "held — built from a session whose checkout sat on feat/semantic-lint, so its spend is inside semantic-lint (finops C14)"
 ---
 
 # Epic: Intent match (wave 1, advisory) — a score for how well the plan captured the ask, routed follow-ups, and a rule for visuals

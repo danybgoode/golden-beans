@@ -3,7 +3,7 @@ epic: finops
 sprint: 1
 title: "Actuals, measured locally"
 risk: low
-phase: Shaping
+phase: In review
 stories_total: 4
 stories:
   - id: S1.1
@@ -12,38 +12,52 @@ stories:
     i_want: "a script that reads my Claude Code transcripts and totals what each epic consumed"
     so_that: "I can see an epic's real cost without instrumenting anything"
     risk: low
-    status: planned
+    status: done
   - id: S1.2
     title: "The incremental usage index and the dated price table"
     as_a: "the product owner"
     i_want: "the totals kept in a small local index and priced as ≈ API $"
     so_that: "the numbers are instant to read and comparable across models and cache mixes"
     risk: low
-    status: planned
+    status: done
   - id: S1.3
     title: "The Spend row in the build view band"
     as_a: "the product owner"
     i_want: "a Spend row in the band on any epic branch"
     so_that: "I see what this epic has consumed while it is being built"
     risk: low
-    status: planned
+    status: done
   - id: S1.4
     title: "Backfill: actuals for recently shipped epics from local history"
     as_a: "the product owner"
     i_want: "the last ~30 days of epics measured from what is already on my Mac"
     so_that: "the first quote rests on real history instead of a guess"
     risk: low
-    status: planned
+    status: done
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 1: Actuals, measured locally
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — S1.1/S1.2 `fc89ccb` · S1.3 `efceabd` · S1.4 `27e7d37` · release 0.22.0 `94545c4` · contract seam `5a926bc`
 
-## Build contract (to be locked by the architect before the builder starts)
-Shared seam first: the architect lands **2.1's contract fields** in `scripts/lib/roadmap-contract.mjs` (+ template twin) at the
-start of this sprint — 1.4 writes them. Then: `epic-actuals.mjs` + `lib/model-prices.mjs` (pure; Node built-ins only;
-kit closure via the `golden-frijoles` skill's `requires_scripts`), `build-state.mjs` reads the summary, `hooks/index.tsx`
-refreshes on `session.measure`. Verify D1/D2 and the subagent transcript layout against a live Claude Code first.
+## Build contract (locked by the architect before the builder started — 2026-10-02)
+Cites README § Architecture lock; nothing here restates a rule that lives there.
+- **Shared seam first (architect):** `scripts/lib/roadmap-contract.mjs` gains decimals (D17) and `FINOPS_FIELDS` +
+  `validateFinopsFields` (D6/D17), wired into `validateEpicFrontmatter`; `template/scripts/lib/` twin byte-identical.
+- **1.1/1.2 —** `scripts/epic-actuals.mjs` (+ twin) and `scripts/lib/model-prices.mjs` (+ twin), Node built-ins
+  only. Scan set D14, repo match D15, dedupe/attribution D13, branch→epic D16 (`resolveTarget` exported from
+  `build-state.mjs`), index location D19, prices D18. Modes: `--epic <slug> [--json]`, `--refresh` (index only, prints
+  nothing unless `--json`), `--backfill [--write]`, `--repo-root <dir>`, `--projects-dir <dir>` (fixtures).
+  JSON key set pinned by spec (D9): no `message`, no `content`, no prompt text, ever.
+- **1.3 —** `build-state.mjs` reads `<common-root>/.golden-frijoles/usage-summary.json` only (D5) and adds `spend` to
+  its JSON; `renderLines` prints `  Spend    ≈$<n> · <m>M tok · <k> sessions · this machine` between Progress and
+  Status; no summary or no row for the epic → no line. `hooks/build-view.mjs` gets `Spend: '$'`; `hooks/index.tsx`
+  runs the vendored `epic-actuals.mjs --refresh` on `session.measure` per D24. The vendor bundle gains
+  `epic-actuals.mjs` as an `also` entry (`render-hook-vendor.mjs`).
+- **1.4 —** `--backfill` reads shipped epics from `buildRows`; `--write` stamps `actual_usd`, `actual_mtok`,
+  `actual_basis: "backfill · this machine · <date> · <n> sessions"` on resolved shipped epics only, via a line edit of
+  the frontmatter (insert or replace the three keys; never touch any other line).
+- **Release:** plugin + kit minor bump with a CHANGELOG section (`check-release.mjs`); kit closure gains the two
+  scripts through the `golden-frijoles` skill's `requires_scripts`.
 
 ## Stories
 
@@ -85,6 +99,9 @@ refreshes on `session.measure`. Verify D1/D2 and the subagent transcript layout 
 - `epic-actuals.mjs --backfill` lists every epic found in local transcripts with its totals, and every shipped epic it could not resolve, each with a reason (no transcripts left, cloud-built, branch never seen) — findings recorded, not fixed (the `roadmap-backfill` D5 rule).
 - `--backfill --write` stamps `actual_*` (contract from 2.1, pulled forward) on resolved shipped epics only, with `actual_basis: "backfill · this machine · <date>"`; dry run is the default.
 - Running it on this repo resolves at least the epics shipped since 2026-09-01 that were built on this Mac (workspaces, think-skills, session-budget, intent-match are the expected ones) — the report says which.
+  **Amended at the build (README C14, C16):** workspaces, think-skills and session-budget resolve; intent-match cannot
+  (its session's checkout sat on `feat/semantic-lint`), and semantic-lint is held back for the same reason. Real run:
+  10 stamped, 2 partial (not stamped), 31 shipped before the oldest transcript.
 **QA:** spec over a fixture corpus; the real run's report is attached to the PR.
 **Risk:** low
 

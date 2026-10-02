@@ -12,6 +12,9 @@ stories_total: 7   # the sum of every sprint's stories_total — keep it in step
 build_order: 53  # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 37.02
+actual_mtok: 115.1
+actual_basis: "backfill · this machine · 2026-10-02 · 1 session · prices 2026-10-02"
 ---
 
 # ✅ Epic: Think skills — PMF Narrative, North Star and Risk Validation ship in the plugin and write files groom reads

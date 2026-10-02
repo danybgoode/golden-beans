@@ -39,10 +39,18 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-**Re-bet at the wave boundary before this sprint starts.** Lock D13 (push credential) against `lib/auth.ts` and the
-CLI's `credentials.ts`. Confirm no migration is needed (events reuse the ingest table; the artifact is JSON); if one is,
-it is applied before merge and verified live (WAYS-OF-WORKING → Done means shipped). Engine before kit before landing.
+## Build contract (locked by the architect before the builder started — 2026-10-02)
+Cites README § Architecture lock (D21–D26). **No migration**: `$agent_usage` rides the `events` table through the
+existing ingest RPC; the roadmap fields ride the artifact's JSON payload. Engine before kit before landing.
+- **3.1 —** `lib/signal-events.ts` gains `AGENT_USAGE_EVENT = '$agent_usage'` (NOT added to
+  `isReservedSignalEvent`, which means "group into signals"); a new zero-import `lib/agent-usage.ts` owns the payload
+  schema (the exact D9 key set, strict) and the latest-wins reader (D22). The track route rejects a `$agent_usage` event
+  whose `metadata` fails that schema (400) — the scrub. Kit side: `epic-actuals.mjs --push` (D21/D23/D24).
+- **3.2 —** `roadmapRowSchema` + six nullish numeric/string fields; `scripts/roadmap-extract.mjs` already emits them
+  (2.1); a typed accessor `epicFinopsFromArtifact()` exported for portfolio-view; Hub epic drill-down line.
+- **3.3 —** `app/app/finops/[projectSlug]/page.tsx` (D25), registered wherever the console's route manifest and
+  design-coverage gates require; the `tenancy` lint stays clean.
+- **3.4 —** `lib/maker-ops.ts` per D26 + copy per C13; `maker-ops.test.ts`, landing browser spec.
 
 ## Stories
 

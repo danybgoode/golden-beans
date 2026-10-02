@@ -12,6 +12,9 @@ stories_total: 6   # the sum of every sprint's stories_total — keep it in step
 build_order: 51  # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 23.43
+actual_mtok: 77.1
+actual_basis: "backfill · this machine · 2026-10-02 · 1 session · prices 2026-10-02"
 ---
 
 # ✅ Epic: Compiled prompts, wave 1 — Jev questions become data, optimize/ is committed, and wording gets measured
