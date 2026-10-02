@@ -69,13 +69,16 @@ test('the roadmap board renders as a real page, from a real pushed artifact', as
   await page.goto(`/hub/${tenant().slug}`)
   await expect(page.getByRole('heading', { name: 'Roadmap', exact: true })).toBeVisible()
   await expect(page.getByTestId('hub-empty-state')).toHaveCount(0)
-  // The board's own three halves: the answer, the four tiles, and the epic rows.
+  // board-sinks-and-scrumban S4.1 — the Roadmap tab is areas × Shipped · Now · Next · Later now (the journey track and
+  // its four tiles retired; "you are here" lives in the Board's answer line). Its three halves: the answer naming what
+  // is Now, one row per area, and every name a link to its card on the Board.
   await expect(page.locator('main .ds-answer')).toContainText('epics have shipped')
-  await expect(page.locator('main .ds-tile')).toHaveCount(4)
-  await expect(page.locator('main .ds-epic').first()).toBeVisible()
-  // ⚠️ The closing note carries the provenance now (the approved state draws no stamp), so the
-  // board still says how stale it is — the property `hub.spec.ts` asserts on the markup.
-  await expect(page.locator('main [data-freshness-tone]')).toContainText('generated')
+  await expect(page.locator('main .ds-answer')).toContainText('Now: The mockups, as built (Building).')
+  // The fixture's epics sit in 02-commercial and 01-platform, its seeds in 00-ideas: three areas.
+  await expect(page.locator('main .ds-areas-row')).toHaveCount(3)
+  await expect(page.locator('main .ds-areas-item').first()).toHaveAttribute('href', /\/board\?card=/)
+  // The closing note carries the provenance, so the board still says how stale it is.
+  await expect(page.locator('main p.ds-hint[data-freshness-tone]')).toContainText('Pushed')
 })
 
 test('the horizon renders destinations and never claims a destination is lit on an empty roadmap', async ({

@@ -110,31 +110,50 @@ async function pushRoadmap(request: APIRequestContext, items: unknown[]) {
   return res.json()
 }
 
-test('the journey view renders the latest artifact’s epics with a freshness stamp', async ({ request }) => {
+test('the Roadmap tab shows areas × Shipped · Now · Next · Later, with a freshness stamp (S4.1)', async ({
+  request,
+}) => {
   const unique = `spec-epic-${Date.now()}`
   await pushRoadmap(request, [
-    epicRow({ slug: unique, name: `Journey spec ${unique}`, status: 'Shipped', build_order_num: 1 }),
-    epicRow({ slug: `${unique}-next`, name: 'Not shipped yet', status: 'Scaffolded', build_order_num: 2 }),
+    epicRow({
+      slug: unique,
+      name: `Shipped ${unique}`,
+      stage: 'Shipped',
+      build_order_num: 1,
+      area: '02 Commercial',
+    }),
+    epicRow({
+      slug: `${unique}-now`,
+      name: `Building ${unique}`,
+      stage: 'Building',
+      build_order_num: 2,
+      area: '02 Commercial',
+    }),
+    epicRow({
+      slug: `${unique}-next`,
+      name: `Next ${unique}`,
+      stage: 'Ready to build',
+      build_order_num: 3,
+      area: '09 Platform Infra',
+    }),
   ])
 
   const res = await request.get(`/hub/${DEMO_SLUG}`)
   expect(res.status()).toBe(200)
   const html = await res.text()
-
-  expect(html).toContain(`Journey spec ${unique}`)
-  expect(html).toContain('Not shipped yet')
-  // The freshness stamp is a required design element, not fine print (sprint-1.md).
-  //
-  // ⚠️ **It MOVED, and both halves of it are still asserted** — mockups-as-built Story 4.4. The
-  // approved `hub-roadmap` state is `head → answer → tiles → list → sectionlabel → list → note` and
-  // draws no provenance line; the stamp belongs to `hub-report`, which does. So the three facts it
-  // carried — when, from which merge, and how stale — are in the closing note, in words, which is
-  // where the approved design puts the provenance of this board. The `data-freshness-tone`
-  // attribute travels with them, so a stylesheet and a screen reader still get the cue.
-  expect(html).toMatch(/as of merge abc1234/)
+  // The five columns, in order — the approved `hub-roadmap-areas` list (D10).
+  const heads = [...html.matchAll(/class="ds-areas-col" role="columnheader">([^<]+)</g)].map((m) => m[1])
+  expect(heads).toEqual(['Area', 'Shipped', 'Now', 'Next', 'Later'])
+  expect(html).toContain('02 Commercial')
+  expect(html).toContain(`Shipped ${unique}`)
+  // The answer names what is Now, with its stage — the journey track's "you are here", where the question is asked.
+  expect(html).toContain(`Now: Building ${unique} (Building).`)
+  // Every name links to its card on the Board.
+  expect(html).toContain(`/board?card=${unique}-next`)
+  // The freshness stamp is a required design element, not fine print — in the closing note, with its tone.
+  expect(html).toMatch(/as of abc1234/)
   expect(html).toContain('data-freshness-tone="fresh"')
-  // "You are here" marks the first UNSHIPPED epic — what is being built next.
-  expect(html).toContain('you are here')
+  expect(html).not.toContain('ds-track')
 })
 
 test('an epic drill-down renders its sprints, and an unknown slug 404s', async ({ request }) => {
