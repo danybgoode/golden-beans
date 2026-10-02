@@ -2874,8 +2874,8 @@
 
 /* ── The board (board-sinks-and-scrumban S2) — six stage columns as one tile row ──────────────────────
    The approved `hub-board` state draws the six stages as `tiles count 6`, so each column IS a `.ds-tile`: its label
-   is the stage word, its value the count, and its cards sit under them. Six across on a wide screen, two then one as
-   it narrows — the page never scrolls sideways (Do-not #6). */
+   is the stage word, its value the count, and its cards sit under them. Six across on a wide screen, three then one
+   as it narrows — the page never scrolls sideways (Do-not #6). */
 .ds .ds-tiles--board {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: start;

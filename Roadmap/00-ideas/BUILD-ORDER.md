@@ -10,7 +10,7 @@
 > This committed file reads the docs alone, so **Building and QA are not here** — they are facts git
 > and GitHub hold. For the live board run `node scripts/build-order.mjs --live`, or open the Hub board.
 
-## To groom (8)
+## To groom (9)
 
 _seeds with no pitch yet._
 
@@ -21,6 +21,7 @@ _seeds with no pitch yet._
 - [perf-probe only requests the hosts a project names](seeds/perf-probe-target-allowlist.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 - [Template scripts run when invoked through a symlinked path](seeds/script-ismain-realpath.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 - [The CLI body-order guard misses req.clone().json()](seeds/cli-body-order-guard-clone.md) — 09 Platform Infra · seed · Chore · risk: Low · appetite S · _docs: status raw_
+- [The docs name a kickoff-generator path that does not exist in an installed repo](seeds/kickoff-generator-path.md) — 09 Platform Infra · seed · Bug · risk: Low · appetite S · _docs: status raw_
 - [This repo lints its template scripts the way its consumers do](seeds/foundation-lint-gate.md) — 09 Platform Infra · seed · Chore · _docs: status raw_
 
 ## Grooming (2)
@@ -103,4 +104,4 @@ _merged, deployed and closed._
 - [The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics](../01-growth-engine/flags-console-parity/README.md) — 01 Growth Engine · 11/11 stories · risk: High · appetite M · _docs: status shipped_
 
 ---
-_64 initiatives on the board. Regenerate with `node scripts/build-order.mjs`._
+_65 initiatives on the board. Regenerate with `node scripts/build-order.mjs`._

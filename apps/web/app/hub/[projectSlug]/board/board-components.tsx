@@ -101,6 +101,8 @@ export function BoardView({
                   : column.wip.at
                     ? `at its WIP limit of ${column.wip.limit}`
                     : `WIP limit ${column.wip.limit}`}
+                {/* The tile's number is what the filters show; WIP is the whole column's (round-2 review, #226). */}
+                {column.wip.count !== column.cards.length ? ` (${column.wip.count} in the whole column)` : ''}
               </p>
             ) : null}
             {column.cards.length > 0 ? (
@@ -152,7 +154,7 @@ function docRows(card: BoardCard): { label: string; path: string }[] {
 
 export function CardView({ card, back, repo }: { card: BoardCard; back: string; repo: string | null }) {
   const commands = [
-    ...(card.kickoff ? [{ label: 'The kickoff prompt', text: card.kickoff, kickoff: true }] : []),
+    ...(card.kickoff ? [{ label: 'kickoff prompt', text: card.kickoff, kickoff: true }] : []),
     ...stageCommands(card).map((c) => ({ ...c, kickoff: false })),
   ]
   const docs = docRows(card)
@@ -236,7 +238,7 @@ export function CardView({ card, back, repo }: { card: BoardCard; back: string; 
           commands.map((command) => (
             <Row key={command.label}>
               <RowMain
-                title={command.kickoff ? command.label : command.text}
+                title={command.kickoff ? 'The kickoff prompt' : command.text}
                 description={command.kickoff ? command.text.split('\n')[0] : command.label}
                 mono={!command.kickoff}
               />
