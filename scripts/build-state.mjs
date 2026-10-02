@@ -333,7 +333,9 @@ export function spendValue(spend, quote) {
   const range = `$${quote.low}–${quote.high}${label ? ` ${label}` : ''}`;
   if (spend.usd > quote.high) {
     const pct = quote.high > 0 ? Math.round(((spend.usd - quote.high) / quote.high) * 100) : null;
-    return [usd, `${pct === null ? 'over' : `${pct}% over`} quote ${range}`, tok].filter(Boolean).join(' · ');
+    // `<1% over`, never `0% over`: the comparison is on the raw dollars, so a rounded 0 would read as "not over".
+    const over = pct === null ? 'over' : pct < 1 ? '<1% over' : `${pct}% over`;
+    return [usd, `${over} quote ${range}`, tok].filter(Boolean).join(' · ');
   }
   return [`${usd} of quote ${range}`, tok, sessions].filter(Boolean).join(' · ');
 }

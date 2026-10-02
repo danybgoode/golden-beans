@@ -62,3 +62,8 @@ test('--report: per appetite, how many actuals landed inside their quote', () =>
   const m = calibrationReport(rows).find((r) => r.appetite === 'M');
   assert.deepEqual([m.judged, m.inside, m.over, m.under], [3, 1, 1, 1]);
 });
+
+test('the boundary: n = 3 is calibrated, n = 2 is wide (MIN_HISTORY, fresh review #231)', () => {
+  assert.equal(quoteFor([epic('S', 8.77), epic('S', 13.86), epic('S', 18.5)], 'S').kind, 'p25–p75');
+  assert.equal(quoteFor([epic('S', 8.77), epic('S', 13.86)], 'S').kind, 'wide');
+});

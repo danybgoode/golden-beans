@@ -106,6 +106,9 @@ Cites README § Architecture lock.
 **QA:** `build-state.test.mjs` + `build-view.test.mjs`: one fixture per state; the `progressOf`-style bar helper unit-tested.
 **Amended at the build:** a quoted or unquoted epic's line follows the mockup word for word, so it no longer ends in
 Sprint 1's `· this machine` (the mockup is the contract — WAYS-OF-WORKING → Plan); the basis lives in the JSON.
+The thin-history line keeps its tok and sessions after the label (the story says "e.g."; the mockup stops at the
+label), an over-quote under 1% reads `<1% over` (never `0% over`), and the bar is actual ÷ quote high exactly — the
+mockup's drawn bars follow no formula (fresh review, #231).
 **Risk:** low
 
 ### Story 2.5 — Close stamps the actual

@@ -147,7 +147,7 @@ export const SPEND_BAR_WIDTH = 10;
  */
 export function spendOf(value) {
   const v = String(value || '');
-  if (/\d+% over quote \$/.test(v) || /· over quote \$/.test(v))
+  if (/(?:<1|\d+)% over quote \$/.test(v) || /· over quote \$/.test(v))
     return { tone: 'bad', bar: { filled: SPEND_BAR_WIDTH, width: SPEND_BAR_WIDTH } };
   const m = /^[≈≥]\$(\d+(?:\.\d+)?) of quote \$(\d+(?:\.\d+)?)–(\d+(?:\.\d+)?)/.exec(v);
   if (!m) return { tone: 'plain', bar: null };
