@@ -590,6 +590,7 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/install': () => '/install',
   '/talk': () => '/talk',
   '/hub/[projectSlug]': (slug) => `/hub/${slug}`,
+  '/hub/[projectSlug]/board': (slug) => `/hub/${slug}/board`,
   '/hub/[projectSlug]/horizon': (slug) => `/hub/${slug}/horizon`,
   '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
   // Reached by clicking, or by a key/token this suite must not invent.

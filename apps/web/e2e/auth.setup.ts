@@ -949,6 +949,15 @@ async function seedRoadmapFixture(db: SupabaseClient, projectId: string) {
     area: '00-ideas',
     epic_slug: null,
   })
+  // board-sinks-and-scrumban S2 — the board reads each row's `stage` and the card's prose (D21), which every push
+  // since S1 carries. Without them `/hub/<slug>/board` renders its EMPTY state and the gate would measure
+  // `hub-board-empty` against `hub-board`. Shipped dates are relative to today so the 30-day window always holds them.
+  const today = new Date().toISOString().slice(0, 10)
+  const card = (stage: string, extra: Record<string, unknown> = {}) => ({
+    stage,
+    stage_source: 'fixture',
+    ...extra,
+  })
 
   const { error } = await db.rpc('push_report_artifact', {
     p_project_id: projectId,
@@ -956,25 +965,59 @@ async function seedRoadmapFixture(db: SupabaseClient, projectId: string) {
     p_schema_version: ROADMAP_SCHEMA_VERSION,
     p_payload: {
       items: [
-        epic(
-          'fixture-console-ia',
-          'Four destinations — an information architecture',
-          'shipped',
-          1,
-          '02-commercial'
-        ),
-        epic('fixture-design-rails', 'One design system, every surface', 'shipped', 2, '02-commercial'),
-        epic('fixture-mockups', 'The mockups, as built', 'in-progress', 3, '02-commercial'),
+        {
+          ...epic(
+            'fixture-console-ia',
+            'Four destinations — an information architecture',
+            'shipped',
+            1,
+            '02-commercial'
+          ),
+          ...card('Shipped', { shipped_at: today }),
+        },
+        {
+          ...epic('fixture-design-rails', 'One design system, every surface', 'shipped', 2, '02-commercial'),
+          ...card('Shipped', { shipped_at: today }),
+        },
+        {
+          ...epic('fixture-mockups', 'The mockups, as built', 'in-progress', 3, '02-commercial'),
+          ...card('Building'),
+        },
         // ⚠️ No `build_order_num` — the design draws the sentence about exactly this row.
-        epic('fixture-unbet', 'An idea nobody has bet on yet', 'scaffolded', null, '01-platform'),
+        {
+          ...epic('fixture-unbet', 'An idea nobody has bet on yet', 'scaffolded', null, '01-platform'),
+          ...card('Ready to build', {
+            goal: 'So that the board has a Ready-to-build card with a kickoff to copy.',
+            sprints: [{ n: 1, title: 'The one sprint', done: 0, total: 2 }],
+            links: {
+              readme: 'Roadmap/01-platform/fixture-unbet/README.md',
+              seed: null,
+              sprints: ['Roadmap/01-platform/fixture-unbet/sprint-1.md'],
+              retro: null,
+            },
+            kickoff:
+              'Start by pushing the epic branch, before anything else — it is what moves this card to Building on the board:\n' +
+              '`git switch -c feat/fixture-unbet origin/main && git push -u origin feat/fixture-unbet`',
+          }),
+        },
         sprint('fixture-console-ia', 1, 'shipped'),
         sprint('fixture-console-ia', 2, 'shipped'),
         sprint('fixture-design-rails', 1, 'shipped'),
         sprint('fixture-mockups', 1, 'shipped'),
         sprint('fixture-mockups', 2, 'in-progress'),
-        seed('fixture-seed-alerts', 'Alerting on a signal that has stopped arriving'),
-        seed('fixture-seed-digest', 'A weekly digest nobody has to open the console for'),
+        {
+          ...seed('fixture-seed-alerts', 'Alerting on a signal that has stopped arriving'),
+          ...card('To groom'),
+        },
+        {
+          ...seed('fixture-seed-digest', 'A weekly digest nobody has to open the console for'),
+          ...card('Grooming'),
+        },
       ],
+      board: {
+        wip: { Building: 2, QA: 3 },
+        repo: 'https://github.com/danybgoode/golden-frijoles/blob/main/',
+      },
     },
     p_generated_at: new Date().toISOString(),
     p_source_commit: null,

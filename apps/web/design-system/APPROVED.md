@@ -87,11 +87,17 @@ of the file's SHA-256. `state-contract.mjs --check` and `surface-contract.test.t
 line whose hash no longer matches the file, and a line for a file that does not exist. Like the prototype lines
 above (pinned by `tokens.test.ts`), this hash is checked by code.
 
-No surface has been approved yet (lock C4, C5). The first state to use this is the first new console state after
-2026-09-30.
+The first approved surfaces are the board's (`board-sinks-and-scrumban`, lock D23): drawn in the epic's seed, reviewed
+visually and approved by the product owner on 2026-10-01, then corrected only where the live system forced it (real
+routes; no `tabs` line — the hub tabs are the frame's nav, outside the measured `<main>`; `steps` carries no count in
+this repo; the card is a page state at `?card=`, not an overlay). The product owner approved those corrections and
+asked the architect to record the lines on 2026-10-02.
 
 | State | File | SHA-256 (first 16) | Approved by | Approved |
 |---|---|---|---|---|
+| hub-board | `surfaces/hub-board.surface` | `ab51f60a6cefbbd0` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
+| hub-board-card | `surfaces/hub-board-card.surface` | `06d5e165f22f2be7` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
+| hub-board-empty | `surfaces/hub-board-empty.surface` | `8c2f5f0b8892e590` | Daniel (recorded by the architect at his instruction) | 2026-10-02 |
 
 ## Design decisions settled at approval — the lock does NOT reopen these
 

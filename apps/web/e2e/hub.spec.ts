@@ -269,3 +269,69 @@ test('an unknown tenant never renders a half-built horizon', async ({ request })
   const res = await request.get('/hub/some-tenant-that-does-not-exist/horizon', { maxRedirects: 0 })
   expect([302, 303, 307, 404]).toContain(res.status())
 })
+
+// ── board-sinks-and-scrumban · Sprint 2 — the Board tab (S2.2 gating, S2.4 filters) ──────────────────────────────
+
+test('the board renders the six stages in order, and ?type=spike keeps only spikes (S2.2, S2.4)', async ({
+  request,
+}) => {
+  const unique = `board-${Date.now()}`
+  await pushRoadmap(request, [
+    epicRow({
+      slug: `${unique}-ready`,
+      name: `Ready ${unique}`,
+      stage: 'Ready to build',
+      type: 'Feature',
+      build_order_num: 5,
+    }),
+    epicRow({
+      slug: `${unique}-spike`,
+      name: `Spike ${unique}`,
+      stage: 'Building',
+      type: 'Spike',
+      build_order_num: 6,
+    }),
+    epicRow({
+      slug: `${unique}-qa`,
+      name: `QA ${unique}`,
+      stage: 'QA',
+      type: 'Feature',
+      risk: 'Low',
+      build_order_num: 7,
+    }),
+  ])
+
+  const all = await (await request.get(`/hub/${DEMO_SLUG}/board`)).text()
+  const labels = [...all.matchAll(/class="ds-tile-label">([^<]+)</g)].map((m) => m[1])
+  expect(labels).toEqual(['To groom', 'Grooming', 'Ready to build', 'Building', 'QA', 'Shipped'])
+  expect(all).toContain(`Ready ${unique}`)
+  expect(all).toContain(`Spike ${unique}`)
+  expect(all).toContain(`Next to pull: Ready ${unique} (build order 5).`)
+
+  const spikes = await request.get(`/hub/${DEMO_SLUG}/board?type=spike`)
+  expect(spikes.status()).toBe(200)
+  const html = await spikes.text()
+  expect(html).toContain(`Spike ${unique}`)
+  expect(html).not.toContain(`Ready ${unique}`)
+  expect(html).not.toContain(`QA ${unique}`)
+  // Cards are initiatives: every card on the filtered board links to its own view, in the same filter.
+  expect(html).toContain(`?type=spike&amp;card=${unique}-spike`)
+})
+
+test('a payload pushed before the board (no stages) gets the board’s empty state, not six empty columns', async ({
+  request,
+}) => {
+  await pushRoadmap(request, [epicRow({ slug: `pre-board-${Date.now()}`, name: 'Pushed before the board' })])
+  const html = await (await request.get(`/hub/${DEMO_SLUG}/board`)).text()
+  expect(html).toContain('Nothing on the board yet.')
+  expect(html).not.toContain('ds-tiles--board')
+})
+
+test('a non-demo project’s board needs a member: signed out, it bounces to /login (S2.2)', async ({
+  request,
+}) => {
+  // The demo project is public by design (AGENTS rule #2, lock C2); every other project's board is not.
+  const res = await request.get('/hub/project-one/board', { maxRedirects: 0 })
+  expect([302, 307]).toContain(res.status())
+  expect(res.headers()['location']).toMatch(/\/login/)
+})

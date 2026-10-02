@@ -957,6 +957,85 @@
       "disclosures": 0,
       "annotations": 0,
       "unknown": []
+    },
+    "hub-board": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "toolbar"
+        },
+        {
+          "kind": "tiles",
+          "count": 6
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": [],
+      "source": "spec"
+    },
+    "hub-board-card": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "copy kickoff prompt"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "summary",
+          "count": 7
+        },
+        {
+          "kind": "steps"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "doc",
+            "link"
+          ]
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "command",
+            "copy"
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": [],
+      "source": "spec"
+    },
+    "hub-board-empty": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "empty"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": [],
+      "source": "spec"
     }
   }
 }
