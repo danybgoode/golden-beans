@@ -100,3 +100,11 @@ test('rollUp: skills and models from the breakdowns; an unpriced part makes the 
   assert.equal(r.bySkill['golden-frijoles:groom'].tokens, 45)
   assert.equal(usdIsLowerBound(usage() as never), false)
 })
+
+test('a breakdown name that would touch Object machinery is refused (no prototype pollution through a payload)', () => {
+  for (const name of ['__proto__', 'constructor', 'prototype']) {
+    const raw = JSON.parse(`{"${name}": {"tokens": ${JSON.stringify(tokens(1))}, "usd": 1}}`)
+    assert.equal(parseAgentUsage(usage({ skill_breakdown: raw })).ok, false, name)
+  }
+  assert.equal(({} as Record<string, unknown>).polluted, undefined)
+})

@@ -106,9 +106,11 @@ function readBreakdown(v: unknown, field: string, errors: string[]): Record<stri
     errors.push(`${field} has more than ${MAX_BREAKDOWN_ENTRIES} entries`)
     return null
   }
-  const out: Record<string, UsagePart> = {}
+  const out: Record<string, UsagePart> = Object.create(null)
   for (const [name, part] of entries) {
-    if (!NAME_RE.test(name)) {
+    // `__proto__` would set the PROTOTYPE of `out` rather than an entry; the other two shadow Object machinery a reader
+    // may touch. No model, skill or branch is ever called any of them, so they are refused rather than escaped.
+    if (!NAME_RE.test(name) || name === '__proto__' || name === 'constructor' || name === 'prototype') {
       errors.push(`${field} has an invalid name`)
       return null
     }
