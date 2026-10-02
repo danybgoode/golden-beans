@@ -76,8 +76,16 @@ export function richText(v) {
   if (!v) return { rich_text: [] };
   const s = String(v);
   const chunks = [];
-  for (let i = 0; i < s.length && chunks.length < 100; i += NOTION_TEXT_LIMIT)
-    chunks.push({ text: { content: s.slice(i, i + NOTION_TEXT_LIMIT) } });
+  let i = 0;
+  // A property holds at most 100 objects (200,000 chars); past that the rest is dropped — far beyond any roadmap row.
+  while (i < s.length && chunks.length < 100) {
+    let end = Math.min(i + NOTION_TEXT_LIMIT, s.length);
+    // Never cut between the two halves of a surrogate pair (an emoji): both pieces would carry a broken half.
+    const code = s.charCodeAt(end - 1);
+    if (end < s.length && code >= 0xd800 && code <= 0xdbff) end -= 1;
+    chunks.push({ text: { content: s.slice(i, end) } });
+    i = end;
+  }
   return { rich_text: chunks };
 }
 

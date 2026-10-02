@@ -30,3 +30,12 @@ test('richText splits long text across ≤2000-char objects instead of failing o
   assert.ok(parts.every((p) => p.text.content.length <= NOTION_TEXT_LIMIT));
   assert.equal(parts.map((p) => p.text.content).join(''), long, 'nothing is cut');
 });
+
+test('richText never cuts an emoji in half at a chunk boundary', async () => {
+  const { richText } = await import('./roadmap-to-notion.mjs');
+  const text = 'a'.repeat(1999) + '🏗' + 'b'.repeat(10); // the surrogate pair sits at 1999–2000, across the cut
+  const parts = richText(text).rich_text.map((p) => p.text.content);
+  assert.equal(parts.join(''), text);
+  for (const part of parts)
+    assert.ok(!/[\uD800-\uDBFF]$/.test(part) && !/^[\uDC00-\uDFFF]/.test(part), 'a half pair');
+});
