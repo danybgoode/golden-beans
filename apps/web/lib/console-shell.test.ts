@@ -317,6 +317,29 @@ test('from Today, every project switches to THAT PROJECT’s Today', () => {
   }
 })
 
+test('portfolio-view S2.2: a project with no surface in this section falls back to ITS Today, never bare /app', () => {
+  // A bare `/app` opens on the portfolio for anyone holding 2+ products in one workspace, so this fallback must carry
+  // the project — the fresh reviewer on PR #235 found it still pointing at `TODAY_HREF`.
+  const closed = {
+    'experiment-governance': false,
+    'flag-console': false,
+    'flag-serving': false,
+    'journey-projections': false,
+    signals: false,
+  }
+  const { projects } = header('ship', closed, [
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
+  ])
+  for (const project of projects) {
+    assert.equal(
+      project.href,
+      `${TODAY_HREF}?project=${project.slug}`,
+      `${project.slug} falls back to its own Today`
+    )
+  }
+})
+
 test('a slug with URL-significant characters is encoded, not concatenated', () => {
   // Slugs are validated elsewhere, so this is defence rather than a live case — but a switcher that
   // builds a URL by concatenation is one migration away from emitting a broken link, and the
