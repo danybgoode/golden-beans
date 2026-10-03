@@ -3,7 +3,7 @@ epic: portfolio-view
 sprint: 1
 title: "The read model and the loop stage"
 risk: high
-phase: Shaping
+phase: Building
 stories_total: 4
 stories:
   - id: S1.1
@@ -39,10 +39,18 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
-Lock against live code + data: count the projects in the product owner's workspace (decides D7's batching), confirm
-the pod-report artifact's `delivery.epicLeadTime` shape, and pick the kill-switch source (breakers vs flags) the
-project page already uses — reuse that read, don't add one.
+## Build contract (locked by the architect before the builder started — README § Architecture lock)
+Cite, don't restate: D1, D2, D4, D7, D8, D9, D10, D11, C1, C4–C8.
+- **Files:** `lib/portfolio-model.ts` (+ `.test.ts`), `lib/portfolio.ts`, `lib/loop-stage.ts` (+ `.test.ts`),
+  `lib/loop-stage-write.ts`, `supabase/migrations/20261003100000_projects_loop_stage.sql`,
+  `e2e/portfolio-access.spec.ts`, `e2e/portfolio-loop-stage.spec.ts`. The Server Action itself lands with its first
+  caller in S2 (2.3); S1 ships the decision + the write it will call.
+- **Measured inputs:** 3 projects in the largest workspace (no batching); lead time lives at
+  `payload.delivery.epicLeadTime.medianDays`; kill switches come from the flag registry Today reads (C5).
+- **Teeth:** the access spec seeds a sibling project in the viewer's OWN workspace that the viewer is not a member of,
+  plus a foreign workspace — and is mutation-checked by swapping the legal read for "every project in the workspace"
+  (LEARNINGS, board-sinks S4). The CHECK is verified by attempting `loop_stage = 'grow'` against the real database.
+- **Deviation:** the row has no `wow` (C1) and carries `kill_switches_off` (C5).
 
 ## Stories
 
