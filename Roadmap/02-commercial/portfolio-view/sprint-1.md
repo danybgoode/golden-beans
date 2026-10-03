@@ -12,32 +12,32 @@ stories:
     i_want: "one call that returns a row for every product I'm a member of in my workspace"
     so_that: "the page has one honest source and the tenancy rule holds by construction"
     risk: high
-    status: planned
+    status: done   # PR #234
   - id: S1.2
     title: "Every cell honest: value, not set, or couldn't load"
     as_a: "the product owner"
     i_want: "each figure to say plainly when it doesn't exist or didn't load"
     so_that: "I never compare products on a zero that isn't real"
     risk: high
-    status: planned
+    status: done   # PR #234
   - id: S1.3
     title: "projects.loop_stage — written by an owner, never inferred"
     as_a: "the product owner"
     i_want: "to place each product on Consider, Operate or Exit myself"
     so_that: "the loop reflects my judgment, not a guess from metrics"
     risk: high
-    status: planned
+    status: done   # PR #234
   - id: S1.4
     title: "Spend vs quote from the roadmap artifact"
     as_a: "the product owner"
     i_want: "each product's spend against its quotes on its row"
     so_that: "cost sits beside health when I choose the next wave"
     risk: low
-    status: planned
+    status: done   # PR #234
 ---
 # Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop — Sprint 1: The read model and the loop stage
 
-**Status:** ⬜ not started
+**Status:** ✅ built — PR #234 (merged after the migration was applied and verified in production)
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D1, D2, D4, D7, D8, D9, D10, D11, C1, C4–C8.

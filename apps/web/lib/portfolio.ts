@@ -17,7 +17,8 @@ export type { PortfolioRow } from './portfolio-model'
 // ⚠️ **The project list comes from `getWorkspaceProjects()` and from nowhere else** (AGENTS.md § The tenancy invariant
 // — cited, not restated). Every reader below takes ONE project id from that list; none of them lists, joins or filters
 // by several. Widening this to "every project in the workspace" is the one change the invariant exists to forbid, and
-// `e2e/portfolio.authed.spec.ts` seeds a sibling project the viewer is not a member of to catch exactly that.
+// `e2e/portfolio-access.spec.ts` (and, signed in, Sprint 2's `e2e/portfolio.authed.spec.ts`) seeds a sibling
+// project the viewer is not a member of to catch exactly that.
 //
 // Every reader is the one the product's own single-project pages already use (D10) — the portfolio adds no query of
 // its own except the loop stage, which it reads per project rather than by widening the legal read.

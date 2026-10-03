@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  CELL_TIMEOUT_MS,
   REASONS,
   assemblePortfolio,
   experimentsRunningCell,
@@ -140,10 +141,14 @@ test('1.2: a failed read is “couldn’t load” — distinct from both a value
   assert.deepEqual(northStarCell(outcome({ unavailable: true, rows: [], northStar: null })), { error: true })
   // Every feature's funnel failed: that is not "nobody targeted".
   assert.deepEqual(funnelStageCell(outcome({ rows: [{ tars: null }, { tars: null }] })), { error: true })
-  // One failed, one read: the read one answers.
+  // One failed, one read: the unread one may have got further, so the cell cannot answer — not even "nobody targeted".
   assert.deepEqual(
     funnelStageCell(outcome({ rows: [{ tars: null }, { tars: { targeted: 3, adopted: 2, retained: 1 } }] })),
-    { value: 'retained' }
+    { error: true }
+  )
+  assert.deepEqual(
+    funnelStageCell(outcome({ rows: [{ tars: null }, { tars: { targeted: 0, adopted: 0, retained: 0 } }] })),
+    { error: true }
   )
 })
 
@@ -227,4 +232,8 @@ test('1.4: the label says the sum, the delta and how many epics it is over', () 
   assert.equal(spendLabel({ usd: 96, deltaPct: -6, epics: 2 }), '≈$96.00 · −6% (2 quoted epics)')
   assert.equal(spendLabel({ usd: 12.5, deltaPct: 0, epics: 1 }), '≈$12.50 · ±0% (1 quoted epic)')
   assert.equal(spendLabel({ usd: 12.5, deltaPct: null, epics: 1 }), '≈$12.50 (1 quoted epic)')
+})
+
+test('D7: the per-cell timeout is the locked 5000 ms', () => {
+  assert.equal(CELL_TIMEOUT_MS, 5000)
 })

@@ -13,8 +13,9 @@ import { specWorkspaceId } from './helpers/spec-workspace'
 //   1. The column takes the three stages and NULL, and REFUSES anything else — by the CHECK, which is proven by the
 //      error being 23514 naming `projects_loop_stage_check` (LEARNINGS: check WHAT refused the write, not that
 //      something did — a refusal can come from any constraint).
-//   2. The write decision on REAL membership rows: owner → ok (200), member → forbidden (403), non-member → not_found
-//      (404). The Server Action that wires it to a session is S2's (2.3); its wire is the authed browser spec.
+//   2. The write decision on the roles REAL membership rows carry: owner → ok (200), member → forbidden (403),
+//      non-member → not_found (404). This reads the role directly, NOT through `getMembershipByProjectId` (server-only);
+//      the seam the Server Action calls — workspace re-check included — is S2's (2.3) authed browser spec.
 //   3. No credential path can set it: no route under app/api names the column.
 
 function db(): SupabaseClient {
@@ -49,10 +50,11 @@ test.describe('projects.loop_stage (1.3)', () => {
       .single()
     if (error || !data) throw new Error(`project: ${error?.message}`)
     projectId = data.id as string
-    await client.from('project_members').insert([
+    const { error: memberError } = await client.from('project_members').insert([
       { user_id: users.owner, project_id: projectId, role: 'owner' },
       { user_id: users.member, project_id: projectId, role: 'member' },
     ])
+    if (memberError) throw new Error(`members: ${memberError.message}`)
   })
 
   test.afterAll(async () => {
@@ -90,7 +92,7 @@ test.describe('projects.loop_stage (1.3)', () => {
     expect(await writeLoopStage(client, '00000000-0000-4000-8000-000000000000', 'exit')).toBe(false)
   })
 
-  test('the decision on real membership rows: owner ok (200), member forbidden (403), non-member not_found (404)', async () => {
+  test('the decision on real membership roles: owner ok (200), member forbidden (403), non-member not_found (404)', async () => {
     const roleOf = async (userId: string) => {
       const { data, error } = await client
         .from('project_members')

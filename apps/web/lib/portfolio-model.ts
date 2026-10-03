@@ -27,7 +27,7 @@ export type PortfolioProject = { id: string; slug: string; role: string }
 
 export type PortfolioRow = {
   project: PortfolioProject
-  /** The stored stage, raw-validated; `lib/loop-stage.ts` owns the vocabulary. */
+  /** The stored stage, already validated by `readLoopStage` (`lib/loop-stage.ts` owns the vocabulary). */
   loop_stage: Cell<string>
   north_star: Cell<NorthStarValue>
   funnel_stage: Cell<FunnelStage>
@@ -131,14 +131,15 @@ export function northStarCell(outcome: OutcomeFacts): Cell<NorthStarValue> {
 }
 
 /**
- * C6: the furthest TARS stage ANY registered feature has reached. A feature whose funnel could not be read is skipped;
- * if every one of them failed, the cell could not be read — it is not "nobody targeted".
+ * C6: the furthest TARS stage ANY registered feature has reached. If ANY feature's funnel could not be read, the cell
+ * could not be read: the unread feature may be the one that got further, and "nobody targeted yet" would be a claim
+ * about a feature nobody looked at (fresh reviewer, PR #234).
  */
 export function funnelStageCell(outcome: OutcomeFacts): Cell<FunnelStage> {
   if (outcome.unavailable) return ERROR
   if (outcome.rows.length === 0) return absent(REASONS.noFeatures)
+  if (outcome.rows.some((row) => row.tars === null)) return ERROR
   const read = outcome.rows.flatMap((row) => (row.tars ? [row.tars] : []))
-  if (read.length === 0) return ERROR
   if (read.some((t) => t.retained > 0)) return { value: 'retained' }
   if (read.some((t) => t.adopted > 0)) return { value: 'adopted' }
   if (read.some((t) => t.targeted > 0)) return { value: 'targeted' }
