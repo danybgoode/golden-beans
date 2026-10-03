@@ -136,6 +136,8 @@ test('1.2: a failed read is “couldn’t load” — distinct from both a value
     }
   )
   assert.deepEqual(funnelStageCell(outcome({ unavailable: true })), { error: true })
+  // The shared outcome read failed: getProjectOutcome then reports northStar: null, which must NOT read as "none set".
+  assert.deepEqual(northStarCell(outcome({ unavailable: true, rows: [], northStar: null })), { error: true })
   // Every feature's funnel failed: that is not "nobody targeted".
   assert.deepEqual(funnelStageCell(outcome({ rows: [{ tars: null }, { tars: null }] })), { error: true })
   // One failed, one read: the read one answers.

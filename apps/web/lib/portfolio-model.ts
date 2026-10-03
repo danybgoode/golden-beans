@@ -120,6 +120,10 @@ export function loopStageCell(stored: string | null): Cell<string> {
  * feed it — never a number for the metric itself, and no week-over-week.
  */
 export function northStarCell(outcome: OutcomeFacts): Cell<NorthStarValue> {
+  // ⚠️ First, and not optional: when the outcome read failed, `getProjectOutcome` hands back `northStar: null` because
+  // it never READ the metric — the same null that means "none registered". Checking `northStar` first rendered an
+  // outage as "no North Star set" beside a funnel cell that correctly said "couldn't load" (cross-review, PR #234).
+  if (outcome.unavailable) return ERROR
   const ns = outcome.northStar
   if (ns === null) return absent(REASONS.noNorthStar)
   if (ns.unavailable || ns.metric === null) return ERROR

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { LoopStage } from './loop-stage'
+import { parseLoopStage, type LoopStage } from './loop-stage'
 
 // portfolio-view · Sprint 1, Story 1.3 (the Architecture lock, D8, D11).
 //
@@ -12,16 +12,22 @@ import type { LoopStage } from './loop-stage'
 // membership check for the write — never a slug (CODE-QUALITY #10).
 
 /**
- * One project's stored stage, raw. THROWS on a failed read: null means "not placed", and a database outage must not
- * render as that (D2) — the portfolio turns the throw into its "couldn't load" cell.
+ * One project's stored stage. THROWS on a failed read, and on a stored value that is not one of the three: null means
+ * "not placed", and neither an outage nor an unreadable value may render as that (D2) — the portfolio turns the throw
+ * into its "couldn't load" cell. The CHECK makes the second case unreachable through any write; this is the read
+ * refusing to trust that it always will (cross-review, PR #234).
  */
-export async function readLoopStage(db: SupabaseClient, projectId: string): Promise<string | null> {
+export async function readLoopStage(db: SupabaseClient, projectId: string): Promise<LoopStage | null> {
   const { data, error } = await db.from('projects').select('loop_stage').eq('id', projectId).maybeSingle()
   if (error) {
     console.error('[loop-stage] read failed:', error)
     throw new Error('Could not read the loop stage')
   }
-  return (data?.loop_stage as string | null | undefined) ?? null
+  const stored: unknown = data?.loop_stage ?? null
+  if (stored === null) return null
+  const stage = parseLoopStage(stored)
+  if (stage === null) throw new Error('The stored loop stage is not one of consider, operate or exit')
+  return stage
 }
 
 /** Set (or clear, with null) one project's loop stage. Returns false when the write failed or matched no row. */
