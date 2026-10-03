@@ -189,16 +189,6 @@ export function spendCell(
   return { value: { usd, deltaPct, epics: quoted.length }, as_of: artifact.generatedAt }
 }
 
-/** `≈$410 · +18% (5 quoted epics)` — the cell's one line. */
-export function spendLabel(spend: SpendValue): string {
-  const usd = spend.usd >= 100 ? Math.round(spend.usd).toString() : spend.usd.toFixed(2)
-  const delta =
-    spend.deltaPct === null
-      ? ''
-      : ` · ${spend.deltaPct > 0 ? '+' : spend.deltaPct < 0 ? '−' : '±'}${Math.abs(spend.deltaPct)}%`
-  return `≈$${usd}${delta} (${spend.epics} quoted epic${spend.epics === 1 ? '' : 's'})`
-}
-
 // ── The assembler ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
