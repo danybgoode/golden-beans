@@ -42,7 +42,7 @@ stories:
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D1, D2, D4, D7, D8, D9, D10, D11, C1, C4–C8.
 - **Files:** `lib/portfolio-model.ts` (+ `.test.ts`), `lib/portfolio.ts`, `lib/loop-stage.ts` (+ `.test.ts`),
-  `lib/loop-stage-write.ts`, `supabase/migrations/20261003100000_projects_loop_stage.sql`,
+  `lib/loop-stage-store.ts`, `supabase/migrations/20261003100000_projects_loop_stage.sql`,
   `e2e/portfolio-access.spec.ts`, `e2e/portfolio-loop-stage.spec.ts`. The Server Action itself lands with its first
   caller in S2 (2.3); S1 ships the decision + the write it will call.
 - **Measured inputs:** 3 projects in the largest workspace (no batching); lead time lives at

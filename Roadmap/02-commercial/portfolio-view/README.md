@@ -78,7 +78,7 @@ carrying the finops fields; pod_report v212, lead time 2 d) and `miyagisanchez` 
   each cell has a **5000 ms** timeout and times out to `{ error: true }` alone.
 - **D8 — Module split.** `lib/portfolio-model.ts` ZERO-import (cell type, `withTimeout`, every shaping rule, the
   assembler over injected readers); `lib/portfolio.ts` `server-only` (binds `getWorkspaceProjects` + the real readers);
-  `lib/loop-stage.ts` ZERO-import (stages, parse, the write decision); `lib/loop-stage-write.ts` (client parameter, no
+  `lib/loop-stage.ts` ZERO-import (stages, parse, the write decision); `lib/loop-stage-store.ts` (its read + write; client parameter, no
   `server-only`, so a spec drives the real write against the real database — the `workspace-projects.ts` precedent).
 - **D9 — Migration** `20261003100000_projects_loop_stage.sql`: `ALTER TABLE projects ADD COLUMN loop_stage text` +
   a separately named `CHECK (loop_stage IN ('consider','operate','exit'))`. NULL passes the check on purpose (NULL =
@@ -90,7 +90,7 @@ carrying the finops fields; pod_report v212, lead time 2 d) and `miyagisanchez` 
   `getFlagRegistryView` → `projectFlagRows(…, 'production')` (the read Today uses) · lead time: `getLatestArtifact(id,
   'pod_report')` · spend: `getLatestArtifact(id, 'roadmap')` → `epicFinopsFromArtifact` (finops 3.2's accessor).
 - **D11 — Write path.** A Server Action (`app/app/portfolio/actions.ts`): session user → `getMembershipByProjectId` →
-  `loopStageWriteDecision` → `writeLoopStage`. No API route, no credential path reaches it.
+  `loopStageWriteDecision` → `writeLoopStage` (`lib/loop-stage-store.ts`). No API route, no credential path reaches it.
 - **D12 — Workspace choice for `/app/portfolio`.** `?workspace=<id>` is a VIEW preference matched against the viewer's
   own workspaces (not theirs / malformed → 404). Without it: the workspace holding most of the viewer's projects
   (ties → workspace name), from `getUserProjects` (the named membership carve-out) through a pure `portfolioWorkspace()`.
