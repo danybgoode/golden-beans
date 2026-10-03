@@ -99,13 +99,13 @@ jobs:
        github.event.deployment_status.state == 'success')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.deployment.sha || github.sha }}
           # FULL history, load-bearing: scripts/pod-report.mjs derives every number from `git log` and from when
           # each epic README first appeared. On a shallow clone it would report "1 commit / 0 measurable epics".
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
