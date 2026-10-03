@@ -113,7 +113,7 @@ export function buildFinopsView(input: {
           )
         : null,
       absent: 'No usage pushed this month',
-      detail: `≈ API $ · ${thisMonth.length} session${thisMonth.length === 1 ? '' : 's'} · from the usage push`,
+      detail: `API $ list-price equivalent · ${thisMonth.length} session${thisMonth.length === 1 ? '' : 's'} · from the usage push`,
     },
     {
       label: 'Quote hit rate',

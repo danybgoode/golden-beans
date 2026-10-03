@@ -773,3 +773,44 @@ test('fresh review #232: a malformed config is a reason, never a throw — the s
     fx.cleanup();
   }
 });
+
+test('round 2 #232: an idle run (no transcript moved) still persists the push attempt and what was refused', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    telemetry(fx.root, 'on');
+    const opts = { root: fx.root, projectsDir: fx.projects, push: true, throttle: true, env: ENV };
+    await refresh({ root: fx.root, projectsDir: fx.projects }); // index it first, no push
+    // An IDLE run whose push fails (401): nothing was scanned, but the attempt must still reach disk.
+    const failed = await refresh({ ...opts, fetchImpl: fakeEngine(401).fetchImpl });
+    assert.equal(failed.changes.files_read, 0);
+    // Second run, nothing changed on disk, within 10 minutes: throttled because the ATTEMPT was saved.
+    const again = fakeEngine(201);
+    const r = await refresh({ ...opts, fetchImpl: again.fetchImpl });
+    assert.equal(r.changes.files_read, 0);
+    assert.equal(r.pushed.reason, 'throttled');
+    assert.equal(again.calls.length, 0);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('round 2 #232: a 400 is never silent — counted in the summary on disk, and not re-sent by an idle run', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    telemetry(fx.root, 'on');
+    const opts = { root: fx.root, projectsDir: fx.projects, push: true, env: ENV };
+    await refresh({ root: fx.root, projectsDir: fx.projects }); // index it first, no push
+    const r = await refresh({ ...opts, fetchImpl: fakeEngine(400).fetchImpl }); // an idle run that is refused
+    assert.equal(r.changes.files_read, 0);
+    assert.equal(r.pushed.rejected, 1);
+    const onDisk = JSON.parse(readFileSync(join(fx.root, '.golden-frijoles', 'usage-summary.json'), 'utf8'));
+    assert.equal(onDisk.push_rejected, 1);
+    const again = fakeEngine(201);
+    await refresh({ ...opts, fetchImpl: again.fetchImpl });
+    assert.equal(again.calls.length, 0, 'the refused snapshot was recorded on disk, so it is not re-sent');
+  } finally {
+    fx.cleanup();
+  }
+});

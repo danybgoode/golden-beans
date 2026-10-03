@@ -520,8 +520,13 @@ export async function refresh({
     ...summarize(index, { epicOf: epicOfBranch(root), now }),
     complete: changes.complete,
     pushed_at: Number.isFinite(index.pushed_at) ? new Date(index.pushed_at).toISOString() : null,
+    // Snapshots the engine refused as malformed (400). Never silent: the CLI prints it and exits non-zero.
+    push_rejected: index.push_rejected ?? 0,
   };
-  if (changes.files_read || pushed?.sent || !existsSync(indexPath)) writeJson(indexPath, index);
+  // A push that TRIED the network changed the index (attempt time, 409/400 marks) even when no transcript moved — an
+  // idle machine must persist its backoff, or it retries every minute and re-sends what was refused (round 2, #232).
+  const triedNetwork = pushed && !/^(off|throttled|no ingest key|config unreadable)/.test(pushed.reason);
+  if (changes.files_read || triedNetwork || !existsSync(indexPath)) writeJson(indexPath, index);
   writeJson(join(dir, SUMMARY_FILE), summary);
   return { summary, changes, dir, pushed };
 }
@@ -621,14 +626,14 @@ export function sessionSnapshots(index, { epicOf }) {
     usd_estimate: round2(s.usd_estimate),
     model_breakdown: Object.fromEntries(Object.entries(s.model_breakdown).map(([k, p]) => [k, r(p)])),
     skill_breakdown: Object.fromEntries(Object.entries(s.skill_breakdown).map(([k, p]) => [k, r(p)])),
-    // The engine wants ISO-8601 UTC with a `Z`; the transcript already writes that shape.
+    // The engine wants ISO-8601 UTC with exactly milliseconds and a `Z`; the transcript writes that shape, copied as is.
     first_at: s.first_at,
     last_at: s.last_at,
   }));
 }
 
 /**
- * Push every snapshot that changed since the last push. Returns { sent, skipped, reason }. Never throws: a failure is a
+ * Push every snapshot that changed since the last push. Returns { sent, rejected, reason }. Never throws: a failure is a
  * reason, and the snapshots it did not send go next time. `index.pushed` remembers what each (session, epic) last sent.
  */
 export async function pushUsage({
@@ -689,7 +694,8 @@ export async function pushUsage({
     //   201 stored · 200 this exact snapshot was already there → done.
     //   409 the engine already holds a snapshot at this (session, epic, last_at) with other numbers — a rebuilt index,
     //       or a new price table re-pricing an old session. The engine's copy stands (append-only, latest-wins) → done.
-    //   400 this snapshot will never be accepted (say, a branch name over the limit) → recorded, skipped, never retried.
+    //   400 this snapshot will never be accepted (say, a branch name over the limit) → recorded and counted (the CLI says so
+    //       and exits non-zero); not retried at this `last_at` — a grown session tries again.
     //   anything else (401 wrong key, 429 quota, 5xx) → stop; it is about the run, not the row. Next try in 10 min.
     if (res.status === 201 || res.status === 200 || res.status === 409) {
       index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
@@ -698,6 +704,7 @@ export async function pushUsage({
     }
     if (res.status === 400) {
       index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
+      index.push_rejected = (index.push_rejected ?? 0) + 1;
       rejected++;
       continue;
     }
@@ -867,10 +874,13 @@ async function main(argv) {
     throttle: !argv.includes('--push'),
   });
   if (argv.includes('--push')) {
+    const refused = pushed?.rejected
+      ? ` · ${pushed.rejected} REFUSED by the engine as malformed (400) — not retried at this size; run --push --json and report it`
+      : '';
     process.stdout.write(
-      `epic-actuals: pushed ${pushed?.sent ?? 0} session snapshot(s) — ${pushed?.reason ?? 'scan incomplete, nothing sent'}\n`
+      `epic-actuals: pushed ${pushed?.sent ?? 0} session snapshot(s) — ${pushed?.reason ?? 'scan incomplete, nothing sent'}${refused}\n`
     );
-    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) ? 0 : 1;
+    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) && !pushed.rejected ? 0 : 1;
   }
 
   if (argv.includes('--refresh')) {
