@@ -146,7 +146,9 @@ export function buildConsoleHeader(input: {
       tabs.push({
         id: 'today',
         label: section.label,
-        href: TODAY_HREF,
+        // ⚠️ portfolio-view S2.2: a bare `/app` now opens on the portfolio for anyone holding 2+ products in one
+        // workspace (lock D5), so Today for the project in hand carries its slug — the same link the switcher uses.
+        href: activeProject ? todayHrefFor(activeProject.slug) : TODAY_HREF,
         // `home` and `today` are the same destination, so a page declaring either marks this tab.
         // Kept as two names because they answer different questions: `home` is where /app itself
         // says it lives, `today` is what a surface classified into that section says.
@@ -193,7 +195,9 @@ export function buildConsoleHeader(input: {
       slug: project.slug,
       role: project.role,
       workspace: { id: project.workspace.id, name: project.workspace.name },
-      href: sectionForProject ?? TODAY_HREF,
+      // portfolio-view S2.2: a project with no surface in this section falls back to ITS Today — never the bare `/app`,
+      // which opens on the portfolio at 2+ products (fresh reviewer, PR #235: the sweep for deviation (a) missed this).
+      href: sectionForProject ?? todayHrefFor(project.slug),
       current,
     }
   })

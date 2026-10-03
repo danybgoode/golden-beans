@@ -16,6 +16,7 @@ import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
 import { CommandPalette } from './CommandPalette'
 import { ShellErrorBoundary } from './ShellErrorBoundary'
+import { PORTFOLIO_MIN_PRODUCTS, portfolioHrefFor } from '@/lib/portfolio-workspace'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -282,9 +283,9 @@ export async function ProductShell({
             </>
           ) : (
             <>
-              {/* The logo goes to Today, which IS /app — see lib/console-shell.ts' TODAY_HREF note on
-                why that resolves Story 1.3's "logo links to Today" against Story 1.4's "Today has no
-                rail". One destination, named twice. */}
+              {/* The logo goes to the front door, `/app` — Today for one product, the portfolio for anyone
+                holding 2+ in one workspace (portfolio-view D5). The Today TAB carries the project in hand
+                (lib/console-shell.ts), so Today itself is never more than one click away. */}
               <BrandLockup compact href={TODAY_HREF} />
 
               {/* Four destinations, generated from the inventory's `section` field (D2). A hardcoded
@@ -333,6 +334,17 @@ export async function ProductShell({
                           <section key={group.workspace.id} aria-label={group.workspace.name}>
                             <p>{group.workspace.name}</p>
                             <ul>
+                              {/* portfolio-view S2.2 — every product of this workspace on one page. Offered only
+                                where there are two to compare: with one, the portfolio is its own empty state,
+                                and a menu entry leading to "add a second" is a detour, not a destination. */}
+                              {group.projects.length >= PORTFOLIO_MIN_PRODUCTS ? (
+                                <li>
+                                  <a href={portfolioHrefFor(group.workspace.id)} data-portfolio-entry>
+                                    <span>Portfolio</span>
+                                    <span className="ds-shell-role">{group.projects.length} products</span>
+                                  </a>
+                                </li>
+                              ) : null}
                               {group.projects.map((project) => (
                                 <li key={project.slug}>
                                   <a href={project.href} aria-current={project.current ? 'true' : undefined}>

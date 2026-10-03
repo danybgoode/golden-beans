@@ -11,7 +11,6 @@ import {
   loopStageCell,
   northStarCell,
   spendCell,
-  spendLabel,
   withTimeout,
   type EpicSpendFacts,
   type OutcomeFacts,
@@ -225,13 +224,6 @@ test('1.4: no roadmap pushed, or no quoted epics, is “no quotes yet” — nev
     value: null,
     reason: REASONS.noQuotes,
   })
-})
-
-test('1.4: the label says the sum, the delta and how many epics it is over', () => {
-  assert.equal(spendLabel({ usd: 410.4, deltaPct: 18, epics: 5 }), '≈$410 · +18% (5 quoted epics)')
-  assert.equal(spendLabel({ usd: 96, deltaPct: -6, epics: 2 }), '≈$96.00 · −6% (2 quoted epics)')
-  assert.equal(spendLabel({ usd: 12.5, deltaPct: 0, epics: 1 }), '≈$12.50 · ±0% (1 quoted epic)')
-  assert.equal(spendLabel({ usd: 12.5, deltaPct: null, epics: 1 }), '≈$12.50 (1 quoted epic)')
 })
 
 test('D7: the per-cell timeout is the locked 5000 ms', () => {

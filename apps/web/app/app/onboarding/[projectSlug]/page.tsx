@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Callout, Card, Crumb, Crumbs, PageHead, ShownOnce, Step, Steps } from '@/design-system/primitives'
 import { CopyField } from '@/design-system/copy-field'
 import { CopyPromptCard } from '@/components/landing/CopyPromptCard'
+import { todayHrefFor } from '@/lib/console-shell'
 
 // multi-tenant-activation · Sprint 2, Story 2.3 — the first-run screen a freshly confirmed
 // signup lands on: the one-time key reveal, a ≤5-line SDK snippet pre-filled with it, and (gated)
@@ -73,7 +74,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
   return (
     <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
       <main>
-        <Crumbs back={{ href: '/app', label: 'Today' }}>
+        <Crumbs back={{ href: todayHrefFor(projectSlug), label: 'Today' }}>
           <Crumb>Getting started</Crumb>
         </Crumbs>
         <PageHead

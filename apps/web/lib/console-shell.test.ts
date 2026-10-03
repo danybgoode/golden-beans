@@ -99,7 +99,8 @@ test('with every gate open an owner sees exactly the four sections, in order', (
 test('each tab points at the first entitled surface of its section', () => {
   const tabs = header('home').tabs
   const href = (id: string) => tabs.find((tab) => tab.id === id)?.href
-  assert.equal(href('today'), '/app')
+  // portfolio-view S2.2: Today carries the project in hand — a bare /app opens on the portfolio at 2+ products.
+  assert.equal(href('today'), '/app?project=miyagisanchez')
   // ⚠️ `north-star`, not `journeys` — mockups-as-built Story 3.1 (epic D14). The approved Measure
   // rail opens on North Star, and the route did not exist until this sprint built it; the tab points
   // at the section's FIRST entitled surface, so putting the row first in the inventory is what makes
@@ -242,6 +243,11 @@ test('Today always renders, even when every gate is closed and the viewer owns n
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
   // part of this assertion: Today's presence is not an artefact of everything else surviving too.
   assert.ok(tabs.some((tab) => tab.id === 'today'))
+  assert.equal(tabs.find((tab) => tab.id === 'today')?.href, `${TODAY_HREF}?project=miyagisanchez`)
+})
+
+test('portfolio-view S2.2: with no project in hand, Today is the bare front door', () => {
+  const tabs = header('home', allGatesOpen, owner, 'not-a-member').tabs
   assert.equal(tabs.find((tab) => tab.id === 'today')?.href, TODAY_HREF)
 })
 
@@ -308,6 +314,29 @@ test('from Today, every project switches to THAT PROJECT’s Today', () => {
   // Every one of them still LANDS on Today — the section does not change, only the tenant does.
   for (const project of projects) {
     assert.ok(project.href.startsWith(TODAY_HREF), `${project.href} leaves Today`)
+  }
+})
+
+test('portfolio-view S2.2: a project with no surface in this section falls back to ITS Today, never bare /app', () => {
+  // A bare `/app` opens on the portfolio for anyone holding 2+ products in one workspace, so this fallback must carry
+  // the project — the fresh reviewer on PR #235 found it still pointing at `TODAY_HREF`.
+  const closed = {
+    'experiment-governance': false,
+    'flag-console': false,
+    'flag-serving': false,
+    'journey-projections': false,
+    signals: false,
+  }
+  const { projects } = header('ship', closed, [
+    { slug: 'miyagisanchez', role: 'owner', workspace: WORKSPACE },
+    { slug: 'acme', role: 'member', workspace: WORKSPACE },
+  ])
+  for (const project of projects) {
+    assert.equal(
+      project.href,
+      `${TODAY_HREF}?project=${project.slug}`,
+      `${project.slug} falls back to its own Today`
+    )
   }
 })
 

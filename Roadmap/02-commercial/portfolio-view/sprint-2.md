@@ -12,25 +12,25 @@ stories:
     i_want: "one page with a row for every product in my workspace"
     so_that: "I can compare them at a glance"
     risk: high
-    status: planned
+    status: done   # PR #235
   - id: S2.2
     title: "/app opens on the portfolio at 2+ products"
     as_a: "the product owner"
     i_want: "to land on the portfolio when I hold two or more products"
     so_that: "the front door shows me everything I run"
     risk: high
-    status: planned
+    status: done   # PR #235
   - id: S2.3
     title: "Place a product on the loop from its row"
     as_a: "a project owner"
     i_want: "to set Consider, Operate or Exit from the product's row"
     so_that: "the portfolio reflects where I've decided each product is"
     risk: high
-    status: planned
+    status: done   # PR #235
 ---
 # Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop — Sprint 2: The page and the front door
 
-**Status:** ⬜ not started
+**Status:** ✅ built — PR #235
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D2, D5, D11, D12, C2, C3, C5.
@@ -46,6 +46,10 @@ Render from Sprint 1's `getPortfolio()` only. The approved sketch in the seed is
   stage is null shows "Not placed", and "Place it" for an owner).
 - **Teeth:** the authed spec signs in a disposable person with two projects in one workspace plus a sibling project
   they are NOT a member of, and asserts the sibling's slug is absent; the redirect is asserted for 1 vs 2 products.
+- **Deviations found while building (said out loud):** (a) the console's **Today tab** and two "Today" crumbs linked to
+  bare `/app` — the same class as C2 — so they now carry the project in hand (`todayHrefFor`); (b) a route-level
+  `loading.tsx` streamed a 200 before `notFound()` ran, so the loading state is an in-page Suspense fallback and every
+  404/redirect is decided above it; (c) only a cell holding a VALUE is a link — a reason in link ink read as a figure.
 - **Order:** 2.1 and 2.3 first; the `/app` redirect (2.2) is the last commit, so nobody is sent to a page that isn't there.
 
 ## Stories

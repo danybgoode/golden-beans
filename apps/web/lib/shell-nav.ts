@@ -103,8 +103,11 @@ function emptyHeader(activeSection: ShellSection) {
   })
 }
 
-/** The gate values, read once per call. One resolution point, two consumers (header and rail). */
-function readGates(): ProjectSurfaceGates {
+/**
+ * The gate values, read once per call. One resolution point, three consumers: the header, the rail, and the
+ * portfolio's cell links (portfolio-view S2.1), which must not link to a surface whose gate is off.
+ */
+export function readGates(): ProjectSurfaceGates {
   return {
     'experiment-governance': isExperimentGovernanceEnabled(),
     'flag-console': isFlagConsoleEnabled(),
