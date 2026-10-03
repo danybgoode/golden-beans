@@ -814,3 +814,27 @@ test('round 2 #232: a 400 is never silent — counted in the summary on disk, an
     fx.cleanup();
   }
 });
+
+test('round 4 #232: the refusal alarm clears once a later push goes through cleanly', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    telemetry(fx.root, 'on');
+    const opts = { root: fx.root, projectsDir: fx.projects, push: true, env: ENV };
+    const summary = () =>
+      JSON.parse(readFileSync(join(fx.root, '.golden-frijoles', 'usage-summary.json'), 'utf8'));
+    await refresh({ ...opts, fetchImpl: fakeEngine(400).fetchImpl });
+    assert.equal(summary().push_rejected, 1);
+    // The session grows; the next snapshot is accepted — a clean run.
+    appendFileSync(
+      join(fx.projects, '-elsewhere', 's.jsonl'),
+      `${entry({ cwd: fx.root, session: 'A', at: '2026-10-01T12:00:00.000Z' })}\n`
+    );
+    await new Promise((r) => setTimeout(r, 5));
+    const ok = await refresh({ ...opts, fetchImpl: fakeEngine(201).fetchImpl });
+    assert.deepEqual([ok.pushed.sent, ok.pushed.rejected], [1, 0]);
+    assert.equal(summary().push_rejected, 0, 'the band no longer says refused');
+  } finally {
+    fx.cleanup();
+  }
+});

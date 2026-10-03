@@ -522,7 +522,11 @@ export async function refresh({
     pushed_at: Number.isFinite(index.pushed_at) ? new Date(index.pushed_at).toISOString() : null,
     // Snapshots the engine refused as malformed (400), cumulative for this index. Never silent: the build view's Spend
     // line shows the count, and `--push` prints it and exits non-zero.
-    push_rejected: index.push_rejected ?? 0,
+    // Refusals since the last clean push — 0 once a later push went through with none.
+    push_rejected:
+      Number.isFinite(index.push_rejected_at) && !(index.push_clean_at > index.push_rejected_at)
+        ? (index.push_rejected ?? 0)
+        : 0,
   };
   // A push that TRIED the network changed the index (attempt time, 409/400 marks) even when no transcript moved — an
   // idle machine must persist its backoff, or it retries every minute and re-sends what was refused (round 2, #232).
@@ -706,12 +710,16 @@ export async function pushUsage({
     if (res.status === 400) {
       index.pushed[`${s.session_id}|${s.epic}`] = s.last_at;
       index.push_rejected = (index.push_rejected ?? 0) + 1;
+      index.push_rejected_at = now;
       rejected++;
       continue;
     }
     return { sent, rejected, reason: `engine answered ${res.status}` };
   }
   index.pushed_at = now;
+  // A run that finished with no refusal clears the alarm (round 4, #232): the band stops saying "refused" once a later
+  // push went through cleanly, so a signal that fired once does not become one people learn to ignore.
+  if (!rejected) index.push_clean_at = now;
   return { sent, rejected, reason: due.length ? 'ok' : 'nothing changed' };
 }
 
@@ -876,14 +884,15 @@ async function main(argv) {
   });
   if (argv.includes('--push')) {
     // This run's refusals, and every one before it (a refusal during the band's automatic refresh lands here too).
-    const total = summary.push_rejected ?? 0;
+    const total = summary.push_rejected ?? 0; // since the last clean push
     const refused = total
-      ? ` · ${pushed?.rejected ?? 0} refused now, ${total} in all — the engine answered 400 (malformed); run --push --json and report it`
+      ? ` · ${pushed?.rejected ?? 0} refused now, ${total} since the last clean push — the engine answered 400 (malformed); run --push --json and report it`
       : '';
     process.stdout.write(
       `epic-actuals: pushed ${pushed?.sent ?? 0} session snapshot(s) — ${pushed?.reason ?? 'scan incomplete, nothing sent'}${refused}\n`
     );
-    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) && !total ? 0 : 1;
+    // The exit code is THIS run's: a refusal last week must not fail every --push after it.
+    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) && !pushed.rejected ? 0 : 1;
   }
 
   if (argv.includes('--refresh')) {

@@ -20,8 +20,8 @@ newest heading are always the same number — `scripts/check-release.mjs` enforc
   snapshot per (session, epic). The build view's refresh pushes too when the setting is on — only after a complete
   scan, within 5 s, at most every 10 minutes. `--epic <slug> --json` reports `pushed_at`.
 - **A refused push is never silent.** A snapshot the engine refuses as malformed (400) is counted; the build view's Spend
-  row then ends `· N usage pushes refused — epic-actuals --push --json`, and `--push` prints the count and exits
-  non-zero. A failed push backs off 10 minutes, and a malformed config is a reason, never a crash.
+  row then ends `· N usage pushes refused — epic-actuals --push --json` until a later push goes through cleanly, and a
+  `--push` run with a refusal prints it and exits non-zero. A failed push backs off 10 minutes, and a malformed config is a reason, never a crash.
 
 ### Changed
 
