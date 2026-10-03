@@ -560,6 +560,9 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/app/tasks/[projectSlug]': (slug) => `/app/tasks/${slug}`,
   // mockups-as-built Story 3.1 — the route `measure-north-star` was substituted for until now.
   '/app/north-star/[projectSlug]': (slug) => `/app/north-star/${slug}`,
+  // finops S3.3 · Measure › FinOps. Opened by the gate like CLI access: its structural promises are measured although
+  // it has no approved reference state yet — the manifest row's deferral says why.
+  '/app/finops/[projectSlug]': (slug) => `/app/finops/${slug}`,
   '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
   '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
   '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,

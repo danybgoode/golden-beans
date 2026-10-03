@@ -1026,3 +1026,13 @@ test('finops 2.4: on a quoted epic branch the resolver prints the inside state',
     f.done();
   }
 });
+
+test('finops S3 (round 3, #232): a usage push the engine refused shows on the Spend line, never only in a file', async () => {
+  const { spendValue } = await import('./build-state.mjs');
+  const spend = { usd: 22, usd_known: true, mtok: 1.1, sessions: 2, basis: 'this machine', push_rejected: 2 };
+  assert.equal(
+    spendValue(spend, null),
+    '≈$22 · no quote · 1.1M tok · 2 sessions · 2 usage pushes refused — epic-actuals --push --json'
+  );
+  assert.equal(spendValue({ ...spend, push_rejected: 0 }, null), '≈$22 · no quote · 1.1M tok · 2 sessions');
+});

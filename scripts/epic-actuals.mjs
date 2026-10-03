@@ -520,7 +520,8 @@ export async function refresh({
     ...summarize(index, { epicOf: epicOfBranch(root), now }),
     complete: changes.complete,
     pushed_at: Number.isFinite(index.pushed_at) ? new Date(index.pushed_at).toISOString() : null,
-    // Snapshots the engine refused as malformed (400). Never silent: the CLI prints it and exits non-zero.
+    // Snapshots the engine refused as malformed (400), cumulative for this index. Never silent: the build view's Spend
+    // line shows the count, and `--push` prints it and exits non-zero.
     push_rejected: index.push_rejected ?? 0,
   };
   // A push that TRIED the network changed the index (attempt time, 409/400 marks) even when no transcript moved — an
@@ -874,13 +875,15 @@ async function main(argv) {
     throttle: !argv.includes('--push'),
   });
   if (argv.includes('--push')) {
-    const refused = pushed?.rejected
-      ? ` · ${pushed.rejected} REFUSED by the engine as malformed (400) — not retried at this size; run --push --json and report it`
+    // This run's refusals, and every one before it (a refusal during the band's automatic refresh lands here too).
+    const total = summary.push_rejected ?? 0;
+    const refused = total
+      ? ` · ${pushed?.rejected ?? 0} refused now, ${total} in all — the engine answered 400 (malformed); run --push --json and report it`
       : '';
     process.stdout.write(
       `epic-actuals: pushed ${pushed?.sent ?? 0} session snapshot(s) — ${pushed?.reason ?? 'scan incomplete, nothing sent'}${refused}\n`
     );
-    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) && !pushed.rejected ? 0 : 1;
+    return pushed && /^(ok|nothing changed)$/.test(pushed.reason) && !total ? 0 : 1;
   }
 
   if (argv.includes('--refresh')) {
