@@ -838,3 +838,32 @@ test('round 4 #232: the refusal alarm clears once a later push goes through clea
     fx.cleanup();
   }
 });
+
+test('round 5 #232: an idle run never clears a refusal, and the count restarts after a clean push', async () => {
+  const fx = repoFixture();
+  try {
+    write(fx.projects, '-elsewhere', 's.jsonl', [entry({ cwd: fx.root, session: 'A' })]);
+    telemetry(fx.root, 'on');
+    const opts = { root: fx.root, projectsDir: fx.projects, push: true, env: ENV };
+    const summary = () =>
+      JSON.parse(readFileSync(join(fx.root, '.golden-frijoles', 'usage-summary.json'), 'utf8'));
+    const grow = (at) =>
+      appendFileSync(
+        join(fx.projects, '-elsewhere', 's.jsonl'),
+        `${entry({ cwd: fx.root, session: 'A', at })}\n`
+      );
+    await refresh({ ...opts, fetchImpl: fakeEngine(400).fetchImpl });
+    const idle = await refresh({ ...opts, fetchImpl: fakeEngine(201).fetchImpl });
+    assert.equal(idle.pushed.reason, 'nothing changed');
+    assert.equal(summary().push_rejected, 1, 'nothing went through, so the refusal is still current');
+    grow('2026-10-01T12:00:00.000Z');
+    await refresh({ ...opts, fetchImpl: fakeEngine(201).fetchImpl });
+    assert.equal(summary().push_rejected, 0, 'a push went through cleanly');
+    grow('2026-10-01T13:00:00.000Z');
+    await new Promise((r) => setTimeout(r, 5));
+    await refresh({ ...opts, fetchImpl: fakeEngine(400).fetchImpl });
+    assert.equal(summary().push_rejected, 1, 'one refusal since the last clean push, not two');
+  } finally {
+    fx.cleanup();
+  }
+});

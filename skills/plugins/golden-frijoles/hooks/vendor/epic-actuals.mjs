@@ -520,8 +520,6 @@ export async function refresh({
     ...summarize(index, { epicOf: epicOfBranch(root), now }),
     complete: changes.complete,
     pushed_at: Number.isFinite(index.pushed_at) ? new Date(index.pushed_at).toISOString() : null,
-    // Snapshots the engine refused as malformed (400), cumulative for this index. Never silent: the build view's Spend
-    // line shows the count, and `--push` prints it and exits non-zero.
     // Refusals since the last clean push — 0 once a later push went through with none.
     push_rejected:
       Number.isFinite(index.push_rejected_at) && !(index.push_clean_at > index.push_rejected_at)
@@ -719,7 +717,12 @@ export async function pushUsage({
   index.pushed_at = now;
   // A run that finished with no refusal clears the alarm (round 4, #232): the band stops saying "refused" once a later
   // push went through cleanly, so a signal that fired once does not become one people learn to ignore.
-  if (!rejected) index.push_clean_at = now;
+  // CLEAN means something actually went through with no refusal — an idle run ("nothing changed") or one where every
+  // snapshot was a 409 proves nothing, and must not silence a refusal that is still current (round 5, #232).
+  if (sent > 0 && !rejected) {
+    index.push_clean_at = now;
+    index.push_rejected = 0;
+  }
   return { sent, rejected, reason: due.length ? 'ok' : 'nothing changed' };
 }
 
