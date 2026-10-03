@@ -82,6 +82,11 @@ test('2+ products: bare /app opens on the portfolio — one row per product of m
     await expect(main.locator(`[data-product="${memberOf.slug}"]`)).toBeVisible()
     await expect(main.locator('[data-product]')).toHaveCount(2)
     await expect(main.locator(`[data-product="${sibling.slug}"]`)).toHaveCount(0)
+    // The switcher offers the portfolio for this workspace (S2.2).
+    await expect(page.locator('[data-portfolio-entry]')).toHaveAttribute(
+      'href',
+      /\/app\/portfolio\?workspace=/
+    )
     await expect(main).not.toContainText(sibling.slug)
 
     // The approved columns, in order.
@@ -134,7 +139,7 @@ test('the loop: an owner places a product from its row; a member sees the stage 
   const session = await disposableSession(browser, 'owner')
   const extra: Extra = { projects: [], users: [] }
   try {
-    const { owned, memberOf } = await seedTwoProductWorkspace(session, extra)
+    const { owned, memberOf, sibling } = await seedTwoProductWorkspace(session, extra)
     const { page, db } = session
     await page.goto('/app/portfolio')
     const rowOf = (slug: string) =>
@@ -163,6 +168,32 @@ test('the loop: an owner places a product from its row; a member sees the stage 
       .toBe('operate')
     const { data: memberRow } = await db.from('projects').select('loop_stage').eq('id', memberOf.id).single()
     expect(memberRow?.loop_stage).toBeNull()
+
+    // The ACTION is the guard, not the hidden control (fresh reviewer, PR #235). Forge the owner's own form: point its
+    // hidden project id at a project they only MEMBER, then at the sibling they do not belong to, and submit.
+    const forge = async (projectId: string) => {
+      await page.goto('/app/portfolio', { waitUntil: 'networkidle' })
+      const form = rowOf(owned.slug).locator('form')
+      await form
+        .locator('input[name="projectId"]')
+        .evaluate((el, id) => ((el as HTMLInputElement).value = id), projectId)
+      await rowOf(owned.slug).getByText('Change').click()
+      await rowOf(owned.slug).getByRole('menuitem', { name: 'Exit' }).click()
+    }
+    const stageOf = async (id: string) =>
+      (await db.from('projects').select('loop_stage').eq('id', id).single()).data?.loop_stage ?? null
+
+    await forge(memberOf.id)
+    // Refused with a named outcome on the page — not the "couldn't load your workspace" error boundary.
+    await expect(page).toHaveURL(/[?&]loop=forbidden/)
+    await expect(page.locator('main')).toContainText('Only a project owner can place it on the loop.')
+    expect(await stageOf(memberOf.id)).toBeNull()
+
+    await forge(sibling.id)
+    await expect(page.locator('main [data-portfolio-state]')).toHaveCount(0) // the not-found page, not the portfolio
+    expect(await stageOf(sibling.id)).toBeNull()
+    // CONTROL: the owner's own row was not touched by either forged submit.
+    expect(await stageOf(owned.id)).toBe('operate')
   } finally {
     await removeExtra(session, extra)
     await session.cleanup()

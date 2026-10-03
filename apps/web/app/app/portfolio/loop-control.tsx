@@ -13,10 +13,12 @@ import { setLoopStageAction } from './actions'
 
 export function LoopControl({
   projectId,
+  workspaceId,
   cell,
   isOwner,
 }: {
   projectId: string
+  workspaceId: string
   cell: Cell<string>
   isOwner: boolean
 }) {
@@ -35,7 +37,8 @@ export function LoopControl({
       <details className="ds-disclosure">
         <summary>{stage === null ? 'Place it' : 'Change'}</summary>
         <form action={setLoopStageAction} className="ds-menu" role="menu">
-          <input type="hidden" name="projectId" value={projectId} />
+          <input type="hidden" name="projectId" defaultValue={projectId} />
+          <input type="hidden" name="workspace" defaultValue={workspaceId} />
           {LOOP_STAGES.map((option) => (
             <button
               key={option}

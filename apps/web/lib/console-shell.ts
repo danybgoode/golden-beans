@@ -195,7 +195,9 @@ export function buildConsoleHeader(input: {
       slug: project.slug,
       role: project.role,
       workspace: { id: project.workspace.id, name: project.workspace.name },
-      href: sectionForProject ?? TODAY_HREF,
+      // portfolio-view S2.2: a project with no surface in this section falls back to ITS Today — never the bare `/app`,
+      // which opens on the portfolio at 2+ products (fresh reviewer, PR #235: the sweep for deviation (a) missed this).
+      href: sectionForProject ?? todayHrefFor(project.slug),
       current,
     }
   })

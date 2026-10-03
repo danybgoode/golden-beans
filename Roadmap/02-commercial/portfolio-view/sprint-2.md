@@ -12,25 +12,25 @@ stories:
     i_want: "one page with a row for every product in my workspace"
     so_that: "I can compare them at a glance"
     risk: high
-    status: planned
+    status: done   # PR #235
   - id: S2.2
     title: "/app opens on the portfolio at 2+ products"
     as_a: "the product owner"
     i_want: "to land on the portfolio when I hold two or more products"
     so_that: "the front door shows me everything I run"
     risk: high
-    status: planned
+    status: done   # PR #235
   - id: S2.3
     title: "Place a product on the loop from its row"
     as_a: "a project owner"
     i_want: "to set Consider, Operate or Exit from the product's row"
     so_that: "the portfolio reflects where I've decided each product is"
     risk: high
-    status: planned
+    status: done   # PR #235
 ---
 # Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop — Sprint 2: The page and the front door
 
-**Status:** ⬜ not started
+**Status:** ✅ built — PR #235
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D2, D5, D11, D12, C2, C3, C5.

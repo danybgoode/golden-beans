@@ -5,6 +5,7 @@ import { getUserProjects } from '@/lib/membership'
 import { getUserWorkspaces } from '@/lib/workspace'
 import { getPortfolio } from '@/lib/portfolio'
 import {
+  LOOP_OUTCOME_MESSAGES,
   PORTFOLIO_MIN_PRODUCTS,
   projectsPerWorkspace,
   resolvePortfolioWorkspace,
@@ -38,7 +39,7 @@ export const dynamic = 'force-dynamic'
 export default async function PortfolioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string | string[] }>
+  searchParams: Promise<{ workspace?: string | string[]; loop?: string | string[] }>
 }) {
   const user = await getSessionUser()
   if (!user) redirect('/login')
@@ -56,15 +57,23 @@ export default async function PortfolioPage({
 
   const mine = projects.filter((project) => project.workspace.id === workspace.id)
   const held = projectsPerWorkspace(projects).get(workspace.id) ?? 0
+  const outcomeKey = Array.isArray(query.loop) ? query.loop[0] : query.loop
+  // Own keys only: `LOOP_OUTCOME_MESSAGES['constructor']` must not render a function's name as a sentence.
+  const loopOutcome =
+    outcomeKey && Object.hasOwn(LOOP_OUTCOME_MESSAGES, outcomeKey) ? LOOP_OUTCOME_MESSAGES[outcomeKey] : null
 
   return (
-    <ProductShell projectSlug={undefined} section="home" railActive={null}>
+    // The frame names a project FROM THIS WORKSPACE: with none given it falls back to the viewer's first membership,
+    // which can sit in another workspace — the chrome and the page naming different tenants (fresh reviewer, PR #235).
+    <ProductShell projectSlug={mine[0]?.slug} section="home" railActive={null}>
       <main>
         {held < PORTFOLIO_MIN_PRODUCTS ? (
           <div data-portfolio-state="empty">
             <PageHead title="Your workspace" lede={workspace.name} />
             <Empty
-              title="Your workspace has one product."
+              title={
+                held === 1 ? 'Your workspace has one product.' : 'You have no product in this workspace yet.'
+              }
               body="The portfolio appears when you add a second."
             />
           </div>
@@ -79,6 +88,7 @@ export default async function PortfolioPage({
                 </a>
               }
             />
+            {loopOutcome ? <Callout tone="warn">{loopOutcome}</Callout> : null}
             {/* The approved `portfolio-loading` state is this fallback: the head is already there, the rows are read. */}
             <Suspense fallback={<LoadingTable />}>
               <PortfolioRows userId={user.id} workspaceId={workspace.id} />
@@ -140,6 +150,7 @@ async function PortfolioRows({ userId, workspaceId }: { userId: string; workspac
               <TableCell>
                 <LoopControl
                   projectId={row.project.id}
+                  workspaceId={workspaceId}
                   cell={row.loop_stage}
                   isOwner={row.project.role === 'owner'}
                 />

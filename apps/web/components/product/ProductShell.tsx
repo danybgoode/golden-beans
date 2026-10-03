@@ -283,9 +283,9 @@ export async function ProductShell({
             </>
           ) : (
             <>
-              {/* The logo goes to Today, which IS /app — see lib/console-shell.ts' TODAY_HREF note on
-                why that resolves Story 1.3's "logo links to Today" against Story 1.4's "Today has no
-                rail". One destination, named twice. */}
+              {/* The logo goes to the front door, `/app` — Today for one product, the portfolio for anyone
+                holding 2+ in one workspace (portfolio-view D5). The Today TAB carries the project in hand
+                (lib/console-shell.ts), so Today itself is never more than one click away. */}
               <BrandLockup compact href={TODAY_HREF} />
 
               {/* Four destinations, generated from the inventory's `section` field (D2). A hardcoded

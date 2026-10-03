@@ -78,3 +78,13 @@ export const PORTFOLIO_HREF = '/app/portfolio'
 export function portfolioHrefFor(workspaceId: string): string {
   return `${PORTFOLIO_HREF}?workspace=${encodeURIComponent(workspaceId)}`
 }
+
+/**
+ * The loop-stage action reports a refusal or a failed save back to the page under this parameter (S2.3). Only these
+ * values render anything; any other value is ignored, so a hand-typed URL can show at most one of these two sentences.
+ */
+export const LOOP_OUTCOME_PARAM = 'loop'
+export const LOOP_OUTCOME_MESSAGES: Record<string, string> = {
+  forbidden: 'Only a project owner can place it on the loop. Nothing was changed.',
+  failed: 'The loop stage could not be saved. Nothing was changed — try again.',
+}
