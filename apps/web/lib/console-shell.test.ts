@@ -99,7 +99,8 @@ test('with every gate open an owner sees exactly the four sections, in order', (
 test('each tab points at the first entitled surface of its section', () => {
   const tabs = header('home').tabs
   const href = (id: string) => tabs.find((tab) => tab.id === id)?.href
-  assert.equal(href('today'), '/app')
+  // portfolio-view S2.2: Today carries the project in hand — a bare /app opens on the portfolio at 2+ products.
+  assert.equal(href('today'), '/app?project=miyagisanchez')
   // ⚠️ `north-star`, not `journeys` — mockups-as-built Story 3.1 (epic D14). The approved Measure
   // rail opens on North Star, and the route did not exist until this sprint built it; the tab points
   // at the section's FIRST entitled surface, so putting the row first in the inventory is what makes
@@ -242,6 +243,11 @@ test('Today always renders, even when every gate is closed and the viewer owns n
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
   // part of this assertion: Today's presence is not an artefact of everything else surviving too.
   assert.ok(tabs.some((tab) => tab.id === 'today'))
+  assert.equal(tabs.find((tab) => tab.id === 'today')?.href, `${TODAY_HREF}?project=miyagisanchez`)
+})
+
+test('portfolio-view S2.2: with no project in hand, Today is the bare front door', () => {
+  const tabs = header('home', allGatesOpen, owner, 'not-a-member').tabs
   assert.equal(tabs.find((tab) => tab.id === 'today')?.href, TODAY_HREF)
 })
 

@@ -16,6 +16,7 @@ import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
 import { CommandPalette } from './CommandPalette'
 import { ShellErrorBoundary } from './ShellErrorBoundary'
+import { PORTFOLIO_MIN_PRODUCTS, portfolioHrefFor } from '@/lib/portfolio-workspace'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -333,6 +334,17 @@ export async function ProductShell({
                           <section key={group.workspace.id} aria-label={group.workspace.name}>
                             <p>{group.workspace.name}</p>
                             <ul>
+                              {/* portfolio-view S2.2 — every product of this workspace on one page. Offered only
+                                where there are two to compare: with one, the portfolio is its own empty state,
+                                and a menu entry leading to "add a second" is a detour, not a destination. */}
+                              {group.projects.length >= PORTFOLIO_MIN_PRODUCTS ? (
+                                <li>
+                                  <a href={portfolioHrefFor(group.workspace.id)} data-portfolio-entry>
+                                    <span>Portfolio</span>
+                                    <span className="ds-shell-role">{group.projects.length} products</span>
+                                  </a>
+                                </li>
+                              ) : null}
                               {group.projects.map((project) => (
                                 <li key={project.slug}>
                                   <a href={project.href} aria-current={project.current ? 'true' : undefined}>

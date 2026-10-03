@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import { resolveActiveProject } from '@/lib/active-project'
+import { PORTFOLIO_HREF, opensOnPortfolio } from '@/lib/portfolio-workspace'
 import { isSignupEnabled } from '@/lib/flags'
 import { getShellNav } from '@/lib/shell-nav'
 import { shellRendersAccountMenu } from '@/lib/console-shell'
@@ -66,6 +67,12 @@ export default async function AppHome({
   if (projects.length === 0 && isSignupEnabled() && provision !== 'failed') {
     redirect('/app/provision')
   }
+
+  // portfolio-view · Sprint 2, Story 2.2 (lock D5, C2) — the front door for anyone holding two or more products in one
+  // workspace. BELOW the provisioning trigger (which must still run first), and ONLY for a bare `/app`: `?project=` is
+  // the switcher's way back to one product's Today, and redirecting it would make Today unreachable for exactly the
+  // people this serves. One product, or several spread across workspaces: this page, unchanged.
+  if (opensOnPortfolio(projects, { project: requestedSlug, provision })) redirect(PORTFOLIO_HREF)
 
   const active = resolveActiveProject(projects, requestedSlug)
 
