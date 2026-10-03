@@ -3,7 +3,7 @@ epic: finops
 sprint: 3
 title: "The engine — usage events, the roadmap push and /app/finops"
 risk: high
-phase: In review
+phase: Shipped
 stories_total: 4
 stories:
   - id: S3.1
@@ -37,7 +37,7 @@ stories:
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 3: The engine — usage events, the roadmap push and /app/finops
 
-**Status:** 🟦 In review — S3.1 `74d66ca` · S3.2 `5806521` · S3.3 `f52d5df` · S3.4 `c9c6466` · release 0.24.0
+**Status:** ✅ shipped — #232 `379b50d` (merged + deployed 2026-10-03)
 
 **Re-bet at the wave boundary (2026-10-02):** wave 1 (S1–S2) used one orchestrated session and stayed inside the L appetite; the product owner's kickoff authorised the whole epic in one run, so Sprint 3 proceeded without returning to shaping.
 

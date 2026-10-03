@@ -3,7 +3,7 @@ epic: finops
 sprint: 1
 title: "Actuals, measured locally"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 4
 stories:
   - id: S1.1
@@ -37,7 +37,7 @@ stories:
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 1: Actuals, measured locally
 
-**Status:** 🟦 In review — S1.1/S1.2 `fc89ccb` · S1.3 `efceabd` · S1.4 `27e7d37` · release 0.22.0 `94545c4` · contract seam `5a926bc`
+**Status:** ✅ shipped — #230 `6f3ac1e` (merged + deployed 2026-10-02)
 
 ## Build contract (locked by the architect before the builder started — 2026-10-02)
 Cites README § Architecture lock; nothing here restates a rule that lives there.

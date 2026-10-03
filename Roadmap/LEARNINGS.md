@@ -1986,3 +1986,21 @@ one-liner + why + date shape.
   now on; a proxy ask is flagged, never mixed in silently.
 - **Regenerate the board with every sprint's doc commit.** The pre-push hook refused two pushes because a plan or
   tick commit left `BUILD-ORDER.md` stale.
+
+### Measuring agent spend from transcripts (finops, 2026-10-03)
+
+- **A transcript's `gitBranch` is the branch of the session's own checkout, not of the work.** A session sitting on
+  `feat/semantic-lint` that built `intent-match` in another directory stamped every turn with the wrong epic. Build an
+  epic from a session on its branch, or in a worktree on it — and attribute by branch, never guess.
+- **Count a streamed message once, by `message.id`, at its LARGEST `output_tokens`; let the FIRST occurrence own the
+  attribution.** Claude Code writes one entry per content block (half the entries are repeats), and a resumed session
+  copies earlier entries into a new file re-stamped with the new branch.
+- **When a checkout moves, its transcripts keep the old `cwd`.** The project folder Claude Code keeps is the reliable
+  signal. Its 30-day cleanup runs silently, so an index that keeps aggregates must exist BEFORE the history you want.
+- **After a copy change, run the full api suite and the authed project, not the specs you think it touches.** A
+  vocabulary spec pinned a sentence the FinOps rewrite removed, and the visual gate needed a way to reach the new
+  page; a focused run caught neither, CI caught both, one round apart.
+- **A merged stack squashed into `main` conflicts on every shared file.** Check that `main`'s tree equals the parent's
+  final tree (`git diff --stat origin/main <parent>` is empty) — then "ours" is provably right and the merge changes
+  nothing.
+
