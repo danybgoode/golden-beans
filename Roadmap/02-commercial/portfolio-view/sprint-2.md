@@ -46,6 +46,10 @@ Render from Sprint 1's `getPortfolio()` only. The approved sketch in the seed is
   stage is null shows "Not placed", and "Place it" for an owner).
 - **Teeth:** the authed spec signs in a disposable person with two projects in one workspace plus a sibling project
   they are NOT a member of, and asserts the sibling's slug is absent; the redirect is asserted for 1 vs 2 products.
+- **Deviations found while building (said out loud):** (a) the console's **Today tab** and two "Today" crumbs linked to
+  bare `/app` — the same class as C2 — so they now carry the project in hand (`todayHrefFor`); (b) a route-level
+  `loading.tsx` streamed a 200 before `notFound()` ran, so the loading state is an in-page Suspense fallback and every
+  404/redirect is decided above it; (c) only a cell holding a VALUE is a link — a reason in link ink read as a figure.
 - **Order:** 2.1 and 2.3 first; the `/app` redirect (2.2) is the last commit, so nobody is sent to a page that isn't there.
 
 ## Stories
