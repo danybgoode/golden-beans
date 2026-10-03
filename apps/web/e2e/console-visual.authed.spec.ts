@@ -563,6 +563,9 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   // finops S3.3 · Measure › FinOps. Opened by the gate like CLI access: its structural promises are measured although
   // it has no approved reference state yet — the manifest row's deferral says why.
   '/app/finops/[projectSlug]': (slug) => `/app/finops/${slug}`,
+  // portfolio-view S2.1 — opened like FinOps (deferred, no approved state yet). The shared fixture user holds one
+  // product, so the gate measures the portfolio's empty state; the populated states are `portfolio.authed.spec.ts`'s.
+  '/app/portfolio': () => '/app/portfolio',
   '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
   '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
   '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,

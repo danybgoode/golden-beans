@@ -172,20 +172,22 @@ test('the loop: an owner places a product from its row; a member sees the stage 
     // The ACTION is the guard, not the hidden control (fresh reviewer, PR #235). Forge the owner's own form: point its
     // hidden project id at a project they only MEMBER, then at the sibling they do not belong to, and submit.
     const forge = async (projectId: string) => {
-      await page.goto('/app/portfolio', { waitUntil: 'networkidle' })
-      const form = rowOf(owned.slug).locator('form')
-      await form
-        .locator('input[name="projectId"]')
-        .evaluate((el, id) => ((el as HTMLInputElement).value = id), projectId)
-      await rowOf(owned.slug).getByText('Change').click()
-      await rowOf(owned.slug).getByRole('menuitem', { name: 'Exit' }).click()
+      await page.goto('/app/portfolio')
+      const row = rowOf(owned.slug)
+      // Open the menu FIRST, then rewrite the hidden id and prove it took: set before hydration, React restores the
+      // rendered value and the forged submit silently becomes the owner's own (seen in CI on PR #235).
+      await row.getByText('Change').click()
+      const input = row.locator('form input[name="projectId"]')
+      await input.evaluate((el, id) => ((el as HTMLInputElement).value = id), projectId)
+      await expect(input).toHaveValue(projectId)
+      await row.getByRole('menuitem', { name: 'Exit' }).click()
     }
     const stageOf = async (id: string) =>
       (await db.from('projects').select('loop_stage').eq('id', id).single()).data?.loop_stage ?? null
 
     await forge(memberOf.id)
     // Refused with a named outcome on the page — not the "couldn't load your workspace" error boundary.
-    await expect(page).toHaveURL(/[?&]loop=forbidden/)
+    await expect(page).toHaveURL(/[?&]loop=forbidden/, { timeout: 15_000 })
     await expect(page.locator('main')).toContainText('Only a project owner can place it on the loop.')
     expect(await stageOf(memberOf.id)).toBeNull()
 
