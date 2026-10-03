@@ -3,7 +3,7 @@ epic: finops
 sprint: 2
 title: "Quotes, calibrated, and the loop closes"
 risk: low
-phase: Shaping
+phase: In review
 stories_total: 5
 stories:
   - id: S2.1
@@ -12,39 +12,39 @@ stories:
     i_want: "every epic README to carry its quote and its actual in the same fields"
     so_that: "the history the quotes learn from is one git-tracked record"
     risk: low
-    status: planned
+    status: done
   - id: S2.2
     title: "quote.mjs — the calibrated range"
     as_a: "the product owner"
     i_want: "a quote for an appetite computed from my own shipped epics"
     so_that: "quotes get better as we ship more"
     risk: low
-    status: planned
+    status: done
   - id: S2.3
     title: "Groom writes the quote"
     as_a: "the product owner"
     i_want: "groom to attach the quote at Stage 1.5 and the scaffolder to write it"
     so_that: "no one ever types a quote"
     risk: low
-    status: planned
+    status: done
   - id: S2.4
     title: "The band shows quote vs actual — all four states"
     as_a: "the product owner"
     i_want: "the Spend row to compare against the epic's quote"
     so_that: "I see during the build whether we are inside, near or over what we expected"
     risk: low
-    status: planned
+    status: done
   - id: S2.5
     title: "Close stamps the actual"
     as_a: "the product owner"
     i_want: "the epic's actual written into its README at close, automatically"
     so_that: "every shipped epic feeds the next quote with no manual step"
     risk: low
-    status: planned
+    status: done
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 2: Quotes, calibrated, and the loop closes
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — S2.1/S2.2 `ee330b1` · S2.3 `857418d` · S2.4 `5f966ba` · S2.5 `d8905e0` · release 0.23.0
 
 ## Build contract (locked by the architect before the builder started — 2026-10-02)
 Cites README § Architecture lock.
@@ -104,12 +104,17 @@ Cites README § Architecture lock.
 - Thin history: the quote shows its basis, e.g. `(M · 2 past epics, wide)`.
 - The four lines match the mockup approved at grooming (seed → Visuals) — a spec pins each line's text.
 **QA:** `build-state.test.mjs` + `build-view.test.mjs`: one fixture per state; the `progressOf`-style bar helper unit-tested.
+**Amended at the build:** a quoted or unquoted epic's line follows the mockup word for word, so it no longer ends in
+Sprint 1's `· this machine` (the mockup is the contract — WAYS-OF-WORKING → Plan); the basis lives in the JSON.
+The thin-history line keeps its tok and sessions after the label (the story says "e.g."; the mockup stops at the
+label), an over-quote under 1% reads `<1% over` (never `0% over`), and the bar is actual ÷ quote high exactly — the
+mockup's drawn bars follow no formula (fresh review, #231).
 **Risk:** low
 
 ### Story 2.5 — Close stamps the actual
 **As** the product owner, **I want** the epic's actual written into its README at close, automatically, **so that** every shipped epic feeds the next quote with no manual step.
 **Acceptance:**
-- `epic-actuals.mjs --epic <slug> --write` stamps `actual_usd`, `actual_mtok`, `actual_basis: "this machine · <date> · <n> sessions"`; re-running replaces, never adds.
+- (Built in Sprint 1, with the backfill: the close replaces, a backfill never overwrites.) `epic-actuals.mjs --epic <slug> --write` stamps `actual_usd`, `actual_mtok`, `actual_basis: "this machine · <date> · <n> sessions"`; re-running replaces, never adds.
 - `epic-dod --check` reports a shipped epic without `actual_usd` as a **warning** naming the command (not a failure — epics shipped before this have none; `epic-dod.exemptions.json` untouched).
 - `templates/RETROSPECTIVE.md` gains a `Quote vs actual:` line; the close-out step in WAYS-OF-WORKING's DoD (template + `render-ways-of-working --check`) names the stamp.
 - This epic's own retro is the first to use it.
