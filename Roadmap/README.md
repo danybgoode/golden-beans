@@ -320,6 +320,14 @@ independently shippable slice of value.
   read, so the portfolio view and the workspace-wide board are now buildable. The switcher groups projects by workspace,
   and `gf whoami` prints it (CLI 0.4.0, npm publish owed). A `tenancy` lint rule watches it in shadow. Nobody gained or
   lost access (access model A; no billing, quotas or invites yet).
+- ✅ [Portfolio view](02-commercial/portfolio-view/README.md) (every product in a workspace on one page) — **shipped
+  and live 2026-10-03** (#234, #235). `/app/portfolio` puts each product you belong to on one row: its place on the
+  Consider · Operate · Exit loop (written by an owner, never inferred — `projects.loop_stage`), its North Star metric
+  and inputs, the furthest TARS stage, running experiments and kill switches off, epic lead time and spend vs quote
+  ("as of" their push). Every cell is a value, a reason, or "couldn't load" — never a fabricated 0. Rows come only
+  through `getWorkspaceProjects()`. A bare `/app` opens on it at 2+ products in one workspace; Today stays one click
+  away. No metric level for the North Star exists yet, so there is no week-over-week (lock C1, a follow-up).
+  **Owed to Daniel:** the signed-in walkthrough, and placing his products on the loop.
 - ✅ [One stage, every client](02-commercial/board-sinks-and-scrumban/README.md) (a six-stage board on the Hub, the CLI
   mod and every sink) — **shipped and live 2026-10-02** (PRs #224–#228, plugin + kit 0.20.0/0.21.0). Every client now
   reads ONE stage: To groom · Grooming · Ready to build · Building · QA · Shipped, decided once by
@@ -449,6 +457,13 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-10-03**: `portfolio-view` **shipped**: two sprints in one run, one migration applied before its merge.
+  - Anyone holding two or more products in a workspace now lands on one page that compares them, each placed on
+    the Consider · Operate · Exit loop by its owner.
+  - The lock found the pitch's headline figure did not exist: there is no stored North Star value, so no
+    week-over-week. The cell names the metric and its inputs instead. Running the signed-in spec found three
+    defects no review had: a 404 served as 200, a control a person could not click, and forged ids that never
+    reached the action.
 - **2026-10-03**: `finops` **shipped**: three sprints in one run, kit 0.22.0–0.24.0.
   - Every epic can now carry a quote calibrated from what our own shipped epics cost (today M is $24–35, n=4), shows
     spend against it in the build view while it is built, and stamps its actual at close. FinOps is live on the

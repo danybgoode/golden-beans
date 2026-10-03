@@ -1114,6 +1114,10 @@ one-liner + why + date shape.
   the *migration* that does the same backfill was left untouched, and round 2 flagged it as Blocking.
   The fix is cheap at the time you're already in the mental model; it's a whole extra review cycle
   later. *(2026-07-20, multi-tenant-activation S1.)*
+  **A redirect on a front door is the same shape:** before changing what a URL does, grep every link TO it.
+  portfolio-view made bare `/app` open the portfolio; the lock caught the switcher's `?project=` links, and the build
+  found three more (the Today tab, two crumbs, and the switcher's fallback — the last one only by the fresh reviewer).
+  *(2026-10-03.)*
   **The same holds for a rule's wording:** a seed that lists "the N places this rule lives" gives you a
   starting grep, not the scope. session-budget's seed listed four; the grep found nine, because shared
   templates hold byte-identical copies (three `WAYS-OF-WORKING.template.md` files and the template's own
@@ -1492,7 +1496,19 @@ one-liner + why + date shape.
   the dark-path API contract regressed from 404 to 200. Keep feature/auth guards above any shared
   shell that can stream; render the shell inside the page after the guard, and use client-side
   navigation/submission feedback when the status code itself is part of the contract. Pin it with
-  request-level status tests, not screenshots alone. *(2026-07-28.)*
+  request-level status tests, not screenshots alone. *(2026-07-28.)* **Hit again by a builder who had not re-read
+  this** (portfolio-view S2, 2026-10-03): a route `loading.tsx` served `/app/portfolio?workspace=<foreign>` as 200. The
+  fix that held: decide every 404/redirect in the page, then put the slow part in an in-page `<Suspense>` — the
+  fallback IS the approved loading state.
+- **A spec that rewrites a hidden input must prove the rewrite took before it submits.** portfolio-view's forged-id
+  test first passed by never forging: the hidden `projectId` was a React-controlled `value`, hydration put the real id
+  back, and the "forged" submit was the owner's own. Use `defaultValue` for hidden form fields, rewrite after the page
+  is interactive, and assert `toHaveValue(forged)` — a refused forgery and an ignored one otherwise look identical.
+  *(2026-10-03, portfolio-view S2.)*
+- **A thrown Server Action error is reported as the PAGE failing.** It lands in the route's `error.tsx` ("couldn't
+  load…") and Next redacts its message in production, so an owner's failed save read as an outage. Redirect back with a
+  named outcome the page renders (whitelisted keys, `Object.hasOwn`) instead of throwing. *(2026-10-03, portfolio-view S2,
+  fresh reviewer.)*
 - **On a UI sprint, someone has to OPEN THE PAGE. A full green gate does not see layout.**
   app-shell-and-agent-rail S2 shipped two real defects past typecheck, lint, 883 unit tests, build,
   the drift guard, 435 api specs and 14 authed browser specs — both found by looking at a screenshot
