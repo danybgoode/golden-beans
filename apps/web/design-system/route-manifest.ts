@@ -257,6 +257,30 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     retiresIn: null,
     deferred: null,
   },
+  // finops · Sprint 3, Story 3.3 (lock D25) — Measure › FinOps. Built from `design-system/primitives` (PageHead, Tiles,
+  // ListCard rows, Empty, Callout), but its approved pictures are the seed's three `surface` blocks
+  // (finops-actuals → Visuals), which no hash row has approved into a state contract yet. So, exactly like CLI access:
+  // in the DENOMINATOR, not the numerator, with a dated deferral naming who owes the approval.
+  {
+    route: '/app/finops/[projectSlug]',
+    page: 'app/finops/[projectSlug]/page.tsx',
+    label: 'FinOps',
+    frame: 'console',
+    seam: 'product-shell',
+    surface: 'finops',
+    referenceState: null,
+    rendersFromDesignSystem: false,
+    landsIn: 6,
+    retiresIn: null,
+    deferred: {
+      owner: 'Daniel',
+      until: '2026-12-31',
+      why:
+        'Measure \u203a FinOps is built from the design system; its three approved surfaces (finops-actuals seed, ' +
+        'Visuals) are not yet a hashed state contract. Approve them in the next batch and this row claims coverage. ' +
+        'Until then it counts against the percentage.',
+    },
+  },
   {
     route: '/app/impact/[projectSlug]/[featureKey]',
     page: 'app/impact/[projectSlug]/[featureKey]/page.tsx',

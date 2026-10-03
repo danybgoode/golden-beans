@@ -107,6 +107,7 @@ test('members see every live member surface but never owner-only or flow-only ro
     // everyone else for no boundary in return.
     [
       'north-star',
+      'finops', // finops S3.3 — Measure, beside the North Star
       'journeys',
       // ⚠️ `flags` ahead of `experiments` — Story 4.3. The approved Ship rail is
       // Features · Experiments · Scheduled changes · Activity, and this list had the first two the
@@ -190,6 +191,7 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
     links.map(({ routeSegment }) => routeSegment),
     [
       'north-star',
+      'finops',
       'journeys',
       'experiments',
       'scenarios',
@@ -284,7 +286,7 @@ test('Ship holds the feature-operating surfaces and Setup holds every credential
     // ⚠️ **`north-star` FIRST — mockups-as-built Story 3.1 (epic D14).** Measure's rail opens on it
     // because `getSectionEntryHref` takes `[0]`, so the order in the inventory is the design
     // decision rather than a second `isDefault` field somebody would have to keep in step.
-    ['north-star', 'journeys', 'scenarios']
+    ['north-star', 'finops', 'journeys', 'scenarios']
   )
   assert.deepEqual(
     getSectionLinks(links, 'today').map((l) => l.routeSegment),

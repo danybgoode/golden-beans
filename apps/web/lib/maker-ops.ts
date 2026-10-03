@@ -155,39 +155,40 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   {
     id: 'fin',
     tab: 'FinOps',
-    bagContents: 'tokens · cost · value',
+    bagContents: 'tokens · quote · actual',
     eyebrow: 'FINOPS',
-    title: 'Spend intelligence where it creates value',
+    title: 'What each epic cost, against what you expected',
+    // finops 3.4 (D26) — flipped from `unbuilt` to `shipped` when /app/finops went live, and rewritten to claim ONLY
+    // what it shows: measured from your own Claude Code sessions, quoted from your own history, alert-only (D8), in
+    // ≈ API $. Not gated: the opt-in push is a client setting (`spend.telemetry`), not a server gate GATE_NOTES could
+    // describe, and the measuring, the quote and the band work with it off. What is still unbuilt — cost linked to the
+    // North Star movement it bought — is named as such on the section, not here.
     description:
-      'Attribute token consumption across providers, agents and workflows, then connect that cost to the Bet and the North Star movement it was meant to create.',
+      'Measure what each epic consumed from your own Claude Code sessions, quote the next one from that history, and see spend against the quote while you build.',
     questions: [
-      'What is this agent workflow costing us?',
-      'What useful outcome did those tokens produce?',
-      'Is more spend justified by expected value?',
+      'What did that epic cost, and was it what we expected?',
+      'Which skills and models is the spend going to?',
+      'Are our quotes getting better?',
     ],
     capabilities: [
       {
-        name: 'Provider-normalized usage',
-        detail: 'Input, output, cache, retry and model mix.',
+        name: 'Measured, not estimated',
+        detail: 'Input, output, cache and model mix from your own sessions — metrics only, never content.',
         icon: 'binary',
       },
       {
-        name: 'Agent + workflow attribution',
-        detail: 'Know exactly what generated the spend.',
+        name: 'Epic, skill and model attribution',
+        detail: 'Which epic, skill and model consumed the tokens.',
         icon: 'group',
       },
       {
-        name: 'Budgets + appetite',
-        detail: 'Alert, rate-limit or stop at a boundary you set.',
+        name: 'Quote vs actual',
+        detail:
+          'A calibrated quote at grooming; an alert in the build view when spend passes it. Nothing is stopped.',
         icon: 'warning',
       },
-      {
-        name: 'Value-linked unit economics',
-        detail: 'Cost per workflow, transaction or outcome.',
-        icon: 'trend-up',
-      },
     ],
-    availability: { kind: 'unbuilt' },
+    availability: { kind: 'shipped' },
   },
 ]
 

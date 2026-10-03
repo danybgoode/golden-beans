@@ -25,6 +25,10 @@ export const ERROR_EVENT = '$error'
 /** A friction finding DERIVED server-side from funnel aggregates. Never sent by a client. */
 export const FRICTION_EVENT = '$friction'
 
+// `$agent_usage` (finops 3.1) — what one agent session spent on one epic — is reserved too. It is defined in the
+// zero-import lib/agent-usage.ts beside its payload contract, and it is deliberately NOT in isReservedSignalEvent
+// below: that predicate means "group this into a signal", and usage is not a signal.
+
 /**
  * True for any engine-reserved event name.
  *

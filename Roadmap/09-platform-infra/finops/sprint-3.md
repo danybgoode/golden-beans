@@ -3,7 +3,7 @@ epic: finops
 sprint: 3
 title: "The engine — usage events, the roadmap push and /app/finops"
 risk: high
-phase: Shaping
+phase: In review
 stories_total: 4
 stories:
   - id: S3.1
@@ -12,32 +12,34 @@ stories:
     i_want: "my sessions' usage sent to my project in the engine when I turn it on"
     so_that: "spend from every machine I build on adds up in one place, broken down by skill and model"
     risk: high
-    status: planned
+    status: done
   - id: S3.2
     title: "The roadmap push carries quote and actual"
     as_a: "the product owner"
     i_want: "each epic's quote and actual on the roadmap I already push"
     so_that: "the Roadmap Hub and the portfolio view show them with no second pipeline"
     risk: high
-    status: planned
+    status: done
   - id: S3.3
     title: "/app/finops — per project, per epic, per skill, per model"
     as_a: "the product owner"
     i_want: "a FinOps page for my project"
     so_that: "I can see what each epic, skill and model cost and how often quotes held"
     risk: high
-    status: planned
+    status: done
   - id: S3.4
     title: "The landing's FinOps surface flips from unbuilt"
     as_a: "a visitor to goldenfrijoles.com"
     i_want: "the FinOps section to say what is actually live"
     so_that: "the public page never over-claims or lags"
     risk: low
-    status: planned
+    status: done
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 3: The engine — usage events, the roadmap push and /app/finops
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — S3.1 `74d66ca` · S3.2 `5806521` · S3.3 `f52d5df` · S3.4 `c9c6466` · release 0.24.0
+
+**Re-bet at the wave boundary (2026-10-02):** wave 1 (S1–S2) used one orchestrated session and stayed inside the L appetite; the product owner's kickoff authorised the whole epic in one run, so Sprint 3 proceeded without returning to shaping.
 
 ## Build contract (locked by the architect before the builder started — 2026-10-02)
 Cites README § Architecture lock (D21–D26). **No migration**: `$agent_usage` rides the `events` table through the
@@ -82,6 +84,11 @@ existing ingest RPC; the roadmap fields ride the artifact's JSON payload. Engine
 - Reads exactly one project resolved server-side through `lib/membership.ts`; a non-member gets 404 (api spec); the `tenancy` lint stays clean.
 - "Claude Code only — other agents not measured" is on the page (D12).
 **QA:** api spec for access; browser spec for the three states (replaces a browser smoke).
+**Amended at the build:** the api gate covers unauthed → `/login`; the signed-in non-member 404, the empty state and the
+populated state are in `e2e/finops.authed.spec.ts` (the opt-in authed rail — passed locally). The **error** state (a failed
+read) cannot be provoked from a browser without breaking the database; it is one branch in `page.tsx`, not asserted. The
+page also shows **By model** beside By skill (the story title's "per model"), and lands uncovered in the design ledger
+with a dated deferral (its seed surfaces are not a hashed state yet).
 **Risk:** high
 
 ### Story 3.4 — The landing's FinOps surface flips from unbuilt
@@ -103,13 +110,15 @@ existing ingest RPC; the roadmap fields ride the artifact's JSON payload. Engine
 ## Sprint 3 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com   (or the preview URL while testing pre-merge)
 
-1. In the repo, run `npx -y @golden-frijoles/kit config set finops.push true`, then send one message in Claude Code on an epic branch.
-   → no error; `node scripts/epic-actuals.mjs --epic <slug> --json` shows `pushed_at` set.
-2. (auth — owed to Daniel) Sign in and go to https://goldenfrijoles.com/app/finops
+1. In the repo, run `npx -y @golden-frijoles/kit config set spend.telemetry on` (lock D21 — the setting that already
+   existed, not `finops.push`), make sure `SELF_PROJECT_API_KEY` and `GROWTH_ENGINE_URL=https://goldenfrijoles.com` are
+   in the shell, then run `node scripts/epic-actuals.mjs --push`.
+   → `pushed N session snapshot(s) — ok`; `node scripts/epic-actuals.mjs --epic <slug> --json` shows `pushed_at` set.
+2. (auth — owed to Daniel) Sign in and go to https://goldenfrijoles.com/app/finops/<slug> (lock D25: console pages are per project)
    → the Epics table lists the epic with its quote and ≈ actual; By skill and By model are filled.
 3. Push the roadmap with `node scripts/roadmap-push.mjs`, then open https://goldenfrijoles.com/hub/<slug>/epic/finops (`<slug>` = the project `gf projects` prints for this repo)
    → the epic drill-down shows "Quote … · Actual …".
-4. Open https://goldenfrijoles.com/app/finops in a private window, signed in as a user who is not a member of the project.
+4. Open https://goldenfrijoles.com/app/finops/<slug> in a private window, signed in as a user who is not a member of the project.
    → 404, not the page.
 5. Go to https://goldenfrijoles.com and scroll to FinOps.
    → it no longer says unbuilt, and every claim matches what step 2 showed.

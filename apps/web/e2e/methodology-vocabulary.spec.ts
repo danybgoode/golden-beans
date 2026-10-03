@@ -97,13 +97,13 @@ test('§loop renders exactly three portfolio moves, in order, with the product o
 // fixed — a spec that only names them can never fail again. Pinning the survivors instead means a
 // new "Shape" anywhere on this page turns it red.
 //
-// TWO lowercase survivors are expected and correct, and both are the ordinary English noun for the
-// form of a thing rather than the method's move: §finops' "the shape of the capability" and
-// §pricing's "the shape of it". D3 renames the MOVE; it does not ban an English word. They are
+// ONE lowercase survivor is expected and correct — the ordinary English noun for the form of a thing
+// rather than the method's move: §pricing's "the shape of it". (There were two until finops S3.4: §finops'
+// "the shape of the capability" described a panel that was not built, and went when FinOps shipped.) D3 renames the MOVE; it does not ban an English word. They are
 // pinned by their sentences so that nobody reading a bare count wonders whether one was missed —
 // and the first run of this spec found the §finops one, which the story's own list of "occurrences
 // to clear" did not name.
-test('the landing never names the second move "Shape" — the two surviving "shape"s are ordinary English', async ({
+test('the landing never names the second move "Shape" — the surviving "shape" is ordinary English', async ({
   request,
 }) => {
   const text = await landingHtml(request).then(visibleText)
@@ -125,10 +125,9 @@ test('the landing never names the second move "Shape" — the two surviving "sha
   )
   expect(
     occurrences.map((occurrence) => occurrence.slice(1, occurrence.indexOf('"', 1))),
-    `exactly two ordinary-English "shape"s survive on the landing.\n${occurrences.join('\n')}`
-  ).toEqual(['shape', 'shape'])
+    `exactly one ordinary-English "shape" survives on the landing.\n${occurrences.join('\n')}`
+  ).toEqual(['shape'])
 
-  expect(text).toContain('It is the shape of the capability')
   expect(text).toContain('No price until we both know the shape of it.')
 })
 

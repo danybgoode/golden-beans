@@ -181,8 +181,11 @@ test('the denominator moves exactly as the D13 ledger says', () => {
   // Unlike the two above it lands WITH an approved state — `hub-board`, the first approved SURFACE (D23) — so it moves
   // the denominator AND the covered count together.
   // ⚠️ **+1 in S4.2 — `/hub/w/[workspaceId]/board`**, the workspace board, also landing with its approved surface.
-  assert.equal(beforeSprint4.length, 34, 'every row is live before Story 4.5 retires three')
-  assert.equal(atClose.length, 31, 'after Story 4.5: 34 rows minus the three retired')
+  // ⚠️ **+1 — finops Sprint 3, Story 3.3: `/app/finops/[projectSlug]`.** Like CLI access: it moves the DENOMINATOR
+  // and not the covered count — built from the system, but its approved surfaces are not a hashed state yet, and its
+  // row carries a dated deferral instead of claiming coverage.
+  assert.equal(beforeSprint4.length, 35, 'every row is live before Story 4.5 retires three')
+  assert.equal(atClose.length, 32, 'after Story 4.5: 35 rows minus the three retired')
 
   // ...and the row that does not exist yet is the one Daniel approved as a designed empty state.
   const scheduled = ROUTE_MANIFEST.find((row) => row.route === '/app/scheduled/[projectSlug]')
@@ -204,7 +207,7 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   const now = coverage(1)
   // 32 since golden-frijoles-cli added Setup › CLI access, 33 since board-sinks-and-scrumban added the Board tab — see
   // the ledger test above.
-  assert.equal(now.total, 34)
+  assert.equal(now.total, 35) // +1: /app/finops (finops S3.3)
   // ⚠️ **`>=`, not `>` — and the change is the whole point of Sprint 6.** This line asserted
   // `hasReferenceState > complete` under the message "reference states exist ahead of the work",
   // which was true for five sprints and is FALSE at epic close by design: the work caught up. The
@@ -247,15 +250,17 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // ⚠️ **30 and 29 since board-sinks-and-scrumban S2.2** — the Board tab lands covered (its approved surface,
   // `hub-board`), so both numbers move by one and `outstanding` stays exactly the CLI route.
   const atClose = coverage(6)
-  assert.equal(atClose.total, 31, 'the epic-close denominator is not the 31 the two ledgers compute')
+  // ⚠️ **32 and still 30 since finops S3.3** — `/app/finops` joins CLI access as the second uncovered route, each with
+  // a deferral naming its owner and date; `outstanding` is pinned to exactly those two.
+  assert.equal(atClose.total, 32, 'the epic-close denominator is not the 32 the two ledgers compute')
   assert.equal(
     atClose.complete,
     30,
-    `30 of 31 routes are covered — outstanding: ${atClose.outstanding.join(', ')}`
+    `30 of 32 routes are covered — outstanding: ${atClose.outstanding.join(', ')}`
   )
   assert.deepEqual(
     atClose.outstanding,
-    ['/app/setup/cli/[projectSlug]'],
+    ['/app/finops/[projectSlug]', '/app/setup/cli/[projectSlug]'],
     'the only uncovered console route is the one whose deferral names an owner and a date'
   )
 
@@ -350,8 +355,8 @@ test('every row names a seam, and the seam matches the frame', () => {
   const bySeam = (seam: string) => liveRows(3).filter((row) => row.seam === seam).length
   assert.equal(
     bySeam('product-shell'),
-    23,
-    'seam A: the 20 console routes, plus Scheduled, North Star and Setup \u203a CLI access'
+    24,
+    'seam A: the 20 console routes, plus Scheduled, North Star, Setup \u203a CLI access and FinOps'
   )
   assert.equal(
     bySeam('frame'),

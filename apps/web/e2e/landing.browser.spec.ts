@@ -594,30 +594,28 @@ test('the Ops tabs are a real, keyboard-operable tablist', async ({ page }) => {
   await expect(page.locator('#ops-panel-fin')).toBeVisible()
 })
 
-// Epic D4. FinOps is the one section on this page describing something that does not exist, and the
-// whole decision to ship it rested on it being unmistakably labelled. "Unmistakably" means the
-// label is on the tab a reader has not opened yet AND inside the panel — not only in the panel,
-// which a reader who never clicks the fourth tab will not see.
-//
-// It also asserts the negative that actually matters: the unbuilt surface must never be sold in the
-// same vocabulary as the shipped ones. If someone later gives it a `live` badge, this goes red.
-test('the unbuilt FinOps surface is labelled as next wherever it appears', async ({ page }) => {
+// finops S3.4 (epic D26). FinOps WAS the one section describing something that did not exist, labelled `next`
+// everywhere it appeared. It shipped — /app/finops, the build view's Spend row, the calibrated quote — so the tab and
+// the section are live now. What this still guards is the negative that matters: the section claims only what ships.
+// The one unbuilt part (cost per outcome) keeps its own `next` badge in words, and the concept's old promises — a
+// stop/rate-limit, "across providers", invented dollar figures — must not come back.
+test('the FinOps surface is live and claims only what ships', async ({ page }) => {
   await page.goto('/')
 
   const finTab = page.locator('#ops-tab-fin')
-  await expect(finTab.locator('.tag-next')).toHaveCount(1)
-  await expect(finTab.locator('.tag-live')).toHaveCount(0)
+  await expect(finTab.locator('.tag-next')).toHaveCount(0)
 
   await finTab.click()
   const panel = page.locator('#ops-panel-fin')
-  await expect(panel.locator('.tag-next')).not.toHaveCount(0)
-  await expect(panel.locator('.tag-live')).toHaveCount(0)
+  await expect(panel.locator('.tag-next')).toHaveCount(0)
+  await expect(panel).toContainText(/Nothing is stopped/)
 
-  // And the section further down the page, which carries the concept panel.
   const finops = page.locator('#finops')
-  await expect(finops.locator('.tag-next')).not.toHaveCount(0)
-  await expect(finops.locator('.tag-live')).toHaveCount(0)
-  await expect(finops).toContainText(/not built|nothing on this panel is built/i)
+  await expect(finops.locator('.tag-live')).toHaveCount(1)
+  await expect(finops.locator('.finops-concept__next .tag-next')).toHaveCount(1)
+  await expect(finops).toContainText(/Claude Code only/)
+  await expect(finops).toContainText(/never their content/)
+  await expect(finops).not.toContainText(/rate-limit|across 3 providers|\$184|not built/i)
 })
 
 // ── The anchor contract, for EVERY link on the page ───────────────────────────────────────────

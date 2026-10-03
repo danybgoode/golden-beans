@@ -76,9 +76,9 @@ export const LANDING_SECTIONS: LandingSection[] = [
   {
     id: 'finops',
     title: 'AI unit economics',
-    epic: 'landing-maker-ops',
-    status: 'next',
-    note: 'Not built. The only section on this page describing something that does not exist, and it says so on the page (epic D4).',
+    epic: 'finops',
+    status: 'live',
+    note: 'finops S3.4: measured from your sessions, quoted from your history, shown at /app/finops. The section names its one unbuilt part (cost per outcome, the North Star link) as next, in words.',
   },
   {
     id: 'methodology',
