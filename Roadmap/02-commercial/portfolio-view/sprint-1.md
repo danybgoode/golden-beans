@@ -37,7 +37,7 @@ stories:
 ---
 # Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop — Sprint 1: The read model and the loop stage
 
-**Status:** ✅ built — PR #234 (merged after the migration was applied and verified in production)
+**Status:** ✅ shipped — PR #234 (`a23ff01`), merged after the migration was applied and verified in production
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D1, D2, D4, D7, D8, D9, D10, D11, C1, C4–C8.
@@ -109,3 +109,7 @@ Env: production · https://goldenfrijoles.com   (Sprint 1 ships no page — the 
    → nothing has changed yet (the front door moves in Sprint 2).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Run 2026-10-03 (builder):** 1 ✅ `supabase migration list` shows `20261003100000` local = remote; the CHECK refused
+`loop_stage = 'grow'` with 23514 on production (in a rolled-back transaction); 4/4 projects `NULL`. 2 ✅ both specs
+green in CI on the PR head and locally (9/9). 3 owed to Daniel (auth).

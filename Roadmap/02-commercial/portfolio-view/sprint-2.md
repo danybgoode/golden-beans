@@ -30,7 +30,7 @@ stories:
 ---
 # Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop — Sprint 2: The page and the front door
 
-**Status:** ✅ built — PR #235
+**Status:** ✅ shipped — PR #235 (`1751c8c`)
 
 ## Build contract (locked by the architect before the builder started — README § Architecture lock)
 Cite, don't restate: D2, D5, D11, D12, C2, C3, C5.
@@ -102,3 +102,8 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → the page you know, no redirect.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Run 2026-10-03 (builder):** production is on `1751c8c`; unauthenticated, `/app/portfolio` answers 307 → `/login`
+like every console route. Steps 1–4 are signed-in and **owed to Daniel**; their mechanical half runs in CI as
+`e2e/portfolio.authed.spec.ts` (2+ products → portfolio, sibling hidden, owner places a product, member read-only,
+forged ids refused, one product → Today, foreign workspace → 404).

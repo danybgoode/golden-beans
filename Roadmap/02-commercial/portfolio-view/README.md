@@ -1,6 +1,6 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: portfolio-view
 title: "Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop"
@@ -14,9 +14,16 @@ intent_match: null   # could not look at grooming (Jev unreachable, 2026-10-01) 
 build_order: 41      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 18.17
+actual_mtok: 57.3
+actual_basis: "this machine · 2026-10-03 · 1 session · prices 2026-10-02"
 ---
 
-# Epic: Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop
+# Epic: Portfolio view — every product in a workspace on one page, placed on the Consider · Operate · Exit loop ✅
+
+> **✅ Shipped and live 2026-10-03** — S1 #234 (`a23ff01`), S2 #235 (`1751c8c`). Migration `20261003100000` applied
+> to production before S1 merged and verified. Actual ≈$18.17. Owed to Daniel: the signed-in walkthroughs (sprint
+> files) and placing his products on the loop.
 
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/portfolio-view.md`](../../00-ideas/seeds/portfolio-view.md)
 > **Appetite:** M (one wave — architect session + builder fan-out + one review round) · **Bet:** not yet placed (`underwritten_by: null`).
@@ -161,13 +168,13 @@ additive (a nullable column) and safe to leave in place.
    isn't there). Stacked: `feat/portfolio-view` → `feat/portfolio-view-s2`.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written (with its quote vs actual line, once finops S2 has shipped)
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written (with its quote vs actual line, once finops S2 has shipped)
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
 - [ ] ~~Kill-switch~~ n/a — no flag planned at grooming (carve-out above).
-- [ ] The migration is applied in production and verified (`supabase migration list` shows it on the linked project)
-- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] The migration is applied in production and verified (`supabase migration list` shows it on the linked project)
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
