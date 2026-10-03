@@ -1,6 +1,6 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Shipped       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: finops
 title: "FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine"
@@ -16,9 +16,12 @@ intent_match: null   # could not look at grooming (Jev unreachable, 2026-10-01) 
 build_order: 40      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
                      # table; plain integers, no "#2a" suffixes. See 00-ideas/README.md → Ordering.
+actual_usd: 56.13
+actual_mtok: 182.2
+actual_basis: "this machine · 2026-10-03 · 1 session · prices 2026-10-02"
 ---
 
-# Epic: FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine
+# Epic: FinOps — quote vs actual per epic, measured from your own sessions, live in the build view, sent to the engine ✅
 
 > **Area:** 09-platform-infra · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/finops-actuals.md`](../../00-ideas/seeds/finops-actuals.md)
 > (consolidates [`finops-quotes`](../../00-ideas/seeds/finops-quotes.md) — one loop, one epic; product owner's call, 2026-10-01)
@@ -251,12 +254,13 @@ pin the previous plugin version.
    if the lock finds one is needed, it is applied before merge (DoD).
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated — `node scripts/owed-ledger.mjs` counts what is still owed)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written — **including this epic's own actual**, stamped by the tool it built
-- [ ] Product poster (`Roadmap/README.md`) updated; landing FinOps backfill done (3.4)
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] All sprints merged to `main` + smoke-tested — #230 `6f3ac1e`, #231 `288a5a3`, #232 `379b50d`, each deployed to
+  production and its kit published (0.22.0, 0.23.0, 0.24.0). Gaps stated in each sprint's walkthrough and the retro.
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs; the signed-in and prod-credential steps owed to Daniel by name)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written — **including this epic's own actual**, stamped by the tool it built (≈$56.13)
+- [x] Product poster (`Roadmap/README.md`) updated; landing FinOps backfill done (3.4, verified live)
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md`
 - [ ] ~~Kill-switch~~ n/a — no flag planned at grooming (carve-out above).
-- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`**; `node scripts/build-order.mjs` run

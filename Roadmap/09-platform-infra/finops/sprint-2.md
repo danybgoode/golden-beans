@@ -3,7 +3,7 @@ epic: finops
 sprint: 2
 title: "Quotes, calibrated, and the loop closes"
 risk: low
-phase: In review
+phase: Shipped
 stories_total: 5
 stories:
   - id: S2.1
@@ -44,7 +44,7 @@ stories:
 ---
 # FinOps: quote vs actual per epic — measured from your own sessions, shown live in the build view, sent to the engine — Sprint 2: Quotes, calibrated, and the loop closes
 
-**Status:** 🟦 In review — S2.1/S2.2 `ee330b1` · S2.3 `857418d` · S2.4 `5f966ba` · S2.5 `d8905e0` · release 0.23.0
+**Status:** ✅ shipped — #231 `288a5a3` (merged + deployed 2026-10-03)
 
 ## Build contract (locked by the architect before the builder started — 2026-10-02)
 Cites README § Architecture lock.

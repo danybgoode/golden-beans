@@ -438,12 +438,24 @@ independently shippable slice of value.
   - ✅ **The build view** — a machine-readable frontmatter contract on every epic doc (`lib/roadmap-contract.mjs`), enforced by `doc-format.mjs` and born from the `groom` scaffolder; `roadmap-backfill.mjs` brought the whole corpus onto it and recorded what it could not resolve; `build-state.mjs` is the one resolver for "what is being built right now"; and `plugins/golden-frijoles/hooks/` renders it in the CLI as a Claude Mod (opt-in, deleting `hooks.json` is the kill-switch). [`build-visualization-claude-mods`](09-platform-infra/build-visualization-claude-mods/README.md)
   - ✅ **Jev semantic guards** — the review guard ("did the reviewer actually review?", which gates a PR's `cross-review/<lens>` status) and the prose guard's four semantic families (invented fix, beneficiary, liveness, deadline) are decided by Jev (TypeSafe, pinned `jev-1.13.0`) in all three repos, with the regexes as the offline fallback. One zero-dependency client (`lib/jev.mjs`) and a committed per-rail kill-switch (`jev.config.json`). Every decision is logged, and every posted review carries a `<!-- jev: -->` marker. `jev-eval.mjs` replays 240 labelled fixtures offline in CI, and `jev-report.mjs` watches agreement. Measured: review 98.7% vs the regex's 87.0%, prose 86.5% vs 71.2%. [`jev-semantic-guards`](09-platform-infra/jev-semantic-guards/README.md)
   - ✅ **Ways-of-work lean pass** — committed permissions with a cited deny/ask ledger (three spellings, deny **and** ask), one external general pass + one lean security lens + one fresh reviewer, a generated `WAYS-OF-WORKING`, and `epic-dod --check` for the mechanical half of the epic DoD. [`ways-of-work-lean-pass`](09-platform-infra/ways-of-work-lean-pass/README.md)
+  - ✅ **[FinOps](09-platform-infra/finops/README.md)** — quote vs actual per epic, from your own Claude Code sessions (no hook,
+    no receiver): `epic-actuals` (deduped, worktree-aware, ≈ API $ from one dated price table), `quote` (p25–p75 of your
+    shipped actuals by appetite, written by groom), the build view's `$ Spend` row against the quote (alert only), the
+    actual stamped at close, and an opt-in `$agent_usage` push to `/app/finops/<project>`. Claude Code only. Shipped
+    2026-10-03 (#230–#232, kit 0.22.0–0.24.0).
   - ✅ **Distribute what we use** — a stranger's repo gets the rails this one runs, from the kit, by construction. **One review rail**, byte-identical across this repo, the template and medusa-bonsai. It is locked down: Vibe runs with no host tools, devin is refused, codex runs read-only with no user config or MCP, a reply carrying a secret is never posted, and outsiders' diffs are refused. One doctor. The **review rail, `session-resume` and `build-state` ship in the kit**. The **build view never runs the open repo's code**. A **byte-parity guard** covers the shared scripts. **Jev asks before anything is sent**, and a Jev setup route leads to a proof that writes nothing. A **notify setup route** covers `--chat-id` and `--test`. **Routines** are paste-ready for `/schedule`, and there are model-free cron templates. **Shipped 2026-09-30** (#188–#191, kit 0.6.0–0.9.0; medusa-bonsai #197). [`distribute-what-we-use`](09-platform-infra/distribute-what-we-use/README.md)
 
 ---
 
 ## Recent highlights
 
+- **2026-10-03**: `finops` **shipped**: three sprints in one run, kit 0.22.0–0.24.0.
+  - Every epic can now carry a quote calibrated from what our own shipped epics cost (today M is $24–35, n=4), shows
+    spend against it in the build view while it is built, and stamps its actual at close. FinOps is live on the
+    landing and at `/app/finops`, measured from Claude Code transcripts that already existed.
+  - The lock rested on the 241 transcripts on this Mac: they repeat each streamed message, resumed sessions re-stamp
+    copied history with a new branch, and half this repo's history still names its old folder. The first epic to
+    stamp its own actual with the tool it built: ≈$56.
 - **2026-10-02**: `board-sinks-and-scrumban` **shipped**: four sprints, plugin + kit 0.20.0 and 0.21.0.
   - One stage everywhere: the Hub's Board, the CLI build view, the kit's sinks and Notion all read the resolver's
     answer, so "10/10 shown as Building" can't recur.
