@@ -1,6 +1,6 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
-phase: Shaping       # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+phase: Building      # the executive ladder — Shaping | Locking architecture | Building | Verifying | In review | Shipped.
                      # WRITTEN at each cadence event, never inferred. Shipped = merged AND deployed.
 slug: portfolio-view
 title: "Portfolio view: every product in a workspace on one page, placed on the Consider · Operate · Exit loop"
@@ -51,6 +51,77 @@ nothing here touches the public/demo allow-list (rule #2).
 - **D6 — Rows only.** No workspace totals, no ranking, no bets table in v1 (the "Next wave" panel from the grooming
   mockup was cut to hold the appetite → follow-up seed).
 - **D7 — Per-cell fan-out with a timeout,** in parallel; the lock measures it on the real workspace.
+
+## Architecture lock (2026-10-03, verified against live code + production data before any builder started)
+
+**Live data the lock read (prod `slweidgffcfndnskcskc`):** 2 workspaces, 4 projects. "Daniel's products" holds
+`golden-beans`, `golden-beans-demo`, `miyagisanchez` (one owner each, no other members); "miyagi's products" holds
+`miyagi`. Events per project ≤ 453. Pushed artifacts: `golden-beans-demo` (roadmap v228 with 50 epic rows, every one
+carrying the finops fields; pod_report v212, lead time 2 d) and `miyagisanchez` (pod_report only, lead time 7.1 d, as of
+2026-07-26). `golden-beans` has no artifacts (its pushes go to the self-tenant `golden-beans-demo`). North Star:
+`miyagisanchez` and `golden-beans-demo` register `payable_sellers` (2 and 1 inputs); the other two register none.
+
+### Decisions (the builders cite these; nothing below is restated elsewhere)
+- **D1 — One seam (verified).** `getPortfolio(userId, workspaceId)` (`lib/portfolio.ts`) lists projects ONLY through
+  `getWorkspaceProjects()`; every other read is keyed by ONE project id from that list. The loop stage is read per
+  project too (C10) — `getWorkspaceProjects` itself is not widened.
+- **D2 — Unknown is not zero (verified, kept).** A cell is `{ value, as_of? }`, `{ value: null, reason }` or
+  `{ error: true }` — the type in `lib/portfolio-model.ts`, nowhere else.
+- **D3 — Loop stage is written, never inferred (kept).** `projects.loop_stage`, nullable, `consider | operate | exit`.
+  Only an owner writes it (`isOwner` on `getMembershipByProjectId`).
+- **D4 — Pushed figures carry `as_of` (kept)** = the artifact's `generatedAt`.
+- **D5 — Front door (corrected, C2/C3).** Bare `/app` redirects to `/app/portfolio` when the viewer holds 2+ projects
+  in ONE workspace. `/app?project=…` and `/app?provision=…` never redirect.
+- **D6 — Rows only (kept).** No cross-product totals or ranking. (A per-product spend sum over that product's own
+  epics is a row figure, not a workspace total.)
+- **D7 — Fan-out (measured).** Largest workspace = 3 projects → no batching. All cells of all rows run in parallel;
+  each cell has a **5000 ms** timeout and times out to `{ error: true }` alone.
+- **D8 — Module split.** `lib/portfolio-model.ts` ZERO-import (cell type, `withTimeout`, every shaping rule, the
+  assembler over injected readers); `lib/portfolio.ts` `server-only` (binds `getWorkspaceProjects` + the real readers);
+  `lib/loop-stage.ts` ZERO-import (stages, parse, the write decision); `lib/loop-stage-store.ts` (its read + write; client parameter, no
+  `server-only`, so a spec drives the real write against the real database — the `workspace-projects.ts` precedent).
+- **D9 — Migration** `20261003100000_projects_loop_stage.sql`: `ALTER TABLE projects ADD COLUMN loop_stage text` +
+  a separately named `CHECK (loop_stage IN ('consider','operate','exit'))`. NULL passes the check on purpose (NULL =
+  not placed); every other string must fail — verified by ATTEMPTING the write (CODE-QUALITY #3). Applied to prod via
+  `supabase db query --linked -f` + its `schema_migrations` row (the workspaces precedent; the Supabase MCP is not
+  connected), before Sprint 1 merges.
+- **D10 — Reads reused per cell.** loop stage: one `projects` row by id · North Star + funnel: `getProjectOutcome`
+  (one call, two cells — the read Today uses) · running: `listExperimentRegistries` · kill switches:
+  `getFlagRegistryView` → `projectFlagRows(…, 'production')` (the read Today uses) · lead time: `getLatestArtifact(id,
+  'pod_report')` · spend: `getLatestArtifact(id, 'roadmap')` → `epicFinopsFromArtifact` (finops 3.2's accessor).
+- **D11 — Write path.** A Server Action (`app/app/portfolio/actions.ts`): session user → `getMembershipByProjectId` →
+  `loopStageWriteDecision` → `writeLoopStage` (`lib/loop-stage-store.ts`). No API route, no credential path reaches it.
+- **D12 — Workspace choice for `/app/portfolio`.** `?workspace=<id>` is a VIEW preference matched against the viewer's
+  own workspaces (not theirs / malformed → 404). Without it: the workspace holding most of the viewer's projects
+  (ties → workspace name), from `getUserProjects` (the named membership carve-out) through a pure `portfolioWorkspace()`.
+- **D13 — Routing.** The architect builds in place (one session in the checkout, one builder); the fresh
+  `pr-reviewer` (mandatory, risk high) + `review-route.mjs` external passes review each PR.
+
+### Corrections — scope the live system disproved (said out loud)
+- **C1 — There is no North Star value, so there is no WoW.** `readNorthStar` returns `latestValue: null` by
+  construction: `north_star_metrics` stores a KEY, values belong to leading INPUTS, and no table holds a level for the
+  metric (the North Star page says so in its header comment). A "value (WoW)" column would be "not set" forever.
+  **The cell shows the registered metric and how many inputs feed it** (`payable_sellers · 2 inputs`), or
+  "no North Star set". `wow` is dropped from the row shape. A metric level is a follow-up seed, not this epic.
+- **C2 — `/app?project=<slug>` is the switcher's Today link.** Redirecting every `/app` at 2+ products would make
+  Today unreachable for exactly the users this epic serves. Only bare `/app` redirects (D5).
+- **C3 — "2+ products in the workspace" needs a workspace.** A viewer can belong to several (prod has two). D12 picks one.
+- **C4 — "owner 200 / member 403 / non-member 404" assumed a route.** No session-authed API route exists in this repo,
+  and a cookie-authed POST route would need its own CSRF guard that Server Actions carry. The three outcomes are the
+  decision function's `ok | forbidden | not_found`, asserted directly; the write and its CHECK are asserted against the
+  real database; the wire is the S2 authed browser spec.
+- **C5 — "open kill switches" = kill-switch-polarity flags switched OFF in production** (the deliberate kill; a
+  kill switch's default is on — `flag-list-view.ts`). Breakers are not read separately: a breaker trip moves its flag
+  to a protective version, which this count does not claim to see. Shown as the Running cell's second line (the
+  approved sketch has no kill-switch column).
+- **C6 — "funnel_stage" has no definition in code.** It is the furthest TARS stage any registered feature reached
+  (`Retained` > `Adopted` > `Targeted`), over `getProjectOutcome`'s bounded feature list; "no features registered" /
+  "nobody targeted yet" otherwise.
+- **C7 — Spend vs quote.** Over this product's epics carrying BOTH a quote and an actual: `≈$Σactual · ±Δ% (n quoted
+  epics)`, Δ against Σ`quote_high` (finops' own "over" rule). None → "no quotes yet". finops S3 is live, so the column
+  lights up for `golden-beans-demo` on day one.
+- **C8 — Row shape (final):** `{ project, loop_stage, north_star, funnel_stage, experiments_running,
+  kill_switches_off, epic_lead_time_days, spend_vs_quote }`, every field but `project` a D2 cell.
 
 ## What already exists (reuse, don't rebuild)
 - `apps/web/lib/workspace.ts` (`getUserWorkspaces`, `getWorkspaceProjects`), `lib/workspace-access.ts`,

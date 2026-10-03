@@ -3,7 +3,7 @@ epic: portfolio-view
 sprint: 2
 title: "The page and the front door"
 risk: high
-phase: Shaping
+phase: Building
 stories_total: 3
 stories:
   - id: S2.1
@@ -32,9 +32,21 @@ stories:
 
 **Status:** ⬜ not started
 
-## Build contract (to be locked by the architect before the builder starts)
+## Build contract (locked by the architect before the builder started — README § Architecture lock)
+Cite, don't restate: D2, D5, D11, D12, C2, C3, C5.
 Render from Sprint 1's `getPortfolio()` only. The approved sketch in the seed is the visual contract
 (WAYS-OF-WORKING: an approved design IS scope) — a browser assertion must be able to fail on how the page looks.
+- **Files:** `app/app/portfolio/{page,loading,error}.tsx`, `app/app/portfolio/actions.ts` (the D11 Server Action),
+  a loop-stage control component, `lib/portfolio-workspace.ts` (D12's pure chooser + the D5 redirect predicate),
+  the `/app` redirect in `app/app/page.tsx` (bare `/app` only — C2), the switcher's Portfolio entry,
+  `design-system/route-manifest.ts` (+1 route, uncovered with a dated deferral — the `/app/finops` precedent: the
+  seed's surface blocks carry no approving hash row), `e2e/portfolio.authed.spec.ts`.
+- **States → triggers:** portfolio (2+ rows) · loading (`loading.tsx`) · empty (the chosen workspace holds < 2 of the
+  viewer's projects) · error (`error.tsx`; `getUserWorkspaces` throws on a failed read) · loop not placed (a row whose
+  stage is null shows "Not placed", and "Place it" for an owner).
+- **Teeth:** the authed spec signs in a disposable person with two projects in one workspace plus a sibling project
+  they are NOT a member of, and asserts the sibling's slug is absent; the redirect is asserted for 1 vs 2 products.
+- **Order:** 2.1 and 2.3 first; the `/app` redirect (2.2) is the last commit, so nobody is sent to a page that isn't there.
 
 ## Stories
 
